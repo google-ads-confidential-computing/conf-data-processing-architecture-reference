@@ -51,6 +51,19 @@ variable "instance_type" {
   type        = string
 }
 
+variable "instance_disk_image_family" {
+  description = <<-EOT
+    The image family from which to initialize the server instance disk.
+    Using this variable, the server will pull the latest image in the family
+    automatically. If instance_disk_image is set, instance_disk_image_family
+    will be ignored."
+  EOT
+  type = object({
+    image_project = string
+    image_family  = string
+  })
+}
+
 variable "instance_disk_image" {
   description = "The image from which to initialize the worker instance disk."
   type        = string
@@ -183,4 +196,12 @@ variable "alarm_duration_sec" {
 variable "notification_channel_id" {
   description = "Notification channel to which to send alarms."
   type        = string
+}
+
+variable "java_job_validations_to_alert" {
+  description = <<-EOT
+      Job validations to alarm for Java CPIO Job Client. Supported validations:
+      ["JobValidatorCheckFields", "JobValidatorCheckRetryLimit", "JobValidatorCheckStatus"]
+  EOT
+  type        = list(string)
 }

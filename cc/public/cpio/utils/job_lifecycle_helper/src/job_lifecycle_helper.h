@@ -31,8 +31,10 @@
 #include "public/cpio/proto/job_service/v1/job_service.pb.h"
 #include "public/cpio/utils/job_lifecycle_helper/interface/job_lifecycle_helper_interface.h"
 #include "public/cpio/utils/job_lifecycle_helper/proto/v1/job_lifecycle_helper.pb.h"
+#include "public/cpio/utils/metric_instance/interface/aggregate_metric_interface.h"
 #include "public/cpio/utils/metric_instance/interface/metric_instance_factory_interface.h"
 #include "public/cpio/utils/metric_instance/interface/simple_metric_interface.h"
+#include "public/cpio/utils/metric_instance/interface/time_aggregate_metric_interface.h"
 #include "public/cpio/utils/metric_instance/noop/noop_metric_instance_factory.h"
 
 #include "error_codes.h"
@@ -249,9 +251,9 @@ class JobLifecycleHelper : public JobLifecycleHelperInterface {
       std::shared_ptr<cpio::AggregateMetricInterface> metric,
       const std::string& event_name) noexcept;
 
-  void RecordTimeInSimpleMetric(
-      std::shared_ptr<cpio::SimpleMetricInterface> metric,
-      const std::string& time_in_string) noexcept;
+  void RecordTimeInTimeAggregateMetric(
+      std::shared_ptr<cpio::TimeAggregateMetricInterface> metric,
+      const google::scp::core::TimeDuration& time_duration) noexcept;
 
   // The job client.
   JobClientInterface* job_client_;
@@ -295,13 +297,14 @@ class JobLifecycleHelper : public JobLifecycleHelperInterface {
   std::map<std::string, std::string> job_waiting_time_metric_labels_;
 
   /// The aggregate metric instance for job waiting time.
-  std::shared_ptr<cpio::SimpleMetricInterface> job_waiting_time_metric_;
+  std::shared_ptr<cpio::TimeAggregateMetricInterface> job_waiting_time_metric_;
 
   // The metrics labels for job processing time.
   std::map<std::string, std::string> job_processing_time_metric_labels_;
 
   /// The aggregate metric instance for job processing time.
-  std::shared_ptr<cpio::SimpleMetricInterface> job_processing_time_metric_;
+  std::shared_ptr<cpio::TimeAggregateMetricInterface>
+      job_processing_time_metric_;
 
   // The metrics labels for job extender.
   std::map<std::string, std::string> job_extender_metric_labels_;

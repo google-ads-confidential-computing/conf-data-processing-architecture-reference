@@ -27,6 +27,7 @@
 
 #include "noop_aggregate_metric.h"
 #include "noop_simple_metric.h"
+#include "noop_time_aggregate_metric.h"
 
 namespace google::scp::cpio {
 /**
@@ -56,6 +57,28 @@ class NoopMetricInstanceFactory : public MetricInstanceFactoryInterface {
       const std::vector<std::string>& event_code_labels_list,
       const std::string& event_code_name) noexcept override {
     return std::make_unique<NoopAggregateMetric>();
+  }
+
+  std::unique_ptr<TimeAggregateMetricInterface>
+  ConstructTimeAggregateMetricInstance(
+      MetricDefinition metric_info) noexcept override {
+    return std::make_unique<NoopTimeAggregateMetric>();
+  }
+
+  std::unique_ptr<TimeAggregateMetricInterface>
+  ConstructTimeAggregateMetricInstance(
+      MetricDefinition metric_info,
+      const std::vector<std::string>& event_code_labels_list) noexcept
+      override {
+    return std::make_unique<NoopTimeAggregateMetric>();
+  }
+
+  std::unique_ptr<TimeAggregateMetricInterface>
+  ConstructTimeAggregateMetricInstance(
+      MetricDefinition metric_info,
+      const std::vector<std::string>& event_code_labels_list,
+      const std::string& event_code_name) noexcept override {
+    return std::make_unique<NoopTimeAggregateMetric>();
   }
 };
 }  // namespace google::scp::cpio

@@ -25,6 +25,7 @@
 
 #include "aggregate_metric.h"
 #include "simple_metric.h"
+#include "time_aggregate_metric.h"
 
 using google::scp::core::AsyncExecutorInterface;
 using std::make_unique;
@@ -78,6 +79,38 @@ MetricInstanceFactory::ConstructAggregateMetricInstance(
         aggregated_metric_interval_ms_, event_code_labels_list);
   } else {
     return make_unique<AggregateMetric>(
+        async_executor_, metric_client_, move(metric_info),
+        aggregated_metric_interval_ms_, event_code_labels_list,
+        event_code_name);
+  }
+}
+
+unique_ptr<TimeAggregateMetricInterface>
+MetricInstanceFactory::ConstructTimeAggregateMetricInstance(
+    MetricDefinition metric_info) noexcept {
+  return make_unique<TimeAggregateMetric>(async_executor_, metric_client_,
+                                          move(metric_info),
+                                          aggregated_metric_interval_ms_);
+}
+
+unique_ptr<TimeAggregateMetricInterface>
+MetricInstanceFactory::ConstructTimeAggregateMetricInstance(
+    MetricDefinition metric_info,
+    const vector<string>& event_code_labels_list) noexcept {
+  return ConstructTimeAggregateMetricInstance(metric_info,
+                                              event_code_labels_list, "");
+}
+
+unique_ptr<TimeAggregateMetricInterface>
+MetricInstanceFactory::ConstructTimeAggregateMetricInstance(
+    MetricDefinition metric_info, const vector<string>& event_code_labels_list,
+    const std::string& event_code_name) noexcept {
+  if (event_code_name.empty()) {
+    return make_unique<TimeAggregateMetric>(
+        async_executor_, metric_client_, move(metric_info),
+        aggregated_metric_interval_ms_, event_code_labels_list);
+  } else {
+    return make_unique<TimeAggregateMetric>(
         async_executor_, metric_client_, move(metric_info),
         aggregated_metric_interval_ms_, event_code_labels_list,
         event_code_name);

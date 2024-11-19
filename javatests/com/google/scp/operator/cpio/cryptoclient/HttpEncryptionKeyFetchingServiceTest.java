@@ -60,7 +60,7 @@ public final class HttpEncryptionKeyFetchingServiceTest {
         HttpClientResponse.create(404, getNotFoundResponse(), ImmutableMap.of());
     when(httpClient.execute(any(HttpRequestBase.class))).thenReturn(response);
 
-    var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com/v1");
+    var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com");
     EncryptionKeyFetchingServiceException exception =
         assertThrows(
             EncryptionKeyFetchingServiceException.class,
@@ -79,7 +79,7 @@ public final class HttpEncryptionKeyFetchingServiceTest {
             PERMISSION_DENIED.getHttpStatusCode(), getForbiddenResponse(), ImmutableMap.of());
     when(httpClient.execute(any(HttpRequestBase.class))).thenReturn(response);
 
-    var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com/v1");
+    var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com");
     EncryptionKeyFetchingServiceException exception =
         assertThrows(
             EncryptionKeyFetchingServiceException.class,
@@ -98,10 +98,27 @@ public final class HttpEncryptionKeyFetchingServiceTest {
     HttpClientResponse response =
         HttpClientResponse.create(200, getSingleKeyResponse(), ImmutableMap.of());
     when(httpClient.execute(any(HttpRequestBase.class))).thenReturn(response);
-    var expectedUri = URI.create("https://example.com/v1/encryptionKeys/12345");
+    var expectedUri = URI.create("https://example.com/v1alpha/encryptionKeys/12345");
     var argument = ArgumentCaptor.forClass(HttpRequestBase.class);
 
-    var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com/v1");
+    var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com");
+    // Assume response is valid if deserialization was successful.
+    service.fetchEncryptionKey("12345");
+
+    verify(httpClient).execute(argument.capture());
+    assertThat(argument.getValue().getURI()).isEqualTo(expectedUri);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked") // Ignore Http{Request,Response,Client} casting warnings.
+  public void fetchEncryptionKey_success_withEndpointContainsVersionSuffix() throws Exception {
+    HttpClientResponse response =
+        HttpClientResponse.create(200, getSingleKeyResponse(), ImmutableMap.of());
+    when(httpClient.execute(any(HttpRequestBase.class))).thenReturn(response);
+    var expectedUri = URI.create("https://example.com/v1alpha/encryptionKeys/12345");
+    var argument = ArgumentCaptor.forClass(HttpRequestBase.class);
+
+    var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com/v1alpha");
     // Assume response is valid if deserialization was successful.
     service.fetchEncryptionKey("12345");
 

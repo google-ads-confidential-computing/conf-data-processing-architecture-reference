@@ -41,6 +41,7 @@ using google::cmrt::sdk::metric_service::v1::MetricUnit;
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutor;
 using google::scp::core::AsyncExecutorInterface;
+using google::scp::core::AverageTimeDuration;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::kAggregatedMetricIntervalMs;
@@ -54,16 +55,20 @@ using std::make_shared;
 using std::move;
 using std::shared_ptr;
 using std::string;
+using std::to_string;
 using std::vector;
+using std::chrono::seconds;
 
 namespace {
 constexpr char kMetricName[] = "FrontEndRequestCount";
 constexpr char kMetricNameUpdate[] = "NewMetricName";
 constexpr char kMetricValue[] = "1234";
 constexpr char kOneIncrease[] = "1";
+constexpr AverageTimeDuration kDuration = 5000;
 constexpr char kNamespace[] = "PBS";
-constexpr int kAggregatedIntervalMs = 1;
+constexpr int kAggregatedIntervalMs = 5000;
 constexpr char kEventCodeKey[] = "event_key";
+constexpr char kTimeEventCodeKey[] = "time_event_key";
 
 }  // namespace
 
@@ -165,7 +170,7 @@ TEST_F(MetricInstanceFactoryTest, ConstructAggregateMetricInstance) {
     });
 
     aggregate_metric->Increment();
-    WaitUntil([&]() { return schedule_is_called; });
+    WaitUntil([&]() { return schedule_is_called; }, seconds(10));
 
     EXPECT_EQ(metric_received.name(), kMetricName);
     EXPECT_EQ(metric_received.unit(),
@@ -185,7 +190,7 @@ TEST_F(MetricInstanceFactoryTest, ConstructAggregateMetricInstance) {
     });
 
     aggregate_metric->IncrementBy(std::stoi(kMetricValue));
-    WaitUntil([&]() { return schedule_is_called; });
+    WaitUntil([&]() { return schedule_is_called; }, seconds(10));
 
     EXPECT_EQ(metric_received.name(), kMetricName);
     EXPECT_EQ(metric_received.unit(),
@@ -224,7 +229,7 @@ TEST_F(MetricInstanceFactoryTest,
       aggregate_metric->Increment(event_code);
     }
 
-    WaitUntil([&]() { return schedule_is_called == 3; });
+    WaitUntil([&]() { return schedule_is_called == 3; }, seconds(10));
   }
 
   {
@@ -249,7 +254,72 @@ TEST_F(MetricInstanceFactoryTest,
       aggregate_metric->IncrementBy(std::stoi(kMetricValue), event_code);
     }
 
-    WaitUntil([&]() { return schedule_is_called == 3; });
+    WaitUntil([&]() { return schedule_is_called == 3; }, seconds(10));
+  }
+}
+
+TEST_F(MetricInstanceFactoryTest, ConstructTimeAggregateMetricInstance) {
+  auto metric_info = MetricDefinition(
+      kMetricName, MetricUnit::METRIC_UNIT_COUNT, kNamespace, {});
+
+  auto time_aggregate_metric =
+      metric_factory_->ConstructTimeAggregateMetricInstance(move(metric_info));
+
+  AutoInitRunStop to_handle_aggregate_metric(*time_aggregate_metric);
+
+  {
+    Metric metric_received;
+    bool schedule_is_called = false;
+    EXPECT_CALL(*mock_metric_client_, PutMetrics).WillOnce([&](auto context) {
+      metric_received.CopyFrom(context.request->metrics(0));
+      schedule_is_called = true;
+      context.result = SuccessExecutionResult();
+      context.Finish();
+      return context.result;
+    });
+
+    time_aggregate_metric->RecordDuration(kDuration);
+    WaitUntil([&]() { return schedule_is_called; }, seconds(10));
+
+    EXPECT_EQ(metric_received.name(), kMetricName);
+    EXPECT_EQ(metric_received.unit(),
+              cmrt::sdk::metric_service::v1::MetricUnit::METRIC_UNIT_COUNT);
+    EXPECT_EQ(metric_received.value(), to_string(kDuration));
+  }
+}
+
+TEST_F(MetricInstanceFactoryTest,
+       ConstructTimeAggregateMetricInstanceWithEventCodeList) {
+  auto metric_info = MetricDefinition(
+      kMetricName, MetricUnit::METRIC_UNIT_COUNT, kNamespace, {});
+  std::vector<std::string> event_code_list = {"value1", "value2", "value3"};
+
+  auto time_aggregate_metric =
+      metric_factory_->ConstructTimeAggregateMetricInstance(
+          move(metric_info), event_code_list, kTimeEventCodeKey);
+
+  AutoInitRunStop to_handle_aggregate_metric(*time_aggregate_metric);
+
+  {
+    atomic<int> schedule_is_called = 0;
+    EXPECT_CALL(*mock_metric_client_, PutMetrics)
+        .WillRepeatedly([&](auto context) {
+          EXPECT_EQ(context.request->metrics(0).name(), kMetricName);
+          EXPECT_EQ(
+              context.request->metrics(0).unit(),
+              cmrt::sdk::metric_service::v1::MetricUnit::METRIC_UNIT_COUNT);
+          EXPECT_EQ(context.request->metrics(0).value(), to_string(kDuration));
+          schedule_is_called++;
+          context.result = SuccessExecutionResult();
+          context.Finish();
+          return context.result;
+        });
+
+    for (const auto& event_code : event_code_list) {
+      time_aggregate_metric->RecordDuration(kDuration, event_code);
+    }
+
+    WaitUntil([&]() { return schedule_is_called == 3; }, seconds(10));
   }
 }
 

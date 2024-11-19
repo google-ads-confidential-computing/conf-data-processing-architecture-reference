@@ -72,6 +72,11 @@ namespace {
 constexpr char kAwsPrivateKeyFetcherProvider[] = "AwsPrivateKeyFetcherProvider";
 /// Generic AWS service name.
 constexpr char kServiceName[] = "execute-api";
+constexpr char kVersionNumberAlphaSuffix[] = "/v1alpha";
+constexpr char kVersionNumberSuffix[] = "/v1";
+constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
+constexpr char kListKeysByTimeUri[] = ":recent";
+constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
 }  // namespace
 
 namespace google::scp::cpio::client_providers {
@@ -122,10 +127,7 @@ void AwsPrivateKeyFetcherProvider::
     return;
   }
 
-  auto http_request = make_shared<HttpRequest>();
-  PrivateKeyFetchingClientUtils::CreateHttpRequest(
-      *sign_request_context.request, *http_request);
-
+  auto http_request = CreateHttpRequest(*sign_request_context.request);
   execution_result = SignHttpRequestUsingV4Signer(
       http_request, *get_session_credentials_context.response->access_key_id,
       *get_session_credentials_context.response->access_key_secret,
@@ -174,6 +176,33 @@ ExecutionResult AwsPrivateKeyFetcherProvider::SignHttpRequestUsingV4Signer(
     http_request->headers->insert({header.first, header.second});
   }
   return SuccessExecutionResult();
+}
+
+shared_ptr<HttpRequest> AwsPrivateKeyFetcherProvider::CreateHttpRequest(
+    const PrivateKeyFetchingRequest& request) noexcept {
+  auto http_request = make_shared<HttpRequest>();
+  auto endpoint = request.key_endpoint->endpoint();
+  size_t version_position = endpoint.find(kVersionNumberSuffix);
+  if (version_position != string::npos) {
+    endpoint = endpoint.substr(0, version_position);
+  }
+
+  const auto& base_uri = absl::StrCat(endpoint, kVersionNumberAlphaSuffix,
+                                      kEncryptionKeyUrlSuffix);
+  http_request->method = HttpMethod::GET;
+  if (request.key_id && !request.key_id->empty()) {
+    const auto& key_uri = *request.key_id;
+    auto uri =
+        make_shared<Uri>(absl::StrCat(absl::StrCat(base_uri, "/"), key_uri));
+    http_request->path = move(uri);
+    return http_request;
+  }
+
+  http_request->path =
+      make_shared<Uri>(absl::StrCat(base_uri + kListKeysByTimeUri));
+  http_request->query = make_shared<string>(
+      absl::StrCat(kMaxAgeSecondsQueryParameter, request.max_age_seconds));
+  return http_request;
 }
 
 #ifndef TEST_CPIO

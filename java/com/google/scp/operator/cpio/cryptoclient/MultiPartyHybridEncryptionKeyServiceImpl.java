@@ -21,6 +21,7 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import com.google.api.gax.rpc.ApiException;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -45,10 +46,13 @@ import com.google.scp.shared.util.KeySplitUtil;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.net.ConnectException;
 import java.security.GeneralSecurityException;
 import java.util.Base64;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation for retrieving and decrypting keys from the KMS. This version uses the encryption
@@ -56,6 +60,8 @@ import java.util.concurrent.TimeUnit;
  */
 public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEncryptionKeyService {
 
+  private static final Logger logger =
+      LoggerFactory.getLogger(MultiPartyHybridEncryptionKeyServiceImpl.class);
   private static final int MAX_CACHE_SIZE = 100;
   private static final long CACHE_ENTRY_TTL_SEC = 3600;
   private static final int CONCURRENCY_LEVEL = Runtime.getRuntime().availableProcessors();
@@ -161,9 +167,9 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
       }
 
     } catch (EncryptionKeyFetchingServiceException e) {
-      throw generateKeyFetchException(e);
+      throw generateKeyFetchExceptionFromServiceException(e);
     } catch (GeneralSecurityException e) {
-      throw new KeyFetchException(e, ErrorReason.KEY_DECRYPTION_ERROR);
+      throw generateKeyFetchExceptionFromGrpcException(e);
     } catch (IOException e) {
       throw new KeyFetchException("Failed to fetch key ID: " + keyId, ErrorReason.UNKNOWN_ERROR, e);
     }
@@ -209,8 +215,9 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
         .get();
   }
 
-  private static KeyFetchException generateKeyFetchException(
+  private static KeyFetchException generateKeyFetchExceptionFromServiceException(
       EncryptionKeyFetchingServiceException e) {
+    logger.error("Exception for key fetching: ", e);
     if (e.getCause() instanceof ServiceException) {
       switch (((ServiceException) e.getCause()).getErrorCode()) {
         case NOT_FOUND:
@@ -228,5 +235,38 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
       }
     }
     return new KeyFetchException(e, ErrorReason.UNKNOWN_ERROR);
+  }
+
+  private static KeyFetchException generateKeyFetchExceptionFromGrpcException(Throwable e) {
+    if (e == null) {
+      return new KeyFetchException(e, ErrorReason.KEY_DECRYPTION_ERROR);
+    }
+    logger.error("Exception for key decryption: ", e);
+    if (e instanceof ConnectException) {
+      return new KeyFetchException(e, ErrorReason.KEY_SERVICE_UNAVAILABLE);
+    }
+    if (e instanceof ApiException) {
+      switch (((ApiException) e).getStatusCode().getCode()) {
+        case NOT_FOUND:
+          return new KeyFetchException(e, ErrorReason.KEY_NOT_FOUND);
+        case PERMISSION_DENIED:
+          return new KeyFetchException(e, ErrorReason.PERMISSION_DENIED);
+        case UNAUTHENTICATED:
+          return new KeyFetchException(e, ErrorReason.UNAUTHENTICATED);
+        case INTERNAL:
+          return new KeyFetchException(e, ErrorReason.INTERNAL);
+        case UNAVAILABLE:
+          return new KeyFetchException(e, ErrorReason.KEY_SERVICE_UNAVAILABLE);
+        case DEADLINE_EXCEEDED:
+          return new KeyFetchException(e, ErrorReason.DEADLINE_EXCEEDED);
+        case RESOURCE_EXHAUSTED:
+          return new KeyFetchException(e, ErrorReason.RESOURCE_EXHAUSTED);
+        case INVALID_ARGUMENT:
+          return new KeyFetchException(e, ErrorReason.INVALID_ARGUMENT);
+        default:
+          return new KeyFetchException(e, ErrorReason.KEY_DECRYPTION_ERROR);
+      }
+    }
+    return generateKeyFetchExceptionFromGrpcException(e.getCause());
   }
 }

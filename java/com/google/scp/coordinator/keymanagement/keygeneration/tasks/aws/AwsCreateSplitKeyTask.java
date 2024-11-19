@@ -30,6 +30,7 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annot
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBase;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -57,14 +58,16 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       KeyDb keyDb,
       KeyStorageClient keyStorageClient,
       KeyIdFactory keyIdFactory,
-      CloudAeadSelector aeadSelector) {
+      CloudAeadSelector aeadSelector,
+      LogMetricHelper logMetricHelper) {
     super(
         keyEncryptionKeyAead,
         keyEncryptionKeyUri,
         signatureKey,
         keyDb,
         keyStorageClient,
-        keyIdFactory);
+        keyIdFactory,
+        logMetricHelper);
     this.aeadSelector = aeadSelector;
   }
 

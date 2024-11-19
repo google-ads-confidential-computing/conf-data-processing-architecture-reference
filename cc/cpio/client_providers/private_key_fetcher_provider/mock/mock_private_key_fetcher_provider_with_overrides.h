@@ -46,5 +46,10 @@ class MockPrivateKeyFetcherProviderWithOverrides
     sign_http_request_context.Finish();
     return sign_http_request_context.result;
   }
+
+  std::shared_ptr<core::HttpRequest> CreateHttpRequest(
+      const PrivateKeyFetchingRequest& request) noexcept override {
+    return std::make_shared<core::HttpRequest>();
+  }
 };
 }  // namespace google::scp::cpio::client_providers::mock

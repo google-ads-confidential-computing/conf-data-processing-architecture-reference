@@ -47,6 +47,10 @@ struct PrivateKeyFetchingRequest {
 
   /// Return all keys generated newer than max_age_seconds.
   int max_age_seconds;
+
+  /// The name of the key set.
+  /// If not set, the request will use "" as default key set.
+  std::shared_ptr<std::string> key_set_name;
 };
 
 /// Type of encryption key and how it is split.

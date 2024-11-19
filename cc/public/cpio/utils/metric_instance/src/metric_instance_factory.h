@@ -61,6 +61,21 @@ class MetricInstanceFactory : public MetricInstanceFactoryInterface {
       const std::vector<std::string>& event_code_labels_list,
       const std::string& event_code_name) noexcept override;
 
+  std::unique_ptr<TimeAggregateMetricInterface>
+  ConstructTimeAggregateMetricInstance(
+      MetricDefinition metric_info) noexcept override;
+
+  std::unique_ptr<TimeAggregateMetricInterface>
+  ConstructTimeAggregateMetricInstance(
+      MetricDefinition metric_info,
+      const std::vector<std::string>& event_code_labels_list) noexcept override;
+
+  std::unique_ptr<TimeAggregateMetricInterface>
+  ConstructTimeAggregateMetricInstance(
+      MetricDefinition metric_info,
+      const std::vector<std::string>& event_code_labels_list,
+      const std::string& event_code_name) noexcept override;
+
   /// An instance to the async executor.
   core::AsyncExecutorInterface* async_executor_;
   /// Metric client instance.

@@ -15,6 +15,21 @@
 load("@rules_java//java:defs.bzl", "java_test")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
+package(default_visibility = ["//visibility:public"])
+
+java_library(
+    name = "ApiTaskTestBase",
+    srcs = ["ApiTaskTestBase.java"],
+    deps = [
+        "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
+        "//java/com/google/scp/shared/api/exception",
+        "//java/external:google_truth",
+        "//java/external:guice",
+        "//java/external:junit",
+        "//java/external:mockito",
+    ],
+)
+
 java_test(
     name = "ApiTaskTest",
     srcs = [

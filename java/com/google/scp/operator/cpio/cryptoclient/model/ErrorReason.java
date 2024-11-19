@@ -30,4 +30,12 @@ public enum ErrorReason {
   UNKNOWN_ERROR,
   // Service unresponsive or not available.
   KEY_SERVICE_UNAVAILABLE,
+  // Unauthenticated, caused by KMS client request.
+  UNAUTHENTICATED,
+  // Invalid argument, caused by KMS client request.
+  INVALID_ARGUMENT,
+  // Deadline exceeded, caused by KMS client request.
+  DEADLINE_EXCEEDED,
+  // Resource exhausted, caused by KMS client request.
+  RESOURCE_EXHAUSTED,
 }

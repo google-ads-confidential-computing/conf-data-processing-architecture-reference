@@ -219,7 +219,7 @@ container_pull(
 container_pull(
     name = "java_debug_runtime",
     # Using SHA-256 for reproducibility.
-    digest = "sha256:f311c37af17ac6e96c44f5990aa2bb5070da32d5e4abc11b2124750c1062c308",
+    digest = "sha256:66f354398a000c573a1e166cf53ab99cd4766c9084a47b6fd7b814632a3379a9",
     registry = "gcr.io",
     repository = "distroless/java17-debian11",
     tag = "debug-nonroot-amd64",
@@ -268,10 +268,27 @@ container_pull(
 # Needed for cc/pbs/deploy/pbs_server/build_defs
 container_pull(
     name = "debian_11",
-    digest = "sha256:640e07a7971e0c13eb14214421cf3d75407e0965b84430e08ec90c336537a2cf",
+    digest = "sha256:16f0c16160de30e40a408a6e940083bc1b409fe2a7db93bb0b04262a6ef73419",
     registry = "index.docker.io",
     repository = "amd64/debian",
     tag = "11",
+)
+
+# Needed for cc/public/cpio/build_deps
+container_pull(
+    name = "linux_debian_11_runtime_snapshot",
+    digest = "sha256:5dcb0a12205a1381d530dd2175445467283d83b002c9478da487def7e5589ee0",
+    registry = "us-docker.pkg.dev",
+    repository = "admcloud-scp/cc-runtime-snapshot/linux_debian_11_runtime",
+    tag = "v0.3",
+)
+
+container_pull(
+    name = "linux_debian_11_build_time_snapshot",
+    digest = "sha256:77d89a40b7e122d7dd22e367a7e274a126fa1cfb1c917f9c1eeedbdaa8326993",
+    registry = "us-docker.pkg.dev",
+    repository = "admcloud-scp/cc-build-time-snapshot/linux_debian_11_build_time",
+    tag = "v0.2",
 )
 
 ########################################################################

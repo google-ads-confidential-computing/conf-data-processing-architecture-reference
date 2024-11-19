@@ -88,6 +88,16 @@ variable "worker_scale_in_jar" {
   type        = string
 }
 
+variable "worker_scale_in_zip" {
+  description = <<-EOT
+    Optional. Path to the zip file for lambda function under bucket
+    operator_package_bucket_name.
+    If this path is missing, the terraform will use path in worker_scale_in_jar,
+    archive the jar in zip file and upload to the bucket.
+  EOT
+  type        = string
+}
+
 variable "metadatadb_instance_name" {
   description = "The metadata database Spanner instance name."
   type        = string

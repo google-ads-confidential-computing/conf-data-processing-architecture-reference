@@ -58,6 +58,15 @@ class PrivateKeyFetcherProvider : public PrivateKeyFetcherProviderInterface {
           sign_http_request_context) noexcept = 0;
 
   /**
+   * @brief Create a Http Request object to query private key vending endpoint.
+   *
+   * @param private_key_fetching_request request to query private key.
+   */
+  virtual std::shared_ptr<core::HttpRequest> CreateHttpRequest(
+      const PrivateKeyFetchingRequest&
+          private_key_fetching_request) noexcept = 0;
+
+  /**
    * @brief Triggered to fetch private key when http request is signed.
    *
    * @param private_key_fetching_context context to fetch private key.

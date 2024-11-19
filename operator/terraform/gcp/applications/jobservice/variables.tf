@@ -88,6 +88,22 @@ variable "frontend_service_jar" {
   type        = string
 }
 
+variable "frontend_service_path" {
+  description = <<-EOT
+          Optional. Get frontend service in cloud function GCS path.
+        Please note the bucket must be created beforehand, and the file name must be .zip extension.
+        This application does not do any validations.
+  EOT
+  type = object({
+    bucket_name   = string
+    zip_file_name = string
+  })
+  default = {
+    bucket_name   = ""
+    zip_file_name = ""
+  }
+}
+
 variable "frontend_service_cloudfunction_num_cpus" {
   description = "The number of CPU to use for frontend service cloud function."
   type        = number
@@ -184,9 +200,27 @@ variable "instance_type" {
   type        = string
 }
 
+variable "instance_disk_image_family" {
+  description = <<-EOT
+    The image family from which to initialize the server instance disk.
+    Using this variable, the server will pull the latest image in the family
+    automatically. If instance_disk_image is set, instance_disk_image_family
+    will be ignored."
+  EOT
+  type = object({
+    image_project = string
+    image_family  = string
+  })
+  default = {
+    image_project = "confidential-space-images"
+    image_family  = "confidential-space-debug"
+  }
+}
+
 variable "instance_disk_image" {
-  description = "The image from which to initialize the worker instance disk."
+  description = "The image from which to initialize the worker instance disk. E.g., projects/confidential-space-images/global/images/confidential-space-241000"
   type        = string
+  default     = null
 }
 
 variable "worker_instance_disk_type" {
@@ -274,6 +308,14 @@ variable "worker_alarm_duration_sec" {
   type        = string
 }
 
+variable "java_job_validations_to_alert" {
+  description = <<-EOT
+      Job validations to alarm for Java CPIO Job Client. Supported validations:
+      ["JobValidatorCheckFields", "JobValidatorCheckRetryLimit", "JobValidatorCheckStatus"]
+  EOT
+  type        = list(string)
+}
+
 ################################################################################
 # Autoscaling Variables.
 ################################################################################
@@ -304,6 +346,22 @@ variable "worker_scale_in_jar" {
         Build with `bazel build //operator/terraform/gcp/applications/jobservice:all`.
       EOT
   type        = string
+}
+
+variable "worker_scale_in_path" {
+  description = <<-EOT
+          Optional. Get worker scale in cloud function GCS path.
+        Please note the bucket must be created beforehand, and the file name must be .zip extension.
+        This application does not do any validations.
+  EOT
+  type = object({
+    bucket_name   = string
+    zip_file_name = string
+  })
+  default = {
+    bucket_name   = ""
+    zip_file_name = ""
+  }
 }
 
 variable "termination_wait_timeout_sec" {
@@ -414,6 +472,22 @@ variable "job_completion_notifications_cloud_function_jar" {
         Build with `bazel build //operator/terraform/gcp/applications/jobservice:all`.
       EOT
   type        = string
+}
+
+variable "job_completion_notifications_cloud_function_path" {
+  description = <<-EOT
+          Optional. Get Job completion notifications service in cloud function GCS path.
+        Please note the bucket must be created beforehand, and the file name must be .zip extension.
+        This application does not do any validations.
+  EOT
+  type = object({
+    bucket_name   = string
+    zip_file_name = string
+  })
+  default = {
+    bucket_name   = ""
+    zip_file_name = ""
+  }
 }
 
 variable "job_completion_notifications_cloud_function_cpu_count" {

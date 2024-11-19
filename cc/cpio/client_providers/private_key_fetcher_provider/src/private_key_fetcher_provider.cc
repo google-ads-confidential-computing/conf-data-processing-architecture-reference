@@ -46,8 +46,9 @@ using std::shared_ptr;
 using std::string;
 using std::placeholders::_1;
 
-static constexpr char kPrivateKeyFetcherProvider[] =
-    "PrivateKeyFetcherProvider";
+namespace {
+constexpr char kPrivateKeyFetcherProvider[] = "PrivateKeyFetcherProvider";
+}  // namespace
 
 namespace google::scp::cpio::client_providers {
 ExecutionResult PrivateKeyFetcherProvider::Init() noexcept {
@@ -89,21 +90,22 @@ void PrivateKeyFetcherProvider::SignHttpRequestCallback(
         sign_http_request_context) noexcept {
   auto execution_result = sign_http_request_context.result;
   if (!execution_result.Successful()) {
-    SCP_ERROR_CONTEXT(kPrivateKeyFetcherProvider, private_key_fetching_context,
-                      execution_result, "Failed to sign http request.");
+    SCP_ERROR_CONTEXT(
+        kPrivateKeyFetcherProvider, private_key_fetching_context,
+        execution_result, "Failed to sign http request for endpoint %s.",
+        private_key_fetching_context.request->key_endpoint->endpoint().c_str());
     private_key_fetching_context.result = execution_result;
     private_key_fetching_context.Finish();
     return;
   }
 
   AsyncContext<HttpRequest, HttpResponse> http_client_context(
-      move(sign_http_request_context.response),
+      std::move(sign_http_request_context.response),
       bind(&PrivateKeyFetcherProvider::PrivateKeyFetchingCallback, this,
            private_key_fetching_context, _1),
       private_key_fetching_context);
   SCP_DEBUG_CONTEXT(kPrivateKeyFetcherProvider, private_key_fetching_context,
-                    "Starting to fetch private key split for key %s.",
-                    private_key_fetching_context.request->key_id->c_str());
+                    "Starting to fetch private key split.");
   execution_result = http_client_->PerformRequest(http_client_context);
   if (!execution_result.Successful()) {
     SCP_ERROR_CONTEXT(
@@ -122,9 +124,11 @@ void PrivateKeyFetcherProvider::PrivateKeyFetchingCallback(
     AsyncContext<HttpRequest, HttpResponse>& http_client_context) noexcept {
   private_key_fetching_context.result = http_client_context.result;
   if (!http_client_context.result.Successful()) {
-    SCP_ERROR_CONTEXT(kPrivateKeyFetcherProvider, private_key_fetching_context,
-                      private_key_fetching_context.result,
-                      "Failed to fetch private key.");
+    SCP_ERROR_CONTEXT(
+        kPrivateKeyFetcherProvider, private_key_fetching_context,
+        private_key_fetching_context.result,
+        "Failed to fetch private key from endpoint %s.",
+        private_key_fetching_context.request->key_endpoint->endpoint().c_str());
     private_key_fetching_context.Finish();
     return;
   }
@@ -133,16 +137,19 @@ void PrivateKeyFetcherProvider::PrivateKeyFetchingCallback(
   auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
       http_client_context.response->body, response);
   if (!result.Successful()) {
-    SCP_ERROR_CONTEXT(kPrivateKeyFetcherProvider, private_key_fetching_context,
-                      private_key_fetching_context.result,
-                      "Failed to parse private key.");
+    SCP_ERROR_CONTEXT(
+        kPrivateKeyFetcherProvider, private_key_fetching_context,
+        private_key_fetching_context.result,
+        "Failed to parse private key from endpoint %s.",
+        private_key_fetching_context.request->key_endpoint->endpoint().c_str());
     private_key_fetching_context.result = result;
     private_key_fetching_context.Finish();
     return;
   }
-  SCP_DEBUG_CONTEXT(kPrivateKeyFetcherProvider, private_key_fetching_context,
-                    "Successfully obtained private key split for key %s.",
-                    private_key_fetching_context.request->key_id->c_str());
+  SCP_DEBUG_CONTEXT(
+      kPrivateKeyFetcherProvider, private_key_fetching_context,
+      "Successfully obtained private key split from endpoint %s.",
+      private_key_fetching_context.request->key_endpoint->endpoint().c_str());
   private_key_fetching_context.response =
       make_shared<PrivateKeyFetchingResponse>(response);
   private_key_fetching_context.Finish();

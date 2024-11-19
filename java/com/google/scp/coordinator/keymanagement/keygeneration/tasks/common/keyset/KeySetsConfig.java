@@ -70,11 +70,26 @@ abstract class KeySetsConfig {
       @JsonProperty("name")
       abstract Builder name(String name);
 
-      abstract Builder count(int count);
+      @JsonProperty("count")
+      Builder count(Integer count) {
+        return count(Optional.ofNullable(count));
+      }
 
-      abstract Builder validityInDays(int validityInDays);
+      abstract Builder count(Optional<Integer> count);
 
-      abstract Builder ttlInDays(int ttlInDays);
+      @JsonProperty("validity_in_days")
+      Builder validityInDays(Integer validityInDays) {
+        return validityInDays(Optional.ofNullable(validityInDays));
+      }
+
+      abstract Builder validityInDays(Optional<Integer> validityInDays);
+
+      @JsonProperty("ttl_in_days")
+      Builder ttlInDays(Integer ttlInDays) {
+        return ttlInDays(Optional.ofNullable(ttlInDays));
+      }
+
+      abstract Builder ttlInDays(Optional<Integer> ttlInDays);
 
       @JsonProperty("tink_template")
       Builder tinkTemplate(String tinkTemplate) {

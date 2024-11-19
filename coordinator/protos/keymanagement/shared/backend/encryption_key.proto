@@ -66,12 +66,13 @@ message EncryptionKey {
   // Date in epoch milliseconds when the key becomes active and available for encryption.
   int64 activation_time = 12;
 
-  // Date in epoch milliseconds when Key expires
-  int64 expiration_time = 8;
+  // Date in epoch milliseconds when Key expires.  If unset, the key never expires.
+  optional int64 expiration_time = 8;
 
-  // Date in epoch seconds when Key is removed from database. TTL Time must be
-  // in seconds due to DynamoDB TTL requirements.
-  int64 ttl_time = 9;
+  // Date in epoch seconds when Key is removed from database.If unset, the key
+  // will not be removed from the database. TTL Time must be in seconds due to
+  // DynamoDB TTL requirements.
+  optional int64 ttl_time = 9;
 
   // Stores key metadata for each coordinator (e.g. key signatures and KEKs),
   // as a collection of KeySplitData.

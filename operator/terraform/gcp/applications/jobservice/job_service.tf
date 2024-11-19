@@ -53,6 +53,7 @@ locals {
 
 # Storage bucket containing cloudfunction JARs
 resource "google_storage_bucket" "operator_package_bucket" {
+  count = var.frontend_service_path.bucket_name == "" || var.worker_scale_in_path.bucket_name == "" || var.job_completion_notifications_cloud_function_path.bucket_name == "" ? 1 : 0
   # GCS names are globally unique
   name     = "${var.project_id}_${var.environment}_operator_jars"
   location = var.operator_package_bucket_location
@@ -169,8 +170,9 @@ module "frontend" {
   job_queue_topic             = module.jobqueue.jobqueue_pubsub_topic_name
   job_queue_sub               = module.jobqueue.jobqueue_pubsub_sub_name
 
-  operator_package_bucket_name = google_storage_bucket.operator_package_bucket.id
+  operator_package_bucket_name = var.frontend_service_path.bucket_name != "" ? var.frontend_service_path.bucket_name : google_storage_bucket.operator_package_bucket[0].id
   frontend_service_jar         = local.frontend_service_jar
+  frontend_service_zip         = var.frontend_service_path.zip_file_name
 
   frontend_service_cloudfunction_num_cpus                         = var.frontend_service_cloudfunction_num_cpus
   frontend_service_cloudfunction_memory_mb                        = var.frontend_service_cloudfunction_memory_mb
@@ -204,6 +206,7 @@ module "worker" {
   job_queue_topic          = module.jobqueue.jobqueue_pubsub_topic_name
 
   instance_type                = var.instance_type
+  instance_disk_image_family   = var.instance_disk_image_family
   instance_disk_image          = var.instance_disk_image
   worker_instance_disk_type    = var.worker_instance_disk_type
   worker_instance_disk_size_gb = var.worker_instance_disk_size_gb
@@ -229,6 +232,7 @@ module "worker" {
   alarm_duration_sec                 = var.worker_alarm_duration_sec
   alarm_eval_period_sec              = var.worker_alarm_eval_period_sec
   notification_channel_id            = local.notification_channel_id
+  java_job_validations_to_alert      = var.java_job_validations_to_alert
 }
 
 module "autoscaling" {
@@ -248,8 +252,9 @@ module "autoscaling" {
   termination_wait_timeout_sec        = var.termination_wait_timeout_sec
   worker_scale_in_cron                = var.worker_scale_in_cron
 
-  operator_package_bucket_name = google_storage_bucket.operator_package_bucket.id
+  operator_package_bucket_name = var.worker_scale_in_path.bucket_name != "" ? var.worker_scale_in_path.bucket_name : google_storage_bucket.operator_package_bucket[0].id
   worker_scale_in_jar          = local.worker_scale_in_jar
+  worker_scale_in_zip          = var.worker_scale_in_path.zip_file_name
 
   metadatadb_instance_name     = module.metadatadb.metadatadb_instance_name
   metadatadb_name              = module.metadatadb.metadatadb_name
@@ -297,8 +302,9 @@ module "job_completion_notifications_cloud_function" {
   region              = var.region
   description         = "Handler to send notification to custom PubSub topics."
   function_entrypoint = "com.google.scp.operator.notification.service.gcp.JobNotificationEventHandler"
-  source_bucket_name  = google_storage_bucket.operator_package_bucket.id
+  source_bucket_name  = var.job_completion_notifications_cloud_function_path.bucket_name != "" ? var.job_completion_notifications_cloud_function_path.bucket_name : google_storage_bucket.operator_package_bucket[0].id
   cloud_function_jar  = var.job_completion_notifications_cloud_function_jar
+  cloud_function_zip  = var.job_completion_notifications_cloud_function_path.zip_file_name
   vpc_connector_id    = var.vpcsc_compatible ? module.vpc.connectors[var.region] : null
 
   min_instance_count          = 0

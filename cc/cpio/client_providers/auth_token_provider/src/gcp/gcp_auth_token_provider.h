@@ -29,6 +29,10 @@
 #include "error_codes.h"
 
 namespace google::scp::cpio::client_providers {
+bool TokenIsExpired(
+    const google::scp::cpio::client_providers::GetSessionTokenResponse&
+        token_reponse);
+
 /*! @copydoc AuthTokenProviderInterface
  */
 class GcpAuthTokenProvider : public AuthTokenProviderInterface {

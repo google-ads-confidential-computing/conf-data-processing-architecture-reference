@@ -47,6 +47,7 @@ using google::scp::core::SuccessExecutionResult;
 using google::scp::core::Uri;
 using google::scp::core::common::ConcurrentMap;
 using google::scp::core::common::kZeroUuid;
+using google::scp::core::errors::SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST;
 using google::scp::core::errors::
     SC_PRIVATE_KEY_CLIENT_PROVIDER_UNMATCHED_ENDPOINTS_SPLITS;
 using std::atomic;
@@ -78,16 +79,25 @@ void PrivateKeyClientProvider::ListPrivateKeys(
     AsyncContext<ListPrivateKeysRequest, ListPrivateKeysResponse>&
         list_private_keys_context) noexcept {
   auto endpoint_count = list_private_keys_context.request->key_endpoints_size();
+  auto key_ids = list_private_keys_context.request->key_ids();
+  auto max_age_seconds = list_private_keys_context.request->max_age_seconds();
+  if (key_ids.empty() && max_age_seconds <= 0) {
+    list_private_keys_context.result =
+        FailureExecutionResult(SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST);
+    SCP_ERROR_CONTEXT(kPrivateKeyClientProvider, list_private_keys_context,
+                      list_private_keys_context.result,
+                      "The list of key_ids is empty and the max_age_seconds is "
+                      "invalid in the request.");
+    list_private_keys_context.Finish();
+  }
   auto list_keys_status = make_shared<ListPrivateKeysStatus>();
   list_keys_status->listing_method =
-      list_private_keys_context.request->key_ids().empty()
-          ? ListingMethod::kByMaxAge
-          : ListingMethod::kByKeyId;
+      key_ids.empty() ? ListingMethod::kByMaxAge : ListingMethod::kByKeyId;
   list_keys_status->result_list = vector<KeysResultPerEndpoint>(endpoint_count);
 
   list_keys_status->call_count_per_endpoint =
       list_keys_status->listing_method == ListingMethod::kByKeyId
-          ? list_private_keys_context.request->key_ids().size()
+          ? key_ids.size()
           : 1;
 
   for (size_t call_index = 0;
@@ -96,16 +106,17 @@ void PrivateKeyClientProvider::ListPrivateKeys(
       auto request = make_shared<PrivateKeyFetchingRequest>();
 
       if (list_keys_status->listing_method == ListingMethod::kByKeyId) {
-        request->key_id = make_shared<string>(
-            list_private_keys_context.request->key_ids(call_index));
+        request->key_id = make_shared<string>(key_ids[call_index]);
       } else {
-        request->max_age_seconds =
-            list_private_keys_context.request->max_age_seconds();
+        request->max_age_seconds = max_age_seconds;
       }
 
       const auto& endpoint =
           list_private_keys_context.request->key_endpoints().Get(uri_index);
       request->key_endpoint = make_shared<PrivateKeyEndpoint>(endpoint);
+
+      request->key_set_name = make_shared<string>(
+          list_private_keys_context.request->key_set_name());
 
       AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>
           fetch_private_key_context(
@@ -164,6 +175,17 @@ void PrivateKeyClientProvider::OnFetchPrivateKeyCallback(
   // For empty key list, call callback directly.
   if (!execution_result.Successful() ||
       fetch_private_key_context.response->encryption_keys.empty()) {
+    if (!execution_result.Successful()) {
+      SCP_ERROR_CONTEXT(
+          kPrivateKeyClientProvider, list_private_keys_context,
+          execution_result, "Failed to fetch keys from endpoint: %s",
+          fetch_private_key_context.request->key_endpoint->endpoint().c_str());
+    } else {
+      SCP_ERROR_CONTEXT(
+          kPrivateKeyClientProvider, list_private_keys_context,
+          execution_result, "Fetched response without keys from endpoint: %s",
+          fetch_private_key_context.request->key_endpoint->endpoint().c_str());
+    }
     AsyncContext<DecryptRequest, DecryptResponse> decrypt_context(
         make_shared<DecryptRequest>(), [](auto&) {}, list_private_keys_context);
     decrypt_context.result = SuccessExecutionResult();

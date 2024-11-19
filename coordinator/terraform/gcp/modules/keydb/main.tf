@@ -28,8 +28,9 @@ resource "google_spanner_instance" "keydb_instance" {
 }
 
 resource "google_spanner_database" "keydb" {
-  instance = google_spanner_instance.keydb_instance.name
-  name     = "${var.environment}-keydb"
+  instance                 = google_spanner_instance.keydb_instance.name
+  name                     = "${var.environment}-keydb"
+  version_retention_period = "7d"
   ddl = [
     <<-EOT
     CREATE TABLE KeySets (
@@ -50,9 +51,13 @@ resource "google_spanner_database" "keydb" {
     , "CREATE INDEX KeySetsByExpiryTime ON KeySets(ExpiryTime)"
     , "ALTER TABLE KeySets ADD COLUMN ActivationTime TIMESTAMP"
     , "CREATE INDEX KeySetsByExpiryActivationDesc ON KeySets(ExpiryTime DESC, ActivationTime DESC)"
-    # TODO: Drop deprecated index in favor of KeySetsByNameExpiryActivationDesc.
     , "DROP INDEX KeySetsByExpiryTime"
     , "ALTER TABLE KeySets ADD COLUMN SetName String(50)"
+    , "CREATE INDEX KeySetsByNameExpiryActivationDesc ON KeySets(SetName, ExpiryTime DESC, ActivationTime DESC)"
+    , "DROP INDEX KeySetsByExpiryActivationDesc"
+    , "DROP INDEX KeySetsByNameExpiryActivationDesc"
+    , "ALTER TABLE KeySets ALTER COLUMN ExpiryTime TIMESTAMP"
+    , "ALTER TABLE KeySets ALTER COLUMN TtlTime TIMESTAMP"
     , "CREATE INDEX KeySetsByNameExpiryActivationDesc ON KeySets(SetName, ExpiryTime DESC, ActivationTime DESC)"
   ]
 

@@ -19,6 +19,7 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTask.KEY_REFRESH_WINDOW;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -112,7 +113,11 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     assertThat(key.getCreationTime()).isIn(Range.closed(now - 1000, now));
 
     // Must have expected expiration time
-    var dayInMilli = Instant.now().plus(expectedExpiryInDays, ChronoUnit.DAYS).toEpochMilli();
+    var dayInMilli =
+        Instant.now()
+            .plus(expectedExpiryInDays, ChronoUnit.DAYS)
+            .plus(KEY_REFRESH_WINDOW)
+            .toEpochMilli();
     assertThat(key.getExpirationTime()).isIn(Range.closed(dayInMilli - 1000, dayInMilli));
 
     // Must match expected ttl
@@ -219,6 +224,96 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
 
     // Only one key is inside the refresh window so only one key should be created.
     assertThat(keyDb.getAllKeys().size()).isEqualTo(3);
+  }
+
+  @Test
+  public void createSplitKey_createKeysWithoutExpirationAndTtl_success() throws Exception {
+    int keysToCreate = 1;
+    int expectedExpiryInDays = 0;
+    int expectedTtlInDays = 0;
+    var encryptionKeyCaptor = ArgumentCaptor.forClass(EncryptionKey.class);
+    var encryptedKeySplitCaptor = ArgumentCaptor.forClass(String.class);
+
+    task.createSplitKey(keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
+
+    ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
+    assertThat(keys).hasSize(keysToCreate);
+
+    EncryptionKey key = keys.get(0);
+
+    // Validate that the key split decrypts (currently no associated data)
+    keyEncryptionKeyAead.decrypt(
+        Base64.getDecoder().decode(key.getJsonEncodedKeyset()), new byte[0]);
+
+    // Misc metadata
+    assertThat(key.getStatus()).isEqualTo(EncryptionKeyStatus.ACTIVE);
+    assertThat(key.getKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
+    assertThat(key.getKeyType()).isEqualTo("MULTI_PARTY_HYBRID_EVEN_KEYSPLIT");
+
+    // Properties about Key Split Data
+    assertThat(key.getKeySplitDataList()).hasSize(2);
+    ImmutableMap<String, KeySplitData> keySplitDataMap =
+        key.getKeySplitDataList().stream()
+            .collect(
+                toImmutableMap(
+                    KeySplitData::getKeySplitKeyEncryptionKeyUri,
+                    keySplitDataItem -> keySplitDataItem));
+    KeySplitData keySplitDataA = keySplitDataMap.get(keyEncryptionKeyUri);
+    KeySplitData keySplitDataB = keySplitDataMap.get(FakeKeyStorageClient.KEK_URI);
+
+    // Coordinator A's KeySplitData
+    assertThat(keySplitDataA).isNotNull();
+    assertThat(keySplitDataA.getKeySplitKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
+    // TODO: Verify signature
+    // Coordinator B's KeySplitData
+    assertThat(keySplitDataB).isNotNull();
+    assertThat(keySplitDataB.getKeySplitKeyEncryptionKeyUri())
+        .isEqualTo(FakeKeyStorageClient.KEK_URI);
+    // TODO: Verify signature
+
+    // Must have a creationTime of now
+    var now = Instant.now().toEpochMilli();
+    assertThat(key.getCreationTime()).isIn(Range.closed(now - 1000, now));
+
+    // Must have null expiration time which is represented as 0
+    assertThat(key.getExpirationTime()).isEqualTo(0);
+
+    // Must have null expiration time which is represented as 0
+    assertThat(key.getTtlTime()).isEqualTo(0);
+
+    verify(keyStorageClient, times(keysToCreate))
+        .createKey(encryptionKeyCaptor.capture(), encryptedKeySplitCaptor.capture());
+
+    assertThat(encryptionKeyCaptor.getValue().getKeyId()).isEqualTo(key.getKeyId());
+
+    // Validate that the key split decrypts with peer coordinator KEK
+    peerCoordinatorKeyEncryptionKeyAead.decrypt(
+        Base64.getDecoder().decode(encryptedKeySplitCaptor.getValue()),
+        Base64.getDecoder().decode(key.getPublicKeyMaterial()));
+
+    // Verify that the keys will not expire
+    assertThat(keyDb.getActiveKeys(keyDb.DEFAULT_SET_NAME, 1, Instant.now()).size()).isEqualTo(1);
+    assertThat(
+            keyDb
+                .getActiveKeys(keyDb.DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofHours(1)))
+                .size())
+        .isEqualTo(1);
+    assertThat(
+            keyDb
+                .getActiveKeys(keyDb.DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofDays(1)))
+                .size())
+        .isEqualTo(1);
+    assertThat(
+            keyDb
+                .getActiveKeys(keyDb.DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofDays(365)))
+                .size())
+        .isEqualTo(1);
+    assertThat(
+            keyDb
+                .getActiveKeys(
+                    keyDb.DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofDays(36500)))
+                .size())
+        .isEqualTo(1);
   }
 
   protected void insertKeyWithExpiration(Instant expirationTime) throws ServiceException {

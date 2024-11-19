@@ -172,6 +172,36 @@ variable "key_generation_undelivered_messages_threshold" {
   type        = number
 }
 
+variable "key_generation_key_storage_error_threshold" {
+  description = "Total key storage errors greater than this to send alert."
+  type        = number
+}
+
+variable "key_generation_key_db_create_key_error_threshold" {
+  description = "Total key db create key errors greater than this to send alert."
+  type        = number
+}
+
+variable "key_generation_key_db_insert_placeholder_key_error_threshold" {
+  description = "Total key db insert placeholder key errors greater than this to send alert."
+  type        = number
+}
+
+variable "key_generation_create_split_key_error_threshold" {
+  description = "Total create split key errors greater than this to send alert."
+  type        = number
+}
+
+variable "key_generation_insufficient_next_key_error_threshold" {
+  description = "Total insufficient next key errors greater than this to send alert."
+  type        = number
+}
+
+variable "key_generation_insufficient_current_key_error_threshold" {
+  description = "Total insufficient current key errors greater than this to send alert."
+  type        = number
+}
+
 variable "key_generation_alignment_period" {
   description = "Alignment period of key generation alert metrics in seconds. This value should match the period of the cron schedule."
   type        = number
@@ -352,6 +382,11 @@ variable "get_public_key_cloud_cdn_max_ttl_seconds" {
   type        = number
 }
 
+variable "get_public_key_cloud_cdn_serve_while_stale_seconds" {
+  description = "Maximum CDN TTL seconds that cache header directive cannot surpass."
+  type        = number
+}
+
 ################################################################################
 # Public Key Alarm Variables.
 ################################################################################
@@ -366,8 +401,8 @@ variable "get_public_key_alarm_duration_sec" {
   type        = string
 }
 
-variable "get_public_key_cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm. Example: 0."
+variable "get_public_key_cloudfunction_error_ratio_threshold" {
+  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = string
 }
 
@@ -391,6 +426,16 @@ variable "get_public_key_lb_5xx_threshold" {
   type        = string
 }
 
+variable "get_public_key_empty_key_set_error_threshold" {
+  description = "Get Public Key Empty Key Set error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "get_public_key_general_error_threshold" {
+  description = "Get Public Key General error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
 ################################################################################
 # Encryption Key Service Alarm Variables.
 ################################################################################
@@ -400,8 +445,8 @@ variable "encryptionkeyservice_alarm_eval_period_sec" {
   type        = string
 }
 
-variable "encryptionkeyservice_cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm. Example: 0."
+variable "encryptionkeyservice_cloudfunction_error_ratio_threshold" {
+  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = string
 }
 
@@ -433,4 +478,14 @@ variable "encryptionkeyservice_alarm_duration_sec" {
 variable "key_sets_config" {
   description = "Key sets configuration."
   type        = string
+}
+
+variable "get_encrypted_private_key_general_error_threshold" {
+  description = "Get Encrypted Key General error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "alert_severity_overrides" {
+  description = "Alerts severity overrides."
+  type        = map(string)
 }

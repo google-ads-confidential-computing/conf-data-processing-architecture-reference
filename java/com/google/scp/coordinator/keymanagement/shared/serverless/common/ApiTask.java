@@ -40,7 +40,7 @@ public abstract class ApiTask {
    *
    * @param basePath the base URL path.
    */
-  boolean tryService(String basePath, RequestContext request, ResponseContext response)
+  protected boolean tryService(String basePath, RequestContext request, ResponseContext response)
       throws ServiceException {
     if (!Objects.equals(request.getMethod(), method) || !request.getPath().startsWith(basePath)) {
       return false;

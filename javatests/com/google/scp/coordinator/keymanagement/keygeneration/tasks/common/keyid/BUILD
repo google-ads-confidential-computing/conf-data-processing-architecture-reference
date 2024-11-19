@@ -17,6 +17,30 @@ load("@rules_java//java:defs.bzl", "java_test")
 package(default_visibility = ["//visibility:public"])
 
 java_test(
+    name = "KeyIdFactoryTest",
+    srcs = ["KeyIdFactoryTest.java"],
+    # TODO(b/358102551) Works around non-hermetic sandbox issue until upgrade
+    # to Bazel 7+ or incompatible_sandbox_hermetic_tmp can be reliably applied.
+    tags = ["no-sandbox"],
+    deps = [
+        "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
+        "//coordinator/protos/keymanagement/shared/backend:java_proto",
+        "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common/keyid",
+        "//java/com/google/scp/shared/api/exception",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:mockito",
+        "//java/external:mockito_inline",
+        "//java/external:protobuf_java",
+        "//java/external:slf4j",
+        "//java/external:test_parameter_injector",
+        "//java/external:tink",
+    ],
+)
+
+java_test(
     name = "UuidKeyIdFactoryTest",
     srcs = glob(["UuidKeyIdFactoryTest.java"]),
     deps = [

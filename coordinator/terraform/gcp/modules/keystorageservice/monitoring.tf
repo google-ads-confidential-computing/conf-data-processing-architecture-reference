@@ -25,10 +25,11 @@ module "keystorageservice_loadbalancer_alarms" {
   load_balancer_name      = var.load_balancer_name
   service_prefix          = "${var.environment} Key Storage Service"
 
-  eval_period_sec     = var.alarm_eval_period_sec
-  error_5xx_threshold = var.lb_5xx_threshold
-  max_latency_ms      = var.lb_max_latency_ms
-  duration_sec        = var.alarm_duration_sec
+  eval_period_sec            = var.alarm_eval_period_sec
+  error_5xx_threshold        = var.lb_5xx_threshold
+  max_latency_ms             = var.lb_max_latency_ms
+  duration_sec               = var.alarm_duration_sec
+  load_balancer_severity_map = var.key_storage_severity_map
 }
 
 module "keystorageservice_cloudfunction_alarms" {
@@ -40,11 +41,12 @@ module "keystorageservice_cloudfunction_alarms" {
   function_name           = local.function_name
   service_prefix          = "${var.environment} Key Storage Service"
 
-  eval_period_sec           = var.alarm_eval_period_sec
-  error_5xx_threshold       = var.cloudfunction_5xx_threshold
-  execution_time_max        = var.cloudfunction_max_execution_time_max
-  execution_error_threshold = var.cloudfunction_error_threshold
-  duration_sec              = var.alarm_duration_sec
+  eval_period_sec                 = var.alarm_eval_period_sec
+  error_5xx_threshold             = var.cloudfunction_5xx_threshold
+  execution_time_max              = var.cloudfunction_max_execution_time_max
+  execution_error_ratio_threshold = var.cloudfunction_error_ratio_threshold
+  duration_sec                    = var.alarm_duration_sec
+  cloud_function_severity_map     = var.key_storage_severity_map
 }
 
 module "keystorageservice_monitoring_dashboard" {

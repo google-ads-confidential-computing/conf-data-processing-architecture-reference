@@ -24,6 +24,7 @@
 
 #include "aggregate_metric_interface.h"
 #include "simple_metric_interface.h"
+#include "time_aggregate_metric_interface.h"
 #include "type_def.h"
 
 namespace google::scp::cpio {
@@ -91,6 +92,56 @@ class MetricInstanceFactoryInterface {
    */
   virtual std::unique_ptr<AggregateMetricInterface>
   ConstructAggregateMetricInstance(
+      MetricDefinition metric_info,
+      const std::vector<std::string>& event_code_labels_list,
+      const std::string& event_code_name) noexcept = 0;
+
+  /**
+   * @brief Construct an TimeAggregateMetric instance. This TimeAggregateMetric
+   * instance will track a single metric, as defined by the metric_info.
+   *
+   * @param metric_info The definition of the metric that the
+   * TimeAggregateMetric monitors.
+   * @return std::unique_ptr<TimeAggregateMetricInterface>
+   */
+  virtual std::unique_ptr<TimeAggregateMetricInterface>
+  ConstructTimeAggregateMetricInstance(
+      MetricDefinition metric_info) noexcept = 0;
+
+  /**
+   * @brief Construct an TimeAggregateMetric instance. The TimeAggregateMetric
+   * will track a specific set of event metrics, which are defined by the
+   * metric_info and event_code_labels_list.
+   *
+   * @param metric_info the basic metric information for the aggregate metric
+   * instance.
+   * @param event_code_labels_list The event labels associated with the set of
+   * metrics, where each metric has a unique event label.
+   * @return std::unique_ptr<TimeAggregateMetricInterface> an instance of
+   * TimeAggregateMetric.
+   */
+  virtual std::unique_ptr<TimeAggregateMetricInterface>
+  ConstructTimeAggregateMetricInstance(
+      MetricDefinition metric_info,
+      const std::vector<std::string>& event_code_labels_list) noexcept = 0;
+
+  /**
+   * @brief Construct an TimeAggregateMetric instance. The TimeAggregateMetric
+   * will track a specific set of event metrics, which are defined by the
+   * metric_info and event_code_labels_list.
+   *
+   * @param metric_info the basic metric information for the aggregate metric
+   * instance.
+   * @param event_code_labels_list The event labels associated with the set of
+   * metrics, where each metric has a unique event label.
+   * @param event_code_name The name of the event code for which the
+   * TimeAggregateMetric will track. If no even_code_name provided, the default
+   * event_name in TimeAggregateMetric will be used.
+   * @return std::unique_ptr<TimeAggregateMetricInterface> an instance of
+   * TimeAggregateMetric.
+   */
+  virtual std::unique_ptr<TimeAggregateMetricInterface>
+  ConstructTimeAggregateMetricInstance(
       MetricDefinition metric_info,
       const std::vector<std::string>& event_code_labels_list,
       const std::string& event_code_name) noexcept = 0;

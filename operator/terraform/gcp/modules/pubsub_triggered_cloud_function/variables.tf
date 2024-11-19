@@ -54,6 +54,13 @@ variable "cloud_function_jar" {
   nullable    = false
 }
 
+variable "cloud_function_zip" {
+  description = <<-EOT
+          Optional. Get cloud function path as zip file.
+  EOT
+  type        = string
+}
+
 variable "min_instance_count" {
   description = "Minimum number of instances in the cloud function pool."
   type        = number

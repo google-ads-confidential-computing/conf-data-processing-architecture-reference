@@ -41,7 +41,7 @@ shared_ptr<Channel> TestGcpPubSubStubFactory::GetPubSubChannel(
     const shared_ptr<QueueClientOptions>& options) noexcept {
   if (!channel_) {
     ChannelArguments args;
-    args.SetInt(GRPC_ARG_ENABLE_RETRIES, 1);  // enable
+    args.SetInt(GRPC_ARG_ENABLE_RETRIES, 0);  // disable retry.
     auto test_options =
         dynamic_pointer_cast<TestGcpQueueClientOptions>(options);
     auto override_endpoint = !test_options->pubsub_endpoint_override.empty();

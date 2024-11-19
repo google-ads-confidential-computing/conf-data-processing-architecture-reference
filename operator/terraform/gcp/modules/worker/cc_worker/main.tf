@@ -28,6 +28,7 @@ module "base_worker" {
   job_queue_topic          = var.job_queue_topic
 
   instance_type                = var.instance_type
+  instance_disk_image_family   = var.instance_disk_image_family
   instance_disk_image          = var.instance_disk_image
   worker_instance_disk_type    = var.worker_instance_disk_type
   worker_instance_disk_size_gb = var.worker_instance_disk_size_gb

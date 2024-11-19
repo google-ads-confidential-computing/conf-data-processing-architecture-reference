@@ -41,6 +41,7 @@ using google::scp::core::Byte;
 using google::scp::core::BytesBuffer;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
+using google::scp::core::HttpMethod;
 using google::scp::core::HttpRequest;
 using google::scp::core::HttpResponse;
 using google::scp::core::SuccessExecutionResult;
@@ -70,7 +71,14 @@ namespace {
 constexpr char kAccountIdentity[] = "accountIdentity";
 constexpr char kRegion[] = "us-east-1";
 constexpr char kKeyId[] = "123";
+constexpr char kKeySetName[] = "setName12";
 constexpr char kPrivateKeyBaseUri[] = "http://localhost.test:8000";
+constexpr char kPrivateKeyBaseUriWithVersionSuffix[] =
+    "http://localhost.test:8000/v1alpha";
+constexpr char kVersionNumberSuffix[] = "/v1alpha";
+constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
+constexpr char kListKeysByTimeUri[] = ":recent";
+constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
 }  // namespace
 
 namespace google::scp::cpio::client_providers::test {
@@ -158,7 +166,7 @@ TEST_F(AwsPrivateKeyFetcherProviderTest, MissingCredentialsProvider) {
           SC_AWS_PRIVATE_KEY_FETCHER_PROVIDER_CREDENTIALS_PROVIDER_NOT_FOUND)));
 }
 
-TEST_F(AwsPrivateKeyFetcherProviderTest, SignHttpRequest) {
+TEST_F(AwsPrivateKeyFetcherProviderTest, SignHttpRequestForKeyId) {
   ExpectCallGetRoleCredentials(SuccessExecutionResult());
   atomic<bool> condition = false;
 
@@ -166,6 +174,68 @@ TEST_F(AwsPrivateKeyFetcherProviderTest, SignHttpRequest) {
       request_,
       [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
         EXPECT_SUCCESS(context.result);
+        string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberSuffix,
+                                  kEncryptionKeyUrlSuffix, "/", kKeyId);
+        EXPECT_EQ(context.response->method, HttpMethod::GET);
+        EXPECT_EQ(*context.response->path, uri);
+        condition = true;
+        return SuccessExecutionResult();
+      });
+
+  aws_private_key_fetcher_provider_->SignHttpRequest(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST_F(AwsPrivateKeyFetcherProviderTest, SignHttpRequestForMaxAgeSeconds) {
+  ExpectCallGetRoleCredentials(SuccessExecutionResult());
+  atomic<bool> condition = false;
+
+  request_->key_id = nullptr;
+  request_->key_set_name = make_shared<string>(kKeySetName);
+  request_->max_age_seconds = 1000000;
+
+  AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
+      request_,
+      [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
+        EXPECT_SUCCESS(context.result);
+        string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberSuffix,
+                                  kEncryptionKeyUrlSuffix, kListKeysByTimeUri);
+        EXPECT_EQ(context.response->method, HttpMethod::GET);
+        EXPECT_EQ(*context.response->path, uri);
+        EXPECT_EQ(*context.response->query,
+                  absl::StrCat(kMaxAgeSecondsQueryParameter, "1000000"));
+        condition = true;
+        return SuccessExecutionResult();
+      });
+
+  aws_private_key_fetcher_provider_->SignHttpRequest(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST_F(AwsPrivateKeyFetcherProviderTest,
+       SignHttpRequestWithEndpointContainsVersionSuffix) {
+  ExpectCallGetRoleCredentials(SuccessExecutionResult());
+  atomic<bool> condition = false;
+
+  request_->key_endpoint = make_shared<PrivateKeyEndpoint>();
+  request_->key_endpoint->set_endpoint(kPrivateKeyBaseUriWithVersionSuffix);
+  request_->key_endpoint->set_key_service_region(kRegion);
+  request_->key_endpoint->set_account_identity(kAccountIdentity);
+
+  request_->key_id = nullptr;
+  request_->key_set_name = make_shared<string>(kKeySetName);
+  request_->max_age_seconds = 1000000;
+
+  AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
+      request_,
+      [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
+        EXPECT_SUCCESS(context.result);
+        string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberSuffix,
+                                  kEncryptionKeyUrlSuffix, kListKeysByTimeUri);
+        EXPECT_EQ(context.response->method, HttpMethod::GET);
+        EXPECT_EQ(*context.response->path, uri);
+        EXPECT_EQ(*context.response->query,
+                  absl::StrCat(kMaxAgeSecondsQueryParameter, "1000000"));
         condition = true;
         return SuccessExecutionResult();
       });

@@ -53,6 +53,7 @@ using google::scp::core::SuccessExecutionResult;
 using google::scp::core::errors::GetErrorMessage;
 using google::scp::core::errors::
     SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_KEY_DATA_COUNT;
+using google::scp::core::errors::SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST;
 using google::scp::core::errors::
     SC_PRIVATE_KEY_CLIENT_PROVIDER_KEY_DATA_NOT_FOUND;
 using google::scp::core::errors::
@@ -100,9 +101,10 @@ constexpr char kTestRegion2[] = "region2";
 constexpr char kTestRegion3[] = "region3";
 const vector<string> kTestKeyIds = {"key_id_1", "key_id_2", "key_id_3"};
 constexpr char kTestKeyIdBad[] = "bad_key_id";
+constexpr char kTestKeySetName[] = "key_set_name";
 constexpr char kTestResourceName[] = "encryptionKeys/key_id";
 constexpr char kTestPublicKeysetHandle[] = "publicKeysetHandle";
-constexpr char kTestPublicKeyMaterial[] = "publicKeyMaterial";
+constexpr char kTestPublicKeyMaterial[] = "publicKeysetHandle";
 constexpr int kTestExpirationTime = 123456;
 constexpr int kTestCreationTime = 111111;
 constexpr char kTestPublicKeySignature[] = "publicKeySignature";
@@ -315,6 +317,7 @@ class PrivateKeyClientProviderTest : public ScpTestBase {
         .Times(call_time)
         .WillRepeatedly([=](AsyncContext<PrivateKeyFetchingRequest,
                                          PrivateKeyFetchingResponse>& context) {
+          EXPECT_EQ(*context.request->key_set_name, kTestKeySetName);
           const auto& endpoint = context.request->key_endpoint->endpoint();
           context.result = mock_results.at(endpoint);
           if (context.result.Successful()) {
@@ -386,6 +389,7 @@ TEST_F(PrivateKeyClientProviderTest, ListPrivateKeysByAgeSuccess) {
       kMockSuccessKeyFetchingResultsForListByAge,
       CreateSuccessKeyFetchingResponseMapForListByAge(), 3);
   list_request_->set_max_age_seconds(kTestCreationTime);
+  list_request_->set_key_set_name(kTestKeySetName);
 
   string encoded_private_key = *Base64Encode(kTestPrivateKey);
   atomic<size_t> response_count = 0;
@@ -396,6 +400,23 @@ TEST_F(PrivateKeyClientProviderTest, ListPrivateKeysByAgeSuccess) {
         EXPECT_THAT(context.response->private_keys(),
                     Pointwise(EqualsProto(), expected_keys));
         EXPECT_SUCCESS(context.result);
+        response_count.fetch_add(1);
+      });
+
+  private_key_client_provider->ListPrivateKeys(context);
+  WaitUntil([&]() { return response_count.load() == 1; });
+}
+
+TEST_F(PrivateKeyClientProviderTest, ListPrivateKeysFailedWithInvalidRequest) {
+  list_request_->set_max_age_seconds(0);
+
+  atomic<size_t> response_count = 0;
+  AsyncContext<ListPrivateKeysRequest, ListPrivateKeysResponse> context(
+      list_request_, [&](AsyncContext<ListPrivateKeysRequest,
+                                      ListPrivateKeysResponse>& context) {
+        EXPECT_THAT(context.result,
+                    ResultIs(FailureExecutionResult(
+                        SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST)));
         response_count.fetch_add(1);
       });
 
@@ -447,6 +468,7 @@ TEST_F(PrivateKeyClientProviderTest, LastEndpointReturnEmptyList) {
       kMockSuccessKeyFetchingResultsForListByAge, responses, 3);
 
   list_request_->set_max_age_seconds(kTestCreationTime);
+  list_request_->set_key_set_name(kTestKeySetName);
 
   atomic<size_t> response_count = 0;
   AsyncContext<ListPrivateKeysRequest, ListPrivateKeysResponse> context(
@@ -483,6 +505,7 @@ TEST_F(PrivateKeyClientProviderTest, LastEndpointMissingKeySplit) {
       kMockSuccessKeyFetchingResultsForListByAge, responses, 3);
 
   list_request_->set_max_age_seconds(kTestCreationTime);
+  list_request_->set_key_set_name(kTestKeySetName);
 
   string encoded_private_key = *Base64Encode(kTestPrivateKey);
   atomic<size_t> response_count = 0;
@@ -524,6 +547,7 @@ TEST_F(PrivateKeyClientProviderTest, FirstEndpointMissingMultipleKeySplits) {
       kMockSuccessKeyFetchingResultsForListByAge, responses, 3);
 
   list_request_->set_max_age_seconds(kTestCreationTime);
+  list_request_->set_key_set_name(kTestKeySetName);
 
   string encoded_private_key = *Base64Encode(kTestPrivateKey);
   atomic<size_t> response_count = 0;
@@ -567,6 +591,7 @@ TEST_F(PrivateKeyClientProviderTest,
       kMockSuccessKeyFetchingResultsForListByAge, responses, 3);
 
   list_request_->set_max_age_seconds(kTestCreationTime);
+  list_request_->set_key_set_name(kTestKeySetName);
 
   string encoded_private_key = *Base64Encode(kTestPrivateKey);
   atomic<size_t> response_count = 0;

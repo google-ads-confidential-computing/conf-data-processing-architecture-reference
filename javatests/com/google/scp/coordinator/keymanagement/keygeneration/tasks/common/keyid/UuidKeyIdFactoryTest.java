@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.KeyIdFactory;
+package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.UuidKeyIdFactory;
 import java.util.UUID;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,7 +30,7 @@ public class UuidKeyIdFactoryTest {
   private final UuidKeyIdFactory keyIdFactory = new UuidKeyIdFactory();
 
   @Test
-  public void testGetNextKeyId() {
+  public void testGetNextKeyId() throws Exception {
     String generated = keyIdFactory.getNextKeyId(null);
     assertThat(UUID.fromString(generated).toString()).isEqualTo(generated);
   }

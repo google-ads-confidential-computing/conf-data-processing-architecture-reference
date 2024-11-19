@@ -28,6 +28,7 @@ module "base_worker" {
   job_queue_topic          = var.job_queue_topic
 
   instance_type                = var.instance_type
+  instance_disk_image_family   = var.instance_disk_image_family
   instance_disk_image          = var.instance_disk_image
   worker_instance_disk_type    = var.worker_instance_disk_type
   worker_instance_disk_size_gb = var.worker_instance_disk_size_gb
@@ -55,11 +56,12 @@ module "base_worker" {
 }
 
 module "java_custom_monitoring" {
-  source                  = "../../java_custom_monitoring"
-  count                   = var.java_custom_metrics_alarms_enabled ? 1 : 0
-  environment             = var.environment
-  vm_instance_group_name  = var.vm_instance_group_name
-  alarm_duration_sec      = var.alarm_duration_sec
-  alarm_eval_period_sec   = var.alarm_eval_period_sec
-  notification_channel_id = var.notification_channel_id
+  source                        = "../../java_custom_monitoring"
+  count                         = var.java_custom_metrics_alarms_enabled ? 1 : 0
+  environment                   = var.environment
+  vm_instance_group_name        = var.vm_instance_group_name
+  alarm_duration_sec            = var.alarm_duration_sec
+  alarm_eval_period_sec         = var.alarm_eval_period_sec
+  notification_channel_id       = var.notification_channel_id
+  java_job_validations_to_alert = var.java_job_validations_to_alert
 }

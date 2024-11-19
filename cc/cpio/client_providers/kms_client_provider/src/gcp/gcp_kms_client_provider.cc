@@ -22,6 +22,7 @@
 #include "core/utils/src/base64.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "google/cloud/kms/key_management_client.h"
+#include "google/cloud/status.h"
 #include "public/cpio/interface/kms_client/type_def.h"
 
 #include "error_codes.h"
@@ -133,7 +134,8 @@ void GcpKmsClientProvider::AeadDecrypt(
     auto execution_result =
         FailureExecutionResult(SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);
     SCP_ERROR_CONTEXT(kGcpKmsClientProvider, decrypt_context, execution_result,
-                      "Decryption failed with error %s.",
+                      "Decryption failed with code %s and error message %s.",
+                      StatusCodeToString(response_or.status().code()).c_str(),
                       response_or.status().message().c_str());
     FinishContext(execution_result, decrypt_context, cpu_async_executor_);
     return;

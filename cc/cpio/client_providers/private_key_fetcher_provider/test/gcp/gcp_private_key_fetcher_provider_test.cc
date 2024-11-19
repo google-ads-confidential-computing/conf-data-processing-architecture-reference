@@ -71,11 +71,20 @@ namespace {
 constexpr char kAccountIdentity[] = "accountIdentity";
 constexpr char kRegion[] = "us-east-1";
 constexpr char kKeyId[] = "123";
+constexpr char kKeySetName[] = "setName12";
 constexpr char kPrivateKeyBaseUri[] = "http://localhost.test:8000";
+constexpr char kPrivateKeyBaseUriWithVersionSuffix[] =
+    "http://localhost.test:8000/v1beta";
 constexpr char kPrivateKeyCloudfunctionUri[] = "http://cloudfunction.test:8000";
 constexpr char kSessionTokenMock[] = "session-token-test";
 constexpr char kAuthorizationHeaderKey[] = "Authorization";
 constexpr char kBearerTokenPrefix[] = "Bearer ";
+constexpr char kVersionNumberAlphaSuffix[] = "/v1alpha";
+constexpr char kVersionNumberBetaSuffix[] = "/v1beta";
+constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
+constexpr char kKeySetNameSuffix[] = "/sets";
+constexpr char kListKeysByTimeUri[] = ":recent";
+constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
 }  // namespace
 
 namespace google::scp::cpio::client_providers::test {
@@ -96,6 +105,7 @@ class GcpPrivateKeyFetcherProviderTest : public ScpTestBase {
     endpoint->set_endpoint(kPrivateKeyBaseUri);
     endpoint->set_key_service_region(kRegion);
     endpoint->set_account_identity(kAccountIdentity);
+    endpoint->set_gcp_cloud_function_url(kPrivateKeyCloudfunctionUri);
     request_->key_endpoint = move(endpoint);
   }
 
@@ -145,64 +155,7 @@ MATCHER_P(TargetAudienceUriEquals, expected_target_audience_uri, "") {
                             expected_target_audience_uri, result_listener);
 }
 
-TEST_F(GcpPrivateKeyFetcherProviderTest, SignHttpRequest) {
-  atomic<bool> condition = false;
-
-  EXPECT_CALL(*credentials_provider_,
-              GetSessionTokenForTargetAudience(
-                  TargetAudienceUriEquals(kPrivateKeyBaseUri)))
-      .WillOnce([=](AsyncContext<GetSessionTokenForTargetAudienceRequest,
-                                 GetSessionTokenResponse>& context) {
-        context.response = make_shared<GetSessionTokenResponse>();
-        context.response->session_token =
-            make_shared<string>(kSessionTokenMock);
-        context.result = SuccessExecutionResult();
-        context.Finish();
-      });
-
-  AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
-      request_,
-      [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
-        EXPECT_SUCCESS(context.result);
-        const auto& signed_request_ = *context.response;
-
-        EXPECT_EQ(signed_request_.method, HttpMethod::GET);
-        EXPECT_THAT(signed_request_.headers,
-                    Pointee(UnorderedElementsAre(Pair(
-                        kAuthorizationHeaderKey,
-                        absl::StrCat(kBearerTokenPrefix, kSessionTokenMock)))));
-        condition = true;
-        return SuccessExecutionResult();
-      });
-
-  gcp_private_key_fetcher_provider_->SignHttpRequest(context);
-  WaitUntil([&]() { return condition.load(); });
-}
-
-TEST_F(GcpPrivateKeyFetcherProviderTest, FailedToGetCredentials) {
-  EXPECT_CALL(*credentials_provider_,
-              GetSessionTokenForTargetAudience(
-                  TargetAudienceUriEquals(kPrivateKeyBaseUri)))
-      .WillOnce([=](AsyncContext<GetSessionTokenForTargetAudienceRequest,
-                                 GetSessionTokenResponse>& context) {
-        context.result = FailureExecutionResult(SC_UNKNOWN);
-        context.Finish();
-      });
-
-  atomic<bool> condition = false;
-  AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
-      request_,
-      [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
-        EXPECT_THAT(context.result,
-                    ResultIs(FailureExecutionResult(SC_UNKNOWN)));
-        condition = true;
-      });
-
-  gcp_private_key_fetcher_provider_->SignHttpRequest(context);
-  WaitUntil([&]() { return condition.load(); });
-}
-
-TEST_F(GcpPrivateKeyFetcherProviderTest, InputCloudFunctionUrl) {
+TEST_F(GcpPrivateKeyFetcherProviderTest, SignHttpRequestForKeyId) {
   atomic<bool> condition = false;
 
   EXPECT_CALL(*credentials_provider_,
@@ -217,8 +170,6 @@ TEST_F(GcpPrivateKeyFetcherProviderTest, InputCloudFunctionUrl) {
         context.Finish();
       });
 
-  request_->key_endpoint->set_gcp_cloud_function_url(
-      kPrivateKeyCloudfunctionUri);
   AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
       request_,
       [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
@@ -230,8 +181,129 @@ TEST_F(GcpPrivateKeyFetcherProviderTest, InputCloudFunctionUrl) {
                     Pointee(UnorderedElementsAre(Pair(
                         kAuthorizationHeaderKey,
                         absl::StrCat(kBearerTokenPrefix, kSessionTokenMock)))));
+        string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberBetaSuffix,
+                                  kEncryptionKeyUrlSuffix, "/", kKeyId);
+        EXPECT_EQ(*signed_request_.path, uri);
         condition = true;
         return SuccessExecutionResult();
+      });
+
+  gcp_private_key_fetcher_provider_->SignHttpRequest(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST_F(GcpPrivateKeyFetcherProviderTest, SignHttpRequestForMaxAgeSeconds) {
+  atomic<bool> condition = false;
+
+  EXPECT_CALL(*credentials_provider_,
+              GetSessionTokenForTargetAudience(
+                  TargetAudienceUriEquals(kPrivateKeyCloudfunctionUri)))
+      .WillOnce([=](AsyncContext<GetSessionTokenForTargetAudienceRequest,
+                                 GetSessionTokenResponse>& context) {
+        context.response = make_shared<GetSessionTokenResponse>();
+        context.response->session_token =
+            make_shared<string>(kSessionTokenMock);
+        context.result = SuccessExecutionResult();
+        context.Finish();
+      });
+
+  request_->key_id = nullptr;
+  request_->key_set_name = make_shared<string>(kKeySetName);
+  request_->max_age_seconds = 1000000;
+
+  AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
+      request_,
+      [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
+        EXPECT_SUCCESS(context.result);
+        const auto& signed_request_ = *context.response;
+
+        EXPECT_EQ(signed_request_.method, HttpMethod::GET);
+        EXPECT_THAT(signed_request_.headers,
+                    Pointee(UnorderedElementsAre(Pair(
+                        kAuthorizationHeaderKey,
+                        absl::StrCat(kBearerTokenPrefix, kSessionTokenMock)))));
+        string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberBetaSuffix,
+                                  kKeySetNameSuffix, "/", kKeySetName,
+                                  kEncryptionKeyUrlSuffix, kListKeysByTimeUri);
+        EXPECT_EQ(*signed_request_.path, uri);
+        EXPECT_EQ(*signed_request_.query,
+                  absl::StrCat(kMaxAgeSecondsQueryParameter, "1000000"));
+        condition = true;
+        return SuccessExecutionResult();
+      });
+
+  gcp_private_key_fetcher_provider_->SignHttpRequest(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST_F(GcpPrivateKeyFetcherProviderTest,
+       SignHttpRequestForMaxAgeSecondsWithVersionSuffix) {
+  atomic<bool> condition = false;
+
+  EXPECT_CALL(*credentials_provider_,
+              GetSessionTokenForTargetAudience(
+                  TargetAudienceUriEquals(kPrivateKeyCloudfunctionUri)))
+      .WillOnce([=](AsyncContext<GetSessionTokenForTargetAudienceRequest,
+                                 GetSessionTokenResponse>& context) {
+        context.response = make_shared<GetSessionTokenResponse>();
+        context.response->session_token =
+            make_shared<string>(kSessionTokenMock);
+        context.result = SuccessExecutionResult();
+        context.Finish();
+      });
+
+  auto endpoint = make_shared<PrivateKeyEndpoint>();
+  endpoint->set_endpoint(kPrivateKeyBaseUriWithVersionSuffix);
+  endpoint->set_key_service_region(kRegion);
+  endpoint->set_account_identity(kAccountIdentity);
+  endpoint->set_gcp_cloud_function_url(kPrivateKeyCloudfunctionUri);
+  request_->key_endpoint = move(endpoint);
+  request_->key_id = nullptr;
+  request_->key_set_name = make_shared<string>(kKeySetName);
+  request_->max_age_seconds = 1000000;
+
+  AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
+      request_,
+      [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
+        EXPECT_SUCCESS(context.result);
+        const auto& signed_request_ = *context.response;
+
+        EXPECT_EQ(signed_request_.method, HttpMethod::GET);
+        EXPECT_THAT(signed_request_.headers,
+                    Pointee(UnorderedElementsAre(Pair(
+                        kAuthorizationHeaderKey,
+                        absl::StrCat(kBearerTokenPrefix, kSessionTokenMock)))));
+        string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberBetaSuffix,
+                                  kKeySetNameSuffix, "/", kKeySetName,
+                                  kEncryptionKeyUrlSuffix, kListKeysByTimeUri);
+        EXPECT_EQ(*signed_request_.path, uri);
+        EXPECT_EQ(*signed_request_.query,
+                  absl::StrCat(kMaxAgeSecondsQueryParameter, "1000000"));
+        condition = true;
+        return SuccessExecutionResult();
+      });
+
+  gcp_private_key_fetcher_provider_->SignHttpRequest(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST_F(GcpPrivateKeyFetcherProviderTest, FailedToGetCredentials) {
+  EXPECT_CALL(*credentials_provider_,
+              GetSessionTokenForTargetAudience(
+                  TargetAudienceUriEquals(kPrivateKeyCloudfunctionUri)))
+      .WillOnce([=](AsyncContext<GetSessionTokenForTargetAudienceRequest,
+                                 GetSessionTokenResponse>& context) {
+        context.result = FailureExecutionResult(SC_UNKNOWN);
+        context.Finish();
+      });
+
+  atomic<bool> condition = false;
+  AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
+      request_,
+      [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
+        EXPECT_THAT(context.result,
+                    ResultIs(FailureExecutionResult(SC_UNKNOWN)));
+        condition = true;
       });
 
   gcp_private_key_fetcher_provider_->SignHttpRequest(context);

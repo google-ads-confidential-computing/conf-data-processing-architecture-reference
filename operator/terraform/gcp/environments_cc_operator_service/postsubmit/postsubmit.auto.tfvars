@@ -27,13 +27,16 @@ operator_package_bucket_location = "US"
 spanner_instance_config          = "regional-us-central1"
 spanner_processing_units         = 300
 
-worker_image                         = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:cc-postsubmit"
-allowed_operator_service_account     = "postsubmit-a-opallowedusr@admcloud-coordinator1.iam.gserviceaccount.com,postsubmit-b-opallowedusr@admcloud-coordinator2.iam.gserviceaccount.com"
-worker_logging_enabled               = true
-worker_container_log_redirect        = "true"
-worker_memory_monitoring_enabled     = true
-worker_instance_force_replace        = true
-instance_disk_image                  = "confidential-space-images/confidential-space"
+worker_image                     = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:cc-postsubmit"
+allowed_operator_service_account = "postsubmit-a-opallowedusr@admcloud-coordinator1.iam.gserviceaccount.com,postsubmit-b-opallowedusr@admcloud-coordinator2.iam.gserviceaccount.com"
+worker_logging_enabled           = true
+worker_container_log_redirect    = "true"
+worker_memory_monitoring_enabled = true
+worker_instance_force_replace    = true
+instance_disk_image_family = {
+  image_project = "confidential-space-images",
+  image_family  = "confidential-space"
+}
 user_provided_worker_sa_email        = "cc-postsubmit-worker@admcloud-adtech1.iam.gserviceaccount.com"
 spanner_database_deletion_protection = false
 max_worker_instances                 = 1

@@ -16,6 +16,7 @@
 
 #include "cc/core/interface/errors.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/error_codes.h"
 
 namespace google::scp::core::errors {
 
@@ -35,4 +36,10 @@ DEFINE_ERROR_CODE(SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION,
                   "Not enough time remaining to continue the operation.",
                   HttpStatusCode::REQUEST_TIMEOUT)
 
+MAP_TO_PUBLIC_ERROR_CODE(SC_DISPATCHER_EXHAUSTED_RETRIES,
+                         SC_CPIO_SERVICE_UNAVAILABLE)
+MAP_TO_PUBLIC_ERROR_CODE(SC_DISPATCHER_OPERATION_EXPIRED,
+                         SC_CPIO_REQUEST_TIMEOUT)
+MAP_TO_PUBLIC_ERROR_CODE(SC_DISPATCHER_NOT_ENOUGH_TIME_REMAINED_FOR_OPERATION,
+                         SC_CPIO_REQUEST_TIMEOUT)
 }  // namespace google::scp::core::errors

@@ -24,7 +24,10 @@ def keygeneration_container(name, tag, registry, repository):
             "--multiparty",
         ],
         files = [Label("//java/com/google/scp/coordinator/keymanagement/keygeneration/app/gcp:KeyGenerationApp_deploy.jar")],
-        labels = {"tee.launch_policy.allow_cmd_override": "false"},
+        labels = {
+            "tee.launch_policy.allow_cmd_override": "false",
+            "tee.launch_policy.log_redirect": "always",
+        },
     )
 
     container_push(

@@ -58,6 +58,16 @@ variable "frontend_service_jar" {
   type        = string
 }
 
+variable "frontend_service_zip" {
+  description = <<-EOT
+    Optional. Path to the zip file for lambda function under bucket
+    operator_package_bucket_name.
+    If this path is missing, the terraform will use path in frontend_service_jar,
+    archive the jar in zip file and upload to the bucket.
+  EOT
+  type        = string
+}
+
 variable "frontend_service_cloudfunction_num_cpus" {
   description = "The number of CPU to use for frontend service cloud function."
   type        = number

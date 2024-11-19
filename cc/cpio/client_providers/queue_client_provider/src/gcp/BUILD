@@ -22,6 +22,8 @@ cc_library(
     ],
     deps = [
         "//cc:cc_base_include_dir",
+        "//cc/core/async_executor/src:core_async_executor_lib",
+        "//cc/core/common/operation_dispatcher/src:operation_dispatcher_lib",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",

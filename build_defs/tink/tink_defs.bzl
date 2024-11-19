@@ -22,13 +22,11 @@ TINK_SHALLOW_SINCE = "1713349341 -0700"
 # List of Maven dependencies necessary for Tink to compile -- to be included in
 # the list of Maven dependenceis passed to maven_install by the workspace.
 
-# Agu 10, 2022
-# Commit for v1.7.0
-TINK_VERSION = "1.7.0"
-TINK_JAVA_VERSION = "1.12.0"
+TINK_GCP_KMS_VERSION = "1.7.0"  # Aug 10, 2022
+TINK_JAVA_VERSION = "1.15.0"  # Aug 30, 2024
 TINK_MAVEN_ARTIFACTS = [
     "com.google.crypto.tink:tink:" + TINK_JAVA_VERSION,
-    "com.google.crypto.tink:tink-gcpkms:" + TINK_VERSION,
+    "com.google.crypto.tink:tink-gcpkms:" + TINK_GCP_KMS_VERSION,
 ]
 
 def import_tink_git(repo_name = ""):
@@ -94,6 +92,6 @@ def import_tink_git(repo_name = ""):
         http_archive,
         name = "tink_proto",
         strip_prefix = "tink-java-{}".format(TINK_JAVA_VERSION),
-        sha256 = "c5f79c4f51e55d5c7bbd52c0b17fc8eeedf36d74a231e134882f9c4a74c3fbb1",
+        sha256 = "e246f848f7749e37f558955ecb50345b04d79ddb9d8d1e8ae19f61e8de530582",
         url = "https://github.com/tink-crypto/tink-java/releases/download/v{}/tink-java-{}.zip".format(TINK_JAVA_VERSION, TINK_JAVA_VERSION),
     )

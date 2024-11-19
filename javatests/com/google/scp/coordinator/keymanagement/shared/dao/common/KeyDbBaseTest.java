@@ -103,6 +103,28 @@ public abstract class KeyDbBaseTest {
   }
 
   @Test
+  public void getActiveKeysWithPublicKey_doesNotReturnNonAsymmetricKeys() throws Exception {
+    // Given
+    EncryptionKey asymmetricKey = FakeEncryptionKey.create();
+    EncryptionKey asymmetricKey2 = FakeEncryptionKey.create();
+    EncryptionKey nonAsymmetricKey1 =
+        FakeEncryptionKey.create().toBuilder().clearPublicKey().clearPublicKeyMaterial().build();
+    EncryptionKey nonAsymmetricKey2 =
+        FakeEncryptionKey.create().toBuilder().clearPublicKey().clearPublicKeyMaterial().build();
+    db.createKeys(
+        ImmutableList.of(asymmetricKey, asymmetricKey2, nonAsymmetricKey1, nonAsymmetricKey2));
+
+    // When
+    ImmutableList<EncryptionKey> keys = db.getActiveKeysWithPublicKey(KeyDb.DEFAULT_SET_NAME, 100);
+
+    // Then
+    ImmutableList<String> ids =
+        keys.stream().map(EncryptionKey::getKeyId).collect(toImmutableList());
+    assertThat(ids).containsAtLeast(asymmetricKey.getKeyId(), asymmetricKey2.getKeyId());
+    assertThat(ids).containsNoneOf(nonAsymmetricKey1.getKeyId(), nonAsymmetricKey2.getKeyId());
+  }
+
+  @Test
   public void createKey_overwriteSuccess() throws Exception {
     String keyId = "asdf";
     EncryptionKey key1 =
@@ -124,7 +146,9 @@ public abstract class KeyDbBaseTest {
     db.createKey(key2);
     EncryptionKey result = db.getKey(keyId);
 
-    assertThat(clearCreationTime(result)).isEqualTo(key2);
+    assertThat(result.getExpirationTime()).isEqualTo(key2.getExpirationTime());
+    assertThat(result.getKeyId()).isEqualTo(key2.getKeyId());
+    assertThat(result.getJsonEncodedKeyset()).isEqualTo(key2.getJsonEncodedKeyset());
   }
 
   @Test

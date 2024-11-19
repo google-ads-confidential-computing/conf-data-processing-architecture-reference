@@ -49,13 +49,14 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.C
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.CreateSplitKeysPubSubListener;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubListener;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubListenerConfig;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyset.KeySetManager.KeySetsJson;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdType;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyset.KeySetManager.KeySetsJson;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.GcpKeyGenerationTasksModule;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.GcpSplitKeyGenerationTasksModule;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpInstanceIdOverride;
@@ -219,8 +220,14 @@ public final class KeyGenerationModule extends AbstractModule {
 
   @Provides
   @KeySetsJson
-  Optional<String> provideKeySetsConfig(ParameterClient parameterClient) throws ParameterClientException {
-    return parameterClient.getParameter("KEY_SETS_CONFIG");
+  Optional<String> provideKeySetsConfig(ParameterClient parameterClient)
+      throws ParameterClientException {
+    return parameterClient.getLatestParameter("KEY_SETS_CONFIG");
+  }
+
+  @Provides
+  LogMetricHelper provideLogMetricHelper() {
+    return new LogMetricHelper("key_service/key_generation");
   }
 
   @Override

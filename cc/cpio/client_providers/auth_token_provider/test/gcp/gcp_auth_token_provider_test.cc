@@ -586,4 +586,19 @@ TEST_F(GcpAuthTokenProviderTest, GetTeeSessionTokenFailedDueToEmptyToken) {
   authorizer_provider_->GetTeeSessionToken(fetch_tee_token_context_);
   WaitUntil([this]() { return finished_.load(); });
 }
+
+TEST(TokenTest, TokenExpire) {
+  GetSessionTokenResponse response;
+  response.expire_time =
+      std::chrono::seconds(TimeUtil::GetCurrentTime().seconds());
+  EXPECT_TRUE(TokenIsExpired(response));
+
+  response.expire_time =
+      std::chrono::seconds(TimeUtil::GetCurrentTime().seconds() + 305);
+  EXPECT_FALSE(TokenIsExpired(response));
+
+  response.expire_time =
+      std::chrono::seconds(TimeUtil::GetCurrentTime().seconds() + 295);
+  EXPECT_TRUE(TokenIsExpired(response));
+}
 }  // namespace google::scp::cpio::client_providers::test

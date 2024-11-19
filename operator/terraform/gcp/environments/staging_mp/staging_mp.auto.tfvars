@@ -31,4 +31,7 @@ worker_image = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp
 # Temporarily use the demo coordinator service until we are ready to integrate dev environments
 allowed_operator_service_account = "staging-a-opallowedusr@admcloud-coordinator1.iam.gserviceaccount.com,staging-b-opallowedusr@admcloud-coordinator2.iam.gserviceaccount.com"
 worker_logging_enabled           = true
-instance_disk_image              = "confidential-space-images/confidential-space"
+instance_disk_image_family = {
+  image_project = "confidential-space-images",
+  image_family  = "confidential-space"
+}

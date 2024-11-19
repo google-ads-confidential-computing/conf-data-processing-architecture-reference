@@ -37,6 +37,12 @@ struct QueueClientOptions {
    *
    */
   std::string queue_name;
+
+  // Optional. Only for GCP. Retry interval for PubSub operations.
+  std::chrono::milliseconds retry_interval = std::chrono::milliseconds(250);
+
+  // Optional. Only for GCP. The maximum retry count for PubSub operations.
+  size_t max_retry_count = 12;
 };
 }  // namespace google::scp::cpio
 

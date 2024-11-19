@@ -17,6 +17,7 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -56,5 +57,29 @@ public final class ActuateKeySetTaskTest {
     // Then
     verify(createSplitKeyTask, times(1)).create("set-name-1", "test-template-1", 1, 2, 3);
     verify(createSplitKeyTask, times(1)).create("set-name-2", "test-template-2", 4, 5, 6);
+  }
+
+  @Test
+  public void testExecute_creationFailureForOneConfig_continuesRemainingConfigs() throws Exception {
+    // Given
+    doReturn(
+            ImmutableList.of(
+                KeySetConfig.create("set-name-1", "test-template-1", 1, 2, 3),
+                KeySetConfig.create("set-name-2", "test-template-2", 4, 5, 6),
+                KeySetConfig.create("set-name-3", "test-template-3", 7, 8, 9)))
+        .when(keySetManager)
+        .getConfigs();
+
+    doThrow(new RuntimeException("test exception"))
+        .when(createSplitKeyTask)
+        .create("set-name-2", "test-template-2", 4, 5, 6);
+
+    // When
+    new ActuateKeySetTask(keySetManager, createSplitKeyTask).execute();
+
+    // Then
+    verify(createSplitKeyTask, times(1)).create("set-name-1", "test-template-1", 1, 2, 3);
+    verify(createSplitKeyTask, times(1)).create("set-name-2", "test-template-2", 4, 5, 6);
+    verify(createSplitKeyTask, times(1)).create("set-name-3", "test-template-3", 7, 8, 9);
   }
 }

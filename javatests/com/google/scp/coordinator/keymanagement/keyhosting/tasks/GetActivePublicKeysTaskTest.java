@@ -24,6 +24,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.Answers.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 import com.google.acai.Acai;
@@ -34,6 +35,7 @@ import com.google.inject.Inject;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
+import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTaskTestBase;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;
@@ -58,7 +60,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public class GetActivePublicKeysTaskTest {
+public class GetActivePublicKeysTaskTest extends ApiTaskTestBase {
 
   @Rule public final Acai acai = new Acai(InMemoryTestEnv.class);
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
@@ -76,6 +78,7 @@ public class GetActivePublicKeysTaskTest {
   @Before
   public void setUp() {
     addRandomKeysToKeyDb(keyLimit * 2, keyDb);
+    super.task = spy(this.task);
   }
 
   @Test

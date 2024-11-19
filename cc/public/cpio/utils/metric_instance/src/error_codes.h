@@ -40,4 +40,10 @@ DEFINE_ERROR_CODE(SC_CUSTOMIZED_METRIC_CANNOT_INCREMENT_WHEN_NOT_RUNNING,
                   "Metric cannot be incremented when it is not running",
                   HttpStatusCode::CONFLICT)
 
+DEFINE_ERROR_CODE(
+    SC_CUSTOMIZED_METRIC_INVALID_AGGREGATION_INTERVAL_DURATION,
+    SC_CUSTOMIZED_METRIC, 0x0006,
+    "Metric cannot be initialized due to invalid aggregation interval duration",
+    HttpStatusCode::BAD_REQUEST)
+
 }  // namespace google::scp::core::errors

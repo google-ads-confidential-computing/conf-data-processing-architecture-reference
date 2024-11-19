@@ -17,9 +17,15 @@
 #pragma once
 
 #include <memory>
+#include <shared_mutex>
+#include <string>
+#include <unordered_map>
 
 #include <tink/hybrid/internal/hpke_context.h>
+#include <tink/hybrid_decrypt.h>
+#include <tink/hybrid_encrypt.h>
 #include <tink/input_stream.h>
+#include <tink/mac.h>
 
 #include "core/interface/async_context.h"
 #include "core/interface/service_interface.h"
@@ -87,5 +93,30 @@ class CryptoClientProvider : public CryptoClientInterface {
   /// HpkeParams passed in from configuration which will override the default
   /// params.
   std::shared_ptr<CryptoClientOptions> options_;
+
+ private:
+  core::ExecutionResultOr<::crypto::tink::HybridEncrypt*>
+  GetHybridEncryptPrimitive(const std::string& key) noexcept;
+  core::ExecutionResultOr<::crypto::tink::HybridDecrypt*>
+  GetHybridDecryptPrimitive(const std::string& key) noexcept;
+  core::ExecutionResultOr<::crypto::tink::Mac*> GetMacPrimitive(
+      const std::string& key) noexcept;
+
+  // Map from tink_binary_key to HybridEncrypt primitive.
+  std::unordered_map<std::string,
+                     std::unique_ptr<::crypto::tink::HybridEncrypt>>
+      hybrid_encrypt_primitive_map_;
+  std::shared_mutex hybrid_encrypt_primitive_map_mutex_;
+
+  // Map from tink_binary_key to HybridDecrypt primitive.
+  std::unordered_map<std::string,
+                     std::unique_ptr<::crypto::tink::HybridDecrypt>>
+      hybrid_decrypt_primitive_map_;
+  std::shared_mutex hybrid_decrypt_primitive_map_mutex_;
+
+  // Map from tink_binary_key to Mac primitive.
+  std::unordered_map<std::string, std::unique_ptr<::crypto::tink::Mac>>
+      mac_primitive_map_;
+  std::shared_mutex mac_primitive_map_mutex_;
 };
 }  // namespace google::scp::cpio::client_providers

@@ -21,6 +21,7 @@ java_test(
     srcs = ["SpannerKeyDbTest.java"],
     deps = [
         ":gcp",
+        "//coordinator/protos/keymanagement/shared/api/v1:proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",

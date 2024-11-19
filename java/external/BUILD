@@ -726,3 +726,8 @@ alias(
     name = "grcp_netty_shaded",
     actual = "@maven//:io_grpc_grpc_netty_shaded",
 )
+
+alias(
+    name = "conscrypt_openjdk",
+    actual = "@maven//:org_conscrypt_conscrypt_openjdk_uber",
+)

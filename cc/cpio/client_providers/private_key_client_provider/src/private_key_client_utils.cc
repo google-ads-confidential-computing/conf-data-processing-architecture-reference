@@ -167,7 +167,7 @@ ExecutionResultOr<PrivateKey> PrivateKeyClientUtils::ConstructPrivateKey(
   auto& encryption_key = decrypt_results.at(0).encryption_key;
   PrivateKey private_key;
   private_key.set_key_id(*encryption_key.key_id);
-  private_key.set_public_key(*encryption_key.public_key_material);
+  private_key.set_public_key(*encryption_key.public_keyset_handle);
   *private_key.mutable_expiration_time() =
       TimeUtil::MillisecondsToTimestamp(encryption_key.expiration_time_in_ms);
   *private_key.mutable_creation_time() =

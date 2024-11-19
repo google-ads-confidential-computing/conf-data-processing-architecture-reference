@@ -21,6 +21,7 @@
 
 #include "cc/cpio/client_providers/queue_client_provider/src/gcp/error_codes.h"
 #include "core/async_executor/mock/mock_async_executor.h"
+#include "core/async_executor/src/async_executor.h"
 #include "core/test/utils/conditional_wait.h"
 #include "core/test/utils/scp_test_base.h"
 #include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
@@ -45,8 +46,11 @@ using google::cmrt::sdk::queue_service::v1::
 using google::pubsub::v1::Publisher;
 using google::pubsub::v1::Subscriber;
 using google::scp::core::AsyncContext;
+using google::scp::core::AsyncExecutor;
 using google::scp::core::FailureExecutionResult;
+using google::scp::core::RetryExecutionResult;
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
+using google::scp::core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES;
 using google::scp::core::errors::SC_GCP_ABORTED;
 using google::scp::core::errors::SC_GCP_DATA_LOSS;
 using google::scp::core::errors::SC_GCP_FAILED_PRECONDITION;
@@ -84,8 +88,10 @@ using std::make_unique;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
+using std::chrono::seconds;
 using testing::_;
 using testing::Eq;
+using testing::InSequence;
 using testing::NiceMock;
 using testing::Return;
 using testing::UnorderedElementsAre;
@@ -121,6 +127,8 @@ class GcpQueueClientProviderTest : public ScpTestBase {
   GcpQueueClientProviderTest() {
     queue_client_options_ = make_shared<QueueClientOptions>();
     queue_client_options_->queue_name = kQueueName;
+    queue_client_options_->retry_interval = std::chrono::milliseconds(101);
+    queue_client_options_->max_retry_count = 0;
     mock_instance_client_provider_ = make_shared<MockInstanceClientProvider>();
     mock_instance_client_provider_->instance_resource_name =
         kInstanceResourceName;
@@ -315,6 +323,121 @@ TEST_F(GcpQueueClientProviderTest, EnqueueMessageFailureWithPubSubError) {
   WaitUntil([this]() { return finish_called_.load(); });
 }
 
+TEST_F(GcpQueueClientProviderTest, EnqueueMessageSuccessAfterRetryFailed) {
+  queue_client_options_ = make_shared<QueueClientOptions>();
+  queue_client_options_->queue_name = kQueueName;
+  queue_client_options_->retry_interval = std::chrono::milliseconds(10);
+  queue_client_options_->max_retry_count = 3;
+  mock_instance_client_provider_ = make_shared<MockInstanceClientProvider>();
+  mock_instance_client_provider_->instance_resource_name =
+      kInstanceResourceName;
+
+  mock_publisher_stub_ = make_shared<NiceMock<MockPublisherStub>>();
+  mock_subscriber_stub_ = make_shared<NiceMock<MockSubscriberStub>>();
+
+  mock_pubsub_stub_factory_ = make_shared<NiceMock<MockGcpPubSubStubFactory>>();
+  ON_CALL(*mock_pubsub_stub_factory_, CreatePublisherStub)
+      .WillByDefault(Return(mock_publisher_stub_));
+  ON_CALL(*mock_pubsub_stub_factory_, CreateSubscriberStub)
+      .WillByDefault(Return(mock_subscriber_stub_));
+
+  auto io_async_executor = make_shared<AsyncExecutor>(2, 1000);
+  EXPECT_SUCCESS(io_async_executor->Init());
+  EXPECT_SUCCESS(io_async_executor->Run());
+
+  queue_client_provider_ = make_unique<GcpQueueClientProvider>(
+      queue_client_options_, mock_instance_client_provider_,
+      make_shared<MockAsyncExecutor>(), io_async_executor,
+      mock_pubsub_stub_factory_);
+
+  EXPECT_SUCCESS(queue_client_provider_->Init());
+  EXPECT_SUCCESS(queue_client_provider_->Run());
+
+  {
+    InSequence seq;
+    EXPECT_CALL(
+        *mock_publisher_stub_,
+        Publish(_, HasPublishParams(kExpectedTopicName, kMessageBody), _))
+        .Times(2)
+        .WillRepeatedly(Return(Status(StatusCode::UNAVAILABLE, "")));
+    EXPECT_CALL(
+        *mock_publisher_stub_,
+        Publish(_, HasPublishParams(kExpectedTopicName, kMessageBody), _))
+        .WillOnce([](auto, auto, auto* publish_response) {
+          publish_response->add_message_ids(kMessageId);
+          return Status(StatusCode::OK, "");
+        });
+  }
+
+  enqueue_message_context_.request->set_message_body(kMessageBody);
+  enqueue_message_context_.callback =
+      [this](AsyncContext<EnqueueMessageRequest, EnqueueMessageResponse>&
+                 enqueue_message_context) {
+        EXPECT_SUCCESS(enqueue_message_context.result);
+
+        EXPECT_EQ(enqueue_message_context.response->message_id(), kMessageId);
+        finish_called_ = true;
+      };
+
+  queue_client_provider_->EnqueueMessage(enqueue_message_context_);
+
+  WaitUntil([this]() { return finish_called_.load(); });
+
+  EXPECT_SUCCESS(io_async_executor->Stop());
+}
+
+TEST_F(GcpQueueClientProviderTest, EnqueueMessageFailureAfterRetryExhausted) {
+  queue_client_options_ = make_shared<QueueClientOptions>();
+  queue_client_options_->queue_name = kQueueName;
+  queue_client_options_->retry_interval = std::chrono::milliseconds(10);
+  queue_client_options_->max_retry_count = 3;
+  mock_instance_client_provider_ = make_shared<MockInstanceClientProvider>();
+  mock_instance_client_provider_->instance_resource_name =
+      kInstanceResourceName;
+
+  mock_publisher_stub_ = make_shared<NiceMock<MockPublisherStub>>();
+  mock_subscriber_stub_ = make_shared<NiceMock<MockSubscriberStub>>();
+
+  mock_pubsub_stub_factory_ = make_shared<NiceMock<MockGcpPubSubStubFactory>>();
+  ON_CALL(*mock_pubsub_stub_factory_, CreatePublisherStub)
+      .WillByDefault(Return(mock_publisher_stub_));
+  ON_CALL(*mock_pubsub_stub_factory_, CreateSubscriberStub)
+      .WillByDefault(Return(mock_subscriber_stub_));
+
+  auto io_async_executor = make_shared<AsyncExecutor>(2, 1000);
+  EXPECT_SUCCESS(io_async_executor->Init());
+  EXPECT_SUCCESS(io_async_executor->Run());
+
+  queue_client_provider_ = make_unique<GcpQueueClientProvider>(
+      queue_client_options_, mock_instance_client_provider_,
+      make_shared<MockAsyncExecutor>(), io_async_executor,
+      mock_pubsub_stub_factory_);
+
+  EXPECT_SUCCESS(queue_client_provider_->Init());
+  EXPECT_SUCCESS(queue_client_provider_->Run());
+
+  EXPECT_CALL(*mock_publisher_stub_,
+              Publish(_, HasPublishParams(kExpectedTopicName, kMessageBody), _))
+      .Times(queue_client_options_->max_retry_count)
+      .WillRepeatedly(Return(Status(StatusCode::UNAVAILABLE, "")));
+
+  enqueue_message_context_.request->set_message_body(kMessageBody);
+  enqueue_message_context_.callback =
+      [this](AsyncContext<EnqueueMessageRequest, EnqueueMessageResponse>&
+                 enqueue_message_context) {
+        EXPECT_THAT(
+            enqueue_message_context.result,
+            ResultIs(FailureExecutionResult(SC_DISPATCHER_EXHAUSTED_RETRIES)));
+        finish_called_ = true;
+      };
+
+  queue_client_provider_->EnqueueMessage(enqueue_message_context_);
+
+  WaitUntil([this]() { return finish_called_.load(); });
+
+  EXPECT_SUCCESS(io_async_executor->Stop());
+}
+
 MATCHER_P2(HasPullParams, subscription_name, max_messages, "") {
   return ExplainMatchResult(Eq(subscription_name), arg.subscription(),
                             result_listener) &&
@@ -475,6 +598,133 @@ TEST_F(GcpQueueClientProviderTest,
   WaitUntil([this]() { return finish_called_.load(); });
 }
 
+TEST_F(GcpQueueClientProviderTest, GetTopMessageSuccessAfterRetryFailed) {
+  queue_client_options_ = make_shared<QueueClientOptions>();
+  queue_client_options_->queue_name = kQueueName;
+  queue_client_options_->retry_interval = std::chrono::milliseconds(10);
+  queue_client_options_->max_retry_count = 3;
+  mock_instance_client_provider_ = make_shared<MockInstanceClientProvider>();
+  mock_instance_client_provider_->instance_resource_name =
+      kInstanceResourceName;
+
+  mock_publisher_stub_ = make_shared<NiceMock<MockPublisherStub>>();
+  mock_subscriber_stub_ = make_shared<NiceMock<MockSubscriberStub>>();
+
+  mock_pubsub_stub_factory_ = make_shared<NiceMock<MockGcpPubSubStubFactory>>();
+  ON_CALL(*mock_pubsub_stub_factory_, CreatePublisherStub)
+      .WillByDefault(Return(mock_publisher_stub_));
+  ON_CALL(*mock_pubsub_stub_factory_, CreateSubscriberStub)
+      .WillByDefault(Return(mock_subscriber_stub_));
+
+  auto io_async_executor = make_shared<AsyncExecutor>(2, 1000);
+  EXPECT_SUCCESS(io_async_executor->Init());
+  EXPECT_SUCCESS(io_async_executor->Run());
+
+  queue_client_provider_ = make_unique<GcpQueueClientProvider>(
+      queue_client_options_, mock_instance_client_provider_,
+      make_shared<MockAsyncExecutor>(), io_async_executor,
+      mock_pubsub_stub_factory_);
+
+  EXPECT_SUCCESS(queue_client_provider_->Init());
+  EXPECT_SUCCESS(queue_client_provider_->Run());
+
+  {
+    InSequence seq;
+    EXPECT_CALL(*mock_subscriber_stub_,
+                Pull(_,
+                     HasPullParams(kExpectedSubscriptionName,
+                                   kMaxNumberOfMessagesReceived),
+                     _))
+        .Times(2)
+        .WillRepeatedly(Return(Status(StatusCode::DEADLINE_EXCEEDED, "")));
+    EXPECT_CALL(*mock_subscriber_stub_,
+                Pull(_,
+                     HasPullParams(kExpectedSubscriptionName,
+                                   kMaxNumberOfMessagesReceived),
+                     _))
+        .WillOnce([](auto, auto, auto* pull_response) {
+          auto* received_message = pull_response->add_received_messages();
+          received_message->mutable_message()->set_data(kMessageBody);
+          received_message->mutable_message()->set_message_id(kMessageId);
+          received_message->set_ack_id(kReceiptInfo);
+          return Status(StatusCode::OK, "");
+        });
+  }
+
+  get_top_message_context_.callback =
+      [this](AsyncContext<GetTopMessageRequest, GetTopMessageResponse>&
+                 get_top_message_context) {
+        EXPECT_SUCCESS(get_top_message_context.result);
+        EXPECT_EQ(get_top_message_context.response->message_id(), kMessageId);
+        EXPECT_EQ(get_top_message_context.response->message_body(),
+                  kMessageBody);
+        EXPECT_EQ(get_top_message_context.response->receipt_info(),
+                  kReceiptInfo);
+        finish_called_ = true;
+      };
+
+  queue_client_provider_->GetTopMessage(get_top_message_context_);
+
+  WaitUntil([this]() { return finish_called_.load(); });
+
+  EXPECT_SUCCESS(io_async_executor->Stop());
+}
+
+TEST_F(GcpQueueClientProviderTest, GetTopMessageFailureAfterRetryExhausted) {
+  queue_client_options_ = make_shared<QueueClientOptions>();
+  queue_client_options_->queue_name = kQueueName;
+  queue_client_options_->retry_interval = std::chrono::milliseconds(10);
+  queue_client_options_->max_retry_count = 3;
+  mock_instance_client_provider_ = make_shared<MockInstanceClientProvider>();
+  mock_instance_client_provider_->instance_resource_name =
+      kInstanceResourceName;
+
+  mock_publisher_stub_ = make_shared<NiceMock<MockPublisherStub>>();
+  mock_subscriber_stub_ = make_shared<NiceMock<MockSubscriberStub>>();
+
+  mock_pubsub_stub_factory_ = make_shared<NiceMock<MockGcpPubSubStubFactory>>();
+  ON_CALL(*mock_pubsub_stub_factory_, CreatePublisherStub)
+      .WillByDefault(Return(mock_publisher_stub_));
+  ON_CALL(*mock_pubsub_stub_factory_, CreateSubscriberStub)
+      .WillByDefault(Return(mock_subscriber_stub_));
+
+  auto io_async_executor = make_shared<AsyncExecutor>(2, 1000);
+  EXPECT_SUCCESS(io_async_executor->Init());
+  EXPECT_SUCCESS(io_async_executor->Run());
+
+  queue_client_provider_ = make_unique<GcpQueueClientProvider>(
+      queue_client_options_, mock_instance_client_provider_,
+      make_shared<MockAsyncExecutor>(), io_async_executor,
+      mock_pubsub_stub_factory_);
+
+  EXPECT_SUCCESS(queue_client_provider_->Init());
+  EXPECT_SUCCESS(queue_client_provider_->Run());
+
+  EXPECT_CALL(*mock_subscriber_stub_,
+              Pull(_,
+                   HasPullParams(kExpectedSubscriptionName,
+                                 kMaxNumberOfMessagesReceived),
+                   _))
+      .Times(queue_client_options_->max_retry_count)
+      .WillRepeatedly(Return(Status(StatusCode::DEADLINE_EXCEEDED, "")));
+
+  get_top_message_context_.callback =
+      [this](AsyncContext<GetTopMessageRequest, GetTopMessageResponse>&
+                 get_top_message_context) {
+        EXPECT_THAT(
+            get_top_message_context.result,
+            ResultIs(FailureExecutionResult(SC_DISPATCHER_EXHAUSTED_RETRIES)));
+
+        finish_called_ = true;
+      };
+
+  queue_client_provider_->GetTopMessage(get_top_message_context_);
+
+  WaitUntil([this]() { return finish_called_.load(); });
+
+  EXPECT_SUCCESS(io_async_executor->Stop());
+}
+
 MATCHER_P3(HasModifyAckDeadlineParams, subscription_name, ack_id,
            ack_deadline_seconds, "") {
   return ExplainMatchResult(Eq(subscription_name), arg.subscription(),
@@ -603,6 +853,142 @@ TEST_F(GcpQueueClientProviderTest,
   WaitUntil([this]() { return finish_called_.load(); });
 }
 
+TEST_F(GcpQueueClientProviderTest,
+       UpdateMessageVisibilityTimeoutSuccessAfterRetryFailed) {
+  queue_client_options_ = make_shared<QueueClientOptions>();
+  queue_client_options_->queue_name = kQueueName;
+  queue_client_options_->retry_interval = std::chrono::milliseconds(10);
+  queue_client_options_->max_retry_count = 3;
+  mock_instance_client_provider_ = make_shared<MockInstanceClientProvider>();
+  mock_instance_client_provider_->instance_resource_name =
+      kInstanceResourceName;
+
+  mock_publisher_stub_ = make_shared<NiceMock<MockPublisherStub>>();
+  mock_subscriber_stub_ = make_shared<NiceMock<MockSubscriberStub>>();
+
+  mock_pubsub_stub_factory_ = make_shared<NiceMock<MockGcpPubSubStubFactory>>();
+  ON_CALL(*mock_pubsub_stub_factory_, CreatePublisherStub)
+      .WillByDefault(Return(mock_publisher_stub_));
+  ON_CALL(*mock_pubsub_stub_factory_, CreateSubscriberStub)
+      .WillByDefault(Return(mock_subscriber_stub_));
+
+  auto io_async_executor = make_shared<AsyncExecutor>(2, 1000);
+  EXPECT_SUCCESS(io_async_executor->Init());
+  EXPECT_SUCCESS(io_async_executor->Run());
+
+  queue_client_provider_ = make_unique<GcpQueueClientProvider>(
+      queue_client_options_, mock_instance_client_provider_,
+      make_shared<MockAsyncExecutor>(), io_async_executor,
+      mock_pubsub_stub_factory_);
+
+  EXPECT_SUCCESS(queue_client_provider_->Init());
+  EXPECT_SUCCESS(queue_client_provider_->Run());
+
+  {
+    InSequence seq;
+    EXPECT_CALL(*mock_subscriber_stub_,
+                ModifyAckDeadline(_,
+                                  HasModifyAckDeadlineParams(
+                                      kExpectedSubscriptionName, kReceiptInfo,
+                                      kAckDeadlineSeconds),
+                                  _))
+        .Times(2)
+        .WillRepeatedly(Return(Status(StatusCode::DEADLINE_EXCEEDED, "")));
+    EXPECT_CALL(*mock_subscriber_stub_,
+                ModifyAckDeadline(_,
+                                  HasModifyAckDeadlineParams(
+                                      kExpectedSubscriptionName, kReceiptInfo,
+                                      kAckDeadlineSeconds),
+                                  _))
+        .WillOnce(Return(Status(StatusCode::OK, "")));
+  }
+
+  update_message_visibility_timeout_context_.request->set_receipt_info(
+      kReceiptInfo);
+  update_message_visibility_timeout_context_.request
+      ->mutable_message_visibility_timeout()
+      ->set_seconds(kAckDeadlineSeconds);
+  update_message_visibility_timeout_context_.callback =
+      [this](AsyncContext<UpdateMessageVisibilityTimeoutRequest,
+                          UpdateMessageVisibilityTimeoutResponse>&
+                 update_message_visibility_timeout_context) {
+        EXPECT_SUCCESS(update_message_visibility_timeout_context.result);
+
+        finish_called_ = true;
+      };
+
+  queue_client_provider_->UpdateMessageVisibilityTimeout(
+      update_message_visibility_timeout_context_);
+
+  WaitUntil([this]() { return finish_called_.load(); });
+
+  EXPECT_SUCCESS(io_async_executor->Stop());
+}
+
+TEST_F(GcpQueueClientProviderTest,
+       UpdateMessageVisibilityTimeoutFailureAfterRetryExhausted) {
+  queue_client_options_ = make_shared<QueueClientOptions>();
+  queue_client_options_->queue_name = kQueueName;
+  queue_client_options_->retry_interval = std::chrono::milliseconds(10);
+  queue_client_options_->max_retry_count = 3;
+  mock_instance_client_provider_ = make_shared<MockInstanceClientProvider>();
+  mock_instance_client_provider_->instance_resource_name =
+      kInstanceResourceName;
+
+  mock_publisher_stub_ = make_shared<NiceMock<MockPublisherStub>>();
+  mock_subscriber_stub_ = make_shared<NiceMock<MockSubscriberStub>>();
+
+  mock_pubsub_stub_factory_ = make_shared<NiceMock<MockGcpPubSubStubFactory>>();
+  ON_CALL(*mock_pubsub_stub_factory_, CreatePublisherStub)
+      .WillByDefault(Return(mock_publisher_stub_));
+  ON_CALL(*mock_pubsub_stub_factory_, CreateSubscriberStub)
+      .WillByDefault(Return(mock_subscriber_stub_));
+
+  auto io_async_executor = make_shared<AsyncExecutor>(2, 1000);
+  EXPECT_SUCCESS(io_async_executor->Init());
+  EXPECT_SUCCESS(io_async_executor->Run());
+
+  queue_client_provider_ = make_unique<GcpQueueClientProvider>(
+      queue_client_options_, mock_instance_client_provider_,
+      make_shared<MockAsyncExecutor>(), io_async_executor,
+      mock_pubsub_stub_factory_);
+
+  EXPECT_SUCCESS(queue_client_provider_->Init());
+  EXPECT_SUCCESS(queue_client_provider_->Run());
+
+  EXPECT_CALL(*mock_subscriber_stub_,
+              ModifyAckDeadline(
+                  _,
+                  HasModifyAckDeadlineParams(kExpectedSubscriptionName,
+                                             kReceiptInfo, kAckDeadlineSeconds),
+                  _))
+      .Times(queue_client_options_->max_retry_count)
+      .WillRepeatedly(Return(Status(StatusCode::DEADLINE_EXCEEDED, "")));
+
+  update_message_visibility_timeout_context_.request->set_receipt_info(
+      kReceiptInfo);
+  update_message_visibility_timeout_context_.request
+      ->mutable_message_visibility_timeout()
+      ->set_seconds(kAckDeadlineSeconds);
+  update_message_visibility_timeout_context_.callback =
+      [this](AsyncContext<UpdateMessageVisibilityTimeoutRequest,
+                          UpdateMessageVisibilityTimeoutResponse>&
+                 update_message_visibility_timeout_context) {
+        EXPECT_THAT(
+            update_message_visibility_timeout_context.result,
+            ResultIs(FailureExecutionResult(SC_DISPATCHER_EXHAUSTED_RETRIES)));
+
+        finish_called_ = true;
+      };
+
+  queue_client_provider_->UpdateMessageVisibilityTimeout(
+      update_message_visibility_timeout_context_);
+
+  WaitUntil([this]() { return finish_called_.load(); });
+
+  EXPECT_SUCCESS(io_async_executor->Stop());
+}
+
 MATCHER_P2(HasAcknowledgeParams, subscription_name, ack_id, "") {
   return ExplainMatchResult(Eq(subscription_name), arg.subscription(),
                             result_listener) &&
@@ -679,6 +1065,124 @@ TEST_F(GcpQueueClientProviderTest, DeleteMessageFailureWithPubSubError) {
   queue_client_provider_->DeleteMessage(delete_message_context_);
 
   WaitUntil([this]() { return finish_called_.load(); });
+}
+
+TEST_F(GcpQueueClientProviderTest, DeleteMessageSuccessAfterRetryFailed) {
+  queue_client_options_ = make_shared<QueueClientOptions>();
+  queue_client_options_->queue_name = kQueueName;
+  queue_client_options_->retry_interval = std::chrono::milliseconds(10);
+  queue_client_options_->max_retry_count = 3;
+  mock_instance_client_provider_ = make_shared<MockInstanceClientProvider>();
+  mock_instance_client_provider_->instance_resource_name =
+      kInstanceResourceName;
+
+  mock_publisher_stub_ = make_shared<NiceMock<MockPublisherStub>>();
+  mock_subscriber_stub_ = make_shared<NiceMock<MockSubscriberStub>>();
+
+  mock_pubsub_stub_factory_ = make_shared<NiceMock<MockGcpPubSubStubFactory>>();
+  ON_CALL(*mock_pubsub_stub_factory_, CreatePublisherStub)
+      .WillByDefault(Return(mock_publisher_stub_));
+  ON_CALL(*mock_pubsub_stub_factory_, CreateSubscriberStub)
+      .WillByDefault(Return(mock_subscriber_stub_));
+
+  auto io_async_executor = make_shared<AsyncExecutor>(2, 1000);
+  EXPECT_SUCCESS(io_async_executor->Init());
+  EXPECT_SUCCESS(io_async_executor->Run());
+
+  queue_client_provider_ = make_unique<GcpQueueClientProvider>(
+      queue_client_options_, mock_instance_client_provider_,
+      make_shared<MockAsyncExecutor>(), io_async_executor,
+      mock_pubsub_stub_factory_);
+
+  EXPECT_SUCCESS(queue_client_provider_->Init());
+  EXPECT_SUCCESS(queue_client_provider_->Run());
+
+  {
+    InSequence seq;
+    EXPECT_CALL(
+        *mock_subscriber_stub_,
+        Acknowledge(
+            _, HasAcknowledgeParams(kExpectedSubscriptionName, kReceiptInfo),
+            _))
+        .Times(2)
+        .WillRepeatedly(Return(Status(StatusCode::DEADLINE_EXCEEDED, "")));
+    EXPECT_CALL(
+        *mock_subscriber_stub_,
+        Acknowledge(
+            _, HasAcknowledgeParams(kExpectedSubscriptionName, kReceiptInfo),
+            _))
+        .WillOnce(Return(Status(StatusCode::OK, "")));
+  }
+
+  delete_message_context_.request->set_receipt_info(kReceiptInfo);
+  delete_message_context_.callback =
+      [this](AsyncContext<DeleteMessageRequest, DeleteMessageResponse>&
+                 delete_message_context) {
+        EXPECT_SUCCESS(delete_message_context.result);
+
+        finish_called_ = true;
+      };
+
+  queue_client_provider_->DeleteMessage(delete_message_context_);
+
+  WaitUntil([this]() { return finish_called_.load(); });
+
+  EXPECT_SUCCESS(io_async_executor->Stop());
+}
+
+TEST_F(GcpQueueClientProviderTest, DeleteMessageFailureAfterRetryExhausted) {
+  queue_client_options_ = make_shared<QueueClientOptions>();
+  queue_client_options_->queue_name = kQueueName;
+  queue_client_options_->retry_interval = std::chrono::milliseconds(10);
+  queue_client_options_->max_retry_count = 3;
+  mock_instance_client_provider_ = make_shared<MockInstanceClientProvider>();
+  mock_instance_client_provider_->instance_resource_name =
+      kInstanceResourceName;
+
+  mock_publisher_stub_ = make_shared<NiceMock<MockPublisherStub>>();
+  mock_subscriber_stub_ = make_shared<NiceMock<MockSubscriberStub>>();
+
+  mock_pubsub_stub_factory_ = make_shared<NiceMock<MockGcpPubSubStubFactory>>();
+  ON_CALL(*mock_pubsub_stub_factory_, CreatePublisherStub)
+      .WillByDefault(Return(mock_publisher_stub_));
+  ON_CALL(*mock_pubsub_stub_factory_, CreateSubscriberStub)
+      .WillByDefault(Return(mock_subscriber_stub_));
+
+  auto io_async_executor = make_shared<AsyncExecutor>(2, 1000);
+  EXPECT_SUCCESS(io_async_executor->Init());
+  EXPECT_SUCCESS(io_async_executor->Run());
+
+  queue_client_provider_ = make_unique<GcpQueueClientProvider>(
+      queue_client_options_, mock_instance_client_provider_,
+      make_shared<MockAsyncExecutor>(), io_async_executor,
+      mock_pubsub_stub_factory_);
+
+  EXPECT_SUCCESS(queue_client_provider_->Init());
+  EXPECT_SUCCESS(queue_client_provider_->Run());
+
+  EXPECT_CALL(
+      *mock_subscriber_stub_,
+      Acknowledge(
+          _, HasAcknowledgeParams(kExpectedSubscriptionName, kReceiptInfo), _))
+      .Times(queue_client_options_->max_retry_count)
+      .WillRepeatedly(Return(Status(StatusCode::UNAVAILABLE, "")));
+
+  delete_message_context_.request->set_receipt_info(kReceiptInfo);
+  delete_message_context_.callback =
+      [this](AsyncContext<DeleteMessageRequest, DeleteMessageResponse>&
+                 delete_message_context) {
+        EXPECT_THAT(
+            delete_message_context.result,
+            ResultIs(FailureExecutionResult(SC_DISPATCHER_EXHAUSTED_RETRIES)));
+
+        finish_called_ = true;
+      };
+
+  queue_client_provider_->DeleteMessage(delete_message_context_);
+
+  WaitUntil([this]() { return finish_called_.load(); });
+
+  EXPECT_SUCCESS(io_async_executor->Stop());
 }
 
 }  // namespace google::scp::cpio::client_providers::gcp_queue_client::test

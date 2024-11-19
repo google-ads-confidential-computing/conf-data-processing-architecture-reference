@@ -16,7 +16,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 4.36"
+      version = ">= 4.48"
     }
   }
 }
@@ -73,12 +73,14 @@ resource "google_cloudfunctions2_function" "get_public_key_cloudfunction" {
   }
 
   service_config {
-    min_instance_count    = var.get_public_key_cloudfunction_min_instances
-    max_instance_count    = var.get_public_key_cloudfunction_max_instances
-    timeout_seconds       = var.cloudfunction_timeout_seconds
-    available_memory      = "${var.get_public_key_cloudfunction_memory_mb}M"
-    service_account_email = local.public_key_service_account_email
-    ingress_settings      = "ALLOW_INTERNAL_AND_GCLB"
+    available_cpu                    = 2
+    max_instance_request_concurrency = 100
+    min_instance_count               = var.get_public_key_cloudfunction_min_instances
+    max_instance_count               = var.get_public_key_cloudfunction_max_instances
+    timeout_seconds                  = var.cloudfunction_timeout_seconds
+    available_memory                 = "${var.get_public_key_cloudfunction_memory_mb}M"
+    service_account_email            = local.public_key_service_account_email
+    ingress_settings                 = "ALLOW_INTERNAL_AND_GCLB"
     environment_variables = {
       PROJECT_ID       = var.project_id
       SPANNER_INSTANCE = var.spanner_instance_name

@@ -48,8 +48,13 @@ public class DefaultParameterModule extends AbstractModule {
     }
 
     @Override
+    public Optional<String> getLatestParameter(String param) throws ParameterClientException {
+      return getParameter(param);
+    }
+
+    @Override
     public Optional<String> getParameter(
-        String param, Optional<String> paramPrefix, boolean includeEnvironmentParam)
+        String param, Optional<String> paramPrefix, boolean includeEnvironmentParam, boolean latest)
         throws ParameterClientException {
       return Optional.empty();
     }

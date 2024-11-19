@@ -32,8 +32,10 @@ using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::HttpClientInterface;
 using google::scp::core::HttpHeaders;
+using google::scp::core::HttpMethod;
 using google::scp::core::HttpRequest;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::Uri;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::errors::
     SC_GCP_PRIVATE_KEY_FETCHER_PROVIDER_CREDENTIALS_PROVIDER_NOT_FOUND;
@@ -49,6 +51,12 @@ namespace {
 constexpr char kGcpPrivateKeyFetcherProvider[] = "GcpPrivateKeyFetcherProvider";
 constexpr char kAuthorizationHeaderKey[] = "Authorization";
 constexpr char kBearerTokenPrefix[] = "Bearer ";
+constexpr char kVersionNumberBetaSuffix[] = "/v1beta";
+constexpr char kVersionNumberSuffix[] = "/v1";
+constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
+constexpr char kKeySetName[] = "sets";
+constexpr char kListKeysByTimeUri[] = ":recent";
+constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
 }  // namespace
 
 namespace google::scp::cpio::client_providers {
@@ -71,12 +79,9 @@ void GcpPrivateKeyFetcherProvider::SignHttpRequest(
     AsyncContext<PrivateKeyFetchingRequest, core::HttpRequest>&
         sign_request_context) noexcept {
   auto request = make_shared<GetSessionTokenForTargetAudienceRequest>();
-  request->token_target_audience_uri = make_shared<string>(
-      sign_request_context.request->key_endpoint->gcp_cloud_function_url()
-              .empty()
-          ? sign_request_context.request->key_endpoint->endpoint()
-          : sign_request_context.request->key_endpoint
-                ->gcp_cloud_function_url());
+  const auto& uri =
+      sign_request_context.request->key_endpoint->gcp_cloud_function_url();
+  request->token_target_audience_uri = make_shared<string>(uri);
   AsyncContext<GetSessionTokenForTargetAudienceRequest, GetSessionTokenResponse>
       get_token_context(
           move(request),
@@ -104,9 +109,7 @@ void GcpPrivateKeyFetcherProvider::OnGetSessionTokenCallback(
   }
 
   const auto& access_token = *get_token_context.response->session_token;
-  auto http_request = make_shared<HttpRequest>();
-  PrivateKeyFetchingClientUtils::CreateHttpRequest(
-      *sign_request_context.request, *http_request);
+  auto http_request = CreateHttpRequest(*sign_request_context.request);
   http_request->headers = make_shared<core::HttpHeaders>();
   http_request->headers->insert(
       {string(kAuthorizationHeaderKey),
@@ -114,6 +117,37 @@ void GcpPrivateKeyFetcherProvider::OnGetSessionTokenCallback(
   sign_request_context.response = move(http_request);
   sign_request_context.result = SuccessExecutionResult();
   sign_request_context.Finish();
+}
+
+shared_ptr<HttpRequest> GcpPrivateKeyFetcherProvider::CreateHttpRequest(
+    const PrivateKeyFetchingRequest& request) noexcept {
+  auto http_request = make_shared<HttpRequest>();
+  http_request->method = HttpMethod::GET;
+
+  auto endpoint = request.key_endpoint->endpoint();
+  size_t version_position = endpoint.find(kVersionNumberSuffix);
+  if (version_position != string::npos) {
+    endpoint = endpoint.substr(0, version_position);
+  }
+
+  string base_uri;
+  if (request.key_id && !request.key_id->empty()) {
+    base_uri = absl::StrCat(endpoint, kVersionNumberBetaSuffix,
+                            kEncryptionKeyUrlSuffix, "/", *request.key_id);
+    http_request->path = make_shared<Uri>(base_uri);
+    return http_request;
+  }
+
+  base_uri =
+      absl::StrCat(endpoint, kVersionNumberBetaSuffix, "/", kKeySetName, "/");
+  if (request.key_set_name) {
+    absl::StrAppend(&base_uri, *request.key_set_name);
+  }
+  absl::StrAppend(&base_uri, kEncryptionKeyUrlSuffix, kListKeysByTimeUri);
+  http_request->path = make_shared<Uri>(base_uri);
+  http_request->query = make_shared<string>(
+      absl::StrCat(kMaxAgeSecondsQueryParameter, request.max_age_seconds));
+  return http_request;
 }
 
 #ifndef TEST_CPIO

@@ -83,7 +83,7 @@ class SyncUtils {
     core::AsyncContext<RequestT, ResponseT> context;
     context.request = std::make_shared<RequestT>(std::move(request));
     context.callback = [&](core::AsyncContext<RequestT, ResponseT>& outcome) {
-      request_promise.set_value({outcome.result, outcome.response});
+      request_promise.set_value({outcome.result, std::move(outcome.response)});
     };
 
     func(context);

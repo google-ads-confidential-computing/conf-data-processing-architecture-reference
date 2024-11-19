@@ -21,6 +21,7 @@
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
+using google::scp::core::RetryExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::errors::SC_GCP_ABORTED;
 using google::scp::core::errors::SC_GCP_ALREADY_EXISTS;
@@ -122,7 +123,7 @@ INSTANTIATE_TEST_SUITE_P(
         make_tuple(grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, ""),
                    FailureExecutionResult(SC_GCP_INVALID_ARGUMENT)),
         make_tuple(grpc::Status(grpc::StatusCode::DEADLINE_EXCEEDED, ""),
-                   FailureExecutionResult(SC_GCP_DEADLINE_EXCEEDED)),
+                   RetryExecutionResult(SC_GCP_DEADLINE_EXCEEDED)),
         make_tuple(grpc::Status(grpc::StatusCode::ALREADY_EXISTS, ""),
                    FailureExecutionResult(SC_GCP_ALREADY_EXISTS)),
         make_tuple(grpc::Status(grpc::StatusCode::UNIMPLEMENTED, ""),
@@ -134,7 +135,7 @@ INSTANTIATE_TEST_SUITE_P(
         make_tuple(grpc::Status(grpc::StatusCode::ABORTED, ""),
                    FailureExecutionResult(SC_GCP_ABORTED)),
         make_tuple(grpc::Status(grpc::StatusCode::UNAVAILABLE, ""),
-                   FailureExecutionResult(SC_GCP_UNAVAILABLE)),
+                   RetryExecutionResult(SC_GCP_UNAVAILABLE)),
         make_tuple(grpc::Status(grpc::StatusCode::UNAUTHENTICATED, ""),
                    FailureExecutionResult(SC_GCP_UNAUTHENTICATED)),
         make_tuple(grpc::Status(grpc::StatusCode::PERMISSION_DENIED, ""),

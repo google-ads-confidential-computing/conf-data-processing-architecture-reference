@@ -256,8 +256,8 @@ variable "keystorageservice_alarm_eval_period_sec" {
   type        = string
 }
 
-variable "keystorageservice_cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm. Example: 0."
+variable "keystorageservice_cloudfunction_error_ratio_threshold" {
+  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = string
 }
 
@@ -295,8 +295,8 @@ variable "encryptionkeyservice_alarm_eval_period_sec" {
   type        = string
 }
 
-variable "encryptionkeyservice_cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm. Example: 0."
+variable "encryptionkeyservice_cloudfunction_error_ratio_threshold" {
+  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = string
 }
 
@@ -323,4 +323,14 @@ variable "encryptionkeyservice_lb_5xx_threshold" {
 variable "encryptionkeyservice_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
+}
+
+variable "get_encrypted_private_key_general_error_threshold" {
+  description = "Get Encrypted Key General error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "alert_severity_overrides" {
+  description = "Alerts severity overrides."
+  type        = map(string)
 }

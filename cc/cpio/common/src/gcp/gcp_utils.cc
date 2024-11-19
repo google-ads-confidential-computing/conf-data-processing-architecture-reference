@@ -25,6 +25,7 @@
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
+using google::scp::core::RetryExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::errors::SC_GCP_ABORTED;
@@ -130,7 +131,7 @@ ExecutionResult GcpUtils::GcpErrorConverter(grpc::Status status) noexcept {
       failure = FailureExecutionResult(SC_GCP_INVALID_ARGUMENT);
       break;
     case grpc::StatusCode::DEADLINE_EXCEEDED:
-      failure = FailureExecutionResult(SC_GCP_DEADLINE_EXCEEDED);
+      failure = RetryExecutionResult(SC_GCP_DEADLINE_EXCEEDED);
       break;
     case grpc::StatusCode::ALREADY_EXISTS:
       failure = FailureExecutionResult(SC_GCP_ALREADY_EXISTS);
@@ -148,7 +149,7 @@ ExecutionResult GcpUtils::GcpErrorConverter(grpc::Status status) noexcept {
       failure = FailureExecutionResult(SC_GCP_ABORTED);
       break;
     case grpc::StatusCode::UNAVAILABLE:
-      failure = FailureExecutionResult(SC_GCP_UNAVAILABLE);
+      failure = RetryExecutionResult(SC_GCP_UNAVAILABLE);
       break;
     case grpc::StatusCode::UNAUTHENTICATED:
       failure = FailureExecutionResult(SC_GCP_UNAUTHENTICATED);

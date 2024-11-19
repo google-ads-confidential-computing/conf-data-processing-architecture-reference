@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -142,6 +143,68 @@ public final class GcpParameterClientTest {
 
     assertThat(val).isEmpty();
     verify(secretManagerServiceClientProxy).accessSecretVersion(secretName);
+  }
+
+  @Test
+  public void getParameter_sourceUpdated_returnsCachedValue() throws Exception {
+    // Given
+    String secretName = getSecretName("scp-environment-JOB_PUBSUB_TOPIC_ID");
+    String originalValue = "original-value";
+    String updatedValue = "updated-value";
+    ByteString originalData = ByteString.copyFrom(originalValue.getBytes(StandardCharsets.UTF_8));
+    ByteString updatedData = ByteString.copyFrom(updatedValue.getBytes(StandardCharsets.UTF_8));
+
+    doReturn(Optional.of(ENVIRONMENT)).when(metadataServiceClient).getMetadata(any());
+    doReturn(
+            AccessSecretVersionResponse.newBuilder()
+                .setPayload(SecretPayload.newBuilder().setData(originalData))
+                .build(),
+            AccessSecretVersionResponse.newBuilder()
+                .setPayload(SecretPayload.newBuilder().setData(updatedData))
+                .build())
+        .when(secretManagerServiceClientProxy)
+        .accessSecretVersion(secretName);
+
+    // When
+    Optional<String> firstReturned =
+        parameterClient.getParameter(WorkerParameter.JOB_PUBSUB_TOPIC_ID.name());
+    Optional<String> secondReturned =
+        parameterClient.getParameter(WorkerParameter.JOB_PUBSUB_TOPIC_ID.name());
+
+    // Then
+    assertThat(firstReturned).hasValue(originalValue);
+    assertThat(secondReturned).hasValue(originalValue);
+  }
+
+  @Test
+  public void getLatestParameter_sourceUpdated_returnsUpdatedValue() throws Exception {
+    // Given
+    String secretName = getSecretName("scp-environment-JOB_PUBSUB_TOPIC_ID");
+    String originalValue = "original-value";
+    String updatedValue = "updated-value";
+    ByteString originalData = ByteString.copyFrom(originalValue.getBytes(StandardCharsets.UTF_8));
+    ByteString updatedData = ByteString.copyFrom(updatedValue.getBytes(StandardCharsets.UTF_8));
+
+    doReturn(Optional.of(ENVIRONMENT)).when(metadataServiceClient).getMetadata(any());
+    doReturn(
+            AccessSecretVersionResponse.newBuilder()
+                .setPayload(SecretPayload.newBuilder().setData(originalData))
+                .build(),
+            AccessSecretVersionResponse.newBuilder()
+                .setPayload(SecretPayload.newBuilder().setData(updatedData))
+                .build())
+        .when(secretManagerServiceClientProxy)
+        .accessSecretVersion(secretName);
+
+    // When
+    Optional<String> firstReturned =
+        parameterClient.getParameter(WorkerParameter.JOB_PUBSUB_TOPIC_ID.name());
+    Optional<String> secondReturned =
+        parameterClient.getParameter(WorkerParameter.JOB_PUBSUB_TOPIC_ID.name());
+
+    // Then
+    assertThat(firstReturned).hasValue(originalValue);
+    assertThat(secondReturned).hasValue(originalValue);
   }
 
   private String getSecretName(String parameter) {

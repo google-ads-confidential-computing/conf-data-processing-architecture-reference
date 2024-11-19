@@ -16,7 +16,6 @@
 
 package com.google.scp.coordinator.keymanagement.shared.dao.gcp;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.UNSUPPORTED_OPERATION;
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.SPANNER_KEY_TABLE_NAME;
@@ -40,6 +39,7 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDbBaseTest;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDbUtil;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
+import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyStatusProto.EncryptionKeyStatus;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 import java.time.Duration;
@@ -227,34 +227,34 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
   }
 
   @Test
-  public void getActiveKeys_doesNotReturnNonAsymmetricKeys() throws Exception {
-    // Given
-    EncryptionKey asymmetricKey = FakeEncryptionKey.create();
-    EncryptionKey asymmetricKey2 = FakeEncryptionKey.create();
-    EncryptionKey nonAsymmetricKey1 =
-        FakeEncryptionKey.create().toBuilder().clearPublicKey().clearPublicKeyMaterial().build();
-    EncryptionKey nonAsymmetricKey2 =
-        FakeEncryptionKey.create().toBuilder().clearPublicKey().clearPublicKeyMaterial().build();
-    keyDb.createKeys(
-        ImmutableList.of(asymmetricKey, asymmetricKey2, nonAsymmetricKey1, nonAsymmetricKey2));
-
-    // When
-    ImmutableList<EncryptionKey> keys =
-        keyDb.getActiveKeys(KeyDb.DEFAULT_SET_NAME, 100, Instant.now());
-
-    // Then
-    ImmutableList<String> ids =
-        keys.stream().map(EncryptionKey::getKeyId).collect(toImmutableList());
-    assertThat(ids).containsAtLeast(asymmetricKey.getKeyId(), asymmetricKey2.getKeyId());
-    assertThat(ids).containsNoneOf(nonAsymmetricKey1.getKeyId(), nonAsymmetricKey2.getKeyId());
-  }
-
-  @Test
   public void getAllKeys_throwsServiceError() {
     ServiceException exception = assertThrows(ServiceException.class, () -> keyDb.getAllKeys());
 
     assertThat(exception.getErrorCode()).isEqualTo(Code.NOT_FOUND);
     assertThat(exception.getErrorReason()).isEqualTo(UNSUPPORTED_OPERATION.name());
+  }
+
+  @Test
+  public void getAllKeys_returnKeysWithNullExpirationAndTtl() throws ServiceException {
+    // Insert items
+    EncryptionKey key =
+        EncryptionKey.newBuilder()
+            .setKeyId("test")
+            .setSetName(KeyDb.DEFAULT_SET_NAME)
+            .setStatus(EncryptionKeyStatus.ACTIVE)
+            .setCreationTime(Instant.now().toEpochMilli())
+            .setActivationTime(Instant.now().toEpochMilli())
+            .setKeyType("testtype")
+            .build();
+
+    keyDb.createKey(key);
+    EncryptionKey receivedKey = keyDb.getKey("test");
+    assertThat(receivedKey.getKeyType()).isEqualTo("testtype");
+    assertThat(receivedKey.hasExpirationTime()).isFalse();
+    assertThat(receivedKey.hasTtlTime()).isFalse();
+    assertThat(receivedKey.getExpirationTime()).isEqualTo(0);
+    assertThat(receivedKey.getTtlTime()).isEqualTo(0);
+    awaitAndAssertActiveKeyCount(keyDb, 1);
   }
 
   /**
@@ -269,7 +269,9 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
             () -> {
-              ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(DEFAULT_KEY_ITEM_COUNT);
+              ImmutableList<EncryptionKey> keys =
+                  keyDb.getActiveKeys(
+                      KeyDb.DEFAULT_SET_NAME, DEFAULT_KEY_ITEM_COUNT, Instant.now());
 
               assertThat(keys).isNotNull();
               assertThat(keys).hasSize(expectedSize);

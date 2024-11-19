@@ -139,8 +139,8 @@ variable "alarm_duration_sec" {
   type        = string
 }
 
-variable "cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm. Example: 0."
+variable "cloudfunction_error_ratio_threshold" {
+  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = string
 }
 
@@ -162,4 +162,9 @@ variable "lb_max_latency_ms" {
 variable "lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
+}
+
+variable "key_storage_severity_map" {
+  description = "map that defines severity for alerts"
+  type        = map(string)
 }

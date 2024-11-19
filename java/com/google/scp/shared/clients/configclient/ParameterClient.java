@@ -33,6 +33,12 @@ public interface ParameterClient {
   Optional<String> getParameter(String param) throws ParameterClientException;
 
   /**
+   * Same as {@link #getParameter(String)} but always get the latest value (if the implementation
+   * caches).
+   */
+  Optional<String> getLatestParameter(String param) throws ParameterClientException;
+
+  /**
    * Blocking call to get a parameter.
    *
    * <p>The parameter storage layer will be invoked in the format:
@@ -47,8 +53,20 @@ public interface ParameterClient {
    * @throws ParameterClientException if an error occurred while attempting to read the parameter
    * @return an {@link Optional} of {@link String} for parameter value
    */
-  Optional<String> getParameter(
+  default Optional<String> getParameter(
       String param, Optional<String> paramPrefix, boolean includeEnvironmentParam)
+      throws ParameterClientException {
+    return getParameter(param, paramPrefix, includeEnvironmentParam, false);
+  }
+
+  /**
+   * Same as {@link #getParameter(String, Optional, boolean)} but with the option to always get the
+   * latest value (if the implementation caches).
+   *
+   * @param latest true to prevent any cached value returned.
+   */
+  Optional<String> getParameter(
+      String param, Optional<String> paramPrefix, boolean includeEnvironmentParam, boolean latest)
       throws ParameterClientException;
 
   /**

@@ -31,6 +31,7 @@ cc_library(
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/interface:type_def_lib",
+        "//cc/public/cpio/interface:cpio_errors",
         "@oneTBB//:tbb",
     ],
 )

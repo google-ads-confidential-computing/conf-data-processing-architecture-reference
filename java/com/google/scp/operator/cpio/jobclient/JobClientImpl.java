@@ -532,7 +532,6 @@ public final class JobClientImpl implements JobClient {
             .filter(validator -> !validator.validate(job, jobKeyString))
             .findFirst();
     if (failedValidator.isPresent()) {
-      // TODO(b/203221111): add monitoring and alerting for failed validations
       logger.warning(
           String.format(
               "Job '%s' failed validation step '%s'.",

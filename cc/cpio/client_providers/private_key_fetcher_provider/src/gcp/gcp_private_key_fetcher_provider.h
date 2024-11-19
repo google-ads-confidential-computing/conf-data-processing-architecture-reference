@@ -49,6 +49,9 @@ class GcpPrivateKeyFetcherProvider : public PrivateKeyFetcherProvider {
       core::AsyncContext<PrivateKeyFetchingRequest, core::HttpRequest>&
           sign_http_request_context) noexcept override;
 
+  std::shared_ptr<core::HttpRequest> CreateHttpRequest(
+      const PrivateKeyFetchingRequest& request) noexcept override;
+
  private:
   /**
    * @brief Is called after auth_token_provider GetSessionToken() for session

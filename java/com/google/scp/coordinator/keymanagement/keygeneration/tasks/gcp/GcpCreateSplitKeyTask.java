@@ -28,6 +28,7 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Creat
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKmsKeyAead;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -36,6 +37,8 @@ import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The entire split key generation task. Handles generating the key split, encrypting the primary
@@ -47,7 +50,10 @@ import java.util.Optional;
  */
 public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
 
+  private static final Logger logger = LoggerFactory.getLogger(GcpCreateSplitKeyTask.class);
+
   private final Aead peerCoordinatorKmsKeyAead;
+  private final LogMetricHelper logMetricHelper;
 
   @Inject
   public GcpCreateSplitKeyTask(
@@ -56,9 +62,18 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       @PeerCoordinatorKmsKeyAead Aead peerCoordinatorKmsKeyAead,
       KeyIdFactory keyIdFactory,
       KeyDb keyDb,
-      KeyStorageClient keyStorageClient) {
-    super(kmsKeyAead, keyEncryptionKeyUri, Optional.empty(), keyDb, keyStorageClient, keyIdFactory);
+      KeyStorageClient keyStorageClient,
+      LogMetricHelper logMetricHelper) {
+    super(
+        kmsKeyAead,
+        keyEncryptionKeyUri,
+        Optional.empty(),
+        keyDb,
+        keyStorageClient,
+        keyIdFactory,
+        logMetricHelper);
     this.peerCoordinatorKmsKeyAead = peerCoordinatorKmsKeyAead;
+    this.logMetricHelper = logMetricHelper;
   }
 
   /**
@@ -111,6 +126,9 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
     try {
       return keyStorageClient.createKey(unsignedCoordinatorBKey, encryptedKeySplitB);
     } catch (KeyStorageServiceException e) {
+      logger.error(
+          logMetricHelper.format(
+              "create_split_key/key_storage_error", "errorReason", e.getMessage()));
       throw new ServiceException(
           Code.INVALID_ARGUMENT, "Key Storage Service failed to validate, sign, and store key", e);
     }

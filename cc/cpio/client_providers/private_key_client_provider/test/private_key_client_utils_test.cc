@@ -67,7 +67,7 @@ namespace {
 constexpr char kTestKeyId[] = "name_test";
 constexpr char kTestResourceName[] = "encryptionKeys/name_test";
 constexpr char kTestPublicKeysetHandle[] = "publicKeysetHandle";
-constexpr char kTestPublicKeyMaterial[] = "publicKeyMaterial";
+constexpr char kTestPublicKeyMaterial[] = "publicKeysetHandle";
 constexpr int kTestExpirationTime = 123456;
 constexpr int kTestCreationTime = 111111;
 constexpr char kTestPublicKeySignature[] = "publicKeySignature";

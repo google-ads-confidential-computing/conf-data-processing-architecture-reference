@@ -44,12 +44,21 @@ public final class ActuateKeySetTask {
     logger.info("Found {} key sets from the configuration.", configs.size());
     for (KeySetConfig config : configs) {
       logger.info("Key set config: {}.", config.toString());
-      createSplitKeyTask.create(
-          config.getName(),
-          config.getTinkTemplate(),
-          config.getCount(),
-          config.getValidityInDays(),
-          config.getTtlInDays());
+      try {
+        createSplitKeyTask.create(
+            config.getName(),
+            config.getTinkTemplate(),
+            config.getCount(),
+            config.getValidityInDays(),
+            config.getTtlInDays());
+      } catch (Exception exception) {
+        // TODO(b/375651558) Record to a log-based metric here. Consider a
+        // general error that can be reused.
+        if (exception instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
+        logger.error("Key set {} actuation failed.", config.getName(), exception);
+      }
     }
   }
 }

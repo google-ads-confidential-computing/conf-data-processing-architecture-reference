@@ -137,10 +137,11 @@ module "keystorageservice" {
   alarm_duration_sec                   = var.keystorageservice_alarm_duration_sec
   notification_channel_id              = local.notification_channel_id
   cloudfunction_5xx_threshold          = var.keystorageservice_cloudfunction_5xx_threshold
-  cloudfunction_error_threshold        = var.keystorageservice_cloudfunction_error_threshold
+  cloudfunction_error_ratio_threshold  = var.keystorageservice_cloudfunction_error_ratio_threshold
   cloudfunction_max_execution_time_max = var.keystorageservice_cloudfunction_max_execution_time_max
   lb_5xx_threshold                     = var.keystorageservice_lb_5xx_threshold
   lb_max_latency_ms                    = var.keystorageservice_lb_max_latency_ms
+  key_storage_severity_map             = var.alert_severity_overrides
 }
 
 module "encryptionkeyservice" {
@@ -167,15 +168,17 @@ module "encryptionkeyservice" {
   encryption_key_domain    = local.encryption_key_domain
 
   # Alarms
-  alarms_enabled                       = var.alarms_enabled
-  alarm_eval_period_sec                = var.encryptionkeyservice_alarm_eval_period_sec
-  alarm_duration_sec                   = var.encryptionkeyservice_alarm_duration_sec
-  notification_channel_id              = local.notification_channel_id
-  cloudfunction_5xx_threshold          = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  cloudfunction_error_threshold        = var.encryptionkeyservice_cloudfunction_error_threshold
-  cloudfunction_max_execution_time_max = var.encryptionkeyservice_cloudfunction_max_execution_time_max
-  lb_5xx_threshold                     = var.encryptionkeyservice_lb_5xx_threshold
-  lb_max_latency_ms                    = var.encryptionkeyservice_lb_max_latency_ms
+  alarms_enabled                                    = var.alarms_enabled
+  alarm_eval_period_sec                             = var.encryptionkeyservice_alarm_eval_period_sec
+  alarm_duration_sec                                = var.encryptionkeyservice_alarm_duration_sec
+  notification_channel_id                           = local.notification_channel_id
+  cloudfunction_5xx_threshold                       = var.encryptionkeyservice_cloudfunction_5xx_threshold
+  cloudfunction_error_ratio_threshold               = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
+  cloudfunction_max_execution_time_max              = var.encryptionkeyservice_cloudfunction_max_execution_time_max
+  lb_5xx_threshold                                  = var.encryptionkeyservice_lb_5xx_threshold
+  lb_max_latency_ms                                 = var.encryptionkeyservice_lb_max_latency_ms
+  get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
+  encryption_key_service_severity_map               = var.alert_severity_overrides
 }
 
 module "domain_a_records" {

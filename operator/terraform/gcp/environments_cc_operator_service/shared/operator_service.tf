@@ -32,6 +32,7 @@ module "operator_service" {
 
   # Worker
   instance_type                    = var.instance_type
+  instance_disk_image_family       = var.instance_disk_image_family
   instance_disk_image              = var.instance_disk_image
   worker_instance_disk_type        = var.worker_instance_disk_type
   worker_instance_disk_size_gb     = var.worker_instance_disk_size_gb

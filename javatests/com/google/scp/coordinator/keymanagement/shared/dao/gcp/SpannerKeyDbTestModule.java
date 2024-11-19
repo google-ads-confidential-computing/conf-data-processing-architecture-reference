@@ -53,9 +53,9 @@ public final class SpannerKeyDbTestModule extends AbstractModule {
               + "  KeySplitData JSON NOT NULL,"
               + "  KeyType STRING(500) NOT NULL,"
               + "  KeyEncryptionKeyUri STRING(1000) NOT NULL,"
-              + "  ExpiryTime TIMESTAMP NOT NULL,"
+              + "  ExpiryTime TIMESTAMP,"
               + "  ActivationTime TIMESTAMP NOT NULL,"
-              + "  TtlTime TIMESTAMP NOT NULL,"
+              + "  TtlTime TIMESTAMP,"
               + "  CreatedAt TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),"
               + "  UpdatedAt TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true)"
               + ") PRIMARY KEY (KeyId)");

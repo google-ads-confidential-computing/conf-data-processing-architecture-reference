@@ -28,6 +28,7 @@ java_test(
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
         "//java/external:acai",
@@ -51,6 +52,7 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/common",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/crypto/tink",
         "//java/com/google/scp/shared/util",
         "//java/external:acai",
@@ -72,6 +74,7 @@ java_test(
     srcs = [
         "ActuateKeySetTaskTest.java",
     ],
+    tags = ["no_sandbox"],
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common/keyset",

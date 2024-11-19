@@ -82,6 +82,11 @@ variable "get_public_key_cloud_cdn_max_ttl_seconds" {
   type        = number
 }
 
+variable "get_public_key_cloud_cdn_serve_while_stale_seconds" {
+  description = "Maximum CDN TTL seconds that cache header directive cannot surpass."
+  type        = number
+}
+
 variable "spanner_database_name" {
   description = "Name of the KeyDb Spanner database."
   type        = string
@@ -116,8 +121,8 @@ variable "alarm_duration_sec" {
   type        = string
 }
 
-variable "get_public_key_cloudfunction_error_threshold" {
-  description = "Error count greater than this to send alarm. Example: 0."
+variable "get_public_key_cloudfunction_error_ratio_threshold" {
+  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = string
 }
 
@@ -139,4 +144,19 @@ variable "get_public_key_lb_max_latency_ms" {
 variable "get_public_key_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
+}
+
+variable "get_public_key_empty_key_set_error_threshold" {
+  description = "Get Public Key Empty Key Set error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "get_public_key_general_error_threshold" {
+  description = "Get Public Key General error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "public_key_alerts_severity_overrides" {
+  description = "map that defines severity for alerts"
+  type        = map(string)
 }

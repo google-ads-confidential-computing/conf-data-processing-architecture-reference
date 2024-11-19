@@ -30,10 +30,11 @@ module "load_balancer_alarms" {
   load_balancer_name      = google_compute_url_map.get_public_key_loadbalancer.name
   service_prefix          = "${var.environment} Public Key Service"
 
-  eval_period_sec     = var.alarm_eval_period_sec
-  duration_sec        = var.alarm_duration_sec
-  error_5xx_threshold = var.get_public_key_lb_5xx_threshold
-  max_latency_ms      = var.get_public_key_lb_max_latency_ms
+  eval_period_sec            = var.alarm_eval_period_sec
+  duration_sec               = var.alarm_duration_sec
+  error_5xx_threshold        = var.get_public_key_lb_5xx_threshold
+  max_latency_ms             = var.get_public_key_lb_max_latency_ms
+  load_balancer_severity_map = var.public_key_alerts_severity_overrides
 }
 
 module "cloud_function_alarms" {
@@ -45,11 +46,112 @@ module "cloud_function_alarms" {
   function_name           = each.value.name
   service_prefix          = "${var.environment}-${each.value.location} Public Key Service"
 
-  eval_period_sec           = var.alarm_eval_period_sec
-  duration_sec              = var.alarm_duration_sec
-  error_5xx_threshold       = var.get_public_key_cloudfunction_5xx_threshold
-  execution_time_max        = var.get_public_key_cloudfunction_max_execution_time_max
-  execution_error_threshold = var.get_public_key_cloudfunction_error_threshold
+  eval_period_sec                 = var.alarm_eval_period_sec
+  duration_sec                    = var.alarm_duration_sec
+  error_5xx_threshold             = var.get_public_key_cloudfunction_5xx_threshold
+  execution_time_max              = var.get_public_key_cloudfunction_max_execution_time_max
+  execution_error_ratio_threshold = var.get_public_key_cloudfunction_error_ratio_threshold
+  cloud_function_severity_map     = var.public_key_alerts_severity_overrides
+}
+
+resource "google_logging_metric" "get_public_key_empty_key_set_error" {
+  filter = "(resource.type=\"cloud_function\" AND resource.labels.function_name=(\"${local.cloud_function_a_name}\" OR \"${local.cloud_function_b_name}\")) OR (resource.type=\"cloud_run_revision\" AND resource.labels.service_name=(\"${local.cloud_function_a_name}\" OR \"${local.cloud_function_b_name}\")) AND textPayload=~\"metricName\" AND textPayload=~\"get_active_public_keys/empty_key_set\""
+  name   = "${var.environment}/get_active_public_keys/empty_key_set"
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    labels {
+      key         = "setName"
+      value_type  = "STRING"
+      description = "Name of the key set"
+    }
+  }
+  label_extractors = {
+    "setName" = "REGEXP_EXTRACT(textPayload, \"setName\\\":([^,}]+)\")"
+  }
+}
+
+resource "google_logging_metric" "get_public_key_general_error" {
+  filter = "(resource.type=\"cloud_function\" AND resource.labels.function_name=(\"${local.cloud_function_a_name}\" OR \"${local.cloud_function_b_name}\")) OR (resource.type=\"cloud_run_revision\" AND resource.labels.service_name=(\"${local.cloud_function_a_name}\" OR \"${local.cloud_function_b_name}\")) AND textPayload=~\"metricName\" AND textPayload=~\"get_active_public_keys/error\""
+  name   = "${var.environment}/get_active_public_keys/error"
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    labels {
+      key         = "errorReason"
+      value_type  = "STRING"
+      description = "Error reason"
+    }
+  }
+  label_extractors = {
+    "errorReason" = "REGEXP_EXTRACT(textPayload, \"errorReason\\\":([^,}]+)\")"
+  }
+}
+
+resource "google_monitoring_alert_policy" "get_public_key_empty_key_set_error_alert" {
+  count        = var.alarms_enabled ? 1 : 0
+  display_name = "${var.environment} Public Key Service Get Public Key Empty Key Set Error"
+  combiner     = "OR"
+  conditions {
+    display_name = "Get Public Key Empty Key Set Error"
+    condition_threshold {
+      filter          = "resource.type=\"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.get_public_key_empty_key_set_error.name}\""
+      duration        = "${var.alarm_duration_sec}s"
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.get_public_key_empty_key_set_error_threshold
+      trigger {
+        count = 1
+      }
+      aggregations {
+        alignment_period   = "${var.alarm_eval_period_sec}s"
+        per_series_aligner = "ALIGN_MAX"
+      }
+    }
+  }
+  notification_channels = [var.notification_channel_id]
+
+  user_labels = {
+    environment = var.environment
+    severity    = lookup(var.public_key_alerts_severity_overrides, "public_key_service_get_public_key_empty_key_set_error_alert", "urgent")
+  }
+
+  alert_strategy {
+    # 30 minutes.
+    auto_close = "1800s"
+  }
+}
+
+resource "google_monitoring_alert_policy" "get_public_key_general_error_alert" {
+  count        = var.alarms_enabled ? 1 : 0
+  display_name = "${var.environment} Public Key Service Get Public Key General Error"
+  combiner     = "OR"
+  conditions {
+    display_name = "Get Public Key General Error"
+    condition_threshold {
+      filter          = "resource.type=\"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/${google_logging_metric.get_public_key_general_error.name}\""
+      duration        = "${var.alarm_duration_sec}s"
+      comparison      = "COMPARISON_GT"
+      threshold_value = var.get_public_key_general_error_threshold
+      trigger {
+        count = 1
+      }
+      aggregations {
+        alignment_period   = "${var.alarm_eval_period_sec}s"
+        per_series_aligner = "ALIGN_MAX"
+      }
+    }
+  }
+  notification_channels = [var.notification_channel_id]
+
+  user_labels = {
+    environment = var.environment
+    severity    = lookup(var.public_key_alerts_severity_overrides, "public_key_service_get_public_key_general_error_alert", "urgent")
+  }
+
+  alert_strategy {
+    # 30 minutes.
+    auto_close = "1800s"
+  }
 }
 
 resource "google_monitoring_dashboard" "dashboard" {
@@ -877,9 +979,63 @@ resource "google_monitoring_dashboard" "dashboard" {
             "width" : 3,
             "xPos" : 3,
             "yPos" : 12
+          },
+          {
+            "height" : 4,
+            "widget" : {
+              "title" : "Cloud CDN RTT By Regions",
+              "xyChart" : {
+                "chartOptions" : {
+                  "mode" : "COLOR"
+                },
+                "dataSets" : [
+                  {
+                    "plotType" : "LINE",
+                    "targetAxis" : "Y1",
+                    "timeSeriesQuery" : {
+                      "timeSeriesQueryLanguage" : "fetch https_lb_rule\n| metric 'loadbalancing.googleapis.com/https/frontend_tcp_rtt'\n| group_by 1m,\n    [value_frontend_tcp_rtt_aggregate: aggregate(value.frontend_tcp_rtt)]\n| every 1m\n| group_by [metric.proxy_continent],\n    [value_frontend_tcp_rtt_aggregate_percentile:\n       percentile(value_frontend_tcp_rtt_aggregate, 95)]"
+                    }
+                  }
+                ],
+                "timeshiftDuration" : "0s",
+                "yAxis" : {
+                  "scale" : "LINEAR"
+                }
+              }
+            },
+            "width" : 3,
+            "xPos" : 6,
+            "yPos" : 12
+          },
+          {
+            "height" : 4,
+            "widget" : {
+              "title" : "Cloud CDN Request Count By Response Code",
+              "xyChart" : {
+                "chartOptions" : {
+                  "mode" : "COLOR"
+                },
+                "dataSets" : [
+                  {
+                    "plotType" : "LINE",
+                    "targetAxis" : "Y1",
+                    "timeSeriesQuery" : {
+                      "timeSeriesQueryLanguage" : "fetch https_lb_rule\n| metric 'loadbalancing.googleapis.com/https/request_count'\n| filter (metric.cache_result != 'DISABLED')\n| group_by 1m, [row_count: row_count()]\n| every 1m\n| group_by [metric.response_code_class],\n    [row_count_aggregate: aggregate(row_count)]"
+                    }
+                  }
+                ],
+                "timeshiftDuration" : "0s",
+                "yAxis" : {
+                  "scale" : "LINEAR"
+                }
+              }
+            },
+            "width" : 3,
+            "xPos" : 9,
+            "yPos" : 12
           }
         ]
-      }
+      },
     }
   )
 }

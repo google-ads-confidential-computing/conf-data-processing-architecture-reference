@@ -23,19 +23,26 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Performs the lookup for a specific private key. */
 public final class GetEncryptedPrivateKeyTask extends ApiTask {
+
+  private static final Logger logger = LoggerFactory.getLogger(GetEncryptedPrivateKeyTask.class);
   private final KeyDb keyDb;
+  private final LogMetricHelper logMetricHelper;
 
   @Inject
-  public GetEncryptedPrivateKeyTask(KeyDb keyDb) {
+  public GetEncryptedPrivateKeyTask(KeyDb keyDb, LogMetricHelper logMetricHelper) {
     super("GET", Pattern.compile("/encryptionKeys/(?<id>[a-zA-Z0-9\\-]+)"));
     this.keyDb = keyDb;
+    this.logMetricHelper = logMetricHelper;
   }
 
   /**
@@ -50,6 +57,12 @@ public final class GetEncryptedPrivateKeyTask extends ApiTask {
   protected void execute(Matcher matcher, RequestContext request, ResponseContext response)
       throws ServiceException {
     String id = matcher.group("id");
-    response.setBody(toApiEncryptionKey(getEncryptedPrivateKey(id)));
+    try {
+      response.setBody(toApiEncryptionKey(getEncryptedPrivateKey(id)));
+    } catch (ServiceException e) {
+      logger.error(logMetricHelper.format("get_encrypted_private_key/error",
+          "errorReason", e.getErrorReason()));
+      throw e;
+    }
   }
 }

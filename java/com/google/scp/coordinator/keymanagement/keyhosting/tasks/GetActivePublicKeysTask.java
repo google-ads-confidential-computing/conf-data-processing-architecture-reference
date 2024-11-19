@@ -16,6 +16,8 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
+
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncodedPublicKeyListConverter;
@@ -61,7 +63,7 @@ public final class GetActivePublicKeysTask extends ApiTask {
 
   /** Gets all public keys from the respective Key database */
   public ImmutableList<EncryptionKey> getActivePublicKeys() throws ServiceException {
-    return keyDb.getActiveKeys(keyLimit);
+    return keyDb.getActiveKeysWithPublicKey(DEFAULT_SET_NAME, keyLimit);
   }
 
   @Override
@@ -74,7 +76,7 @@ public final class GetActivePublicKeysTask extends ApiTask {
       mode = Mode.RAW;
     }
 
-    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(KeyDb.DEFAULT_SET_NAME, keyLimit);
+    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, keyLimit);
     if (keys.isEmpty()) {
       logger.error("No active public keys available.");
     }

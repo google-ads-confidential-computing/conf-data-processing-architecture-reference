@@ -26,9 +26,11 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
         "//java/external:guava",
         "//java/external:guice",
+        "//java/external:slf4j",
     ],
 )

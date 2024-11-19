@@ -42,7 +42,7 @@ public final class InMemoryKeyDb implements KeyDb {
       throws ServiceException {
     return getAllKeys().stream()
         .filter(k -> k.getSetName().equals(setName))
-        .filter(k -> k.getExpirationTime() > instant.toEpochMilli())
+        .filter(k -> !k.hasExpirationTime() || k.getExpirationTime() > instant.toEpochMilli())
         .filter(k -> k.getActivationTime() <= instant.toEpochMilli())
         .limit(keyLimit)
         .collect(toImmutableList());

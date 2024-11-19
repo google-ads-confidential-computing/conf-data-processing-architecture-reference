@@ -31,6 +31,9 @@ worker_image                     = "us-docker.pkg.dev/admcloud-scp/docker-repo-d
 allowed_operator_service_account = "staging-a-opallowedusr@admcloud-coordinator1.iam.gserviceaccount.com,staging-b-opallowedusr@admcloud-coordinator2.iam.gserviceaccount.com"
 
 worker_logging_enabled = true
-instance_disk_image    = "confidential-space-images/confidential-space"
+instance_disk_image_family = {
+  image_project = "confidential-space-images",
+  image_family  = "confidential-space"
+}
 
 user_provided_worker_sa_email = "perf-mp-worker-account@admcloud-adtech1.iam.gserviceaccount.com"

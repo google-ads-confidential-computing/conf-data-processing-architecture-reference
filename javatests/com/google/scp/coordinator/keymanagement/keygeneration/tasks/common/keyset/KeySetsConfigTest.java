@@ -45,7 +45,11 @@ public final class KeySetsConfigTest {
   public void testMapper_hasKeySets_readsExpected() throws Exception {
     // Given
     String json =
-        "{\"key_sets\":[{\"name\": \"set1\", \"tink_template\": \"my-template\"},{\"name\": \"set2\"}]}";
+        "{\"key_sets\":["
+            + "{\"name\": \"set1\", \"tink_template\": \"my-template\"},"
+            + "{\"name\": \"set2\"},"
+            + "{\"name\": \"set3\", \"tink_template\": \"my-template\", \"validity_in_days\": 1, \"count\": 1, \"ttl_in_days\": 1}"
+            + "]}";
 
     // When
     KeySetsConfig configs = mapper.readValue(json, KeySetsConfig.class);
@@ -60,7 +64,14 @@ public final class KeySetsConfigTest {
                             .name("set1")
                             .tinkTemplate("my-template")
                             .build(),
-                        KeySetsConfig.KeySet.Builder.builder().name("set2").build()))
+                        KeySetsConfig.KeySet.Builder.builder().name("set2").build(),
+                        KeySetsConfig.KeySet.Builder.builder()
+                            .name("set3")
+                            .tinkTemplate("my-template")
+                            .count(1)
+                            .validityInDays(1)
+                            .ttlInDays(1)
+                            .build()))
                 .build());
   }
 }

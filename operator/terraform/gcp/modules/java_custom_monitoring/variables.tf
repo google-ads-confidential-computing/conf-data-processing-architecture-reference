@@ -38,3 +38,11 @@ variable "notification_channel_id" {
   description = "Notification channel to which to send alarms."
   type        = string
 }
+
+variable "java_job_validations_to_alert" {
+  description = <<-EOT
+      Job validations to alarm for Java CPIO Job Client. Supported validations:
+      ["JobValidatorCheckFields", "JobValidatorCheckRetryLimit", "JobValidatorCheckStatus"]
+  EOT
+  type        = list(string)
+}

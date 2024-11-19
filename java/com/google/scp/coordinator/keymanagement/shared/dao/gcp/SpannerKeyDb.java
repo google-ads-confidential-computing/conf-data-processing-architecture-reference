@@ -67,6 +67,8 @@ public final class SpannerKeyDb implements KeyDb {
   private static final String CREATED_AT_COLUMN = "CreatedAt";
   private static final String UPDATED_AT_COLUMN = "UpdatedAt";
   private static final String TABLE_NAME = "KeySets";
+  private static final String NATURAL_ORDERING =
+      EXPIRY_TIME_COLUMN + " DESC, " + ACTIVATION_TIME_COLUMN + " DESC, " + KEY_ID_COLUMN + " DESC";
   private static final int EXPIRATION_TIME_CEILING_SECOND = 1;
   private static final JsonFormat.Printer JSON_PRINTER = JsonFormat.printer();
   private static final JsonFormat.Parser JSON_PARSER = JsonFormat.parser();
@@ -88,9 +90,11 @@ public final class SpannerKeyDb implements KeyDb {
         Statement.newBuilder(
                 "SELECT * FROM "
                     + TABLE_NAME
-                    + " WHERE "
+                    + " WHERE ("
                     + EXPIRY_TIME_COLUMN
-                    + " > @nowParam AND ("
+                    + " IS NULL OR "
+                    + EXPIRY_TIME_COLUMN
+                    + " > @nowParam) AND ("
                     + ACTIVATION_TIME_COLUMN
                     + " is NULL OR "
                     + ACTIVATION_TIME_COLUMN
@@ -98,16 +102,11 @@ public final class SpannerKeyDb implements KeyDb {
                     // Filter keys with matching set name, if it's the default set, includes keys
                     // with null set name.
                     + " AND (SetName = @setName OR (@setName = @defaultSetName AND SetName IS NULL))"
-                    + " AND LENGTH("
-                    + PUBLIC_KEY_COLUMN
-                    + " ) > 0 "
                     // Ordering implementation should follow {@link
                     // KeyDbUtil.getActiveKeysComparator}
                     + " ORDER BY "
-                    + EXPIRY_TIME_COLUMN
-                    + " DESC, "
-                    + ACTIVATION_TIME_COLUMN
-                    + " DESC LIMIT @keyLimitParam")
+                    + NATURAL_ORDERING
+                    + " LIMIT @keyLimitParam")
             .bind("nowParam")
             .to(Timestamp.ofTimeSecondsAndNanos(instant.getEpochSecond(), instant.getNano()))
             .bind("keyLimitParam")
@@ -148,10 +147,7 @@ public final class SpannerKeyDb implements KeyDb {
                     + " AND (SetName = @setName OR (@setName = @defaultSetName AND SetName IS NULL))"
                     + " AND (SetName = @setName OR (@setName = @defaultSetName AND SetName IS NULL))"
                     + " ORDER BY "
-                    + EXPIRY_TIME_COLUMN
-                    + " DESC, "
-                    + ACTIVATION_TIME_COLUMN
-                    + " DESC")
+                    + NATURAL_ORDERING)
             .bind("nowParam")
             .to(
                 Timestamp.ofTimeSecondsAndNanos(
@@ -234,12 +230,16 @@ public final class SpannerKeyDb implements KeyDb {
 
   private static Mutation toMutation(EncryptionKey key, boolean overwrite) {
     Timestamp expireTime =
-        Timestamp.ofTimeMicroseconds(
-            TimeUnit.MICROSECONDS.convert(key.getExpirationTime(), TimeUnit.MILLISECONDS));
+        key.hasExpirationTime()
+            ? Timestamp.ofTimeMicroseconds(
+                TimeUnit.MICROSECONDS.convert(key.getExpirationTime(), TimeUnit.MILLISECONDS))
+            : null;
     // TTL is saved in seconds, however Spanner requires a timestamp
     Timestamp ttlTime =
-        Timestamp.ofTimeSecondsAndNanos(
-            TimeUnit.SECONDS.convert(key.getTtlTime(), TimeUnit.SECONDS), 0);
+        key.hasTtlTime()
+            ? Timestamp.ofTimeSecondsAndNanos(
+                TimeUnit.SECONDS.convert(key.getTtlTime(), TimeUnit.SECONDS), 0)
+            : null;
     Timestamp activationTime =
         Timestamp.ofTimeMicroseconds(
             TimeUnit.MICROSECONDS.convert(key.getActivationTime(), TimeUnit.MILLISECONDS));
@@ -307,20 +307,25 @@ public final class SpannerKeyDb implements KeyDb {
     // For backward compatibility with existing keys without set names.
     String setName =
         resultSet.isNull(SET_NAME_COLUMN) ? DEFAULT_SET_NAME : resultSet.getString(SET_NAME_COLUMN);
-    return EncryptionKey.newBuilder()
-        .setKeyId(resultSet.getString(KEY_ID_COLUMN))
-        .setSetName(setName)
-        .setPublicKey(resultSet.getString(PUBLIC_KEY_COLUMN))
-        .setPublicKeyMaterial(resultSet.getString(PUBLIC_KEY_MATERIAL_COLUMN))
-        .setJsonEncodedKeyset(resultSet.getString(PRIVATE_KEY_COLUMN))
-        .addAllKeySplitData(keySplitData)
-        .setKeyType(resultSet.getString(KEY_TYPE))
-        .setKeyEncryptionKeyUri(resultSet.getString(KEY_ENCRYPTION_KEY_URI))
-        .setCreationTime(toEpochMilliSeconds(resultSet.getTimestamp(CREATED_AT_COLUMN)))
-        .setExpirationTime(toEpochMilliSeconds(resultSet.getTimestamp(EXPIRY_TIME_COLUMN)))
-        .setTtlTime(resultSet.getTimestamp(TTL_TIME_COLUMN).getSeconds())
-        .setActivationTime(toEpochMilliSeconds(resultSet.getTimestamp(ACTIVATION_TIME_COLUMN)))
-        .build();
+    EncryptionKey.Builder keyBuilder =
+        EncryptionKey.newBuilder()
+            .setKeyId(resultSet.getString(KEY_ID_COLUMN))
+            .setSetName(setName)
+            .setPublicKey(resultSet.getString(PUBLIC_KEY_COLUMN))
+            .setPublicKeyMaterial(resultSet.getString(PUBLIC_KEY_MATERIAL_COLUMN))
+            .setJsonEncodedKeyset(resultSet.getString(PRIVATE_KEY_COLUMN))
+            .addAllKeySplitData(keySplitData)
+            .setKeyType(resultSet.getString(KEY_TYPE))
+            .setKeyEncryptionKeyUri(resultSet.getString(KEY_ENCRYPTION_KEY_URI))
+            .setCreationTime(toEpochMilliSeconds(resultSet.getTimestamp(CREATED_AT_COLUMN)))
+            .setActivationTime(toEpochMilliSeconds(resultSet.getTimestamp(ACTIVATION_TIME_COLUMN)));
+    if (!resultSet.isNull(TTL_TIME_COLUMN)) {
+      keyBuilder.setTtlTime(resultSet.getTimestamp(TTL_TIME_COLUMN).getSeconds());
+    }
+    if (!resultSet.isNull(EXPIRY_TIME_COLUMN)) {
+      keyBuilder.setExpirationTime(toEpochMilliSeconds(resultSet.getTimestamp(EXPIRY_TIME_COLUMN)));
+    }
+    return keyBuilder.build();
   }
 
   private static long toEpochMilliSeconds(Timestamp timestamp) throws ServiceException {

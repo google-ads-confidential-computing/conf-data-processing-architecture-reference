@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <tink/binary_keyset_writer.h>
@@ -131,6 +132,7 @@ using std::shared_ptr;
 using std::string;
 using std::string_view;
 using std::stringstream;
+using std::thread;
 using std::unique_ptr;
 using std::vector;
 
@@ -695,6 +697,29 @@ TEST_F(CryptoClientProviderTest, HpkeDecryptFailedWithoutKey) {
       FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_MISSING_KEY));
 }
 
+TEST_F(CryptoClientProviderTest, MultipleHpkeEncryptAndDecryptSuccess) {
+  vector<thread> threads;
+  for (auto i = 0; i < 10; ++i) {
+    threads.push_back(thread([this, i]() {
+      auto encrypt_request = CreateHpkeEncryptRequest(
+          false /*is_bidirectional*/, false /*is_raw_key*/);
+      auto encrypt_response_or = client_->HpkeEncryptSync(encrypt_request);
+      AssertHpkeEncryptResponse(false, encrypt_response_or);
+
+      auto decrypt_request = CreateHpkeDecryptRequest(
+          encrypt_response_or->encrypted_data().ciphertext(),
+          false /*is_bidirectional*/, false /*is_raw_key*/,
+          encrypt_response_or->secret());
+      AssertHpkeDecryptResponse(client_->HpkeDecryptSync(decrypt_request),
+                                encrypt_response_or->secret());
+    }));
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+}
+
 TEST_F(CryptoClientProviderTest, HpkeEncryptAndDecryptSuccessForOneDirection) {
   auto encrypt_request = CreateHpkeEncryptRequest(false /*is_bidirectional*/,
                                                   false /*is_raw_key*/);
@@ -949,6 +974,34 @@ TEST_F(CryptoClientProviderTest, ComputeMacSuccessfully) {
   request.set_data(data);
   EXPECT_THAT(client_->ComputeMacSync(move(request))->mac(),
               testing::Not(testing::IsEmpty()));
+}
+
+TEST_F(CryptoClientProviderTest, MultipleComputeMacSuccessfully) {
+  auto keyset_handle = KeysetHandle::GenerateNew(MacKeyTemplates::HmacSha256());
+  std::stringbuf key_buf(std::ios_base::out);
+  auto keyset_writer =
+      BinaryKeysetWriter::New(std::make_unique<std::ostream>(&key_buf));
+  auto write_result = CleartextKeysetHandle::Write(keyset_writer->get(),
+                                                   *keyset_handle->release());
+  EXPECT_TRUE(write_result.ok()) << write_result;
+
+  ComputeMacRequest request;
+  ASSERT_SUCCESS_AND_ASSIGN(*request.mutable_key(),
+                            Base64Encode(key_buf.str()));
+  string data = "some sensitive data";
+  request.set_data(data);
+
+  vector<thread> threads;
+  for (auto i = 0; i < 10; ++i) {
+    threads.push_back(thread([this, &request, i]() {
+      EXPECT_THAT(client_->ComputeMacSync(move(request))->mac(),
+                  testing::Not(testing::IsEmpty()));
+    }));
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
 }
 
 StreamingAeadParams ValidAesGcmHkdfParams(bool is_binary) {

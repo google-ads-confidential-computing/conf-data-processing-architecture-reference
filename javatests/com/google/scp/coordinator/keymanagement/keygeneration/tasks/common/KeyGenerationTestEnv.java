@@ -25,6 +25,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KmsKeyAead;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;
 import java.security.GeneralSecurityException;
 
@@ -37,6 +38,11 @@ public class KeyGenerationTestEnv extends AbstractModule {
     AeadConfig.register();
     KeysetHandle keysetHandle = KeysetHandle.generateNew(AesGcmKeyManager.aes128GcmTemplate());
     return keysetHandle.getPrimitive(Aead.class);
+  }
+
+  @Provides
+  public LogMetricHelper provideLogMetricHelper() {
+    return new LogMetricHelper("key_service/key_generation");
   }
 
   @Override

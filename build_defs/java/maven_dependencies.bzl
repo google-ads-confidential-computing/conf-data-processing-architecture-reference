@@ -30,6 +30,7 @@ def maven_dependencies():
     maven_install(
         name = "maven",
         artifacts = [
+            "org.conscrypt:conscrypt-openjdk-uber:2.5.2",
             "com.amazonaws:aws-lambda-java-core:1.2.1",
             "com.amazonaws:aws-lambda-java-events:3.8.0",
             "com.amazonaws:aws-lambda-java-events-sdk-transformer:3.1.0",

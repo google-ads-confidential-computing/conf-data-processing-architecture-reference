@@ -20,7 +20,7 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.shared.api.exception.ServiceException;
 
 /** Sequence key id factory used to generate, encode, and decode sequence key id. */
-public final class SequenceKeyIdFactory implements KeyIdFactory {
+public final class SequenceKeyIdFactory extends KeyIdFactory {
 
   public Long decodeKeyIdFromString(String keyId) {
     return Long.reverse(Long.parseUnsignedLong(keyId, 16));
@@ -35,7 +35,7 @@ public final class SequenceKeyIdFactory implements KeyIdFactory {
   }
 
   @Override
-  public String getNextKeyId(KeyDb keyDb) throws ServiceException {
+  public String getNextKeyIdBase(KeyDb keyDb) throws ServiceException {
     return encodeKeyIdToString(
         keyDb.getAllKeys().stream()
             .map(a -> decodeKeyIdFromString(a.getKeyId()))

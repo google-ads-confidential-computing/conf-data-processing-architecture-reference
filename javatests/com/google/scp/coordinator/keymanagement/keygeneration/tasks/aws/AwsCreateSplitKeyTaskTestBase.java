@@ -18,6 +18,7 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.aws;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTask.KEY_REFRESH_WINDOW;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeast;
@@ -38,6 +39,7 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annot
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBaseTest;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.keymanagement.testutils.FakeDataKeyUtil;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
@@ -68,6 +70,7 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
   @Inject protected CloudAeadSelector aeadSelector;
   @Inject protected PublicKeySign publicKeySign;
   @Inject protected PublicKeyVerify publicKeyVerify;
+  @Inject protected LogMetricHelper logMetricHelper;
 
   @Test
   public void createSplitKey_success() throws Exception {
@@ -123,7 +126,7 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
     assertThat(key.getCreationTime()).isIn(Range.closed(now - 1000, now));
 
     // Must have expected expiration time
-    var dayInMilli = Instant.now().plus(expectedExpiryInDays, ChronoUnit.DAYS).toEpochMilli();
+    var dayInMilli = Instant.now().plus(expectedExpiryInDays, ChronoUnit.DAYS).plus(KEY_REFRESH_WINDOW).toEpochMilli();
     assertThat(key.getExpirationTime()).isIn(Range.closed(dayInMilli - 1000, dayInMilli));
 
     // Must match expected ttl
@@ -202,7 +205,8 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
             keyDb,
             keyStorageClient,
             keyIdFactory,
-            aeadSelector);
+            aeadSelector,
+            logMetricHelper);
     task.createSplitKey(1, 10, 20, Instant.now());
 
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();

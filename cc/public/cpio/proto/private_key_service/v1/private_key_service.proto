@@ -53,7 +53,7 @@ message PrivateKey {
 // Private key service endpoint options.
 message PrivateKeyEndpoint {
   // Url endpoint of the private key vending service.
-  // It is the base url, and "/encryptionKeys" will be
+  // It is the base url, the version number and "/encryptionKeys" will be
   // appended automatically internally.
   string endpoint = 1;
 
@@ -73,7 +73,7 @@ message PrivateKeyEndpoint {
   string gcp_wip_provider = 4;
 
   // Only needed for GCP to use as the audience when create temporary credentials.
-  // It is Optional. If it is absent, we will use the endpoint.
+  // It is Optional. If it is absent, we will use the endpoint above.
   // Make sure to add the endpoint to the custom audience list of the KeyService
   // cloud run if you want to skip gcp_cloud_function_url here.
   string gcp_cloud_function_url = 5;
@@ -84,10 +84,14 @@ message ListPrivateKeysRequest {
   // Given key IDs. If set, don't honor the max_age_seconds filter.
   repeated string key_ids = 1;
   // Given age. It should be positive integer.
-  // If the the key_ids filter is not set, max_age_seconds will be used.
+  // The service will return failure neither key_ids nor max_age_seconds is set.
   int64 max_age_seconds = 2;
   // The list of endpoints hosting the key splits.
   repeated PrivateKeyEndpoint key_endpoints = 3;
+  // The name of the key set.
+  // If not set, the request will use "" as default key set.
+  // Only for GCP. AWS Key Service does not support key set.
+  optional string key_set_name = 4;
 }
 
 // Response of listing private keys by key IDs or age.

@@ -288,60 +288,85 @@ void JobClientProvider::OnGetTopMessageCallback(
   auto get_database_item_request = JobClientUtils::CreateGetNextJobRequest(
       job_table_name_, *job_id, *server_job_id);
 
-  auto original_callback = get_next_job_context.callback;
-  get_next_job_context.callback =
-      [original_callback, job_id, server_job_id,
-       receipt_info](AsyncContext<GetNextJobRequest, GetNextJobResponse>&
-                         get_next_job_context) {
-        auto execution_result = get_next_job_context.result;
-        if (execution_result.status_code == SC_DISPATCHER_EXHAUSTED_RETRIES) {
-          SCP_ERROR_CONTEXT(
-              kJobClientProvider, get_next_job_context, execution_result,
-              "The next job message in the queue is dangling as job client "
-              "can't find the corresponding job entry in the NoSQL database "
-              "with the job id in the job message, or the server job id in the "
-              "next job message in the queue does not match the one in the job "
-              "entry in the NoSQL database. Job id: %s, server job id: %s",
-              job_id->c_str(), server_job_id->c_str());
-
-          get_next_job_context.response = make_shared<GetNextJobResponse>();
-          Job job_only_contains_ids;
-          job_only_contains_ids.set_job_id(*job_id);
-          *get_next_job_context.response->mutable_job() = job_only_contains_ids;
-          get_next_job_context.response->set_receipt_info(*receipt_info);
-          get_next_job_context.result = SuccessExecutionResult();
-        }
-
-        original_callback(get_next_job_context);
-      };
+  // This additional dispatch_get_next_job_context is only used for Operation
+  // Dispatcher for the GetDatabaseItem operation. We use a callback to
+  // post-process the context and copy result/response back to original
+  // get_next_job_context, after operation dispatch finishing on the
+  // GetDatabaseItem operation.
+  AsyncContext<GetNextJobRequest, GetNextJobResponse>
+      dispatch_get_next_job_context(
+          get_next_job_context.request,
+          bind(&JobClientProvider::OnGetNextJobDispatchCallback, this,
+               get_next_job_context, job_id, server_job_id, receipt_info, _1),
+          get_next_job_context);
 
   // The operation time for writing a job into database could be longer than
   // the time between PutJob and GetJob operations. Hence we use operation
   // dispatcher with retry mechanism to make sure we can read the job item
   // from the database. We need to be careful with our use of Dispatch here
   // - GetDatabaseItem does not register RECORD_NOT_FOUND as a retriable
-  // error. To get around this, we use get_next_job_context's callback to
-  // facilitate a manual transformation of the RECORD_NOT_FOUND error to
+  // error. To get around this, we use dispatch_get_next_job_context's callback
+  // to facilitate a manual transformation of the RECORD_NOT_FOUND error to
   // RetryExecutionResult before it is passed to Operation Dispatcher.
   operation_dispatcher_.Dispatch<
       AsyncContext<GetNextJobRequest, GetNextJobResponse>>(
-      get_next_job_context,
+      dispatch_get_next_job_context,
       [this, get_database_item_request, job_id, server_job_id,
        receipt_info](AsyncContext<GetNextJobRequest, GetNextJobResponse>&
-                         get_next_job_context) mutable {
+                         dispatch_get_next_job_context) mutable {
         AsyncContext<GetDatabaseItemRequest, GetDatabaseItemResponse>
             get_database_item_context(
                 get_database_item_request,
                 bind(&JobClientProvider::OnGetDatabaseItemForGetNextJobCallback,
-                     this, get_next_job_context, job_id, server_job_id,
+                     this, dispatch_get_next_job_context, job_id, server_job_id,
                      receipt_info, _1),
-                get_next_job_context);
+                dispatch_get_next_job_context);
 
         nosql_database_client_provider_->GetDatabaseItem(
             get_database_item_context);
 
         return SuccessExecutionResult();
       });
+}
+
+void JobClientProvider::OnGetNextJobDispatchCallback(
+    AsyncContext<GetNextJobRequest, GetNextJobResponse>&
+        original_get_next_job_context,
+    shared_ptr<string> job_id, shared_ptr<string> server_job_id,
+    shared_ptr<string> receipt_info,
+    AsyncContext<GetNextJobRequest, GetNextJobResponse>&
+        dispatch_get_next_job_context) noexcept {
+  auto execution_result = dispatch_get_next_job_context.result;
+  if (!execution_result.Successful()) {
+    if (execution_result.status_code == SC_DISPATCHER_EXHAUSTED_RETRIES) {
+      SCP_ERROR_CONTEXT(
+          kJobClientProvider, original_get_next_job_context, execution_result,
+          "The next job message in the queue is dangling as job client can't "
+          "find the corresponding job entry in the NoSQL database with the job "
+          "id in the job message, or the server job id in the next job message "
+          "in the queue does not match the one in the job entry in the NoSQL "
+          "database. Job id: %s, server job id: %s",
+          job_id->c_str(), server_job_id->c_str());
+
+      original_get_next_job_context.response =
+          make_shared<GetNextJobResponse>();
+      Job job_only_contains_ids;
+      job_only_contains_ids.set_job_id(*job_id);
+      *original_get_next_job_context.response->mutable_job() =
+          job_only_contains_ids;
+      original_get_next_job_context.response->set_receipt_info(*receipt_info);
+      original_get_next_job_context.result = SuccessExecutionResult();
+    } else {
+      original_get_next_job_context.result = execution_result;
+    }
+    original_get_next_job_context.Finish();
+    return;
+  }
+
+  original_get_next_job_context.response =
+      dispatch_get_next_job_context.response;
+  original_get_next_job_context.result = SuccessExecutionResult();
+  original_get_next_job_context.Finish();
 }
 
 void JobClientProvider::OnGetDatabaseItemForGetNextJobCallback(

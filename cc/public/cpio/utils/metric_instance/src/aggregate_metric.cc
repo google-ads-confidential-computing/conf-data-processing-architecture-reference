@@ -49,6 +49,8 @@ using google::scp::core::Timestamp;
 using google::scp::core::common::TimeProvider;
 using google::scp::core::common::Uuid;
 using google::scp::core::errors::SC_CUSTOMIZED_METRIC_EVENT_CODE_NOT_EXIST;
+using google::scp::core::errors::
+    SC_CUSTOMIZED_METRIC_INVALID_AGGREGATION_INTERVAL_DURATION;
 using google::scp::core::errors::SC_CUSTOMIZED_METRIC_PUSH_CANNOT_SCHEDULE;
 using google::scp::cpio::MetricClientInterface;
 using std::make_shared;
@@ -66,6 +68,7 @@ using std::this_thread::sleep_for;
 static constexpr char kAggregateMetric[] = "AggregateMetric";
 
 static constexpr milliseconds kStopWaitSleepDuration = milliseconds(500);
+static constexpr TimeDuration kMinimumPushIntervalDuration = 5000;
 
 namespace google::scp::cpio {
 AggregateMetric::AggregateMetric(core::AsyncExecutorInterface* async_executor,
@@ -110,6 +113,10 @@ AggregateMetric::AggregateMetric(core::AsyncExecutorInterface* async_executor,
 }
 
 ExecutionResult AggregateMetric::Init() noexcept {
+  if (push_interval_duration_in_ms_ < kMinimumPushIntervalDuration) {
+    return FailureExecutionResult(
+        SC_CUSTOMIZED_METRIC_INVALID_AGGREGATION_INTERVAL_DURATION);
+  }
   return SuccessExecutionResult();
 }
 

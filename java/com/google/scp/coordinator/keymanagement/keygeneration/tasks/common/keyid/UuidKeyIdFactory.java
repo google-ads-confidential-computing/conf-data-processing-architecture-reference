@@ -20,10 +20,10 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import java.util.UUID;
 
 /** UUID key id factory that supports generate, encode and decode UUID key id. */
-public final class UuidKeyIdFactory implements KeyIdFactory {
+public final class UuidKeyIdFactory extends KeyIdFactory {
 
   @Override
-  public String getNextKeyId(KeyDb keyDb) {
+  public String getNextKeyIdBase(KeyDb keyDb) {
     return UUID.randomUUID().toString();
   }
 }

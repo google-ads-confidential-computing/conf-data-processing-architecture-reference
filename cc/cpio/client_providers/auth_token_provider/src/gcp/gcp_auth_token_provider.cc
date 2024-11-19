@@ -103,8 +103,8 @@ constexpr char kJsonTokenAudienceKey[] = "aud";
 constexpr char kJsonTokenSubjectKey[] = "sub";
 constexpr char kJsonTokenIssuedAtKey[] = "iat";
 constexpr char kJsonTokenExpiryKeyForTargetAudience[] = "exp";
-// Refetch the token kTokenExpireGracePeriodInSeconds before it expires.
-constexpr int16_t kTokenExpireGracePeriodInSeconds = 300;
+// Refetch the token kTokenEarlyExpirationIntervalInSeconds before it expires.
+constexpr int16_t kTokenEarlyExpirationIntervalInSeconds = 300;
 
 constexpr char kTeeTokenServerPath[] = "http://localhost/v1/token";
 constexpr char kTeeTokenUnixSocketPath[] =
@@ -144,18 +144,16 @@ const auto& GetRequiredJWTComponentsForTargetAudienceToken() {
   }();
   return iterator_pair;
 }
-
-/// Indicates whether the token is expired.
-bool TokenIsExpired(
-    const google::scp::cpio::client_providers::GetSessionTokenResponse&
-        token_reponse) {
-  return token_reponse.expire_time.count() <
-         TimeUtil::GetCurrentTime().seconds() -
-             kTokenExpireGracePeriodInSeconds;
-}
 }  // namespace
 
 namespace google::scp::cpio::client_providers {
+/// Indicates whether the token is expired.
+bool TokenIsExpired(const GetSessionTokenResponse& token_reponse) {
+  return token_reponse.expire_time.count() <
+         TimeUtil::GetCurrentTime().seconds() +
+             kTokenEarlyExpirationIntervalInSeconds;
+}
+
 GcpAuthTokenProvider::GcpAuthTokenProvider(
     const shared_ptr<HttpClientInterface>& http_client,
     const shared_ptr<AsyncExecutorInterface>& io_async_executor)
@@ -194,9 +192,11 @@ void GcpAuthTokenProvider::GetSessionToken(
           get_token_context,
           [this](AsyncContext<GetSessionTokenRequest, GetSessionTokenResponse>&
                      context) mutable {
-            unique_lock lock(mutex_);
+            std::shared_lock lock(mutex_);
             if (!TokenIsExpired(cached_token_)) {
-              SCP_DEBUG(kGcpAuthTokenProvider, kZeroUuid, "Found token cache.");
+              SCP_DEBUG(kGcpAuthTokenProvider, kZeroUuid,
+                        "Found token cache with expiration time %lld.",
+                        cached_token_.expire_time.count());
               context.response =
                   make_shared<GetSessionTokenResponse>(cached_token_);
               context.result = SuccessExecutionResult();
@@ -222,7 +222,9 @@ void GcpAuthTokenProvider::GetSessionTokenForTargetAudience(
             *context.request->token_target_audience_uri, token_response);
         if (result.Successful() && !TokenIsExpired(token_response)) {
           SCP_DEBUG(kGcpAuthTokenProvider, kZeroUuid,
-                    "Found token cache for target audience.");
+                    "Found token cache for target audience with expiration "
+                    "time %lld.",
+                    token_response.expire_time.count());
           context.response =
               make_shared<GetSessionTokenResponse>(token_response);
           context.result = SuccessExecutionResult();

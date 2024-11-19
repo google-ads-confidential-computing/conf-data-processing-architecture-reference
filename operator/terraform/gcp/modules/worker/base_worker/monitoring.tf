@@ -730,7 +730,7 @@ resource "google_monitoring_dashboard" "worker_dashboard" {
                         ],
                         "perSeriesAligner" : "ALIGN_MEAN"
                       },
-                      "filter" : "metric.type=\"autoscaler.googleapis.com/current_utilization\" resource.type=\"autoscaler\" resource.label.\"autoscaler_name\"=\"${var.autoscaler_name}}\"",
+                      "filter" : "metric.type=\"autoscaler.googleapis.com/current_utilization\" resource.type=\"autoscaler\" resource.label.\"autoscaler_name\"=\"${var.autoscaler_name}\"",
                       "secondaryAggregation" : {
                         "alignmentPeriod" : "60s",
                       }

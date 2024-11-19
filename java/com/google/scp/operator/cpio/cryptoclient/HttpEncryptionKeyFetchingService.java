@@ -37,6 +37,8 @@ public final class HttpEncryptionKeyFetchingService implements EncryptionKeyFetc
 
   private static final int REQUEST_TIMEOUT_DURATION =
       Ints.checkedCast(Duration.ofMinutes(1).toMillis());
+  private static final String ENCRYPTION_KEY_VERSION_NUMBER = "v1alpha";
+  private static final String VERSION_NUMBER_SUFFIX = "/v1";
   private final HttpClientWrapper httpClient;
   private final String encryptionKeyServiceBaseUrl;
   private final Logger logger = LoggerFactory.getLogger(HttpEncryptionKeyFetchingService.class);
@@ -57,8 +59,7 @@ public final class HttpEncryptionKeyFetchingService implements EncryptionKeyFetc
   @Override
   public EncryptionKey fetchEncryptionKey(String keyId)
       throws EncryptionKeyFetchingServiceException {
-    URI fetchUri =
-        URI.create(String.format("%s/encryptionKeys/%s", encryptionKeyServiceBaseUrl, keyId));
+    var fetchUri = createUri(encryptionKeyServiceBaseUrl, keyId);
     var request = new HttpGet(fetchUri);
 
     final RequestConfig requestConfig =
@@ -115,5 +116,14 @@ public final class HttpEncryptionKeyFetchingService implements EncryptionKeyFetc
       logger.error(message, e);
       throw new EncryptionKeyFetchingServiceException(message, e);
     }
+  }
+
+  private URI createUri(String endpoint, String keyId) {
+    int index = endpoint.lastIndexOf(VERSION_NUMBER_SUFFIX);
+    if (index > 0) {
+      endpoint = endpoint.substring(0, index);
+    }
+    return URI.create(
+        String.format("%s/%s/encryptionKeys/%s", endpoint, ENCRYPTION_KEY_VERSION_NUMBER, keyId));
   }
 }

@@ -18,9 +18,13 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyi
 
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.shared.api.exception.ServiceException;
+import com.google.scp.shared.api.model.Code;
 
 /** Interface for getting next key id and key id decoding and encoding */
-public interface KeyIdFactory {
+public abstract class KeyIdFactory {
+
+  // These characters are not supported by gtag clients.
+  private static final String ILLEGAL_CHARACTERS = "~.";
 
   /**
    * Generate next key id given the database.
@@ -29,5 +33,22 @@ public interface KeyIdFactory {
    * @return next key id encoded in String.
    * @throws ServiceException
    */
-  String getNextKeyId(KeyDb keyDb) throws ServiceException;
+  public final String getNextKeyId(KeyDb keyDb) throws ServiceException {
+    String id = getNextKeyIdBase(keyDb);
+
+    if (id.chars().anyMatch(c -> ILLEGAL_CHARACTERS.indexOf(c) >= 0)) {
+      throw new ServiceException(
+          Code.INTERNAL,
+          "UNEXPECTED_ILLEGAL_ID",
+          String.format(
+              "Unexpected illegal character(s) (%s) found in generated ID (%s).",
+              ILLEGAL_CHARACTERS, id));
+    }
+    return id;
+  }
+
+  /**
+   * @see #getNextKeyId(KeyDb)
+   */
+  protected abstract String getNextKeyIdBase(KeyDb keyDb) throws ServiceException;
 }

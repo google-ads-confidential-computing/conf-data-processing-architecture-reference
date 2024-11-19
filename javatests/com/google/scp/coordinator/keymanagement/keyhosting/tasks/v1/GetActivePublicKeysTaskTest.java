@@ -20,20 +20,31 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.addRandomKeysToKeyDb;
 import static org.mockito.Answers.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 import com.google.acai.Acai;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
+import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTaskTestBase;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;
+import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.EncodedPublicKeyProto.EncodedPublicKey;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.EncodedPublicKeyProto.EncodedPublicKey.KeyOneofCase;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActivePublicKeysResponseProto.GetActivePublicKeysResponse;
+import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,13 +56,13 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public class GetActivePublicKeysTaskTest {
+public class GetActivePublicKeysTaskTest extends ApiTaskTestBase {
 
   @Rule public final Acai acai = new Acai(InMemoryTestEnv.class);
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
   @Inject private InMemoryKeyDb keyDb;
-  @Inject private GetActivePublicKeysTask task;
+  @Inject protected GetActivePublicKeysTask task;
   @Inject @KeyLimit private Integer keyLimit;
 
   @Mock private RequestContext request;
@@ -63,6 +74,7 @@ public class GetActivePublicKeysTaskTest {
   @Before
   public void setUp() {
     addRandomKeysToKeyDb(keyLimit * 2, keyDb);
+    super.task = spy(this.task);
   }
 
   @Test
@@ -118,6 +130,54 @@ public class GetActivePublicKeysTaskTest {
     assertThat(keys.getKeys(0).getKeyOneofCase()).isEqualTo(KeyOneofCase.HPKE_PUBLIC_KEY);
   }
 
+  @Test
+  public void testExecute_defaultRequest_returnsExpectedCacheControl() throws Exception {
+    // Given
+    doReturn(DEFAULT_SET_NAME).when(matcher).group("name");
+
+    // When
+    task.execute(matcher, request, response);
+
+    // Then
+    GetActivePublicKeysResponse keys = verifyResponse(response);
+    ImmutableSet<String> ids =
+        keys.getKeysList().stream()
+            .map(EncodedPublicKey::getId)
+            .collect(ImmutableSet.toImmutableSet());
+    Long secondsUntilFirstExpiration =
+        keyDb.getAllKeys().stream()
+            .filter(key -> ids.contains(key.getKeyId()))
+            .map(EncryptionKey::getExpirationTime)
+            .min(Long::compareTo)
+            .map(soonest -> Instant.now().until(Instant.ofEpochMilli(soonest), ChronoUnit.SECONDS))
+            .get();
+
+    List<String> values = getHeaders(response).get("Cache-Control");
+    assertThat(values).hasSize(1);
+
+    Matcher matcher = Pattern.compile("max-age=(\\d+)").matcher(values.get(0));
+    assertThat(matcher.find()).isTrue();
+    long cacheMaxAge = Long.parseLong(matcher.group(1));
+
+    // Account for time elapsed since the task computed it.
+    assertThat(cacheMaxAge).isAtMost(secondsUntilFirstExpiration);
+    assertThat(cacheMaxAge).isWithin(5).of(secondsUntilFirstExpiration);
+  }
+
+  @Test
+  public void testExecute_noKeys_returnsNoCacheControl() throws Exception {
+    // Given
+    doReturn(DEFAULT_SET_NAME).when(matcher).group("name");
+    keyDb.reset();
+
+    // When
+    task.execute(matcher, request, response);
+
+    // Then
+    assertThat(verifyResponse(response).getKeysList()).isEmpty();
+    assertThat(getHeaders(response).get("Cache-Control")).isEmpty();
+  }
+
   private static GetActivePublicKeysResponse verifyResponse(ResponseContext response)
       throws Exception {
     ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
@@ -126,5 +186,18 @@ public class GetActivePublicKeysTaskTest {
 
     JsonFormat.parser().merge(body.getValue(), keysBuilder);
     return keysBuilder.build();
+  }
+
+  private static ArrayListMultimap<String, String> getHeaders(ResponseContext response) {
+    ArgumentCaptor<String> key = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<String> value = ArgumentCaptor.forClass(String.class);
+    verify(response, atLeast(0)).addHeader(key.capture(), value.capture());
+
+    ArrayListMultimap<String, String> headers = ArrayListMultimap.create();
+
+    for (int i = 0; i < key.getAllValues().size(); i++) {
+      headers.put(key.getAllValues().get(i), value.getAllValues().get(i));
+    }
+    return headers;
   }
 }

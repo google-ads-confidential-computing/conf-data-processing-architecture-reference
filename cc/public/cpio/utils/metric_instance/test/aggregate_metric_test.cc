@@ -93,7 +93,7 @@ class AggregateMetricTest : public testing::Test {
   }
 
   shared_ptr<MetricClientInterface> mock_metric_client_;
-  size_t aggregation_time_duration_in_ms_ = 1000;
+  size_t aggregation_time_duration_in_ms_ = 5000;
   shared_ptr<AsyncExecutorInterface> async_executor_;
   shared_ptr<MockAsyncExecutor> mock_async_executor_;
 };

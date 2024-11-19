@@ -26,6 +26,7 @@
 namespace google::scp::core {
 typedef uint64_t Timestamp;
 typedef uint64_t TimeDuration;
+typedef double AverageTimeDuration;
 typedef char Byte;
 typedef uint64_t JournalId;
 typedef uint64_t CheckpointId;

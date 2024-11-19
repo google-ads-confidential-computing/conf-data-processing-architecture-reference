@@ -23,6 +23,7 @@
 #include <google/protobuf/util/time_util.h>
 
 #include "core/interface/async_context.h"
+#include "core/interface/type_def.h"
 #include "cpio/client_providers/job_client_provider/src/error_codes.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/type_def.h"
@@ -67,6 +68,7 @@ using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::TimeDuration;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST;
 using google::scp::core::errors::SC_CPIO_ENTITY_NOT_FOUND;
@@ -87,6 +89,7 @@ using google::scp::cpio::AggregateMetricInterface;
 using google::scp::cpio::MetricDefinition;
 using google::scp::cpio::MetricUtils;
 using google::scp::cpio::SimpleMetricInterface;
+using google::scp::cpio::TimeAggregateMetricInterface;
 using google::scp::cpio::TimeEvent;
 using std::bind;
 using std::make_shared;
@@ -676,8 +679,8 @@ void JobLifecycleHelper::UpdateJobStatusCallbackForMarkJobCompleted(
     IncrementAggregateMetric(job_completion_failure_metric_,
                              kJobProcessingTimeErrorEventName);
   } else {
-    RecordTimeInSimpleMetric(job_processing_time_metric_,
-                             to_string(processing_time_in_milliseconds));
+    RecordTimeInTimeAggregateMetric(job_processing_time_metric_,
+                                    processing_time_in_milliseconds);
   }
   auto created_time_in_milliseconds =
       TimeUtil::TimestampToMilliseconds(*created_time);
@@ -693,8 +696,8 @@ void JobLifecycleHelper::UpdateJobStatusCallbackForMarkJobCompleted(
     IncrementAggregateMetric(job_completion_failure_metric_,
                              kJobProcessingTimeErrorEventName);
   } else {
-    RecordTimeInSimpleMetric(job_waiting_time_metric_,
-                             to_string(waiting_time_in_milliseconds));
+    RecordTimeInTimeAggregateMetric(job_waiting_time_metric_,
+                                    waiting_time_in_milliseconds);
   }
   IncrementAggregateMetric(job_completion_metric_,
                            kJobCompletionSuccessEventName);
@@ -1235,7 +1238,7 @@ ExecutionResult JobLifecycleHelper::InitJobWaitingMetrics() noexcept {
       options_.metric_options().metric_namespace(),
       job_waiting_time_metric_labels_);
   job_waiting_time_metric_ =
-      metric_instance_factory_->ConstructSimpleMetricInstance(
+      metric_instance_factory_->ConstructTimeAggregateMetricInstance(
           std::move(job_waiting_time_metric_info));
   RETURN_IF_FAILURE(job_waiting_time_metric_->Init());
   return SuccessExecutionResult();
@@ -1250,7 +1253,7 @@ ExecutionResult JobLifecycleHelper::InitJobProcessingMetrics() noexcept {
       options_.metric_options().metric_namespace(),
       job_processing_time_metric_labels_);
   job_processing_time_metric_ =
-      metric_instance_factory_->ConstructSimpleMetricInstance(
+      metric_instance_factory_->ConstructTimeAggregateMetricInstance(
           std::move(job_processing_time_metric_info));
   RETURN_IF_FAILURE(job_processing_time_metric_->Init());
   return SuccessExecutionResult();
@@ -1342,10 +1345,10 @@ void JobLifecycleHelper::IncrementAggregateMetric(
   metric->Increment(event_name);
 }
 
-void JobLifecycleHelper::RecordTimeInSimpleMetric(
-    shared_ptr<SimpleMetricInterface> metric,
-    const string& time_in_string) noexcept {
-  metric->Push(time_in_string);
+void JobLifecycleHelper::RecordTimeInTimeAggregateMetric(
+    shared_ptr<TimeAggregateMetricInterface> metric,
+    const TimeDuration& time_duration) noexcept {
+  metric->RecordDuration(time_duration);
 }
 
 }  // namespace google::scp::cpio

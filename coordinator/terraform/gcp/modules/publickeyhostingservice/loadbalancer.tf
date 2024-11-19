@@ -32,10 +32,11 @@ resource "google_compute_backend_service" "get_public_key_loadbalancer_backend" 
   enable_cdn = var.enable_get_public_key_cdn
 
   cdn_policy {
-    cache_mode  = var.enable_get_public_key_cdn ? "CACHE_ALL_STATIC" : null
-    default_ttl = var.enable_get_public_key_cdn ? var.get_public_key_cloud_cdn_default_ttl_seconds : null
-    client_ttl  = var.enable_get_public_key_cdn ? var.get_public_key_cloud_cdn_default_ttl_seconds : null
-    max_ttl     = var.enable_get_public_key_cdn ? var.get_public_key_cloud_cdn_max_ttl_seconds : null
+    cache_mode        = var.enable_get_public_key_cdn ? "CACHE_ALL_STATIC" : null
+    default_ttl       = var.enable_get_public_key_cdn ? var.get_public_key_cloud_cdn_default_ttl_seconds : null
+    client_ttl        = var.enable_get_public_key_cdn ? var.get_public_key_cloud_cdn_default_ttl_seconds : null
+    max_ttl           = var.enable_get_public_key_cdn ? var.get_public_key_cloud_cdn_max_ttl_seconds : null
+    serve_while_stale = var.enable_get_public_key_cdn ? var.get_public_key_cloud_cdn_serve_while_stale_seconds : null # Serve stale content for up to 2 days.
 
     cache_key_policy {
       include_host         = false

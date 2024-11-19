@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+locals {
+  job_validation_filter = length(var.java_job_validations_to_alert) == 0 ? "" : format(" AND metric.label.\"Validator\"=monitoring.regex.full_match(\"%s\")", join("|", var.java_job_validations_to_alert))
+}
 
 resource "google_monitoring_metric_descriptor" "jobclient_job_validation_failure_metric" {
   display_name = "Job Client Validation Failures"
@@ -28,12 +31,13 @@ resource "google_monitoring_metric_descriptor" "jobclient_job_validation_failure
 }
 
 resource "google_monitoring_alert_policy" "jobclient_job_validation_failure_alert" {
+  count        = length(var.java_job_validations_to_alert) == 0 ? 0 : 1
   display_name = "${var.environment} Job Client Validation Failure Alert"
   combiner     = "OR"
   conditions {
     display_name = "Validation Failures"
     condition_threshold {
-      filter     = "metric.type=\"${google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric.type}\" AND resource.type=\"gce_instance\""
+      filter     = "metric.type=\"${google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric.type}\" AND resource.type=\"gce_instance\"${local.job_validation_filter}"
       duration   = "${var.alarm_duration_sec}s"
       comparison = "COMPARISON_GT"
       aggregations {
@@ -128,9 +132,6 @@ resource "google_monitoring_dashboard" "worker_custom_metrics_dashboard" {
                         "alignmentPeriod" : "60s",
                         "perSeriesAligner" : "ALIGN_SUM",
                         "crossSeriesReducer" : "REDUCE_SUM",
-                        "groupByFields" : [
-                          "metadata.system_labels.\"instance_group\""
-                        ]
                       },
                       "filter" : "metric.type=\"${google_monitoring_metric_descriptor.jobclient_job_client_error_metric.type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\"",
                       "secondaryAggregation" : {
@@ -140,7 +141,6 @@ resource "google_monitoring_dashboard" "worker_custom_metrics_dashboard" {
                   }
                 },
                 {
-                  "legendTemplate" : "Job Client Validation Failures",
                   "minAlignmentPeriod" : "60s",
                   "plotType" : "LINE",
                   "targetAxis" : "Y2",
@@ -151,7 +151,7 @@ resource "google_monitoring_dashboard" "worker_custom_metrics_dashboard" {
                         "perSeriesAligner" : "ALIGN_SUM",
                         "crossSeriesReducer" : "REDUCE_SUM",
                         "groupByFields" : [
-                          "metadata.system_labels.\"instance_group\""
+                          "metric.label.\"Validator\""
                         ]
                       },
                       "filter" : "metric.type=\"${google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric.type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\"",
@@ -172,9 +172,6 @@ resource "google_monitoring_dashboard" "worker_custom_metrics_dashboard" {
                         "alignmentPeriod" : "60s",
                         "perSeriesAligner" : "ALIGN_SUM",
                         "crossSeriesReducer" : "REDUCE_SUM",
-                        "groupByFields" : [
-                          "metadata.system_labels.\"instance_group\""
-                        ]
                       },
                       "filter" : "metric.type=\"${google_monitoring_metric_descriptor.worker_job_error_metric.type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\"",
                       "secondaryAggregation" : {

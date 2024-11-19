@@ -16,6 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.shared.dao.common;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -60,6 +61,19 @@ public interface KeyDb {
   default ImmutableList<EncryptionKey> getActiveKeys(String setName, int keyLimit)
       throws ServiceException {
     return getActiveKeys(setName, keyLimit, Instant.now());
+  }
+
+  /**
+   * Returns active keys that have a public key in descending expiration time order.
+   *
+   * @param setName the key set name.
+   * @param keyLimit the maximum number of keys to retrieve.
+   */
+  default ImmutableList<EncryptionKey> getActiveKeysWithPublicKey(String setName, int keyLimit)
+      throws ServiceException {
+    return getActiveKeys(setName, keyLimit, Instant.now()).stream()
+        .filter(key -> !Strings.isNullOrEmpty(key.getPublicKey()))
+        .collect(ImmutableList.toImmutableList());
   }
 
   /**

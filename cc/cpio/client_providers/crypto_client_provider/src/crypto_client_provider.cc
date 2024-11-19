@@ -21,6 +21,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <random>
 #include <sstream>
 #include <string>
@@ -430,10 +431,15 @@ ExecutionResult CryptoClientProvider::Stop() noexcept {
   return SuccessExecutionResult();
 }
 
-ExecutionResultOr<HpkeEncryptResponse>
-CryptoClientProvider::HpkeEncryptUsingExternalInterface(
-    const HpkeEncryptRequest& encrypt_request) noexcept {
-  auto keyset_handle_or = CreateKeysetHandle(encrypt_request.tink_key_binary());
+ExecutionResultOr<HybridEncrypt*>
+CryptoClientProvider::GetHybridEncryptPrimitive(const string& key) noexcept {
+  std::shared_lock s_lock(hybrid_encrypt_primitive_map_mutex_);
+  if (auto it = hybrid_encrypt_primitive_map_.find(key);
+      it != hybrid_encrypt_primitive_map_.end()) {
+    return it->second.get();
+  }
+  s_lock.unlock();
+  auto keyset_handle_or = CreateKeysetHandle(key);
   if (!keyset_handle_or.Successful()) {
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, keyset_handle_or.result(),
               "Creating KeysetHandle failed with error.");
@@ -449,7 +455,22 @@ CryptoClientProvider::HpkeEncryptUsingExternalInterface(
               primitive_or.status().ToString().c_str());
     return execution_result;
   }
+  std::unique_lock u_lock(hybrid_encrypt_primitive_map_mutex_);
+  const auto [it, success] = hybrid_encrypt_primitive_map_.insert(
+      std::make_pair(key, std::move(*primitive_or)));
+  u_lock.unlock();
+  return it->second.get();
+}
 
+ExecutionResultOr<HpkeEncryptResponse>
+CryptoClientProvider::HpkeEncryptUsingExternalInterface(
+    const HpkeEncryptRequest& encrypt_request) noexcept {
+  auto primitive_or =
+      GetHybridEncryptPrimitive(encrypt_request.tink_key_binary());
+  RETURN_AND_LOG_IF_FAILURE(primitive_or.result(), kCryptoClientProvider,
+                            kZeroUuid,
+                            "Get HpkeEncrypt Primitive failed for key %s.",
+                            encrypt_request.tink_key_binary().c_str());
   auto encrypt_result_or =
       (*primitive_or)
           ->Encrypt(encrypt_request.payload(), encrypt_request.shared_info());
@@ -571,10 +592,15 @@ ExecutionResultOr<HpkeEncryptResponse> CryptoClientProvider::HpkeEncryptSync(
   return response;
 }
 
-ExecutionResultOr<HpkeDecryptResponse>
-CryptoClientProvider::HpkeDecryptUsingExternalInterface(
-    const HpkeDecryptRequest& decrypt_request) noexcept {
-  auto keyset_handle_or = CreateKeysetHandle(decrypt_request.tink_key_binary());
+ExecutionResultOr<HybridDecrypt*>
+CryptoClientProvider::GetHybridDecryptPrimitive(const string& key) noexcept {
+  std::shared_lock s_lock(hybrid_decrypt_primitive_map_mutex_);
+  if (auto it = hybrid_decrypt_primitive_map_.find(key);
+      it != hybrid_decrypt_primitive_map_.end()) {
+    return it->second.get();
+  }
+  s_lock.unlock();
+  auto keyset_handle_or = CreateKeysetHandle(key);
   if (!keyset_handle_or.Successful()) {
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, keyset_handle_or.result(),
               "Creating KeysetHandle failed with error.");
@@ -590,6 +616,22 @@ CryptoClientProvider::HpkeDecryptUsingExternalInterface(
               primitive_or.status().ToString().c_str());
     return execution_result;
   }
+  std::unique_lock u_lock(hybrid_decrypt_primitive_map_mutex_);
+  const auto [it, success] = hybrid_decrypt_primitive_map_.insert(
+      std::make_pair(key, std::move(*primitive_or)));
+  u_lock.unlock();
+  return it->second.get();
+}
+
+ExecutionResultOr<HpkeDecryptResponse>
+CryptoClientProvider::HpkeDecryptUsingExternalInterface(
+    const HpkeDecryptRequest& decrypt_request) noexcept {
+  auto primitive_or =
+      GetHybridDecryptPrimitive(decrypt_request.tink_key_binary());
+  RETURN_AND_LOG_IF_FAILURE(primitive_or.result(), kCryptoClientProvider,
+                            kZeroUuid,
+                            "Get HpkeDecrypt Primitive failed for key %s.",
+                            decrypt_request.tink_key_binary().c_str());
 
   auto decrypt_result_or =
       (*primitive_or)
@@ -950,6 +992,36 @@ CryptoClientProvider::AeadDecryptStreamSync(
   return move(dec_stream_result.value());
 }
 
+ExecutionResultOr<Mac*> CryptoClientProvider::GetMacPrimitive(
+    const string& key) noexcept {
+  std::shared_lock s_lock(mac_primitive_map_mutex_);
+  if (auto it = mac_primitive_map_.find(key); it != mac_primitive_map_.end()) {
+    return it->second.get();
+  }
+  s_lock.unlock();
+  auto keyset_handle_or = CreateKeysetHandle(key);
+  if (!keyset_handle_or.Successful()) {
+    SCP_ERROR(kCryptoClientProvider, kZeroUuid, keyset_handle_or.result(),
+              "Creating KeysetHandle failed with error.");
+    return keyset_handle_or.result();
+  }
+
+  auto primitive_or = (*keyset_handle_or)->GetPrimitive<Mac>();
+  if (!primitive_or.ok()) {
+    auto execution_result = FailureExecutionResult(
+        SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_TINK_PRIMITIVE);
+    SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
+              "Creating Mac Primitive failed with error %s.",
+              primitive_or.status().ToString().c_str());
+    return execution_result;
+  }
+  std::unique_lock u_lock(mac_primitive_map_mutex_);
+  const auto [it, success] =
+      mac_primitive_map_.insert(std::make_pair(key, std::move(*primitive_or)));
+  u_lock.unlock();
+  return it->second.get();
+}
+
 ExecutionResultOr<ComputeMacResponse> CryptoClientProvider::ComputeMacSync(
     const ComputeMacRequest& request) noexcept {
   if (request.key().empty()) {
@@ -968,23 +1040,10 @@ ExecutionResultOr<ComputeMacResponse> CryptoClientProvider::ComputeMacSync(
     return execution_result;
   }
 
-  auto keyset_handle_or = CreateKeysetHandle(request.key());
-  if (!keyset_handle_or.Successful()) {
-    SCP_ERROR(kCryptoClientProvider, kZeroUuid, keyset_handle_or.result(),
-              "Creating KeysetHandle failed with error.");
-    return keyset_handle_or.result();
-  }
-
-  auto mac_primitive_or = (*keyset_handle_or)->GetPrimitive<Mac>();
-  if (!mac_primitive_or.ok()) {
-    auto execution_result = FailureExecutionResult(
-        SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_TINK_PRIMITIVE);
-    SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
-              "Creating mac failed with error %s.",
-              mac_primitive_or.status().ToString().c_str());
-    return execution_result;
-  }
-
+  auto mac_primitive_or = GetMacPrimitive(request.key());
+  RETURN_AND_LOG_IF_FAILURE(mac_primitive_or.result(), kCryptoClientProvider,
+                            kZeroUuid, "Get MAC Primitive failed for key %s.",
+                            request.key().c_str());
   auto compute_result_or = (*mac_primitive_or)->ComputeMac(request.data());
   if (!compute_result_or.ok()) {
     auto execution_result =

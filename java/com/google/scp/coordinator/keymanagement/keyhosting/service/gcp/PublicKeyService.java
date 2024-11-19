@@ -16,11 +16,18 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
-import com.google.scp.coordinator.keymanagement.shared.serverless.gcp.GcpServerlessFunction;
+import com.google.inject.Provides;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.PublicKeyServiceModule;
+import com.google.scp.coordinator.keymanagement.shared.serverless.gcp.GcpServerlessFunction;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 
 /** Encryption Key Service GCP Serverless Function. */
 public class PublicKeyService extends GcpServerlessFunction {
+
+  @Provides
+  public LogMetricHelper provideLogMetricHelper() {
+    return new LogMetricHelper("key_service/public_key_service");
+  }
 
   @Override
   protected void configure() {

@@ -55,6 +55,7 @@ using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::AsyncPriority;
 using google::scp::core::ExecutionResult;
+using google::scp::core::ExecutionResultOr;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
@@ -184,28 +185,36 @@ void GcpQueueClientProvider::EnqueueMessage(
     return;
   }
 
-  auto execution_result = io_async_executor_->Schedule(
-      bind(&GcpQueueClientProvider::EnqueueMessageAsync, this,
-           enqueue_message_context),
-      AsyncPriority::Normal);
-  if (!execution_result.Successful()) {
-    enqueue_message_context.result = execution_result;
-    SCP_ERROR_CONTEXT(
-        kGcpQueueClientProvider, enqueue_message_context,
-        enqueue_message_context.result,
-        "Enqueue Message request failed to be scheduled. Topic: %s",
-        topic_name_.c_str());
-    enqueue_message_context.Finish();
-  }
+  operation_dispatcher_
+      .Dispatch<AsyncContext<EnqueueMessageRequest, EnqueueMessageResponse>>(
+          enqueue_message_context,
+          [this](AsyncContext<EnqueueMessageRequest, EnqueueMessageResponse>&
+                     enqueue_message_context) mutable {
+            auto response_or = PublishMessage(*enqueue_message_context.request);
+            if (!response_or.Successful()) {
+              enqueue_message_context.result = response_or.result();
+              SCP_ERROR_CONTEXT(kGcpQueueClientProvider,
+                                enqueue_message_context,
+                                enqueue_message_context.result,
+                                "Failed to publish message to PubSub.");
+              return response_or.result();
+            }
+
+            enqueue_message_context.response =
+                make_shared<EnqueueMessageResponse>(std::move(*response_or));
+            FinishContext(SuccessExecutionResult(), enqueue_message_context,
+                          cpu_async_executor_);
+            return SuccessExecutionResult();
+          });
 }
 
-void GcpQueueClientProvider::EnqueueMessageAsync(
-    AsyncContext<EnqueueMessageRequest, EnqueueMessageResponse>&
-        enqueue_message_context) noexcept {
+ExecutionResultOr<EnqueueMessageResponse>
+GcpQueueClientProvider::PublishMessage(
+    const EnqueueMessageRequest& enqueue_message_request) noexcept {
   PublishRequest publish_request;
   publish_request.set_topic(topic_name_);
   PubsubMessage* message = publish_request.add_messages();
-  message->set_data(enqueue_message_context.request->message_body().c_str());
+  message->set_data(enqueue_message_request.message_body().c_str());
 
   ClientContext client_context;
   PublishResponse publish_response;
@@ -213,13 +222,11 @@ void GcpQueueClientProvider::EnqueueMessageAsync(
                                          &publish_response);
   if (!status.ok()) {
     auto execution_result = GcpUtils::GcpErrorConverter(status);
-    SCP_ERROR_CONTEXT(
-        kGcpQueueClientProvider, enqueue_message_context, execution_result,
+    SCP_ERROR(
+        kGcpQueueClientProvider, kZeroUuid, execution_result,
         "Failed to enqueue message due to GCP Pub/Sub service error. Topic: %s",
         topic_name_.c_str());
-    FinishContext(execution_result, enqueue_message_context,
-                  cpu_async_executor_);
-    return;
+    return execution_result;
   }
 
   const auto& message_ids = publish_response.message_ids();
@@ -227,44 +234,47 @@ void GcpQueueClientProvider::EnqueueMessageAsync(
   if (message_ids.size() != 1) {
     auto execution_result = FailureExecutionResult(
         SC_GCP_QUEUE_CLIENT_PROVIDER_MESSAGES_NUMBER_MISMATCH);
-    SCP_ERROR_CONTEXT(
-        kGcpQueueClientProvider, enqueue_message_context, execution_result,
-        "The number of message ids recevied from the response does "
-        "not match the number of message in the request. Topic: %s",
-        topic_name_.c_str());
-    FinishContext(execution_result, enqueue_message_context,
-                  cpu_async_executor_);
-    return;
+    SCP_ERROR(kGcpQueueClientProvider, kZeroUuid, execution_result,
+              "The number of message ids recevied from the response does "
+              "not match the number of message in the request. Topic: %s",
+              topic_name_.c_str());
+    return execution_result;
   }
 
-  auto response = make_shared<EnqueueMessageResponse>();
-  response->set_message_id(publish_response.message_ids(0));
-  enqueue_message_context.response = std::move(response);
-  FinishContext(SuccessExecutionResult(), enqueue_message_context,
-                cpu_async_executor_);
+  EnqueueMessageResponse response;
+  response.set_message_id(publish_response.message_ids(0));
+  return response;
 }
 
 void GcpQueueClientProvider::GetTopMessage(
     AsyncContext<GetTopMessageRequest, GetTopMessageResponse>&
         get_top_message_context) noexcept {
-  auto execution_result = io_async_executor_->Schedule(
-      bind(&GcpQueueClientProvider::GetTopMessageAsync, this,
-           get_top_message_context),
-      AsyncPriority::Normal);
-  if (!execution_result.Successful()) {
-    get_top_message_context.result = execution_result;
-    SCP_ERROR_CONTEXT(
-        kGcpQueueClientProvider, get_top_message_context,
-        get_top_message_context.result,
-        "Get Top Message request failed to be scheduled. Topic: %s",
-        topic_name_.c_str());
-    get_top_message_context.Finish();
-  }
+  operation_dispatcher_
+      .Dispatch<AsyncContext<GetTopMessageRequest, GetTopMessageResponse>>(
+          get_top_message_context,
+          [this](AsyncContext<GetTopMessageRequest, GetTopMessageResponse>&
+                     get_top_message_context) mutable {
+            auto response_or = PullMessage();
+
+            if (!response_or.Successful()) {
+              get_top_message_context.result = response_or.result();
+              SCP_ERROR_CONTEXT(kGcpQueueClientProvider,
+                                get_top_message_context,
+                                get_top_message_context.result,
+                                "Failed to pull message from PubSub.");
+              return response_or.result();
+            }
+
+            get_top_message_context.response =
+                make_shared<GetTopMessageResponse>(std::move(*response_or));
+            FinishContext(SuccessExecutionResult(), get_top_message_context,
+                          cpu_async_executor_);
+            return SuccessExecutionResult();
+          });
 }
 
-void GcpQueueClientProvider::GetTopMessageAsync(
-    AsyncContext<GetTopMessageRequest, GetTopMessageResponse>&
-        get_top_message_context) noexcept {
+ExecutionResultOr<GetTopMessageResponse>
+GcpQueueClientProvider::PullMessage() noexcept {
   PullRequest pull_request;
   pull_request.set_subscription(subscription_name_);
   pull_request.set_max_messages(kMaxNumberOfMessagesReceived);
@@ -275,14 +285,11 @@ void GcpQueueClientProvider::GetTopMessageAsync(
 
   if (!status.ok()) {
     auto execution_result = GcpUtils::GcpErrorConverter(status);
-    SCP_ERROR_CONTEXT(
-        kGcpQueueClientProvider, get_top_message_context, execution_result,
-        "Failed to get top message due to GCP Pub/Sub service error. "
-        "Subscription: %s",
-        subscription_name_.c_str());
-    FinishContext(execution_result, get_top_message_context,
-                  cpu_async_executor_);
-    return;
+    SCP_ERROR(kGcpQueueClientProvider, kZeroUuid, execution_result,
+              "Failed to get top message due to GCP Pub/Sub service error. "
+              "Subscription: %s",
+              subscription_name_.c_str());
+    return execution_result;
   }
 
   const auto& received_messages = pull_response.received_messages();
@@ -291,26 +298,20 @@ void GcpQueueClientProvider::GetTopMessageAsync(
   if (received_messages.size() > kMaxNumberOfMessagesReceived) {
     auto execution_result = FailureExecutionResult(
         SC_GCP_QUEUE_CLIENT_PROVIDER_MESSAGES_NUMBER_EXCEEDED);
-    SCP_ERROR_CONTEXT(
-        kGcpQueueClientProvider, get_top_message_context, execution_result,
-        "The number of messages recevied from the response is larger "
-        "than the maximum number. Subscription: %s",
-        subscription_name_.c_str());
-    FinishContext(execution_result, get_top_message_context,
-                  cpu_async_executor_);
-    return;
+    SCP_ERROR(kGcpQueueClientProvider, kZeroUuid, execution_result,
+              "The number of messages recevied from the response is larger "
+              "than the maximum number. Subscription: %s",
+              subscription_name_.c_str());
+    return execution_result;
   }
 
   if (received_messages.empty()) {
     auto execution_result = FailureExecutionResult(
         SC_GCP_QUEUE_CLIENT_PROVIDER_NO_MESSAGE_RETURNED);
-    SCP_ERROR_CONTEXT(
-        kGcpQueueClientProvider, get_top_message_context, execution_result,
-        "No messages are returned from the PubSub. Subscription: %s",
-        subscription_name_.c_str());
-    FinishContext(execution_result, get_top_message_context,
-                  cpu_async_executor_);
-    return;
+    SCP_ERROR(kGcpQueueClientProvider, kZeroUuid, execution_result,
+              "No messages are returned from the PubSub. Subscription: %s",
+              subscription_name_.c_str());
+    return execution_result;
   }
 
   auto received_message = received_messages.at(0);
@@ -318,24 +319,18 @@ void GcpQueueClientProvider::GetTopMessageAsync(
   if (message_body.empty()) {
     auto execution_result = FailureExecutionResult(
         SC_GCP_QUEUE_CLIENT_PROVIDER_INVALID_MESSAGE_BODY);
-    SCP_ERROR_CONTEXT(kGcpQueueClientProvider, get_top_message_context,
-                      execution_result,
-                      "The message body in the message receiving from PubSub "
-                      "is empty. Subscription: %s",
-                      subscription_name_.c_str());
-    FinishContext(execution_result, get_top_message_context,
-                  cpu_async_executor_);
-    return;
+    SCP_ERROR(kGcpQueueClientProvider, kZeroUuid, execution_result,
+              "The message body in the message receiving from PubSub "
+              "is empty. Subscription: %s",
+              subscription_name_.c_str());
+    return execution_result;
   }
 
-  auto response = make_shared<GetTopMessageResponse>();
-  response->set_message_body(message_body);
-  response->set_message_id(received_message.mutable_message()->message_id());
-  response->set_receipt_info(received_message.ack_id());
-  get_top_message_context.response = std::move(response);
-
-  FinishContext(SuccessExecutionResult(), get_top_message_context,
-                cpu_async_executor_);
+  GetTopMessageResponse response;
+  response.set_message_body(message_body);
+  response.set_message_id(received_message.mutable_message()->message_id());
+  response.set_receipt_info(received_message.ack_id());
+  return response;
 }
 
 void GcpQueueClientProvider::UpdateMessageVisibilityTimeout(
@@ -374,34 +369,47 @@ void GcpQueueClientProvider::UpdateMessageVisibilityTimeout(
     return;
   }
 
-  auto execution_result = io_async_executor_->Schedule(
-      bind(&GcpQueueClientProvider::UpdateMessageVisibilityTimeoutAsync, this,
-           update_message_visibility_timeout_context),
-      AsyncPriority::Normal);
-  if (!execution_result.Successful()) {
-    update_message_visibility_timeout_context.result = execution_result;
-    SCP_ERROR_CONTEXT(kGcpQueueClientProvider,
-                      update_message_visibility_timeout_context,
-                      update_message_visibility_timeout_context.result,
-                      "Update message visibility timeout request failed to be "
-                      "scheduled for subscription: %s",
-                      subscription_name_.c_str());
-    update_message_visibility_timeout_context.Finish();
-  }
+  operation_dispatcher_
+      .Dispatch<AsyncContext<UpdateMessageVisibilityTimeoutRequest,
+                             UpdateMessageVisibilityTimeoutResponse>>(
+          update_message_visibility_timeout_context,
+          [this](AsyncContext<UpdateMessageVisibilityTimeoutRequest,
+                              UpdateMessageVisibilityTimeoutResponse>&
+                     update_message_visibility_timeout_context) mutable {
+            auto response_or = ModifyMessageAckDeadline(
+                *update_message_visibility_timeout_context.request);
+
+            if (!response_or.Successful()) {
+              update_message_visibility_timeout_context.result =
+                  response_or.result();
+              SCP_ERROR_CONTEXT(
+                  kGcpQueueClientProvider,
+                  update_message_visibility_timeout_context,
+                  update_message_visibility_timeout_context.result,
+                  "Failed to modify ack deadline for message in PubSub.");
+              return response_or.result();
+            }
+
+            update_message_visibility_timeout_context.response =
+                make_shared<UpdateMessageVisibilityTimeoutResponse>(
+                    std::move(*response_or));
+            FinishContext(SuccessExecutionResult(),
+                          update_message_visibility_timeout_context,
+                          cpu_async_executor_);
+            return SuccessExecutionResult();
+          });
 }
 
-void GcpQueueClientProvider::UpdateMessageVisibilityTimeoutAsync(
-    AsyncContext<UpdateMessageVisibilityTimeoutRequest,
-                 UpdateMessageVisibilityTimeoutResponse>&
-        update_message_visibility_timeout_context) noexcept {
+ExecutionResultOr<UpdateMessageVisibilityTimeoutResponse>
+GcpQueueClientProvider::ModifyMessageAckDeadline(
+    const UpdateMessageVisibilityTimeoutRequest&
+        update_message_visibility_timeout_request) noexcept {
   ModifyAckDeadlineRequest modify_ack_deadline_request;
   modify_ack_deadline_request.set_subscription(subscription_name_);
   modify_ack_deadline_request.add_ack_ids(
-      update_message_visibility_timeout_context.request->receipt_info()
-          .c_str());
+      update_message_visibility_timeout_request.receipt_info().c_str());
   modify_ack_deadline_request.set_ack_deadline_seconds(
-      update_message_visibility_timeout_context.request
-          ->message_visibility_timeout()
+      update_message_visibility_timeout_request.message_visibility_timeout()
           .seconds());
 
   ClientContext client_context;
@@ -411,21 +419,15 @@ void GcpQueueClientProvider::UpdateMessageVisibilityTimeoutAsync(
       &modify_ack_deadline_response);
   if (!status.ok()) {
     auto execution_result = GcpUtils::GcpErrorConverter(status);
-    SCP_ERROR_CONTEXT(
-        kGcpQueueClientProvider, update_message_visibility_timeout_context,
-        execution_result,
-        "Failed to modify message ack deadline due to GCP Pub/Sub "
-        "service error. Subscription: %s",
-        subscription_name_.c_str());
-    FinishContext(execution_result, update_message_visibility_timeout_context,
-                  cpu_async_executor_);
-    return;
+    SCP_ERROR(kGcpQueueClientProvider, kZeroUuid, execution_result,
+              "Failed to modify message ack deadline due to GCP Pub/Sub "
+              "service error. Subscription: %s",
+              subscription_name_.c_str());
+    return execution_result;
   }
 
-  update_message_visibility_timeout_context.response =
-      make_shared<UpdateMessageVisibilityTimeoutResponse>();
-  FinishContext(SuccessExecutionResult(),
-                update_message_visibility_timeout_context, cpu_async_executor_);
+  UpdateMessageVisibilityTimeoutResponse response;
+  return response;
 }
 
 void GcpQueueClientProvider::DeleteMessage(
@@ -444,28 +446,37 @@ void GcpQueueClientProvider::DeleteMessage(
     return;
   }
 
-  auto execution_result = io_async_executor_->Schedule(
-      bind(&GcpQueueClientProvider::DeleteMessageAsync, this,
-           delete_message_context),
-      AsyncPriority::Normal);
-  if (!execution_result.Successful()) {
-    delete_message_context.result = execution_result;
-    SCP_ERROR_CONTEXT(
-        kGcpQueueClientProvider, delete_message_context,
-        delete_message_context.result,
-        "Delete request failed to be scheduled for subscription: %s",
-        subscription_name_.c_str());
-    delete_message_context.Finish();
-  }
+  operation_dispatcher_
+      .Dispatch<AsyncContext<DeleteMessageRequest, DeleteMessageResponse>>(
+          delete_message_context,
+          [this](AsyncContext<DeleteMessageRequest, DeleteMessageResponse>&
+                     delete_message_context) mutable {
+            auto response_or =
+                AcknowledgeMessage(*delete_message_context.request);
+
+            if (!response_or.Successful()) {
+              delete_message_context.result = response_or.result();
+              SCP_ERROR_CONTEXT(kGcpQueueClientProvider, delete_message_context,
+                                delete_message_context.result,
+                                "Failed to acknowledge message to PubSub.");
+              return response_or.result();
+            }
+
+            delete_message_context.response =
+                make_shared<DeleteMessageResponse>(std::move(*response_or));
+            FinishContext(SuccessExecutionResult(), delete_message_context,
+                          cpu_async_executor_);
+            return SuccessExecutionResult();
+          });
 }
 
-void GcpQueueClientProvider::DeleteMessageAsync(
-    AsyncContext<DeleteMessageRequest, DeleteMessageResponse>&
-        delete_message_context) noexcept {
+ExecutionResultOr<DeleteMessageResponse>
+GcpQueueClientProvider::AcknowledgeMessage(
+    const DeleteMessageRequest& delete_message_request) noexcept {
   AcknowledgeRequest acknowledge_request;
   acknowledge_request.set_subscription(subscription_name_);
   acknowledge_request.add_ack_ids(
-      delete_message_context.request->receipt_info().c_str());
+      delete_message_request.receipt_info().c_str());
 
   ClientContext client_context;
   Empty acknowledge_response;
@@ -473,50 +484,22 @@ void GcpQueueClientProvider::DeleteMessageAsync(
       &client_context, acknowledge_request, &acknowledge_response);
   if (!status.ok()) {
     auto execution_result = GcpUtils::GcpErrorConverter(status);
-    SCP_ERROR_CONTEXT(kGcpQueueClientProvider, delete_message_context,
-                      execution_result,
-                      "Failed to acknowledge message due to GCP Pub/Sub "
-                      "service error. Subscription: %s",
-                      subscription_name_.c_str());
-    FinishContext(execution_result, delete_message_context,
-                  cpu_async_executor_);
-    return;
+    SCP_ERROR(kGcpQueueClientProvider, kZeroUuid, execution_result,
+              "Failed to acknowledge message due to GCP Pub/Sub "
+              "service error. Subscription: %s",
+              subscription_name_.c_str());
+    return execution_result;
   }
 
-  delete_message_context.response = make_shared<DeleteMessageResponse>();
-  FinishContext(SuccessExecutionResult(), delete_message_context,
-                cpu_async_executor_);
-}
-
-string CreatePubSubServiceConfigJson() {
-  // We had to hard-coded service config json here as the json created by
-  // nlohmann::json is not accepted by grpc validator.
-  // The maxAttempts is also capped to 5 on grpc side.
-  string json_string =
-      "{\n"
-      "  \"methodConfig\": [ {\n"
-      "    \"name\": [\n"
-      "      { \"service\": \"scp.cpio.client_providers.PubSubService\"}\n"
-      "    ],\n"
-      "    \"retryPolicy\": {\n"
-      "      \"maxAttempts\": \"5\",\n"
-      "      \"initialBackoff\": \"18s\",\n"
-      "      \"maxBackoff\": \"600s\",\n"
-      "      \"backoffMultiplier\": 2,\n"
-      "      \"retryableStatusCodes\": [ \"UNAVAILABLE\" ]\n"
-      "    }\n"
-      "  } ]\n"
-      "}";
-  return json_string;
+  DeleteMessageResponse response;
+  return response;
 }
 
 shared_ptr<Channel> GcpPubSubStubFactory::GetPubSubChannel(
     const std::shared_ptr<QueueClientOptions>& options) noexcept {
   if (!channel_) {
     ChannelArguments args;
-    args.SetInt(GRPC_ARG_ENABLE_RETRIES, 1);  // enable retry
-    args.SetServiceConfigJSON(
-        CreatePubSubServiceConfigJson());  // enable retry policy
+    args.SetInt(GRPC_ARG_ENABLE_RETRIES, 0);  // disable retry
     channel_ = CreateCustomChannel(kPubSubEndpointUri,
                                    GoogleDefaultCredentials(), args);
   }

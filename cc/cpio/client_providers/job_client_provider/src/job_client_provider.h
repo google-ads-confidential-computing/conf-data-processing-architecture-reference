@@ -170,6 +170,28 @@ class JobClientProvider : public JobClientProviderInterface {
           get_top_message_context) noexcept;
 
   /**
+   * @brief Is called when the dispatch from the operation dispatcher is
+   * finished for the get next job callback.
+   *
+   * @param original_get_next_job_context the original get next job context.
+   * @param job_id the job id of the job.
+   * @param server_job_id the server job id of the job.
+   * @param receipt_info the receipt info of the job message from queue.
+   * @param dispatch_get_next_job_context the get next job context that will be
+   * used in the dispatch operation.
+   */
+  void OnGetNextJobDispatchCallback(
+      core::AsyncContext<cmrt::sdk::job_service::v1::GetNextJobRequest,
+                         cmrt::sdk::job_service::v1::GetNextJobResponse>&
+          original_get_next_job_context,
+      std::shared_ptr<std::string> job_id,
+      std::shared_ptr<std::string> server_job_id,
+      std::shared_ptr<std::string> receipt_info,
+      core::AsyncContext<cmrt::sdk::job_service::v1::GetNextJobRequest,
+                         cmrt::sdk::job_service::v1::GetNextJobResponse>&
+          dispatch_get_next_job_context) noexcept;
+
+  /**
    * @brief Is called when the object is returned from the get next job item
    * from database callback.
    *

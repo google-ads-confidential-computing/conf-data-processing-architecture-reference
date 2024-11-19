@@ -27,6 +27,7 @@
 
 #include "mock_aggregate_metric.h"
 #include "mock_simple_metric.h"
+#include "mock_time_aggregate_metric.h"
 
 namespace google::scp::cpio {
 class MockMetricInstanceFactory : public MetricInstanceFactoryInterface {
@@ -42,6 +43,16 @@ class MockMetricInstanceFactory : public MetricInstanceFactoryInterface {
     ON_CALL(*this, ConstructAggregateMetricInstance(testing::_, testing::_,
                                                     testing::_))
         .WillByDefault([] { return std::make_unique<MockAggregateMetric>(); });
+    ON_CALL(*this, ConstructTimeAggregateMetricInstance(testing::_))
+        .WillByDefault(
+            [] { return std::make_unique<MockTimeAggregateMetric>(); });
+    ON_CALL(*this, ConstructTimeAggregateMetricInstance(testing::_, testing::_))
+        .WillByDefault(
+            [] { return std::make_unique<MockTimeAggregateMetric>(); });
+    ON_CALL(*this, ConstructTimeAggregateMetricInstance(testing::_, testing::_,
+                                                        testing::_))
+        .WillByDefault(
+            [] { return std::make_unique<MockTimeAggregateMetric>(); });
   }
 
   MOCK_METHOD(std::unique_ptr<SimpleMetricInterface>,
@@ -59,6 +70,21 @@ class MockMetricInstanceFactory : public MetricInstanceFactoryInterface {
 
   MOCK_METHOD(std::unique_ptr<AggregateMetricInterface>,
               ConstructAggregateMetricInstance,
+              (MetricDefinition, const std::vector<std::string>&,
+               const std::string&),
+              (noexcept, override));
+
+  MOCK_METHOD(std::unique_ptr<TimeAggregateMetricInterface>,
+              ConstructTimeAggregateMetricInstance, ((MetricDefinition)),
+              (noexcept, override));
+
+  MOCK_METHOD(std::unique_ptr<TimeAggregateMetricInterface>,
+              ConstructTimeAggregateMetricInstance,
+              (MetricDefinition, const std::vector<std::string>&),
+              (noexcept, override));
+
+  MOCK_METHOD(std::unique_ptr<TimeAggregateMetricInterface>,
+              ConstructTimeAggregateMetricInstance,
               (MetricDefinition, const std::vector<std::string>&,
                const std::string&),
               (noexcept, override));

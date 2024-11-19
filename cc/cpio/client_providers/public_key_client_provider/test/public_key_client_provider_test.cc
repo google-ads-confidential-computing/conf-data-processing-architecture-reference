@@ -56,13 +56,18 @@ using std::move;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
+using testing::HasSubstr;
 
 static constexpr char kPublicKeyHeaderDate[] = "date";
 static constexpr char kPublicKeyHeaderCacheControl[] = "cache-control";
-static constexpr char kPrivateKeyBaseUri1[] = "http://public_key/publicKeys1";
-static constexpr char kPrivateKeyBaseUri2[] = "http://public_key/publicKeys2";
+static constexpr char kPublicKeyBaseUri1[] = "http://public_key/publicKeys1";
+static constexpr char kPublicKeyBaseUri2[] = "http://public_key/publicKeys2";
+static constexpr char kPublicKeyBaseUriWithVersionSuffix[] =
+    "http://public_key/publicKeys1/v1alpha";
 static constexpr char kHeaderDateExample[] = "Wed, 16 Nov 2022 00:02:48 GMT";
 static constexpr char kCacheControlExample[] = "max-age=254838";
+static constexpr char kVersionNumberAlphaSuffix[] = "/v1alpha";
+static constexpr char kPublicKeysUrlSuffix[] = "/publicKeys";
 static constexpr uint64_t kExpectedExpiredTimeInSeconds = 1668811806;
 
 namespace google::scp::cpio::client_providers::test {
@@ -82,7 +87,7 @@ TEST(PublicKeyClientProviderTestI, InitFailedWithInvalidConfig) {
 
 TEST(PublicKeyClientProviderTestI, InitFailedInvalidHttpClient) {
   auto public_key_client_options = make_shared<PublicKeyClientOptions>();
-  public_key_client_options->endpoints.emplace_back(kPrivateKeyBaseUri1);
+  public_key_client_options->endpoints.emplace_back(kPublicKeyBaseUri1);
 
   auto public_key_client =
       make_unique<PublicKeyClientProvider>(public_key_client_options, nullptr);
@@ -98,8 +103,8 @@ class PublicKeyClientProviderTestII : public ScpTestBase {
     http_client_ = make_shared<MockHttpClient>();
 
     auto public_key_client_options = make_shared<PublicKeyClientOptions>();
-    public_key_client_options->endpoints.emplace_back(kPrivateKeyBaseUri1);
-    public_key_client_options->endpoints.emplace_back(kPrivateKeyBaseUri2);
+    public_key_client_options->endpoints.emplace_back(kPublicKeyBaseUri1);
+    public_key_client_options->endpoints.emplace_back(kPublicKeyBaseUri2);
 
     public_key_client_ = make_unique<PublicKeyClientProvider>(
         public_key_client_options, http_client_);
@@ -135,12 +140,16 @@ class PublicKeyClientProviderTestII : public ScpTestBase {
   unique_ptr<PublicKeyClientProvider> public_key_client_;
 };
 
-TEST_F(PublicKeyClientProviderTestII, ListPublicKeysSuccess) {
+TEST_F(PublicKeyClientProviderTestII, ListPublicKeysSuccessWithDefaultKeySet) {
   atomic<int> perform_calls(0);
   auto success_response = GetValidHttpResponse();
   http_client_->perform_request_mock =
       [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
         perform_calls++;
+        Uri expected_uri =
+            absl::StrCat(kVersionNumberAlphaSuffix, kPublicKeysUrlSuffix);
+        EXPECT_THAT(http_context.request->path.get()->c_str(),
+                    HasSubstr(expected_uri));
         http_context.response = make_shared<HttpResponse>(success_response);
         http_context.result = SuccessExecutionResult();
         http_context.Finish();
@@ -151,8 +160,8 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysSuccess) {
 
   atomic<int> success_callback(0);
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
-      move(request), [&](AsyncContext<ListPublicKeysRequest,
-                                      ListPublicKeysResponse>& context) {
+      std::move(request), [&](AsyncContext<ListPublicKeysRequest,
+                                           ListPublicKeysResponse>& context) {
         EXPECT_SUCCESS(context.result);
         EXPECT_EQ(context.response->public_keys()[0].key_id(), "1234");
         EXPECT_EQ(context.response->public_keys()[0].public_key(), "abcdefg");
@@ -170,6 +179,51 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysSuccess) {
   // Http client PerformRequest() has being called twice. All uris in
   // public_key_client_options will being called.
   WaitUntil([&]() { return perform_calls.load() == 2; });
+}
+
+TEST_F(PublicKeyClientProviderTestII,
+       ListPublicKeysSuccessWithEndpointContainsVersionSuffix) {
+  auto public_key_client_options = make_shared<PublicKeyClientOptions>();
+  public_key_client_options->endpoints.emplace_back(
+      kPublicKeyBaseUriWithVersionSuffix);
+
+  public_key_client_ = make_unique<PublicKeyClientProvider>(
+      public_key_client_options, http_client_);
+
+  atomic<int> perform_calls(0);
+  auto success_response = GetValidHttpResponse();
+  http_client_->perform_request_mock =
+      [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
+        perform_calls++;
+        Uri expected_uri =
+            absl::StrCat(kVersionNumberAlphaSuffix, kPublicKeysUrlSuffix);
+        EXPECT_THAT(http_context.request->path.get()->c_str(),
+                    HasSubstr(expected_uri));
+        http_context.response = make_shared<HttpResponse>(success_response);
+        http_context.result = SuccessExecutionResult();
+        http_context.Finish();
+        return SuccessExecutionResult();
+      };
+
+  auto request = make_shared<ListPublicKeysRequest>();
+
+  atomic<int> success_callback(0);
+  AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
+      std::move(request), [&](AsyncContext<ListPublicKeysRequest,
+                                           ListPublicKeysResponse>& context) {
+        EXPECT_SUCCESS(context.result);
+        EXPECT_EQ(context.response->public_keys()[0].key_id(), "1234");
+        EXPECT_EQ(context.response->public_keys()[0].public_key(), "abcdefg");
+        EXPECT_EQ(context.response->public_keys()[1].key_id(), "5678");
+        EXPECT_EQ(context.response->public_keys()[1].public_key(), "hijklmn");
+        EXPECT_EQ(context.response->expiration_time().seconds(),
+                  kExpectedExpiredTimeInSeconds);
+        success_callback++;
+      });
+
+  public_key_client_->ListPublicKeys(context);
+  WaitUntil([&]() { return success_callback.load() == 1; });
+  WaitUntil([&]() { return perform_calls.load() == 1; });
 }
 
 TEST_F(PublicKeyClientProviderTestII, ListPublicKeysFailure) {
@@ -190,8 +244,8 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysFailure) {
 
   atomic<int> failure_callback(0);
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
-      move(request), [&](AsyncContext<ListPublicKeysRequest,
-                                      ListPublicKeysResponse>& context) {
+      std::move(request), [&](AsyncContext<ListPublicKeysRequest,
+                                           ListPublicKeysResponse>& context) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(SC_UNKNOWN)));
         failure_callback++;
@@ -221,8 +275,8 @@ TEST_F(PublicKeyClientProviderTestII, AllUrisPerformRequestFailed) {
 
   atomic<int> failure_callback(0);
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
-      move(request), [&](AsyncContext<ListPublicKeysRequest,
-                                      ListPublicKeysResponse>& context) {
+      std::move(request), [&](AsyncContext<ListPublicKeysRequest,
+                                           ListPublicKeysResponse>& context) {
         EXPECT_THAT(context.result, ResultIs(cpio_failure));
         failure_callback++;
       });
@@ -242,7 +296,8 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysPartialUriSuccess) {
   http_client_->perform_request_mock =
       [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
         perform_calls++;
-        if (*http_context.request->path == kPrivateKeyBaseUri2) {
+        if (http_context.request->path.get()->find(kPublicKeyBaseUri2) !=
+            std::string::npos) {
           http_context.response = make_shared<HttpResponse>(success_response);
           http_context.result = SuccessExecutionResult();
           http_context.Finish();
@@ -258,8 +313,8 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysPartialUriSuccess) {
   auto request = make_shared<ListPublicKeysRequest>();
   atomic<int> success_callback(0);
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
-      move(request), [&](AsyncContext<ListPublicKeysRequest,
-                                      ListPublicKeysResponse>& context) {
+      std::move(request), [&](AsyncContext<ListPublicKeysRequest,
+                                           ListPublicKeysResponse>& context) {
         EXPECT_SUCCESS(context.result);
         success_callback++;
       });

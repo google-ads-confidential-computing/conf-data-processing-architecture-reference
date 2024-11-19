@@ -69,7 +69,6 @@ using google::scp::core::utils::Base64Encode;
 using google::scp::cpio::client_providers::KeyData;
 using google::scp::cpio::client_providers::PrivateKeyFetchingResponse;
 using std::make_shared;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::to_string;
@@ -90,7 +89,6 @@ constexpr char kKeyData[] = "keyData";
 constexpr char kPublicKeySignature[] = "publicKeySignature";
 constexpr char kKeyEncryptionKeyUri[] = "keyEncryptionKeyUri";
 constexpr char kKeyMaterial[] = "keyMaterial";
-constexpr char kListKeysByTimeUri[] = ":recent";
 constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
 constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
 }  // namespace
@@ -153,51 +151,55 @@ ExecutionResult PrivateKeyFetchingClientUtils::ParseEncryptionKey(
     return FailureExecutionResult(
         SC_PRIVATE_KEY_FETCHER_PROVIDER_PUBLIC_KEYSET_HANDLE_NOT_FOUND);
   }
-  // Convert json string to tink binary form.
-  auto keyset_reader_or = JsonKeysetReader::New(handleJsonStr);
-  if (!keyset_reader_or.ok()) {
-    auto execution_result = FailureExecutionResult(
-        core::errors::
-            SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_PUBLIC_KEYSET_HANDLE_JSON);
-    SCP_ERROR(kPrivateKeyFetcherProviderUtils, kZeroUuid, execution_result,
-              "Failed to create JsonKeysetReader: %s.",
-              keyset_reader_or.status().ToString().c_str());
-    return execution_result;
+  if (handleJsonStr.empty()) {
+    encryption_key->public_keyset_handle = make_shared<string>();
+  } else {
+    // Convert json string to tink binary form.
+    auto keyset_reader_or = JsonKeysetReader::New(handleJsonStr);
+    if (!keyset_reader_or.ok()) {
+      auto execution_result = FailureExecutionResult(
+          core::errors::
+              SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_PUBLIC_KEYSET_HANDLE_JSON);
+      SCP_ERROR(kPrivateKeyFetcherProviderUtils, kZeroUuid, execution_result,
+                "Failed to create JsonKeysetReader: %s.",
+                keyset_reader_or.status().ToString().c_str());
+      return execution_result;
+    }
+
+    auto keyset_handle_or =
+        CleartextKeysetHandle::Read(std::move(*keyset_reader_or));
+    if (!keyset_handle_or.ok()) {
+      auto execution_result = FailureExecutionResult(
+          core::errors::
+              SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_PUBLIC_KEYSET_HANDLE_JSON);
+      SCP_ERROR(kPrivateKeyFetcherProviderUtils, kZeroUuid, execution_result,
+                "Creating Keyset handle failed with error %s.",
+                keyset_handle_or.status().ToString().c_str());
+      return execution_result;
+    }
+
+    std::stringbuf public_key_buf(std::ios_base::out);
+    auto keyset_writer = BinaryKeysetWriter::New(
+        std::make_unique<std::ostream>(&public_key_buf));
+    auto write_result = CleartextKeysetHandle::Write(
+        keyset_writer->get(), *keyset_handle_or->release());
+    if (!write_result.ok()) {
+      auto execution_result = FailureExecutionResult(
+          core::errors::
+              SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_PUBLIC_KEYSET_HANDLE_JSON);
+      SCP_ERROR(kPrivateKeyFetcherProviderUtils, kZeroUuid, execution_result,
+                "Write binary keyset failed with error %s.",
+                write_result.ToString().c_str());
+      return execution_result;
+    }
+
+    auto encoded_key_or = Base64Encode(public_key_buf.str());
+    RETURN_AND_LOG_IF_FAILURE(encoded_key_or.result(),
+                              kPrivateKeyFetcherProviderUtils, kZeroUuid,
+                              "Encode public keyset handle failed.");
+
+    encryption_key->public_keyset_handle = make_shared<string>(*encoded_key_or);
   }
-
-  auto keyset_handle_or = CleartextKeysetHandle::Read(move(*keyset_reader_or));
-  if (!keyset_handle_or.ok()) {
-    auto execution_result = FailureExecutionResult(
-        core::errors::
-            SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_PUBLIC_KEYSET_HANDLE_JSON);
-    SCP_ERROR(kPrivateKeyFetcherProviderUtils, kZeroUuid, execution_result,
-              "Creating Keyset handle failed with error %s.",
-              keyset_handle_or.status().ToString().c_str());
-    return execution_result;
-  }
-
-  std::stringbuf public_key_buf(std::ios_base::out);
-  auto keyset_writer =
-      BinaryKeysetWriter::New(std::make_unique<std::ostream>(&public_key_buf));
-  auto write_result = CleartextKeysetHandle::Write(
-      keyset_writer->get(), *keyset_handle_or->release());
-  if (!write_result.ok()) {
-    auto execution_result = FailureExecutionResult(
-        core::errors::
-            SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_PUBLIC_KEYSET_HANDLE_JSON);
-    SCP_ERROR(kPrivateKeyFetcherProviderUtils, kZeroUuid, execution_result,
-              "Write binary keyset failed with error %s.",
-              write_result.ToString().c_str());
-    return execution_result;
-  }
-
-  auto encoded_key_or = Base64Encode(public_key_buf.str());
-  RETURN_AND_LOG_IF_FAILURE(encoded_key_or.result(),
-                            kPrivateKeyFetcherProviderUtils, kZeroUuid,
-                            "Encode public keyset handle failed.");
-
-  encryption_key->public_keyset_handle = make_shared<string>(*encoded_key_or);
-
   string public_key_material;
   result = ParseJsonValue(json_key, kPublicKeyMaterial, public_key_material);
   if (!result.Successful()) {
@@ -337,24 +339,5 @@ ExecutionResult PrivateKeyFetchingClientUtils::ParseKeyData(
   }
 
   return SuccessExecutionResult();
-}
-
-void PrivateKeyFetchingClientUtils::CreateHttpRequest(
-    const PrivateKeyFetchingRequest& request, HttpRequest& http_request) {
-  const auto& base_uri =
-      absl::StrCat(request.key_endpoint->endpoint(), kEncryptionKeyUrlSuffix);
-  http_request.method = HttpMethod::GET;
-  if (request.key_id && !request.key_id->empty()) {
-    const auto& key_uri = *request.key_id;
-    auto uri =
-        make_shared<Uri>(absl::StrCat(absl::StrCat(base_uri, "/"), key_uri));
-    http_request.path = move(uri);
-    return;
-  }
-
-  http_request.path =
-      make_shared<Uri>(absl::StrCat(base_uri + kListKeysByTimeUri));
-  http_request.query = make_shared<string>(
-      absl::StrCat(kMaxAgeSecondsQueryParameter, request.max_age_seconds));
 }
 }  // namespace google::scp::cpio::client_providers

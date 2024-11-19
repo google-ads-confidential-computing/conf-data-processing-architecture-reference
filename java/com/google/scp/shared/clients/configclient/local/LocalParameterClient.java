@@ -50,6 +50,11 @@ public final class LocalParameterClient implements ParameterClient {
     return Optional.ofNullable(parameterValues.get(param));
   }
 
+  @Override
+  public Optional<String> getLatestParameter(String param) throws ParameterClientException {
+    return getParameter(param);
+  }
+
   /**
    * Gets a parameter from the local environment flags.
    *
@@ -61,7 +66,7 @@ public final class LocalParameterClient implements ParameterClient {
    */
   @Override
   public Optional<String> getParameter(
-      String param, Optional<String> paramPrefix, boolean includeEnvironmentParam)
+      String param, Optional<String> paramPrefix, boolean includeEnvironmentParam, boolean latest)
       throws ParameterClientException {
     return getParameter(param);
   }

@@ -21,6 +21,7 @@ import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.ListR
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Answers.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 import com.google.acai.Acai;
@@ -28,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
+import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTaskTestBase;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
@@ -50,7 +52,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public class ListRecentEncryptionKeysTaskTest {
+public class ListRecentEncryptionKeysTaskTest extends ApiTaskTestBase {
 
   private static final ImmutableList<EncryptionKey> TEST_KEYS =
       ImmutableList.of(
@@ -75,6 +77,7 @@ public class ListRecentEncryptionKeysTaskTest {
   @Before
   public void setUp() throws Exception {
     keyDb.createKeys(TEST_KEYS);
+    super.task = spy(this.task);
   }
 
   @Test

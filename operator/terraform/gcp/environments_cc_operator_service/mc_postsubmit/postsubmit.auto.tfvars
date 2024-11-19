@@ -27,13 +27,16 @@ operator_package_bucket_location = "US"
 spanner_instance_config          = "regional-us-central1"
 spanner_processing_units         = 300
 
-worker_image                         = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:mc-postsubmit"
-allowed_operator_service_account     = ""
-worker_logging_enabled               = true
-worker_container_log_redirect        = "true"
-worker_memory_monitoring_enabled     = true
-worker_instance_force_replace        = true
-instance_disk_image                  = "confidential-space-images/confidential-space"
+worker_image                     = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:mc-postsubmit"
+allowed_operator_service_account = ""
+worker_logging_enabled           = true
+worker_container_log_redirect    = "true"
+worker_memory_monitoring_enabled = true
+worker_instance_force_replace    = true
+instance_disk_image_family = {
+  image_project = "confidential-space-images",
+  image_family  = "confidential-space"
+}
 user_provided_worker_sa_email        = "mc-postsubmit-worker@admcloud-adtech1.iam.gserviceaccount.com"
 spanner_database_deletion_protection = false
 max_worker_instances                 = 1
@@ -51,7 +54,7 @@ job_lifecycle_helper_parameter_values = {
 metric_client_parameter_values = {
   enable_batch_recording              = true,
   namespace_for_batch_recording       = "mc-postsubmit",
-  batch_recording_time_duration_in_ms = "1000",
+  batch_recording_time_duration_in_ms = "5000",
 }
 
 # TODO: uncomment them when switch to use build and deploy script.

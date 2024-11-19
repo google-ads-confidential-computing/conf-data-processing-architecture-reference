@@ -75,7 +75,7 @@ using ::testing::Eq;
 
 namespace {
 constexpr char kKeyId[] = "123";
-constexpr char kPrivateKeyBaseUri[] = "http://localhost.test:8000";
+constexpr char kPrivateKeyBaseUri[] = "http://localhost.test:8000/v1beta";
 constexpr char kPublicKeyJson[] =
     R"({\"key\":[{\"keyData\":{\"keyMaterialType\":\"ASYMMETRIC_PUBLIC\",\"typeUrl\":\"type.googleapis.com/google.crypto.tink.HpkePublicKey\",\"value\":\"EgYIARABGAMaIEMQ7pfYjMHwiKVXbHerDPXDrHl/PZUTnGyEtUKcWWYq\"},\"keyId\":123,\"outputPrefixType\":\"RAW\",\"status\":\"ENABLED\"}],\"primaryKeyId\":123})";  // NOLINT
 
@@ -400,34 +400,6 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithCreationTimeNotFound) {
                   SC_PRIVATE_KEY_FETCHER_PROVIDER_CREATION_TIME_NOT_FOUND)));
 }
 
-TEST_F(PrivateKeyFetchingClientUtilsTest, CreateHttpRequestForKeyId) {
-  PrivateKeyFetchingRequest request;
-  request.key_endpoint = make_shared<PrivateKeyEndpoint>();
-  request.key_endpoint->set_endpoint(kPrivateKeyBaseUri);
-  request.key_id = make_shared<string>(kKeyId);
-  request.max_age_seconds = 1000000;
-  HttpRequest http_request;
-  PrivateKeyFetchingClientUtils::CreateHttpRequest(request, http_request);
-
-  EXPECT_EQ(http_request.method, HttpMethod::GET);
-  EXPECT_EQ(*http_request.path,
-            string(kPrivateKeyBaseUri) + "/encryptionKeys/" + string(kKeyId));
-}
-
-TEST_F(PrivateKeyFetchingClientUtilsTest, CreateHttpRequestForMaxAgeSeconds) {
-  PrivateKeyFetchingRequest request;
-  request.key_endpoint = make_shared<PrivateKeyEndpoint>();
-  request.key_endpoint->set_endpoint(kPrivateKeyBaseUri);
-  request.max_age_seconds = 1000000;
-  HttpRequest http_request;
-  PrivateKeyFetchingClientUtils::CreateHttpRequest(request, http_request);
-
-  EXPECT_EQ(http_request.method, HttpMethod::GET);
-  EXPECT_EQ(*http_request.path,
-            string(kPrivateKeyBaseUri) + "/encryptionKeys" + ":recent");
-  EXPECT_EQ(*http_request.query, "maxAgeSeconds=1000000");
-}
-
 TEST_F(PrivateKeyFetchingClientUtilsTest, ParseMultiplePrivateKeysSuccess) {
   string one_key_without_name = absl::StrFormat(R"(
            "encryptionKeyType": "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT",
@@ -463,6 +435,54 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, ParseMultiplePrivateKeysSuccess) {
   EXPECT_EQ(response.encryption_keys.size(), 2);
   EXPECT_EQ(*response.encryption_keys[0]->key_id, "111111");
   EXPECT_EQ(*response.encryption_keys[1]->key_id, "222222");
+}
+
+TEST_F(PrivateKeyFetchingClientUtilsTest,
+       ParsePrivateKeyWithoutPublicKeySuccess) {
+  string bytes_str = R"({
+        "name": "encryptionKeys/123456",
+        "encryptionKeyType": "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT",
+        "publicKeysetHandle": "",
+        "publicKeyMaterial": "",
+        "creationTime": "1669252790485",
+        "expirationTime": "1669943990485",
+        "ttlTime": 0,
+        "keyData": [
+            {
+                "publicKeySignature": "",
+                "keyEncryptionKeyUri": "aws-kms://arn:aws:kms:us-east-1:1234567:key",
+                "keyMaterial": "test=test"
+            },
+            {
+                "publicKeySignature": "",
+                "keyEncryptionKeyUri": "aws-kms://arn:aws:kms:us-east-1:12345:key",
+                "keyMaterial": ""
+            }
+        ]
+    })";
+  PrivateKeyFetchingResponse response;
+  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+      BytesBuffer(bytes_str), response);
+
+  EXPECT_SUCCESS(result);
+  EXPECT_EQ(response.encryption_keys.size(), 1);
+  const auto& encryption_key = *response.encryption_keys.begin();
+  EXPECT_EQ(*encryption_key->key_id, "123456");
+  EXPECT_EQ(*encryption_key->resource_name, "encryptionKeys/123456");
+  EXPECT_EQ(encryption_key->encryption_key_type,
+            EncryptionKeyType::kMultiPartyHybridEvenKeysplit);
+  EXPECT_EQ(*encryption_key->public_keyset_handle, "");
+  EXPECT_EQ(*encryption_key->public_key_material, "");
+  EXPECT_EQ(encryption_key->expiration_time_in_ms, 1669943990485);
+  EXPECT_EQ(encryption_key->creation_time_in_ms, 1669252790485);
+  EXPECT_EQ(*encryption_key->key_data[0]->key_encryption_key_uri,
+            "aws-kms://arn:aws:kms:us-east-1:1234567:key");
+  EXPECT_EQ(*encryption_key->key_data[0]->public_key_signature, "");
+  EXPECT_EQ(*encryption_key->key_data[0]->key_material, "test=test");
+  EXPECT_EQ(*encryption_key->key_data[1]->key_encryption_key_uri,
+            "aws-kms://arn:aws:kms:us-east-1:12345:key");
+  EXPECT_EQ(*encryption_key->key_data[1]->public_key_signature, "");
+  EXPECT_EQ(*encryption_key->key_data[1]->key_material, "");
 }
 
 TEST_F(PrivateKeyFetchingClientUtilsTest, ExtractKeyId) {

@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.KeyIdFactory;
+package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdType;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.SequenceKeyIdFactory;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.UuidKeyIdFactory;
 import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;

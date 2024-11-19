@@ -22,6 +22,7 @@
 
 #include <google/pubsub/v1/pubsub.grpc.pb.h>
 
+#include "core/common/operation_dispatcher/src/operation_dispatcher.h"
 #include "core/interface/async_context.h"
 #include "core/interface/async_executor_interface.h"
 #include "cpio/client_providers/interface/instance_client_provider_interface.h"
@@ -33,6 +34,8 @@
 
 namespace google::scp::cpio::client_providers {
 static constexpr char kPubSubEndpointUri[] = "pubsub.googleapis.com";
+static constexpr int kRetryStrategyDelayInMs = 250;
+static constexpr int kRetryStrategyMaxRetries = 12;
 
 class GcpPubSubStubFactory;
 
@@ -54,6 +57,16 @@ class GcpQueueClientProvider : public QueueClientProviderInterface {
         instance_client_provider_(instance_client_provider),
         cpu_async_executor_(cpu_async_executor),
         io_async_executor_(io_async_executor),
+        operation_dispatcher_(
+            io_async_executor,
+            core::common::RetryStrategy(core::common::RetryStrategyOptions{
+                core::common::RetryStrategyType::Exponential,
+                queue_client_options
+                    ? static_cast<core::TimeDuration>(
+                          queue_client_options->retry_interval.count())
+                    : kRetryStrategyDelayInMs,
+                queue_client_options ? queue_client_options->max_retry_count
+                                     : kRetryStrategyMaxRetries})),
         pubsub_stub_factory_(pubsub_stub_factory) {}
 
   core::ExecutionResult Init() noexcept override;
@@ -85,48 +98,47 @@ class GcpQueueClientProvider : public QueueClientProviderInterface {
 
  private:
   /**
-   * @brief Is called when the object is returned from the GCP Publish callback.
+   * @brief Publish a message to the PubSub gRPC service.
+   * @param enqueue_message_request the enqueue message request.
+   * @return cmrt::sdk::queue_service::v1::EnqueueMessageResponse result of the
+   * operation.
    *
-   * @param enqueue_message_context the enqueue message context.
    */
-  void EnqueueMessageAsync(
-      core::AsyncContext<cmrt::sdk::queue_service::v1::EnqueueMessageRequest,
-                         cmrt::sdk::queue_service::v1::EnqueueMessageResponse>&
-          enqueue_message_context) noexcept;
+  core::ExecutionResultOr<cmrt::sdk::queue_service::v1::EnqueueMessageResponse>
+  PublishMessage(const cmrt::sdk::queue_service::v1::EnqueueMessageRequest&
+                     enqueue_message_request) noexcept;
 
   /**
-   * @brief Is called when the object is returned from the GCP Pull callback.
-   *
-   * @param get_top_message_context the get top message context.
+   * @brief Pull the top messsage from the PubSub gRPC service.
+   * @return cmrt::sdk::queue_service::v1::GetTopMessageResponse result of the
+   * operation.
    */
-  void GetTopMessageAsync(
-      core::AsyncContext<cmrt::sdk::queue_service::v1::GetTopMessageRequest,
-                         cmrt::sdk::queue_service::v1::GetTopMessageResponse>&
-          get_top_message_context) noexcept;
+  core::ExecutionResultOr<cmrt::sdk::queue_service::v1::GetTopMessageResponse>
+  PullMessage() noexcept;
 
   /**
-   * @brief Is called when the object is returned from the GCP Update Ack
-   * Deadline callback.
-   *
-   * @param update_message_visibility_timeout_context the update message
-   * visibility timeout context.
+   * @brief Modify ack deadline for a message from the PubSub gRPC service.
+   * @param update_message_visibility_timeout_request the update message
+   * visibility timeout request.
+   * @return
+   * cmrt::sdk::queue_service::v1::UpdateMessageVisibilityTimeoutResponse result
+   * of the operation.
    */
-  void UpdateMessageVisibilityTimeoutAsync(
-      core::AsyncContext<
-          cmrt::sdk::queue_service::v1::UpdateMessageVisibilityTimeoutRequest,
-          cmrt::sdk::queue_service::v1::UpdateMessageVisibilityTimeoutResponse>&
-          update_message_visibility_timeout_context) noexcept;
+  core::ExecutionResultOr<
+      cmrt::sdk::queue_service::v1::UpdateMessageVisibilityTimeoutResponse>
+  ModifyMessageAckDeadline(
+      const cmrt::sdk::queue_service::v1::UpdateMessageVisibilityTimeoutRequest&
+          update_message_visibility_timeout_request) noexcept;
 
   /**
-   * @brief Is called when the object is returned from the GCP Acknowledge
-   * callback.
-   *
-   * @param delete_message_context the delete message context.
+   * @brief Acknowledge a message from the PubSub from the PubSub gRPC service.
+   * @param delete_message_request the delete message request.
+   * @return cmrt::sdk::queue_service::v1::DeleteMessageResponse result of the
+   * operation.
    */
-  void DeleteMessageAsync(
-      core::AsyncContext<cmrt::sdk::queue_service::v1::DeleteMessageRequest,
-                         cmrt::sdk::queue_service::v1::DeleteMessageResponse>&
-          delete_message_context) noexcept;
+  core::ExecutionResultOr<cmrt::sdk::queue_service::v1::DeleteMessageResponse>
+  AcknowledgeMessage(const cmrt::sdk::queue_service::v1::DeleteMessageRequest&
+                         delete_message_request) noexcept;
 
   /// The configuration for queue client.
   std::shared_ptr<QueueClientOptions> queue_client_options_;
@@ -137,6 +149,9 @@ class GcpQueueClientProvider : public QueueClientProviderInterface {
   /// The instance of the async executor.
   const std::shared_ptr<core::AsyncExecutorInterface> cpu_async_executor_,
       io_async_executor_;
+
+  /// Operation distpatcher.
+  core::common::OperationDispatcher operation_dispatcher_;
 
   /// Project ID of current instance.
   std::string project_id_;

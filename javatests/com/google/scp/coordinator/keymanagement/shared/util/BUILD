@@ -30,3 +30,14 @@ java_test(
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
     ],
 )
+
+java_test(
+    name = "LogMetricHelperTest",
+    srcs = [
+        "LogMetricHelperTest.java",
+    ],
+    deps = [
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
+        "//java/external:google_truth",
+    ],
+)

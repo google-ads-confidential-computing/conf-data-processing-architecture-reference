@@ -23,6 +23,7 @@ import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleart
 
 import com.google.common.collect.ImmutableList;
 import com.google.crypto.tink.Aead;
+import com.google.crypto.tink.KeyTemplate;
 import com.google.crypto.tink.KeyTemplates;
 import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.PublicKeySign;
@@ -33,6 +34,7 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStor
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -49,6 +51,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,6 +70,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
   protected final KeyDb keyDb;
   protected final KeyStorageClient keyStorageClient;
   protected final KeyIdFactory keyIdFactory;
+  protected final LogMetricHelper logMetricHelper;
 
   static {
     try {
@@ -83,13 +87,15 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       Optional<PublicKeySign> signatureKey,
       KeyDb keyDb,
       KeyStorageClient keyStorageClient,
-      KeyIdFactory keyIdFactory) {
+      KeyIdFactory keyIdFactory,
+      LogMetricHelper logMetricHelper) {
     this.keyEncryptionKeyAead = keyEncryptionKeyAead;
     this.keyEncryptionKeyUri = keyEncryptionKeyUri;
     this.signatureKey = signatureKey;
     this.keyDb = keyDb;
     this.keyStorageClient = keyStorageClient;
     this.keyIdFactory = keyIdFactory;
+    this.logMetricHelper = logMetricHelper;
   }
 
   /**
@@ -158,6 +164,8 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     }
     activeKeys = keyDb.getActiveKeys(setName, numDesiredKeys, now);
     if (activeKeys.size() < numDesiredKeys) {
+      LOGGER.error(
+          logMetricHelper.format("get_active_keys/insufficient_current_key", "setName", setName));
       throw new AssertionError(
           String.format(
               "Unexpected failure to generate sufficient immediately active keys for key set \"%s\". Only %d of %d found.",
@@ -168,6 +176,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     // create any missing pending-active keys.
     ImmutableList<Instant> expirations =
         activeKeys.stream()
+            .filter(EncryptionKey::hasExpirationTime)
             .map(EncryptionKey::getExpirationTime)
             .map(Instant::ofEpochMilli)
             .distinct()
@@ -198,6 +207,8 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       }
       actual = keyDb.getActiveKeys(setName, numDesiredKeys, expiration).size();
       if (actual < numDesiredKeys) {
+        LOGGER.error(
+            logMetricHelper.format("get_active_keys/insufficient_next_key", "setName", setName));
         throw new AssertionError(
             String.format(
                 "Unexpected failure to generate sufficient pending active keys for datetime=%s for key set \"%s\". Only %d of %d found.",
@@ -247,7 +258,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     String encryptedKeySplitB;
     try {
       var template = KeyTemplates.get(tinkTemplate);
-      KeysetHandle privateKeysetHandle = KeysetHandle.generateNew(template);
+      KeysetHandle privateKeysetHandle = generateKeysetHandleWithJitter(template);
       Optional<KeysetHandle> publicKeysetHandle = getPublicKeysetHandle(privateKeysetHandle);
 
       ImmutableList<ByteString> keySplits = KeySplitUtil.xorSplit(privateKeysetHandle, 2);
@@ -269,8 +280,13 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       encryptedKeySplitB =
           encryptPeerCoordinatorSplit(keySplits.get(1), dataKey, key.getPublicKeyMaterial());
     } catch (GeneralSecurityException | IOException e) {
+      LOGGER.error(logMetricHelper.format("create_split_key/error", "errorReason", "crypto_error"));
       String msg = "Error generating keys.";
       throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);
+    } catch (ServiceException e) {
+      LOGGER.error(
+          logMetricHelper.format("create_split_key/error", "errorReason", e.getErrorReason()));
+      throw e;
     }
 
     try {
@@ -300,6 +316,9 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             keyIdConflictRetryCount + 1);
         return;
       }
+      LOGGER.error(
+          logMetricHelper.format(
+              "key_db_error/failed_to_insert_placeholder_key", "errorReason", e.getErrorReason()));
       LOGGER.error("Failed to insert placeholder key due to database error");
       throw e;
     }
@@ -320,7 +339,14 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             .build();
 
     // Note: We want to store the keys as they are generated and signed.
-    keyDb.createKey(signedCoordinatorAKey, true);
+    try {
+      keyDb.createKey(signedCoordinatorAKey, true);
+    } catch (ServiceException e) {
+      LOGGER.error(
+          logMetricHelper.format(
+              "key_db_error/create_key_failure", "errorReason", e.getErrorReason()));
+      throw e;
+    }
   }
 
   /**
@@ -363,8 +389,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       String keyEncryptionKeyUri,
       Optional<PublicKeySign> signatureKey)
       throws ServiceException, IOException {
-    Instant expiration = activation.plus(validityInDays, ChronoUnit.DAYS);
-    Instant ttlSec = activation.plus(ttlInDays, ChronoUnit.DAYS);
 
     EncryptionKey.Builder unsignedEncryptionKey =
         EncryptionKey.newBuilder()
@@ -373,15 +397,20 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             .setStatus(EncryptionKeyStatus.ACTIVE)
             .setCreationTime(creationTime.toEpochMilli())
             .setActivationTime(activation.toEpochMilli())
-            .setExpirationTime(expiration.toEpochMilli())
-            // TTL Time must be in seconds due to DynamoDB TTL requirements
-            .setTtlTime(ttlSec.getEpochSecond())
             .setKeyType(EncryptionKeyType.MULTI_PARTY_HYBRID_EVEN_KEYSPLIT.name());
 
     if (publicKeysetHandle.isPresent()) {
       unsignedEncryptionKey
           .setPublicKey(toJsonCleartext(publicKeysetHandle.get()))
           .setPublicKeyMaterial(PublicKeyConversionUtil.getPublicKey(publicKeysetHandle.get()));
+    }
+    if (validityInDays > 0) {
+      unsignedEncryptionKey.setExpirationTime(
+          activation.plus(validityInDays, ChronoUnit.DAYS).plus(KEY_REFRESH_WINDOW).toEpochMilli());
+    }
+    if (ttlInDays > 0) {
+      unsignedEncryptionKey.setTtlTime(
+          activation.plus(ttlInDays, ChronoUnit.DAYS).getEpochSecond());
     }
 
     try {
@@ -417,5 +446,23 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     } catch (GeneralSecurityException e) {
       return Optional.empty();
     }
+  }
+
+  private static KeysetHandle generateKeysetHandleWithJitter(KeyTemplate template)
+      throws GeneralSecurityException {
+    // Adding jitter to mitigate timing attack.
+    try {
+      Thread.sleep(new Random().nextInt(100));
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+    KeysetHandle keysetHandle = KeysetHandle.generateNew(template);
+    // Adding jitter to mitigate timing attack.
+    try {
+      Thread.sleep(new Random().nextInt(100));
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+    return keysetHandle;
   }
 }

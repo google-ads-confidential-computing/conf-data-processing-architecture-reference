@@ -16,8 +16,7 @@
 
 locals {
   worker_service_account_email = var.user_provided_worker_sa_email == "" ? google_service_account.worker_service_account[0].email : var.user_provided_worker_sa_email
-  disk_image_family            = split("/", var.instance_disk_image)[1]
-  disk_image_project           = split("/", var.instance_disk_image)[0]
+  input_disk_image             = var.instance_disk_image != null && var.instance_disk_image != ""
 }
 
 resource "google_service_account" "worker_service_account" {
@@ -28,8 +27,9 @@ resource "google_service_account" "worker_service_account" {
 }
 
 data "google_compute_image" "tee_image" {
-  family  = local.disk_image_family
-  project = local.disk_image_project
+  count   = local.input_disk_image ? 0 : 1
+  family  = var.instance_disk_image_family.image_family
+  project = var.instance_disk_image_family.image_project
 }
 
 resource "null_resource" "worker_instance_replace_trigger" {
@@ -40,13 +40,16 @@ resource "null_resource" "worker_instance_replace_trigger" {
 
 resource "google_compute_instance_template" "worker_instance_template" {
 
-  name_prefix  = "${var.environment}-worker-template"
+  name_prefix = "${var.environment}-worker-template"
+  # See #on-host-maintenance-migrate in this file when changing this value.
   machine_type = var.instance_type
+  # See #on-host-maintenance-migrate in this file when changing this value.
+  min_cpu_platform = "AMD Milan"
 
   disk {
     boot         = true
     device_name  = "${var.environment}-worker"
-    source_image = data.google_compute_image.tee_image.self_link
+    source_image = local.input_disk_image ? var.instance_disk_image : data.google_compute_image.tee_image[0].self_link
     disk_type    = var.worker_instance_disk_type
     disk_size_gb = var.worker_instance_disk_size_gb
   }
@@ -75,12 +78,27 @@ resource "google_compute_instance_template" "worker_instance_template" {
   }
 
   scheduling {
-    # Confidential compute requires on_host_maintenance to be TERMINATE
-    on_host_maintenance = "TERMINATE"
+    # #on-host-maintenance-migrate
+    #
+    # To prevent Confidential VMs from being terminated for maintenance. The
+    # machine types have to be N2D with AMD EPYC Milan CPU platforms running
+    # ADM SEV.
+    #
+    # See:
+    #  - https://cloud.google.com/compute/docs/instances/live-migration-process#limitations
+    #  - b/368036183
+    on_host_maintenance = "MIGRATE"
   }
 
   confidential_instance_config {
     enable_confidential_compute = true
+    # See #on-host-maintenance-migrate in this file when changing this value.
+    # Note: `confidential_instance_type` is not yet available on
+    # hashicorp/google-beta provider until v5.16.0 and hashicorp/google provider
+    # until v5.36.0. Until then the deprecating enable_confidential_compute will
+    # have the same effect as `confidential_instance_type = "SEV"`.
+    #
+    # confidential_instance_type  = "SEV"
   }
 
   shielded_instance_config {

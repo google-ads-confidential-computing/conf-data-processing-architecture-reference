@@ -18,11 +18,13 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include <google/protobuf/util/time_util.h>
 
+#include "absl/strings/str_cat.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/async_context.h"
 #include "core/interface/http_client_interface.h"
@@ -63,10 +65,14 @@ using std::bind;
 using std::make_shared;
 using std::move;
 using std::shared_ptr;
+using std::string;
 using std::vector;
 using std::placeholders::_1;
 
 static constexpr char kPublicKeyClientProvider[] = "PublicKeyClientProvider";
+static constexpr char kVersionNumberAlphaSuffix[] = "/v1alpha";
+static constexpr char kVersionNumberSuffix[] = "/v1";
+static constexpr char kPublicKeysUrlSuffix[] = "/publicKeys";
 
 namespace google::scp::cpio::client_providers {
 
@@ -112,14 +118,19 @@ void PublicKeyClientProvider::ListPublicKeys(
   ExecutionResult result = FailureExecutionResult(
       SC_PUBLIC_KEY_CLIENT_PROVIDER_ALL_URIS_REQUEST_PERFORM_FAILED);
   for (auto uri : public_key_client_options_->endpoints) {
-    auto shared_uri = make_shared<Uri>(uri);
+    size_t version_position = uri.find(kVersionNumberSuffix);
+    if (version_position != string::npos) {
+      uri = uri.substr(0, version_position);
+    }
+    auto shared_uri = make_shared<Uri>(
+        absl::StrCat(uri, kVersionNumberAlphaSuffix, kPublicKeysUrlSuffix));
 
     auto http_request = make_shared<HttpRequest>();
     http_request->method = HttpMethod::GET;
-    http_request->path = move(shared_uri);
+    http_request->path = std::move(shared_uri);
 
     AsyncContext<HttpRequest, HttpResponse> http_client_context(
-        move(http_request),
+        std::move(http_request),
         bind(&PublicKeyClientProvider::OnPerformRequestCallback, this,
              public_key_fetching_context, _1, got_success_result,
              unfinished_counter),

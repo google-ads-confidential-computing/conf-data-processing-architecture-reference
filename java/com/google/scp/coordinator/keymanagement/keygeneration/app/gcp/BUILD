@@ -31,6 +31,7 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/clients",
         "//java/com/google/scp/shared/clients/configclient",
@@ -50,6 +51,7 @@ java_library(
 
 java_binary(
     name = "KeyGenerationApp",
+    classpath_resources = ["//java/com/google/scp:slf4jconfig_prod"],
     main_class = "com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.KeyGenerationApplication",
     runtime_deps = [
         ":key_generation",

@@ -55,16 +55,6 @@ class PrivateKeyFetchingClientUtils {
       const core::BytesBuffer& body,
       PrivateKeyFetchingResponse& response) noexcept;
 
-  /**
-   * @brief Create a Http Request object to query private key vending endpoint.
-   *
-   * @param private_key_fetching_request request to query private key.
-   * @param http_request returned http request.
-   */
-  static void CreateHttpRequest(
-      const PrivateKeyFetchingRequest& private_key_fetching_request,
-      core::HttpRequest& http_request);
-
  protected:
   /**
    * @brief Parse json basic_string value.

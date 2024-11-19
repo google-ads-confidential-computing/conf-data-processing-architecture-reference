@@ -119,11 +119,18 @@ module "keygenerationservice" {
   key_generation_tee_restart_policy = var.key_generation_tee_restart_policy
 
   # Monitoring Args
-  alarms_enabled                  = var.alarms_enabled
-  keydb_instance_name             = module.keydb.keydb_instance_name
-  notification_channel_id         = local.notification_channel_id
-  key_generation_alignment_period = var.key_generation_alignment_period
-  undelivered_messages_threshold  = var.key_generation_undelivered_messages_threshold
+  alarms_enabled                                               = var.alarms_enabled
+  keydb_instance_name                                          = module.keydb.keydb_instance_name
+  notification_channel_id                                      = local.notification_channel_id
+  key_generation_alignment_period                              = var.key_generation_alignment_period
+  undelivered_messages_threshold                               = var.key_generation_undelivered_messages_threshold
+  key_generation_key_db_create_key_error_threshold             = var.key_generation_key_db_create_key_error_threshold
+  key_generation_key_db_insert_placeholder_key_error_threshold = var.key_generation_key_db_insert_placeholder_key_error_threshold
+  key_generation_key_storage_error_threshold                   = var.key_generation_key_storage_error_threshold
+  key_generation_create_split_key_error_threshold              = var.key_generation_create_split_key_error_threshold
+  key_generation_insufficient_current_key_error_threshold      = var.key_generation_insufficient_current_key_error_threshold
+  key_generation_insufficient_next_key_error_threshold         = var.key_generation_insufficient_next_key_error_threshold
+  key_generation_alerts_severity_overrides                     = var.alert_severity_overrides
 }
 
 module "allowed_operators" {
@@ -152,9 +159,10 @@ module "publickeyhostingservice" {
   get_public_key_cloudfunction_max_instances = var.get_public_key_cloudfunction_max_instances
 
   # Load balance vars
-  enable_get_public_key_cdn                    = var.enable_get_public_key_cdn
-  get_public_key_cloud_cdn_default_ttl_seconds = var.get_public_key_cloud_cdn_default_ttl_seconds
-  get_public_key_cloud_cdn_max_ttl_seconds     = var.get_public_key_cloud_cdn_max_ttl_seconds
+  enable_get_public_key_cdn                          = var.enable_get_public_key_cdn
+  get_public_key_cloud_cdn_default_ttl_seconds       = var.get_public_key_cloud_cdn_default_ttl_seconds
+  get_public_key_cloud_cdn_max_ttl_seconds           = var.get_public_key_cloud_cdn_max_ttl_seconds
+  get_public_key_cloud_cdn_serve_while_stale_seconds = var.get_public_key_cloud_cdn_serve_while_stale_seconds
 
   # Domain Management
   enable_domain_management = var.enable_domain_management
@@ -166,10 +174,13 @@ module "publickeyhostingservice" {
   alarm_duration_sec                                  = var.get_public_key_alarm_duration_sec
   notification_channel_id                             = local.notification_channel_id
   get_public_key_cloudfunction_5xx_threshold          = var.get_public_key_cloudfunction_5xx_threshold
-  get_public_key_cloudfunction_error_threshold        = var.get_public_key_cloudfunction_error_threshold
+  get_public_key_cloudfunction_error_ratio_threshold  = var.get_public_key_cloudfunction_error_ratio_threshold
   get_public_key_cloudfunction_max_execution_time_max = var.get_public_key_cloudfunction_max_execution_time_max
   get_public_key_lb_5xx_threshold                     = var.get_public_key_lb_5xx_threshold
   get_public_key_lb_max_latency_ms                    = var.get_public_key_lb_max_latency_ms
+  get_public_key_empty_key_set_error_threshold        = var.get_public_key_empty_key_set_error_threshold
+  get_public_key_general_error_threshold              = var.get_public_key_general_error_threshold
+  public_key_alerts_severity_overrides                = var.alert_severity_overrides
 }
 
 module "encryptionkeyservice" {
@@ -196,15 +207,17 @@ module "encryptionkeyservice" {
   encryption_key_domain    = local.encryption_key_domain
 
   # Alarms
-  alarms_enabled                       = var.alarms_enabled
-  alarm_eval_period_sec                = var.encryptionkeyservice_alarm_eval_period_sec
-  alarm_duration_sec                   = var.encryptionkeyservice_alarm_duration_sec
-  notification_channel_id              = local.notification_channel_id
-  cloudfunction_5xx_threshold          = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  cloudfunction_error_threshold        = var.encryptionkeyservice_cloudfunction_error_threshold
-  cloudfunction_max_execution_time_max = var.encryptionkeyservice_cloudfunction_max_execution_time_max
-  lb_5xx_threshold                     = var.encryptionkeyservice_lb_5xx_threshold
-  lb_max_latency_ms                    = var.encryptionkeyservice_lb_max_latency_ms
+  alarms_enabled                                    = var.alarms_enabled
+  alarm_eval_period_sec                             = var.encryptionkeyservice_alarm_eval_period_sec
+  alarm_duration_sec                                = var.encryptionkeyservice_alarm_duration_sec
+  notification_channel_id                           = local.notification_channel_id
+  cloudfunction_5xx_threshold                       = var.encryptionkeyservice_cloudfunction_5xx_threshold
+  cloudfunction_error_ratio_threshold               = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
+  cloudfunction_max_execution_time_max              = var.encryptionkeyservice_cloudfunction_max_execution_time_max
+  lb_5xx_threshold                                  = var.encryptionkeyservice_lb_5xx_threshold
+  lb_max_latency_ms                                 = var.encryptionkeyservice_lb_max_latency_ms
+  get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
+  encryption_key_service_severity_map               = var.alert_severity_overrides
 }
 
 module "domain_a_records" {

@@ -110,7 +110,7 @@ const Duration kCustomDurationBeforeReleaseTime =
     TimeUtil::SecondsToDuration(10);
 const Duration kDefaultJobProcessingTimeout = TimeUtil::SecondsToDuration(120);
 const Duration kDefaultJobExtendingWorkerSleepTime =
-    TimeUtil::SecondsToDuration(1);
+    TimeUtil::MillisecondsToDuration(1500);
 constexpr char kQueueMessageReceiptInfo[] = "receipt-info";
 constexpr char kJobId[] = "job-id";
 constexpr char kServerJobId[] = "server-job-id";

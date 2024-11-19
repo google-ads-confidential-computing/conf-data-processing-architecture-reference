@@ -87,8 +87,14 @@ public final class AwsParameterClient implements ParameterClient {
   }
 
   @Override
+  public Optional<String> getLatestParameter(String param) throws ParameterClientException {
+    return getParameter(
+        param, Optional.of(DEFAULT_PARAM_PREFIX), /* includeEnvironmentParam= */ true, true);
+  }
+
+  @Override
   public Optional<String> getParameter(
-      String param, Optional<String> paramPrefix, boolean includeEnvironmentParam)
+      String param, Optional<String> paramPrefix, boolean includeEnvironmentParam, boolean latest)
       throws ParameterClientException {
     Optional<String> environment =
         includeEnvironmentParam ? getEnvironmentName() : Optional.empty();
@@ -97,6 +103,9 @@ public final class AwsParameterClient implements ParameterClient {
 
     Optional<String> paramValue;
     try {
+      if (latest) {
+        paramCache.invalidate(storageParam);
+      }
       return paramCache.get(storageParam);
     } catch (ExecutionException e) {
       logger.log(Level.SEVERE, "Error getting value for AWS parameter " + storageParam, e);

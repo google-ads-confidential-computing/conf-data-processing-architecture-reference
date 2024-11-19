@@ -33,6 +33,7 @@ module "job_service" {
   # Frontend Service
   operator_package_bucket_location                                = var.operator_package_bucket_location
   frontend_service_jar                                            = var.frontend_service_jar
+  frontend_service_path                                           = var.frontend_service_path
   frontend_service_cloudfunction_num_cpus                         = var.frontend_service_cloudfunction_num_cpus
   frontend_service_cloudfunction_memory_mb                        = var.frontend_service_cloudfunction_memory_mb
   frontend_service_cloudfunction_min_instances                    = var.frontend_service_cloudfunction_min_instances
@@ -53,6 +54,7 @@ module "job_service" {
 
   # Worker
   instance_type                 = var.instance_type
+  instance_disk_image_family    = var.instance_disk_image_family
   instance_disk_image           = var.instance_disk_image
   worker_instance_disk_type     = var.worker_instance_disk_type
   worker_instance_disk_size_gb  = var.worker_instance_disk_size_gb
@@ -62,8 +64,9 @@ module "job_service" {
   worker_instance_force_replace = var.worker_instance_force_replace
 
   # Worker Alarms
-  worker_alarm_duration_sec    = var.worker_alarm_duration_sec
-  worker_alarm_eval_period_sec = var.worker_alarm_eval_period_sec
+  worker_alarm_duration_sec     = var.worker_alarm_duration_sec
+  worker_alarm_eval_period_sec  = var.worker_alarm_eval_period_sec
+  java_job_validations_to_alert = var.java_job_validations_to_alert
 
   # Instance Metadata
   worker_logging_enabled           = var.worker_logging_enabled
@@ -81,6 +84,7 @@ module "job_service" {
   autoscaling_jobs_per_instance       = var.autoscaling_jobs_per_instance
   autoscaling_cloudfunction_memory_mb = var.autoscaling_cloudfunction_memory_mb
   worker_scale_in_jar                 = var.worker_scale_in_jar
+  worker_scale_in_path                = var.worker_scale_in_path
   termination_wait_timeout_sec        = var.termination_wait_timeout_sec
   worker_scale_in_cron                = var.worker_scale_in_cron
   asg_instances_table_ttl_days        = var.asg_instances_table_ttl_days
@@ -106,6 +110,7 @@ module "job_service" {
 
   enable_job_completion_notifications_per_job           = var.enable_job_completion_notifications_per_job
   job_completion_notifications_cloud_function_jar       = var.job_completion_notifications_cloud_function_jar
+  job_completion_notifications_cloud_function_path      = var.job_completion_notifications_cloud_function_path
   job_completion_notifications_cloud_function_cpu_count = var.job_completion_notifications_cloud_function_cpu_count
   job_completion_notifications_cloud_function_memory_mb = var.job_completion_notifications_cloud_function_memory_mb
   job_completion_notifications_service_account_email    = var.job_completion_notifications_service_account_email

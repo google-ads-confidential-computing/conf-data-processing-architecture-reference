@@ -28,7 +28,6 @@ import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.Mac;
 import com.google.inject.Inject;
 import com.google.protobuf.ByteString;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.testing.FakeKeyStorageClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KmsKeyAead;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -52,7 +51,9 @@ public abstract class CreateSplitKeyTaskBaseTest {
         new ImmutableMap.Builder<String, Class<?>>()
             .put("DHKEM_X25519_HKDF_SHA256_HKDF_SHA256_CHACHA20_POLY1305_RAW", HybridDecrypt.class)
             .put("HMAC_SHA512_256BITTAG_RAW", Mac.class)
-            .build().entrySet().asList();
+            .build()
+            .entrySet()
+            .asList();
 
     // When
     for (Entry<String, Class<?>> primitive : expectedPrimitives) {
@@ -67,18 +68,18 @@ public abstract class CreateSplitKeyTaskBaseTest {
       String template = expectedPrimitives.get(i).getKey();
       Class<?> expectedPrimitive = expectedPrimitives.get(i).getValue();
 
-      byte[] localSplit = keyEncryptionKeyAead.decrypt(
-          Base64.getDecoder().decode(keys.get(i).getJsonEncodedKeyset()), new byte[0]);
+      byte[] localSplit =
+          keyEncryptionKeyAead.decrypt(
+              Base64.getDecoder().decode(keys.get(i).getJsonEncodedKeyset()), new byte[0]);
       byte[] peerSplit = peerSplits.get(i);
 
-      KeysetHandle reconstructed = reconstructXorKeysetHandle(
-          ImmutableList.of(
-              ByteString.copyFrom(localSplit), ByteString.copyFrom(peerSplit)));
+      KeysetHandle reconstructed =
+          reconstructXorKeysetHandle(
+              ImmutableList.of(ByteString.copyFrom(localSplit), ByteString.copyFrom(peerSplit)));
 
       assertThat(reconstructed.getKeysetInfo().getKeyInfo(0).getTypeUrl())
           .isEqualTo(KeyTemplates.get(template).getTypeUrl());
-      assertThat(reconstructed.getPrimitive(expectedPrimitive))
-          .isInstanceOf(expectedPrimitive);
+      assertThat(reconstructed.getPrimitive(expectedPrimitive)).isInstanceOf(expectedPrimitive);
     }
   }
 

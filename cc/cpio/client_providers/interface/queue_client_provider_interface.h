@@ -38,7 +38,6 @@ class QueueClientProviderInterface : public core::ServiceInterface {
   /**
    * @brief Enqueue a message to the queue.
    * @param enqueue_message_context context of the operation.
-   * @return ExecutionResult result of the operation.
    */
   virtual void EnqueueMessage(
       core::AsyncContext<cmrt::sdk::queue_service::v1::EnqueueMessageRequest,
@@ -47,7 +46,6 @@ class QueueClientProviderInterface : public core::ServiceInterface {
   /**
    * @brief Get top message from the queue.
    * @param get_top_message_context context of the operation.
-   * @return ExecutionResult result of the operation.
    */
   virtual void GetTopMessage(
       core::AsyncContext<cmrt::sdk::queue_service::v1::GetTopMessageRequest,
@@ -56,7 +54,6 @@ class QueueClientProviderInterface : public core::ServiceInterface {
   /**
    * @brief Update visibility timeout of a message from the queue.
    * @param update_message_visibility_timeout_context context of the operation.
-   * @return ExecutionResult result of the operation.
    */
   virtual void UpdateMessageVisibilityTimeout(
       core::AsyncContext<
@@ -66,7 +63,6 @@ class QueueClientProviderInterface : public core::ServiceInterface {
   /**
    * @brief Delete a message from the queue.
    * @param delete_message_context context of the operation.
-   * @return ExecutionResult result of the operation.
    */
   virtual void DeleteMessage(
       core::AsyncContext<cmrt::sdk::queue_service::v1::DeleteMessageRequest,

@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -239,5 +240,85 @@ public class AwsParameterClientTest {
     assertThat(result).isEmpty();
     verify(ec2Client).describeTags(any(DescribeTagsRequest.class));
     verify(ssmClient).getParameters(any(GetParametersRequest.class));
+  }
+
+  @Test
+  public void getParameter_sourceUpdated_returnsCachedValue() throws Exception {
+    // Given
+    String originalValue = "original-value";
+    String updatedValue = "updated-value";
+    var originalSsmResponse =
+        GetParametersResponse.builder()
+            .parameters(
+                Parameter.builder()
+                    .name("scp-" + ENVIRONMENT + "-test")
+                    .value(originalValue)
+                    .build())
+            .build();
+    var updatedSsmResponse =
+        GetParametersResponse.builder()
+            .parameters(
+                Parameter.builder()
+                    .name("scp-" + ENVIRONMENT + "-test")
+                    .value(updatedValue)
+                    .build())
+            .build();
+    doReturn(
+            DescribeTagsResponse.builder()
+                .tags(TagDescription.builder().key(ENVIRONMENT_TAG_NAME).value(ENVIRONMENT).build())
+                .build())
+        .when(ec2Client)
+        .describeTags((any(DescribeTagsRequest.class)));
+    doReturn(originalSsmResponse, updatedSsmResponse)
+        .when(ssmClient)
+        .getParameters(any(GetParametersRequest.class));
+
+    // When
+    Optional<String> firstReturned = parameterClient.getParameter("test");
+    Optional<String> secondReturned = parameterClient.getParameter("test");
+
+    // Then
+    assertThat(firstReturned).hasValue(originalValue);
+    assertThat(secondReturned).hasValue(originalValue);
+  }
+
+  @Test
+  public void getLatestParameter_sourceUpdated_returnsUpdatedValue() throws Exception {
+    // Given
+    String originalValue = "original-value";
+    String updatedValue = "updated-value";
+    var originalSsmResponse =
+        GetParametersResponse.builder()
+            .parameters(
+                Parameter.builder()
+                    .name("scp-" + ENVIRONMENT + "-test")
+                    .value(originalValue)
+                    .build())
+            .build();
+    var updatedSsmResponse =
+        GetParametersResponse.builder()
+            .parameters(
+                Parameter.builder()
+                    .name("scp-" + ENVIRONMENT + "-test")
+                    .value(updatedValue)
+                    .build())
+            .build();
+    doReturn(
+            DescribeTagsResponse.builder()
+                .tags(TagDescription.builder().key(ENVIRONMENT_TAG_NAME).value(ENVIRONMENT).build())
+                .build())
+        .when(ec2Client)
+        .describeTags((any(DescribeTagsRequest.class)));
+    doReturn(originalSsmResponse, updatedSsmResponse)
+        .when(ssmClient)
+        .getParameters(any(GetParametersRequest.class));
+
+    // When
+    Optional<String> firstReturned = parameterClient.getLatestParameter("test");
+    Optional<String> secondReturned = parameterClient.getLatestParameter("test");
+
+    // Then
+    assertThat(firstReturned).hasValue(originalValue);
+    assertThat(secondReturned).hasValue(updatedValue);
   }
 }

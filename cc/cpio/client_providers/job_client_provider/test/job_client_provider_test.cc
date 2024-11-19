@@ -80,7 +80,6 @@ using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::errors::SC_CPIO_INTERNAL_ERROR;
 using google::scp::core::errors::SC_CPIO_INVALID_ARGUMENT;
 using google::scp::core::errors::SC_CPIO_REQUEST_TIMEOUT;
-using google::scp::core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES;
 using google::scp::core::errors::SC_GCP_ALREADY_EXISTS;
 using google::scp::core::errors::SC_JOB_CLIENT_PROVIDER_INVALID_DURATION;
 using google::scp::core::errors::SC_JOB_CLIENT_PROVIDER_INVALID_JOB_ITEM;

@@ -185,4 +185,55 @@ public final class KeySetManagerTest {
     // Then
     assertThat(configs1).isEqualTo(configs2);
   }
+
+  @Test
+  public void testGetConfigs_configWithNulls_returnsExpected() throws Exception {
+    // Given
+    String config =
+        "{\"key_sets\":["
+            + "{\"name\":\"test_set\", \"tink_template\":null, \"count\":null, \"validity_in_days\":null, \"ttl_in_days\":null}"
+            + "]}";
+    KeySetManager manager =
+        new KeySetManager(
+            Providers.of(Optional.of(config)),
+            TEST_COUNT,
+            TEST_VALIDITY_IN_DAYS,
+            TEST_TTL_IN_DAYS,
+            new ConfigCacheDuration());
+
+    // When
+    ImmutableList<KeySetConfig> configs = manager.getConfigs();
+
+    // Then
+    assertThat(configs)
+        .containsExactly(
+            KeySetConfig.create(
+                "test_set",
+                DEFAULT_TINK_TEMPLATE,
+                TEST_COUNT,
+                TEST_VALIDITY_IN_DAYS,
+                TEST_TTL_IN_DAYS));
+  }
+
+  @Test
+  public void testGetConfigs_allValuesSet_returnsExpected() throws Exception {
+    // Given
+    String config =
+        "{\"key_sets\":["
+            + "{\"name\":\"set1\", \"tink_template\":\"test_template\", \"count\":5, \"validity_in_days\":0, \"ttl_in_days\":0}"
+            + "]}";
+    KeySetManager manager =
+        new KeySetManager(
+            Providers.of(Optional.of(config)),
+            TEST_COUNT,
+            TEST_VALIDITY_IN_DAYS,
+            TEST_TTL_IN_DAYS,
+            new ConfigCacheDuration());
+
+    // When
+    ImmutableList<KeySetConfig> configs = manager.getConfigs();
+
+    // Then
+    assertThat(configs).containsExactly(KeySetConfig.create("set1", "test_template", 5, 0, 0));
+  }
 }

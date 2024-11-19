@@ -19,14 +19,16 @@ locals {
 
 # Archives the JAR in a ZIP file
 data "archive_file" "cloud_function_archive" {
+  count       = var.cloud_function_zip == "" ? 1 : 0
   type        = "zip"
   source_file = var.cloud_function_jar
   output_path = local.cloudfunction_package_zip
 }
 
 resource "google_storage_bucket_object" "cloud_function_archive_bucket_object" {
+  count = var.cloud_function_zip == "" ? 1 : 0
   # Need hash in name so cloudfunction knows to redeploy when code changes
-  name   = "${var.environment}_${local.cloudfunction_name_suffix}_${data.archive_file.cloud_function_archive.output_md5}"
+  name   = "${var.environment}_${local.cloudfunction_name_suffix}_${data.archive_file.cloud_function_archive[0].output_md5}"
   bucket = var.source_bucket_name
   source = local.cloudfunction_package_zip
 }
@@ -43,7 +45,7 @@ resource "google_cloudfunctions2_function" "pubsub_triggered_cloud_function" {
     source {
       storage_source {
         bucket = var.source_bucket_name
-        object = google_storage_bucket_object.cloud_function_archive_bucket_object.name
+        object = var.cloud_function_zip != "" ? var.cloud_function_zip : google_storage_bucket_object.cloud_function_archive_bucket_object[0].name
       }
     }
   }

@@ -82,13 +82,22 @@ public final class GcpParameterClient implements ParameterClient {
   }
 
   @Override
+  public Optional<String> getLatestParameter(String param) throws ParameterClientException {
+    return getParameter(
+        param, Optional.of(DEFAULT_PARAM_PREFIX), /* includeEnvironmentParam= */ true, true);
+  }
+
+  @Override
   public Optional<String> getParameter(
-      String param, Optional<String> paramPrefix, boolean includeEnvironmentParam)
+      String param, Optional<String> paramPrefix, boolean includeEnvironmentParam, boolean latest)
       throws ParameterClientException {
     String storageParam =
         ParameterClientUtils.getStorageParameterName(
             param, paramPrefix, includeEnvironmentParam ? getEnvironmentName() : Optional.empty());
     try {
+      if (latest) {
+        paramCache.invalidate(storageParam);
+      }
       return paramCache.get(storageParam);
     } catch (Exception ex) {
       throw new ParameterClientException(

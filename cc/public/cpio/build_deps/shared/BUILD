@@ -14,6 +14,8 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_pkg//:mappings.bzl", "pkg_files")
+load("//cc/public/cpio/build_deps/shared:snapshot_build_time_image.bzl", "snapshot_build_time_image")
+load("//cc/public/cpio/build_deps/shared:snapshot_runtime_image.bzl", "snapshot_runtime_image")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -45,4 +47,14 @@ pkg_files(
         "reproducible_build.sh",
     ],
     prefix = "reproducible_build_utils",
+)
+
+snapshot_runtime_image(
+    name = "stable_runtime_image",
+    version = "v0.3",
+)
+
+snapshot_build_time_image(
+    name = "stable_build_time_image",
+    version = "v0.2",
 )

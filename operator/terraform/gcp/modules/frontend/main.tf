@@ -27,14 +27,16 @@ resource "google_service_account" "frontend_service_account" {
 
 # Archives the JAR in a ZIP file
 data "archive_file" "frontend_service_archive" {
+  count       = var.frontend_service_zip == "" ? 1 : 0
   type        = "zip"
   source_file = var.frontend_service_jar
   output_path = local.cloudfunction_package_zip
 }
 
 resource "google_storage_bucket_object" "frontend_service_package_bucket_object" {
+  count = var.frontend_service_zip == "" ? 1 : 0
   # Need hash in name so cloudfunction knows to redeploy when code changes
-  name   = "${var.environment}_${local.cloudfunction_name_suffix}_${data.archive_file.frontend_service_archive.output_md5}"
+  name   = "${var.environment}_${local.cloudfunction_name_suffix}_${data.archive_file.frontend_service_archive[0].output_md5}"
   bucket = var.operator_package_bucket_name
   source = local.cloudfunction_package_zip
 }
@@ -49,7 +51,7 @@ resource "google_cloudfunctions2_function" "frontend_service_cloudfunction" {
     source {
       storage_source {
         bucket = var.operator_package_bucket_name
-        object = google_storage_bucket_object.frontend_service_package_bucket_object.name
+        object = var.frontend_service_zip != "" ? var.frontend_service_zip : google_storage_bucket_object.frontend_service_package_bucket_object[0].name
       }
     }
   }

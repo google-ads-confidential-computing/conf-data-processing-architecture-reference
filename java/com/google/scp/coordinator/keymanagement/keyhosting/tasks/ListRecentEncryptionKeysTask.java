@@ -21,7 +21,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
-import com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
@@ -30,7 +29,6 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.Encryption
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.exception.SharedErrorReason;
 import com.google.scp.shared.api.model.Code;
-import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -51,27 +49,10 @@ public final class ListRecentEncryptionKeysTask extends ApiTask {
     this.keyDb = keyDb;
   }
 
-  /**
-   * all recently created {@link EncryptionKey}s up to a specific age.
-   *
-   * @param maxAgeSeconds Maximum age of {@link EncryptionKey} that should be returned.
-   */
-  public Stream<EncryptionKey> execute(int maxAgeSeconds) throws ServiceException {
-    if (maxAgeSeconds < 0) {
-      throw new ServiceException(
-          Code.INVALID_ARGUMENT,
-          KeyManagementErrorReason.INVALID_ARGUMENT.name(),
-          String.format(
-              "%s should be positive, found (%s) instead.",
-              MAX_AGE_SECONDS_PARAM_NAME, maxAgeSeconds));
-    }
-    return keyDb.listRecentKeys(Duration.ofSeconds(maxAgeSeconds));
-  }
-
   @Override
   protected void execute(Matcher matcher, RequestContext request, ResponseContext response)
       throws ServiceException {
-    Stream<EncryptionKey> keys = execute(getMaxAgeSeconds(request));
+    Stream<EncryptionKey> keys = keyDb.listRecentKeys(getMaxAgeSeconds(request));
     response.setBody(
         ListRecentEncryptionKeysResponse.newBuilder()
             .addAllKeys(

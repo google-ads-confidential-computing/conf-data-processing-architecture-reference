@@ -23,6 +23,7 @@ java_library(
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
         "//java/com/google/scp/shared/api/exception",
+        "//java/com/google/scp/shared/api/model",
         "//java/external:guava",
         "//java/external:guice",
     ],

@@ -73,6 +73,12 @@ class MockConfigurationFetcher
               ((core::AsyncContext<std::string, uint64_t>)),
               (noexcept, override));
 
+  MOCK_METHOD(void, GetBoolByName, ((core::AsyncContext<std::string, bool>)),
+              (noexcept, override));
+
+  MOCK_METHOD(core::ExecutionResultOr<bool>, GetBoolByNameSync, (std::string),
+              (noexcept, override));
+
   MOCK_METHOD(core::ExecutionResultOr<LogOption>, GetCommonLogOptionSync,
               ((GetConfigurationRequest)), (noexcept, override));
 

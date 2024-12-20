@@ -44,8 +44,8 @@ java_library(
 )
 
 java_library(
-    name = "gcp",
-    srcs = glob(["*.java"]),
+    name = "GcpKeyManagementIntegrationTestEnv",
+    srcs = glob(["GcpKeyManagementIntegrationTestEnv.java"]),
     deps = [
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",

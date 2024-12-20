@@ -23,8 +23,8 @@
 #include "core/interface/errors.h"
 #include "core/interface/logger_interface.h"
 
-#include "sampled_macros.h"
 #include "periodic_macros.h"
+#include "sampled_macros.h"
 
 namespace google::scp::core::common {
 class GlobalLogger {
@@ -100,6 +100,16 @@ class GlobalLogger {
     google::scp::core::common::GlobalLogger::GetGlobalLogger()->Warning(      \
         component_name, correlation_id, parent_activity_id, activity_id,      \
         SCP_LOCATION, message, ##__VA_ARGS__);                                \
+  }
+
+#define SCP_ERROR_WITHOUT_RESULT(component_name, activity_id, message, ...) \
+  if (google::scp::core::common::GlobalLogger::GetGlobalLogger() &&         \
+      google::scp::core::common::GlobalLogger::IsLogLevelEnabled(           \
+          google::scp::core::LogLevel::kError)) {                           \
+    google::scp::core::common::GlobalLogger::GetGlobalLogger()->Error(      \
+        component_name, google::scp::core::common::kZeroUuid,               \
+        google::scp::core::common::kZeroUuid, activity_id, SCP_LOCATION,    \
+        message, ##__VA_ARGS__);                                            \
   }
 
 #define SCP_ERROR(component_name, activity_id, execution_result, message, ...) \

@@ -52,6 +52,12 @@ variable "secondary_region_zone" {
   type        = string
 }
 
+variable "add_secondary_region_to_encryption_service" {
+  description = "If true, encryption service will deploy to 2 regions."
+  type        = bool
+  default     = false
+}
+
 variable "key_generation_allow_stopping_for_update" {
   description = "If true, allows Terraform to stop the key generation instances to update their properties. If you try to update a property that requires stopping the instances without setting this field, the update will fail."
   type        = bool
@@ -63,6 +69,11 @@ variable "mpkhs_primary_package_bucket_location" {
   type        = string
 }
 
+variable "mpkhs_primary_package_bucket" {
+  description = "Location for multiparty keyhosting packages. Example: 'US'." #TODO
+  type        = string
+}
+
 ################################################################################
 # Global Alarm Variables.
 ################################################################################
@@ -70,11 +81,6 @@ variable "mpkhs_primary_package_bucket_location" {
 variable "alarms_enabled" {
   description = "Enable alarms for mpkhs services."
   type        = bool
-}
-
-variable "alarms_notification_email" {
-  description = "Email to receive alarms for mpkhs services."
-  type        = string
 }
 
 ################################################################################
@@ -333,6 +339,16 @@ variable "encryption_key_service_jar" {
   type        = string
 }
 
+variable "get_public_key_service_source_path" {
+  description = "GCS path to public Key Service source archive in the package bucket."
+  type        = string
+}
+
+variable "encryption_key_service_source_path" {
+  description = "GCS path to Encryption Key Service source archive in the package bucket."
+  type        = string
+}
+
 variable "get_public_key_cloudfunction_memory_mb" {
   description = "Memory size in MB for public key cloud function."
   type        = number
@@ -403,17 +419,22 @@ variable "get_public_key_alarm_duration_sec" {
 
 variable "get_public_key_cloudfunction_error_ratio_threshold" {
   description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
+  type        = number
 }
 
 variable "get_public_key_cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
-  type        = string
+  type        = number
 }
 
-variable "get_public_key_cloudfunction_5xx_threshold" {
+variable "get_public_key_cloudfunction_5xx_ratio_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  type        = number
+}
+
+variable "publickeyservice_cloudfunction_alert_on_memory_usage_threshold" {
+  description = "Memory usage of the Cloud Function should be higher than this value to alert."
+  type        = number
 }
 
 variable "get_public_key_lb_max_latency_ms" {
@@ -421,7 +442,7 @@ variable "get_public_key_lb_max_latency_ms" {
   type        = string
 }
 
-variable "get_public_key_lb_5xx_threshold" {
+variable "get_public_key_lb_5xx_ratio_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
 }
@@ -447,17 +468,22 @@ variable "encryptionkeyservice_alarm_eval_period_sec" {
 
 variable "encryptionkeyservice_cloudfunction_error_ratio_threshold" {
   description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
+  type        = number
 }
 
 variable "encryptionkeyservice_cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
-  type        = string
+  type        = number
 }
 
-variable "encryptionkeyservice_cloudfunction_5xx_threshold" {
+variable "encryptionkeyservice_cloudfunction_5xx_ratio_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  type        = number
+}
+
+variable "encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold" {
+  description = "Memory usage of the Cloud Function should be higher than this value to alert."
+  type        = number
 }
 
 variable "encryptionkeyservice_lb_max_latency_ms" {
@@ -465,7 +491,7 @@ variable "encryptionkeyservice_lb_max_latency_ms" {
   type        = string
 }
 
-variable "encryptionkeyservice_lb_5xx_threshold" {
+variable "encryptionkeyservice_lb_5xx_ratio_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
 }

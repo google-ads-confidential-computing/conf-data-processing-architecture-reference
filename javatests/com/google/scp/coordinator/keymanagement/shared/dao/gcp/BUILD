@@ -43,7 +43,7 @@ java_test(
         "//java/external:testcontainers",
         "//javatests/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:spanner_key_db_test_util",
     ],
 )
 

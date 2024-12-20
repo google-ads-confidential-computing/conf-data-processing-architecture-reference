@@ -23,7 +23,6 @@ import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import static com.google.scp.shared.api.model.Code.OK;
 import static com.google.scp.shared.testutils.common.HttpRequestUtil.executeRequestWithRetry;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.acai.Acai;
 import com.google.cloud.spanner.DatabaseClient;
 import com.google.cloud.spanner.KeySet;
@@ -35,9 +34,9 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.Ke
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyServiceCloudFunctionContainer;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.GcpKeyManagementIntegrationTestEnv;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
+import com.google.scp.coordinator.testutils.gcp.GcpMultiCoordinatorTestEnvModule;
 import com.google.scp.protos.shared.api.v1.ErrorResponseProto.ErrorResponse;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.util.ErrorUtil;
@@ -57,7 +56,7 @@ import org.junit.runners.JUnit4;
 /** Integration tests for GCP encryption key service cloud function */
 @RunWith(JUnit4.class)
 public final class EncryptionKeyServiceIntegrationTest {
-  @Rule public Acai acai = new Acai(GcpKeyManagementIntegrationTestEnv.class);
+  @Rule public Acai acai = new Acai(GcpMultiCoordinatorTestEnvModule.class);
 
   private static final HttpClient client = HttpClient.newHttpClient();
   private static final String correctPath = "/v1alpha/encryptionKeys/";
@@ -95,12 +94,12 @@ public final class EncryptionKeyServiceIntegrationTest {
     assertThat(httpResponse.statusCode()).isEqualTo(OK.getHttpStatusCode());
     // Cannot map to abstract autovalue class, so the body String will be parsed instead
     String response = httpResponse.body();
-    assertThat(response).contains("\"name\": \"encryptionKeys/");
-    assertThat(response).contains("\"keyMaterial\": \"" + encryptionKey.getJsonEncodedKeyset());
+    assertThat(response).contains("\"name\":\"encryptionKeys/");
+    assertThat(response).contains("\"keyMaterial\":\"" + encryptionKey.getJsonEncodedKeyset());
   }
 
   @Test(timeout = 25_000)
-  public void getEncryptionKeys_notFound() throws JsonProcessingException {
+  public void getEncryptionKeys_notFound() {
     HttpRequest getRequest =
         HttpRequest.newBuilder().uri(getFunctionUri(correctPath + "invalid")).GET().build();
 
@@ -115,7 +114,7 @@ public final class EncryptionKeyServiceIntegrationTest {
   }
 
   @Test(timeout = 25_000)
-  public void getEncryptionKeys_wrongPath() throws JsonProcessingException {
+  public void getEncryptionKeys_wrongPath() {
     HttpRequest getRequest =
         HttpRequest.newBuilder().uri(getFunctionUri(incorrectPath)).GET().build();
 
@@ -125,12 +124,12 @@ public final class EncryptionKeyServiceIntegrationTest {
 
     ErrorResponse response = ErrorUtil.parseErrorResponse(httpResponse.body());
     assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("Unsupported URL path");
+    assertThat(response.getMessage()).contains("Resource not found");
     assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");
   }
 
   @Test(timeout = 25_000)
-  public void getEncryptionKeys_wrongMethod() throws JsonProcessingException {
+  public void getEncryptionKeys_wrongMethod() {
     HttpRequest getRequest =
         HttpRequest.newBuilder()
             .uri(getFunctionUri(correctPath))
@@ -139,13 +138,13 @@ public final class EncryptionKeyServiceIntegrationTest {
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
 
-    assertThat(httpResponse.statusCode()).isEqualTo(INVALID_ARGUMENT.getHttpStatusCode());
+    assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
     assertThat(httpResponse.headers().map().containsKey("cache-control")).isFalse();
 
     ErrorResponse response = ErrorUtil.parseErrorResponse(httpResponse.body());
-    assertThat(response.getCode()).isEqualTo(INVALID_ARGUMENT.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("Unsupported http method");
-    assertThat(response.getDetailsList().toString()).contains("INVALID_HTTP_METHOD");
+    assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
+    assertThat(response.getMessage()).contains("Resource not found");
+    assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");
   }
 
   @Test(timeout = 25_000)
@@ -210,7 +209,7 @@ public final class EncryptionKeyServiceIntegrationTest {
     JsonFormat.parser().merge(httpResponse.body(), builder);
     ErrorResponse response = builder.build();
     assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("Unsupported URL path");
+    assertThat(response.getMessage()).contains("Resource not found");
     assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");
   }
 
@@ -223,15 +222,15 @@ public final class EncryptionKeyServiceIntegrationTest {
             .build();
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-    assertThat(httpResponse.statusCode()).isEqualTo(INVALID_ARGUMENT.getHttpStatusCode());
+    assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
     assertThat(httpResponse.headers().map().containsKey("cache-control")).isFalse();
 
     ErrorResponse.Builder builder = ErrorResponse.newBuilder();
     JsonFormat.parser().merge(httpResponse.body(), builder);
     ErrorResponse response = builder.build();
-    assertThat(response.getCode()).isEqualTo(INVALID_ARGUMENT.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("Unsupported http method");
-    assertThat(response.getDetailsList().toString()).contains("INVALID_HTTP_METHOD");
+    assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
+    assertThat(response.getMessage()).contains("Resource not found");
+    assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");
   }
 
   private URI getFunctionUri(String path) {

@@ -59,6 +59,7 @@ public final class EncryptionKeyConverter {
             .setCreationTime(encryptionKey.getCreationTime())
             .setActivationTime(encryptionKey.getActivationTime())
             .setTtlTime(toIntExact(encryptionKey.getTtlTime()))
+            .setSetName(encryptionKey.getSetName())
             .addAllKeyData(keyData);
 
     Set<String> keyTypeValues = ProtoUtil.getValidEnumValues(EncryptionKeyType.class);

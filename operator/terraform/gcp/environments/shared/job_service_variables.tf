@@ -322,6 +322,12 @@ variable "worker_instance_force_replace" {
   default     = false
 }
 
+variable "enable_metric_aggregation" {
+  description = "Enable metric aggregation."
+  type        = bool
+  default     = false
+}
+
 ################################################################################
 # Worker Alarm Variables.
 ################################################################################

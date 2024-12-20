@@ -44,6 +44,27 @@ MATCHER(EqualsProto, "") {
                                      result_listener);
 }
 
+/// Same as above, but protos with different orderings of the same elements in
+/// repeated fields are still considered equal.
+MATCHER_P(EqualsUnorderedProto, expected, "") {
+  std::string explanation;
+  protobuf::util::MessageDifferencer differ;
+  differ.set_repeated_field_comparison(
+      protobuf::util::MessageDifferencer::RepeatedFieldComparison::AS_SET);
+  differ.ReportDifferencesToString(&explanation);
+  if (!differ.Compare(expected, arg)) {
+    *result_listener << explanation;
+    return false;
+  }
+  return true;
+}
+
+MATCHER(EqualsUnorderedProto, "") {
+  const auto& [actual, expected] = arg;
+  return testing::ExplainMatchResult(EqualsUnorderedProto(expected), actual,
+                                     result_listener);
+}
+
 /**
  * @brief Helper function which accepts a textformatted proto.
  *

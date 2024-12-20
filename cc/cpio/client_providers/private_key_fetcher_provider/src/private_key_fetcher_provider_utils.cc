@@ -83,6 +83,7 @@ constexpr char kMultiPartyEnum[] = "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT";
 constexpr char kSinglePartyEnum[] = "SINGLE_PARTY_HYBRID_KEY";
 constexpr char kPublicKeysetHandle[] = "publicKeysetHandle";
 constexpr char kPublicKeyMaterial[] = "publicKeyMaterial";
+constexpr char kKeysetName[] = "setName";
 constexpr char kExpirationTime[] = "expirationTime";
 constexpr char kCreationTime[] = "creationTime";
 constexpr char kKeyData[] = "keyData";
@@ -208,6 +209,15 @@ ExecutionResult PrivateKeyFetchingClientUtils::ParseEncryptionKey(
   }
   encryption_key->public_key_material =
       make_shared<string>(public_key_material);
+
+  string keyset_name;
+  result = ParseJsonValue(json_key, kKeysetName, keyset_name);
+  if (result.Successful()) {
+    encryption_key->keyset_name = make_shared<string>(keyset_name);
+  } else {
+    SCP_ERROR(kPrivateKeyFetcherProviderUtils, core::common::kZeroUuid, result,
+              "Failed to parse keyset name for key %s.", name.c_str());
+  }
 
   EncryptionKeyType type;
   result = ParseEncryptionKeyType(json_key, kEncryptionKeyType, type);

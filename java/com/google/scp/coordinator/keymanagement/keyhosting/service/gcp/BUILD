@@ -33,27 +33,6 @@ java_library(
 )
 
 java_library(
-    name = "PublicKeyServiceHttpFunction",
-    srcs = [
-        "GetPublicKeysRequestHandler.java",
-        "PublicKeyServiceHttpFunction.java",
-        "PublicKeyServiceHttpFunctionBase.java",
-    ],
-    deps = [
-        ":GcpKeyServiceModule",
-        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/api/util",
-        "//java/com/google/scp/shared/gcp/util",
-        "//java/external:gcp_cloud_function",
-        "//java/external:guava",
-        "//java/external:guice",
-    ],
-)
-
-java_library(
     name = "public_key_service",
     srcs = [
         "PublicKeyService.java",
@@ -96,11 +75,6 @@ java_library(
 java_binary(
     name = "PublicKeyServiceHttpCloudFunction",
     runtime_deps = [
-        ":PublicKeyServiceHttpFunction",
-        # In the interim, package the new implementation into the same artifact
-        # and update the entry point reference. This provides simple swap and
-        # revert. For the long term, a new artifact should be created with
-        # appropriate matching artifact name.
         ":public_key_service",
     ],
 )
@@ -117,38 +91,18 @@ pkg_zip(
     ],
 )
 
-java_library(
-    name = "EncryptionKeyServiceHttpFunction",
-    srcs = [
-        "EncryptionKeyServiceHttpFunction.java",
-        "EncryptionKeyServiceHttpFunctionBase.java",
-        "GetEncryptionKeyRequestHandler.java",
-        "ListRecentEncryptionKeysRequestHandler.java",
-    ],
-    deps = [
-        ":GcpKeyServiceModule",
-        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
-        "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/api/util",
-        "//java/com/google/scp/shared/gcp/util",
-        "//java/external:gcp_cloud_function",
-        "//java/external:guava",
-        "//java/external:guice",
+java_binary(
+    name = "PublicKeyService",
+    main_class = "com.google.cloud.functions.invoker.runner.Invoker",
+    runtime_deps = [
+        ":public_key_service",
+        "//java/external:gcp_function_invoker",
     ],
 )
 
 java_binary(
     name = "EncryptionKeyServiceHttpCloudFunction",
     runtime_deps = [
-        ":EncryptionKeyServiceHttpFunction",
-        # In the interim, package the new implementation into the same artifact
-        # and update the entry point reference. This provides simple swap and
-        # revert. For the long term, a new artifact should be created with
-        # appropriate matching artifact name.
         ":encryption_key_service",
     ],
 )
@@ -162,15 +116,6 @@ pkg_zip(
     name = "EncryptionKeyServiceHttpCloudFunctionDeploy_zip",
     srcs = [
         ":EncryptionKeyServiceHttpCloudFunction_deploy.jar",
-    ],
-)
-
-java_binary(
-    name = "PublicKeyService",
-    main_class = "com.google.cloud.functions.invoker.runner.Invoker",
-    runtime_deps = [
-        ":public_key_service",
-        "//java/external:gcp_function_invoker",
     ],
 )
 

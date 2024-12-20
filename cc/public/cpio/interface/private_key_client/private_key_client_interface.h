@@ -68,6 +68,32 @@ class PrivateKeyClientInterface : public core::ServiceInterface {
       cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>
   ListPrivateKeysSync(cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest
                           request) noexcept = 0;
+
+  /**
+   * @brief List all active encryption keys in a key set.
+   * The encryption key is already decrypted by using KMS and can be used to
+   * decrypt the payload directly.
+   *
+   * @param context the context of the operation.
+   */
+  virtual void ListActiveEncryptionKeys(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest,
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>&
+          context) noexcept = 0;
+
+  /**
+   * @brief List all active encryption keys in a key set in a blocking call.
+   *
+   * @param request request to list active encryption keys.
+   * @return core::ExecutionResultOr<GetActiveEncryptionKeysResponse> result of
+   * the operation.
+   */
+  virtual core::ExecutionResultOr<
+      cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>
+  ListActiveEncryptionKeysSync(
+      cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest
+          request) noexcept = 0;
 };
 
 /// Factory to create PrivateKeyClient.

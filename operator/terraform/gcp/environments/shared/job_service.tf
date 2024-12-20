@@ -62,6 +62,7 @@ module "job_service" {
   max_job_num_attempts          = var.max_job_num_attempts
   user_provided_worker_sa_email = var.user_provided_worker_sa_email
   worker_instance_force_replace = var.worker_instance_force_replace
+  enable_metric_aggregation     = var.enable_metric_aggregation
 
   # Worker Alarms
   worker_alarm_duration_sec     = var.worker_alarm_duration_sec

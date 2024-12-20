@@ -34,10 +34,8 @@ import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
-import com.google.scp.shared.api.exception.ServiceException;
 import java.util.Optional;
 import java.util.regex.Matcher;
-import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -70,25 +68,6 @@ public class ListRecentEncryptionKeysTaskTest extends ApiTaskTestBase {
   public void setUp() throws Exception {
     keyDb.createKey(TEST_KEY);
     super.task = spy(this.task);
-  }
-
-  @Test
-  public void execute_happyPath_returnsExpected() throws ServiceException {
-    // Given/When
-    Stream<EncryptionKey> keys = task.execute(99);
-
-    // Then
-    assertThat(keys.count()).isEqualTo(1);
-  }
-
-  @Test
-  public void execute_negativeAge_throwsException() throws ServiceException {
-    // Given/When
-    ThrowingRunnable when = () -> task.execute(-2000);
-
-    // Then
-    ServiceException exception = assertThrows(ServiceException.class, when);
-    assertThat(exception).hasMessageThat().contains("maxAgeSeconds should be positive");
   }
 
   @Test

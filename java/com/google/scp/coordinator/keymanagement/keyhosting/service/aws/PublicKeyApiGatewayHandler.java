@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.GetActivePublicKeysResponseWithHeaders;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.KeyService;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActivePublicKeysRequestProto.GetActivePublicKeysRequest;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.aws.util.ApiGatewayHandler;

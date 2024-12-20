@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
+import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -55,6 +56,33 @@ public class EncryptionKeyConverterTest {
     assertThat(result.getPublicKey()).isEqualTo(keyStorageKey.getPublicKeysetHandle());
     assertThat(result.getActivationTime()).isEqualTo(keyStorageKey.getActivationTime());
     assertThat(result.getExpirationTime()).isEqualTo(keyStorageKey.getExpirationTime());
+  }
+
+  @Test
+  public void toStorageEncryptionKey_withNulls_success() {
+    String path = "keys/";
+    String keyId = "myKey";
+    EncryptionKey keyStorageKey =
+        EncryptionKey.newBuilder()
+            .setName(path + keyId)
+            .setSetName("test-set-name")
+            .setEncryptionKeyType(EncryptionKeyType.SINGLE_PARTY_HYBRID_KEY)
+            .setPublicKeysetHandle("12345")
+            .setPublicKeyMaterial("qwert")
+            .setCreationTime(0L)
+            .setActivationTime(1L)
+            .addAllKeyData(ImmutableList.of())
+            .build();
+
+    com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
+        result = EncryptionKeyConverter.toStorageEncryptionKey(keyId, keyStorageKey);
+
+    assertThat(path + result.getKeyId()).isEqualTo(keyStorageKey.getName());
+    assertThat(result.getSetName()).isEqualTo(keyStorageKey.getSetName());
+    assertThat(result.getPublicKey()).isEqualTo(keyStorageKey.getPublicKeysetHandle());
+    assertThat(result.getActivationTime()).isEqualTo(keyStorageKey.getActivationTime());
+    assertThat(result.hasTtlTime()).isFalse();
+    assertThat(result.hasExpirationTime()).isFalse();
   }
 
   @Test
@@ -135,5 +163,15 @@ public class EncryptionKeyConverterTest {
 
     assertThat(encryptionKey.getEncryptionKeyType())
         .isEqualTo(EncryptionKeyType.SINGLE_PARTY_HYBRID_KEY);
+  }
+
+  @Test
+  public void toApiEncryptionKey_withNulls() {
+    var encryptionKey = EncryptionKeyProto.EncryptionKey.newBuilder().build();
+
+    EncryptionKey storageKey = EncryptionKeyConverter.toApiEncryptionKey(encryptionKey);
+
+    assertThat(storageKey.hasExpirationTime()).isFalse();
+    assertThat(storageKey.hasTtlTime()).isFalse();
   }
 }

@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <google/protobuf/util/time_util.h>
 #include <nlohmann/json.hpp>
@@ -71,6 +72,7 @@ using std::shared_ptr;
 using std::string;
 using std::thread;
 using std::unique_ptr;
+using std::vector;
 using std::chrono::seconds;
 using testing::Between;
 using testing::Contains;
@@ -98,6 +100,7 @@ constexpr char kTokenType[] = "LIMITED_AWS";
 const seconds kExpireTime =
     seconds(TimeUtil::GetCurrentTime().seconds() + 1800);
 constexpr int kRetryTime = 5;
+const vector<string> kKeyIds = {"test1", "test2"};
 }  // namespace
 
 namespace google::scp::cpio::client_providers::test {
@@ -512,6 +515,47 @@ TEST_F(GcpAuthTokenProviderTest, GetTeeSessionTokenSuccessfully) {
       make_shared<string>(kAudience);
   fetch_tee_token_context_.request->token_type =
       make_shared<string>(kTokenType);
+
+  fetch_tee_token_context_.callback = [this, &tee_token](auto& context) {
+    EXPECT_SUCCESS(context.result);
+    EXPECT_EQ(*context.response->session_token, tee_token);
+    finished_ = true;
+  };
+
+  authorizer_provider_->GetTeeSessionToken(fetch_tee_token_context_);
+  WaitUntil([this]() { return finished_.load(); });
+}
+
+TEST_F(GcpAuthTokenProviderTest, GetTeeSessionTokenWithKeyIdsSuccessfully) {
+  string tee_token = "abcd";
+  EXPECT_CALL(*http_client_, PerformRequest)
+      .WillOnce([&tee_token](auto& http_context) {
+        EXPECT_EQ(http_context.request->method, HttpMethod::POST);
+        EXPECT_THAT(http_context.request->path,
+                    Pointee(Eq(kTeeTokenServerPath)));
+        EXPECT_THAT(http_context.request->headers,
+                    Pointee(UnorderedElementsAre(
+                        Pair("Content-Type", "application/json"))));
+        EXPECT_EQ(
+            http_context.request->body.ToString(),
+            "{\"audience\": \"www.google.com\", \"token_type\": "
+            "\"LIMITED_AWS\", \"token_type_options\": "
+            "{\"allowed_principal_tags\": {\"container_image_signatures\": "
+            "{\"key_ids\": [\"test1\",\"test2\"]}}}");
+
+        http_context.result = SuccessExecutionResult();
+        http_context.response = make_shared<HttpResponse>();
+        http_context.response->body = BytesBuffer(tee_token);
+        http_context.Finish();
+        return SuccessExecutionResult();
+      });
+  fetch_tee_token_context_.request = make_shared<GetTeeSessionTokenRequest>();
+  fetch_tee_token_context_.request->token_target_audience_uri =
+      make_shared<string>(kAudience);
+  fetch_tee_token_context_.request->token_type =
+      make_shared<string>(kTokenType);
+  fetch_tee_token_context_.request->key_ids =
+      make_shared<vector<string>>(kKeyIds);
 
   fetch_tee_token_context_.callback = [this, &tee_token](auto& context) {
     EXPECT_SUCCESS(context.result);

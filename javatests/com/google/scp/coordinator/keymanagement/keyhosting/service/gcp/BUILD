@@ -17,35 +17,6 @@ load("@rules_java//java:defs.bzl", "java_test")
 package(default_visibility = ["//visibility:public"])
 
 java_test(
-    name = "GetPublicKeysRequestHandlerTest",
-    srcs = [
-        "GetPublicKeysRequestHandlerTest.java",
-    ],
-    deps = [
-        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
-        "//coordinator/protos/keymanagement/shared/backend:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PublicKeyServiceHttpFunction",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
-        "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/mapper",
-        "//java/external:acai",
-        "//java/external:gcp_cloud_function",
-        "//java/external:google_truth",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:jackson_core",
-        "//java/external:jackson_databind",
-        "//java/external:mockito",
-        "//java/external:protobuf_java_util",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils",
-    ],
-)
-
-java_test(
     name = "PublicKeyHostingIntegrationTest",
     srcs = [
         "PublicKeyHostingIntegrationTest.java",
@@ -70,89 +41,13 @@ java_test(
         "//java/external:resilience4j_core",
         "//java/external:resilience4j_retry",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:annotations",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:spanner_key_db_test_util",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp/cloudfunction",
+        "//javatests/com/google/scp/coordinator/testutils/gcp:gcp_multi_coordinator_test_env_module",
         "//javatests/com/google/scp/shared/testutils/common",
         "//javatests/com/google/scp/shared/testutils/gcp",
         "//shared/protos/api/v1:java_proto",
-    ],
-)
-
-java_test(
-    name = "PublicKeyServiceHttpFunctionTest",
-    srcs = [
-        "PublicKeyServiceHttpFunctionTest.java",
-    ],
-    deps = [
-        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PublicKeyServiceHttpFunction",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
-        "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/external:acai",
-        "//java/external:gcp_cloud_function",
-        "//java/external:google_truth",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:mockito",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils",
-    ],
-)
-
-java_test(
-    name = "GetEncryptionKeyRequestHandlerTest",
-    srcs = [
-        "GetEncryptionKeyRequestHandlerTest.java",
-    ],
-    deps = [
-        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
-        "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
-        "//coordinator/protos/keymanagement/shared/backend:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:EncryptionKeyServiceHttpFunction",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
-        "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/mapper",
-        "//java/external:acai",
-        "//java/external:gcp_cloud_function",
-        "//java/external:google_truth",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:jackson_core",
-        "//java/external:jackson_databind",
-        "//java/external:mockito",
-        "//java/external:protobuf_java_util",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils",
-    ],
-)
-
-java_test(
-    name = "EncryptionKeyServiceHttpFunctionTest",
-    srcs = [
-        "EncryptionKeyServiceHttpFunctionTest.java",
-    ],
-    deps = [
-        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:EncryptionKeyServiceHttpFunction",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
-        "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/external:acai",
-        "//java/external:gcp_cloud_function",
-        "//java/external:google_truth",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:mockito",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils",
     ],
 )
 
@@ -183,41 +78,13 @@ java_test(
         "//java/external:resilience4j_core",
         "//java/external:resilience4j_retry",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:annotations",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:spanner_key_db_test_util",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp/cloudfunction",
+        "//javatests/com/google/scp/coordinator/testutils/gcp:gcp_multi_coordinator_test_env_module",
         "//javatests/com/google/scp/shared/testutils/common",
         "//javatests/com/google/scp/shared/testutils/gcp",
         "//shared/protos/api/v1:java_proto",
-    ],
-)
-
-java_test(
-    name = "ListRecentEncryptionKeysRequestHandlerTest",
-    srcs = [
-        "ListRecentEncryptionKeysRequestHandlerTest.java",
-    ],
-    deps = [
-        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
-        "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
-        "//coordinator/protos/keymanagement/shared/backend:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:EncryptionKeyServiceHttpFunction",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
-        "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/mapper",
-        "//java/external:acai",
-        "//java/external:gcp_cloud_function",
-        "//java/external:google_truth",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:jackson_core",
-        "//java/external:jackson_databind",
-        "//java/external:mockito",
-        "//java/external:protobuf_java_util",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils",
     ],
 )
 
@@ -245,7 +112,8 @@ java_test(
         "//java/external:testcontainers",
         "//javatests/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:annotations",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:spanner_key_db_test_util",
         "//javatests/com/google/scp/shared/testutils/gcp",
     ],
 )

@@ -50,6 +50,18 @@ class PrivateKeyClient : public PrivateKeyClientInterface {
   ListPrivateKeysSync(cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest
                           request) noexcept override;
 
+  void ListActiveEncryptionKeys(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest,
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>&
+          context) noexcept override;
+
+  core::ExecutionResultOr<
+      cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>
+  ListActiveEncryptionKeysSync(
+      cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest
+          request) noexcept override;
+
  protected:
   virtual core::ExecutionResult CreatePrivateKeyClientProvider() noexcept;
 

@@ -61,11 +61,6 @@ public final class GetActivePublicKeysTask extends ApiTask {
     this.cacheControlMaximum = cacheControlMaximum;
   }
 
-  /** Gets all public keys from the respective Key database */
-  public ImmutableList<EncryptionKey> getActivePublicKeys() throws ServiceException {
-    return keyDb.getActiveKeysWithPublicKey(DEFAULT_SET_NAME, keyLimit);
-  }
-
   @Override
   protected void execute(Matcher matcher, RequestContext request, ResponseContext response)
       throws ServiceException {

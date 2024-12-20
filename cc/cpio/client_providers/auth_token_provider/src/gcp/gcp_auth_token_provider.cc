@@ -111,6 +111,10 @@ constexpr char kTeeTokenUnixSocketPath[] =
     "/run/container_launcher/teeserver.sock";
 constexpr char kTeeTokenRequestBody[] =
     "{\"audience\": \"%s\", \"token_type\": \"%s\"}";
+constexpr char kTeeTokenWithImageSignatureRequestBody[] =
+    "{\"audience\": \"%s\", \"token_type\": \"%s\", \"token_type_options\": "
+    "{\"allowed_principal_tags\": {\"container_image_signatures\": "
+    "{\"key_ids\": [%s]}}}";
 constexpr char kContentTypeHeaderKey[] = "Content-Type";
 constexpr char kJsonContentTypeHeaderValue[] = "application/json";
 
@@ -484,12 +488,25 @@ void GcpAuthTokenProvider::GetTeeSessionToken(
   request->headers = make_shared<HttpHeaders>();
   request->headers->insert(
       {kContentTypeHeaderKey, kJsonContentTypeHeaderValue});
-  string body_str =
-      absl::StrFormat(kTeeTokenRequestBody,
-                      *get_token_context.request->token_target_audience_uri,
-                      *get_token_context.request->token_type);
+  string body_str;
+  if (get_token_context.request->key_ids &&
+      !get_token_context.request->key_ids.get()->empty()) {
+    string key_ids_list = "";
+    for (string s : *get_token_context.request->key_ids.get()) {
+      key_ids_list += "\"" + s + "\"" + ",";
+    }
+    key_ids_list.pop_back();
+    body_str =
+        absl::StrFormat(kTeeTokenWithImageSignatureRequestBody,
+                        *get_token_context.request->token_target_audience_uri,
+                        *get_token_context.request->token_type, key_ids_list);
+  } else {
+    body_str =
+        absl::StrFormat(kTeeTokenRequestBody,
+                        *get_token_context.request->token_target_audience_uri,
+                        *get_token_context.request->token_type);
+  }
   request->body = BytesBuffer(body_str);
-
   AsyncContext<HttpRequest, HttpResponse> http_context(
       std::move(request),
       bind(&GcpAuthTokenProvider::OnGetTeeSessionTokenCallback, this,

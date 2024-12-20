@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <aws/sts/model/AssumeRoleRequest.h>
 #include <aws/sts/model/AssumeRoleWithWebIdentityRequest.h>
@@ -59,6 +60,7 @@ using std::make_shared;
 using std::shared_ptr;
 using std::string;
 using std::to_string;
+using std::vector;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using std::placeholders::_3;
@@ -156,6 +158,10 @@ void AwsRoleCredentialsProvider::GetRoleCredentials(
     get_token_request->token_type = make_shared<string>(kGcpTokenTypeForAws);
     get_token_request->token_target_audience_uri = make_shared<string>(
         get_credentials_context.request->target_audience_for_web_identity);
+    const auto& key_ids = get_credentials_context.request->key_ids;
+    if (key_ids) {
+      get_token_request->key_ids = move(key_ids);
+    }
     AsyncContext<GetTeeSessionTokenRequest, GetSessionTokenResponse>
         get_token_context(std::move(get_token_request),
                           bind(&AwsRoleCredentialsProvider::OnGetTokenCallback,

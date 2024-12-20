@@ -25,7 +25,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.KeyService;
 import com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysRequestProto.ListRecentEncryptionKeysRequest;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;

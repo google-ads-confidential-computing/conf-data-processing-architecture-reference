@@ -18,6 +18,30 @@ load("@rules_pkg//:mappings.bzl", "pkg_files")
 package(default_visibility = ["//visibility:public"])
 
 java_library(
+    name = "key_service",
+    srcs = ["KeyService.java"],
+    deps = [
+        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
+        "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
+        "//coordinator/protos/keymanagement/shared/backend:java_proto",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common/converter",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
+        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/model",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
+        "//java/com/google/scp/shared/api/exception",
+        "//java/com/google/scp/shared/api/model",
+        "//java/com/google/scp/shared/api/util",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:slf4j",
+    ],
+)
+
+java_library(
     name = "AwsKeyServiceModule",
     srcs = [
         "AwsKeyServiceModule.java",
@@ -47,6 +71,7 @@ java_library(
     ],
     deps = [
         ":AwsKeyServiceModule",
+        ":key_service",
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
         "//java/com/google/scp/shared/api/exception",
@@ -91,6 +116,7 @@ java_library(
     ],
     deps = [
         ":AwsKeyServiceModule",
+        ":key_service",
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
@@ -116,6 +142,7 @@ java_library(
     ],
     deps = [
         ":AwsKeyServiceModule",
+        ":key_service",
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",

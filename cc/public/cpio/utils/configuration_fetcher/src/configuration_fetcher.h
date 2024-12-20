@@ -104,6 +104,12 @@ class ConfigurationFetcher : public ConfigurationFetcherInterface {
   void GetUInt64ByName(
       core::AsyncContext<std::string, uint64_t> context) noexcept override;
 
+  core::ExecutionResultOr<bool> GetBoolByNameSync(
+      std::string parameter_name) noexcept override;
+
+  void GetBoolByName(
+      core::AsyncContext<std::string, bool> context) noexcept override;
+
   core::ExecutionResultOr<LogOption> GetCommonLogOptionSync(
       GetConfigurationRequest request) noexcept override;
 

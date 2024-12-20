@@ -40,12 +40,15 @@ public final class InMemoryKeyDb implements KeyDb {
   @Override
   public ImmutableList<EncryptionKey> getActiveKeys(String setName, int keyLimit, Instant instant)
       throws ServiceException {
-    return getAllKeys().stream()
-        .filter(k -> k.getSetName().equals(setName))
-        .filter(k -> !k.hasExpirationTime() || k.getExpirationTime() > instant.toEpochMilli())
-        .filter(k -> k.getActivationTime() <= instant.toEpochMilli())
-        .limit(keyLimit)
-        .collect(toImmutableList());
+    Stream<EncryptionKey> keyStream =
+        getAllKeys().stream()
+            .filter(k -> k.getSetName().equals(setName))
+            .filter(k -> !k.hasExpirationTime() || k.getExpirationTime() > instant.toEpochMilli())
+            .filter(k -> k.getActivationTime() <= instant.toEpochMilli());
+    if (keyLimit > 0) {
+      keyStream = keyStream.limit(keyLimit);
+    }
+    return keyStream.collect(toImmutableList());
   }
 
   @Override

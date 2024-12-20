@@ -17,10 +17,7 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
 import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.addRandomKeysToKeyDb;
-import static com.google.scp.shared.api.model.Code.INTERNAL;
-import static org.junit.Assert.assertThrows;
 import static org.mockito.Answers.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
@@ -29,7 +26,6 @@ import static org.mockito.Mockito.verify;
 
 import com.google.acai.Acai;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.protobuf.util.JsonFormat;
@@ -43,7 +39,6 @@ import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.Encoded
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.EncodedPublicKeyProto.EncodedPublicKey.KeyOneofCase;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActivePublicKeysResponseProto.GetActivePublicKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
-import com.google.scp.shared.api.exception.ServiceException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -79,20 +74,6 @@ public class GetActivePublicKeysTaskTest extends ApiTaskTestBase {
   public void setUp() {
     addRandomKeysToKeyDb(keyLimit * 2, keyDb);
     super.task = spy(this.task);
-  }
-
-  @Test
-  public void getActivePublicKeys_hasAllPublicKeys() throws ServiceException {
-    ImmutableList<EncryptionKey> publicKeys = task.getActivePublicKeys();
-
-    assertThat(publicKeys).hasSize(keyLimit);
-  }
-
-  @Test
-  public void getActivePublicKeys_errorResponse() {
-    keyDb.setServiceException(new ServiceException(INTERNAL, SERVICE_ERROR.name(), "error"));
-
-    assertThrows(ServiceException.class, () -> task.getActivePublicKeys());
   }
 
   @Test

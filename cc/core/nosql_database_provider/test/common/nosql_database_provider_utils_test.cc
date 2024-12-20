@@ -68,24 +68,25 @@ TEST(NoSQLDatabaseProviderUtilsTest, FromStringString) {
 TEST(NoSQLDatabaseProviderUtilsTest, FromStringInvalid) {
   string str("s");
   NoSQLDatabaseValidAttributeValueTypes value;
-  EXPECT_THAT(NoSQLDatabaseProviderUtils::FromString<string>(NULL, 123, value),
+  EXPECT_THAT(
+      NoSQLDatabaseProviderUtils::FromString<string>(NULL, str.length(), value),
+      ResultIs(FailureExecutionResult(
+          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
+
+  EXPECT_THAT(NoSQLDatabaseProviderUtils::FromString<int>(str.c_str(),
+                                                          str.length(), value),
               ResultIs(FailureExecutionResult(
                   errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
 
-  EXPECT_THAT(
-      NoSQLDatabaseProviderUtils::FromString<int>(str.c_str(), 123, value),
-      ResultIs(FailureExecutionResult(
-          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
+  EXPECT_THAT(NoSQLDatabaseProviderUtils::FromString<double>(
+                  str.c_str(), str.length(), value),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
 
-  EXPECT_THAT(
-      NoSQLDatabaseProviderUtils::FromString<double>(str.c_str(), 123, value),
-      ResultIs(FailureExecutionResult(
-          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
-
-  EXPECT_THAT(
-      NoSQLDatabaseProviderUtils::FromString<float>(str.c_str(), 123, value),
-      ResultIs(FailureExecutionResult(
-          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
+  EXPECT_THAT(NoSQLDatabaseProviderUtils::FromString<float>(
+                  str.c_str(), str.length(), value),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE)));
 }
 
 }  // namespace google::scp::core::test

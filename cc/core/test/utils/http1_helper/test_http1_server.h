@@ -18,6 +18,7 @@
 #include <netinet/in.h>
 
 #include <map>
+#include <memory>
 #include <string>
 
 #include <boost/asio.hpp>
@@ -77,13 +78,13 @@ class TestHttp1Server {
   template <typename Socket>
   void ReadFromSocketAndWriteResponse(Socket& socket);
 
-  void RunOnTcpSocket(std::atomic_bool& ready);
+  void RunOnTcpSocket(std::shared_ptr<std::atomic_bool> ready);
 
-  void RunOnUnixSocket(std::atomic_bool& ready);
+  void RunOnUnixSocket(std::shared_ptr<std::atomic_bool> ready);
 
   TestHttp1ServerType server_type_;
 
-  std::string unix_socket_path_ = "/tmp/testhttp1server.sock";
+  const std::string unix_socket_path_ = "/tmp/testhttp1server.sock";
 
   // The most recent request which was processed by the server.
   boost::beast::http::request<boost::beast::http::dynamic_body> request_;

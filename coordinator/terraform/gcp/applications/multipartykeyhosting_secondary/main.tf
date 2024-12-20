@@ -40,7 +40,6 @@ locals {
   key_storage_service_jar    = var.key_storage_service_jar != "" ? var.key_storage_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keystorage/service/gcp/KeyStorageServiceHttpCloudFunction_deploy.jar"
   key_storage_domain         = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.key_storage_service_subdomain}.${var.parent_domain_name}"
   encryption_key_domain      = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${var.parent_domain_name}"
-  notification_channel_id    = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
   package_bucket_prefix      = "${var.project_id}_${var.environment}"
   package_bucket_name        = length("${local.package_bucket_prefix}_mpkhs_secondary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_secondary_package_jars" : "${local.package_bucket_prefix}_mpkhs_b_pkg"
 }
@@ -80,24 +79,6 @@ resource "google_kms_crypto_key" "key_encryption_key" {
   }
 }
 
-resource "google_monitoring_notification_channel" "alarm_email" {
-  count        = var.alarms_enabled ? 1 : 0
-  display_name = "${var.environment} Coordinator B Key Hosting Alarms Notification Email"
-  type         = "email"
-  labels = {
-    email_address = var.alarms_notification_email
-  }
-  force_delete = true
-
-  lifecycle {
-    # Email should not be empty
-    precondition {
-      condition     = var.alarms_notification_email != ""
-      error_message = "var.alarms_enabled is true with an empty var.alarms_notification_email."
-    }
-  }
-}
-
 module "keydb" {
   source                   = "../../modules/keydb"
   environment              = var.environment
@@ -123,6 +104,7 @@ module "keystorageservice" {
   cloudfunction_timeout_seconds                   = var.cloudfunction_timeout_seconds
   key_storage_cloudfunction_name                  = "key-storage-cloudfunction"
   key_storage_service_jar                         = local.key_storage_service_jar
+  key_storage_service_source_path                 = var.key_storage_service_source_path
   key_storage_cloudfunction_memory                = var.key_storage_service_cloudfunction_memory_mb
   key_storage_service_cloudfunction_min_instances = var.key_storage_service_cloudfunction_min_instances
   key_storage_service_cloudfunction_max_instances = var.key_storage_service_cloudfunction_max_instances
@@ -132,26 +114,27 @@ module "keystorageservice" {
   key_storage_domain       = local.key_storage_domain
 
   # Alarms
-  alarms_enabled                       = var.alarms_enabled
-  alarm_eval_period_sec                = var.keystorageservice_alarm_eval_period_sec
-  alarm_duration_sec                   = var.keystorageservice_alarm_duration_sec
-  notification_channel_id              = local.notification_channel_id
-  cloudfunction_5xx_threshold          = var.keystorageservice_cloudfunction_5xx_threshold
-  cloudfunction_error_ratio_threshold  = var.keystorageservice_cloudfunction_error_ratio_threshold
-  cloudfunction_max_execution_time_max = var.keystorageservice_cloudfunction_max_execution_time_max
-  lb_5xx_threshold                     = var.keystorageservice_lb_5xx_threshold
-  lb_max_latency_ms                    = var.keystorageservice_lb_max_latency_ms
-  key_storage_severity_map             = var.alert_severity_overrides
+  alarms_enabled                                = var.alarms_enabled
+  alarm_eval_period_sec                         = var.keystorageservice_alarm_eval_period_sec
+  alarm_duration_sec                            = var.keystorageservice_alarm_duration_sec
+  cloudfunction_5xx_ratio_threshold             = var.keystorageservice_cloudfunction_5xx_ratio_threshold
+  cloudfunction_error_ratio_threshold           = var.keystorageservice_cloudfunction_error_ratio_threshold
+  cloudfunction_max_execution_time_max          = var.keystorageservice_cloudfunction_max_execution_time_max
+  cloudfunction_alert_on_memory_usage_threshold = var.keystorageservice_cloudfunction_alert_on_memory_usage_threshold
+  lb_5xx_ratio_threshold                        = var.keystorageservice_lb_5xx_ratio_threshold
+  lb_max_latency_ms                             = var.keystorageservice_lb_max_latency_ms
+  key_storage_severity_map                      = var.alert_severity_overrides
 }
 
 module "encryptionkeyservice" {
   source = "../../modules/encryptionkeyservice"
 
-  project_id                        = var.project_id
-  environment                       = var.environment
-  region                            = var.primary_region
-  allowed_operator_user_group       = var.allowed_operator_user_group
-  allowed_operator_service_accounts = module.allowed_operators.all_service_accounts
+  project_id                                 = var.project_id
+  environment                                = var.environment
+  regions                                    = var.add_secondary_region_to_encryption_service ? [var.primary_region, var.secondary_region] : [var.primary_region]
+  add_secondary_region_to_encryption_service = var.add_secondary_region_to_encryption_service
+  allowed_operator_user_group                = var.allowed_operator_user_group
+  allowed_operator_service_accounts          = module.allowed_operators.all_service_accounts
 
   # Function vars
   package_bucket_name                                = google_storage_bucket.mpkhs_secondary_package_bucket.name
@@ -159,6 +142,7 @@ module "encryptionkeyservice" {
   spanner_instance_name                              = module.keydb.keydb_instance_name
   cloudfunction_timeout_seconds                      = var.cloudfunction_timeout_seconds
   encryption_key_service_jar                         = local.encryption_key_service_jar
+  encryption_key_service_source_path                 = var.encryption_key_service_source_path
   encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
   encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
@@ -171,11 +155,11 @@ module "encryptionkeyservice" {
   alarms_enabled                                    = var.alarms_enabled
   alarm_eval_period_sec                             = var.encryptionkeyservice_alarm_eval_period_sec
   alarm_duration_sec                                = var.encryptionkeyservice_alarm_duration_sec
-  notification_channel_id                           = local.notification_channel_id
-  cloudfunction_5xx_threshold                       = var.encryptionkeyservice_cloudfunction_5xx_threshold
+  cloudfunction_5xx_ratio_threshold                 = var.encryptionkeyservice_cloudfunction_5xx_ratio_threshold
   cloudfunction_error_ratio_threshold               = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
   cloudfunction_max_execution_time_max              = var.encryptionkeyservice_cloudfunction_max_execution_time_max
-  lb_5xx_threshold                                  = var.encryptionkeyservice_lb_5xx_threshold
+  cloudfunction_alert_on_memory_usage_threshold     = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold
+  lb_5xx_ratio_threshold                            = var.encryptionkeyservice_lb_5xx_ratio_threshold
   lb_max_latency_ms                                 = var.encryptionkeyservice_lb_max_latency_ms
   get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
   encryption_key_service_severity_map               = var.alert_severity_overrides

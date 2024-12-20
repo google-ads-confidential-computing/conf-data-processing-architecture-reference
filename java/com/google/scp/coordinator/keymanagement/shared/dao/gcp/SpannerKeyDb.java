@@ -106,7 +106,7 @@ public final class SpannerKeyDb implements KeyDb {
                     // KeyDbUtil.getActiveKeysComparator}
                     + " ORDER BY "
                     + NATURAL_ORDERING
-                    + " LIMIT @keyLimitParam")
+                    + (keyLimit == 0 ? "" : " LIMIT @keyLimitParam"))
             .bind("nowParam")
             .to(Timestamp.ofTimeSecondsAndNanos(instant.getEpochSecond(), instant.getNano()))
             .bind("keyLimitParam")

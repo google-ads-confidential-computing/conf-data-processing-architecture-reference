@@ -3,6 +3,7 @@ build --verbose_failures
 build --color=yes
 build --config=clang
 build --config=java
+build --copt=-O3
 
 build:cpp --client_env=BAZEL_CXXOPTS=-std=c++17
 build:cpp --cxxopt=-std=c++17

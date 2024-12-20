@@ -37,7 +37,7 @@ public class PublicKeyServiceModule extends AbstractModule {
 
   @ProvidesIntoMap
   @StringMapKey("/v1beta")
-  List<ApiTask> provideV1AlphaTasks(GetActivePublicKeysTask getActivePublicKeysTask) {
+  List<ApiTask> provideV1BetaTasks(GetActivePublicKeysTask getActivePublicKeysTask) {
     return ImmutableList.of(getActivePublicKeysTask);
   }
 }

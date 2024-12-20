@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "core/interface/async_context.h"
 #include "core/interface/async_executor_interface.h"
@@ -47,6 +48,7 @@ struct GetSessionTokenForTargetAudienceRequest {
 struct GetTeeSessionTokenRequest {
   std::shared_ptr<std::string> token_target_audience_uri;
   std::shared_ptr<std::string> token_type;
+  std::shared_ptr<std::vector<std::string>> key_ids;
 };
 
 /**

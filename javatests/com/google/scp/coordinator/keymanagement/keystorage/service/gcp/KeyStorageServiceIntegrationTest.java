@@ -38,6 +38,7 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.Ke
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageCloudFunctionContainerWithKms;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.TestLocalKmsServerContainer;
+import com.google.scp.coordinator.testutils.gcp.GcpMultiCoordinatorTestEnvModule;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer;
 import com.google.scp.shared.util.Base64Util;
@@ -56,7 +57,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class KeyStorageServiceIntegrationTest {
 
-  @Rule public final Acai acai = new Acai(GcpKeyStorageServiceTestEnvModule.class);
+  @Rule public final Acai acai = new Acai(GcpMultiCoordinatorTestEnvModule.class);
 
   private static final HttpClient CLIENT = HttpClient.newHttpClient();
 
@@ -106,7 +107,7 @@ public class KeyStorageServiceIntegrationTest {
   }
 
   @Test
-  public void createKeys_incorrectEnecryptedKeyFailure() throws Exception {
+  public void createKeys_incorrectEnecryptedKeyFailure() {
     String keyId = "6789";
     ByteString nonEncryptedKeySplit =
         ByteString.copyFrom("string_of_encypted_key_split".getBytes());

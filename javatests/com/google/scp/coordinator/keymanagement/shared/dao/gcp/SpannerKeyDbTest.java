@@ -257,6 +257,15 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
     awaitAndAssertActiveKeyCount(keyDb, 1);
   }
 
+  @Test
+  public void getActiveKeys_withZeroKeyLimit() throws ServiceException {
+    putNItemsRandomValues(keyDb, 10);
+
+    ImmutableList<EncryptionKey> keys =
+        keyDb.getActiveKeys(KeyDb.DEFAULT_SET_NAME, 0, Instant.now());
+    assertThat(keys.size()).isEqualTo(10);
+  }
+
   /**
    * Calls keyDb.getActiveKeys() continuously for at most 5 seconds until the assertions succeed and
    * the expectedSize of keys are returned.

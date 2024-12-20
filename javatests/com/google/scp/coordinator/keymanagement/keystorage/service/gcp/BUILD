@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library", "java_test")
+load("@rules_java//java:defs.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -72,7 +72,6 @@ java_test(
         "KeyStorageServiceIntegrationTest.java",
     ],
     deps = [
-        ":GcpKeyStorageServiceTestEnvModule",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//java/com/google/scp/shared/api/exception",
@@ -90,27 +89,11 @@ java_test(
         "//javatests/com/google/scp/coordinator/keymanagement/keystorage/service/gcp/testing:LocalKeyStorageServiceHttpFunction",
         "//javatests/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:annotations",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:spanner_key_db_test_util",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp/cloudfunction",
+        "//javatests/com/google/scp/coordinator/testutils/gcp:gcp_multi_coordinator_test_env_module",
         "//javatests/com/google/scp/shared/testutils/common",
-        "//javatests/com/google/scp/shared/testutils/gcp",
-    ],
-)
-
-java_library(
-    name = "GcpKeyStorageServiceTestEnvModule",
-    srcs = ["GcpKeyStorageServiceTestEnvModule.java"],
-    deps = [
-        "//java/com/google/scp/shared/util",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:protobuf_java",
-        "//java/external:tink",
-        "//javatests/com/google/kms:LocalGcpKmsClient",
-        "//javatests/com/google/kms:LocalKmsServerContainer",
-        "//javatests/com/google/scp/coordinator/keymanagement/keystorage/service/gcp/testing:KeyStorageHttpFunctionModule",
-        "//javatests/com/google/scp/coordinator/keymanagement/keystorage/service/gcp/testing:LocalKeyStorageServiceHttpFunction",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp",
         "//javatests/com/google/scp/shared/testutils/gcp",
     ],
 )

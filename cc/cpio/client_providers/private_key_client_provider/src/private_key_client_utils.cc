@@ -172,6 +172,9 @@ ExecutionResultOr<PrivateKey> PrivateKeyClientUtils::ConstructPrivateKey(
       TimeUtil::MillisecondsToTimestamp(encryption_key.expiration_time_in_ms);
   *private_key.mutable_creation_time() =
       TimeUtil::MillisecondsToTimestamp(encryption_key.creation_time_in_ms);
+  if (encryption_key.keyset_name) {
+    private_key.set_key_set_name(*encryption_key.keyset_name);
+  }
 
   vector<byte> xor_secret = StrToBytes(decrypt_results.at(0).plaintext);
 
@@ -194,12 +197,16 @@ ExecutionResultOr<PrivateKey> PrivateKeyClientUtils::ConstructPrivateKey(
 ExecutionResult PrivateKeyClientUtils::ExtractAnyFailure(
     vector<KeysResultPerEndpoint>& keys_result, const string& key_id) noexcept {
   for (auto& key_result : keys_result) {
-    RETURN_IF_FAILURE(key_result.fetch_result);
+    RETURN_AND_LOG_IF_FAILURE(key_result.fetch_result, kPrivateKeyClientUtils,
+                              kZeroUuid, "Fetching key failed for key %s.",
+                              key_id.c_str());
 
     ExecutionResult fetch_result;
     auto find_result =
         key_result.fetch_result_key_id_map.Find(key_id, fetch_result);
     if (find_result.Successful() && !fetch_result.Successful()) {
+      SCP_ERROR(kPrivateKeyClientUtils, kZeroUuid, fetch_result,
+                "Fetching key failed for key %s.", key_id.c_str());
       return fetch_result;
     }
 
@@ -208,6 +215,9 @@ ExecutionResult PrivateKeyClientUtils::ExtractAnyFailure(
         key_result.decrypt_result_key_id_map.Find(key_id, decrypt_result);
     if (find_result.Successful() &&
         !decrypt_result.decrypt_result.Successful()) {
+      SCP_ERROR(kPrivateKeyClientUtils, kZeroUuid,
+                decrypt_result.decrypt_result,
+                "Decrypting key failed for key %s.", key_id.c_str());
       return decrypt_result.decrypt_result;
     }
   }

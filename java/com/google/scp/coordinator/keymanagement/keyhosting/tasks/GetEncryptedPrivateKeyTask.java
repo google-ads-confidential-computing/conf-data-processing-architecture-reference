@@ -26,6 +26,8 @@ import com.google.scp.coordinator.keymanagement.shared.serverless.common.Respons
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
+import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -45,24 +47,31 @@ public final class GetEncryptedPrivateKeyTask extends ApiTask {
     this.logMetricHelper = logMetricHelper;
   }
 
-  /**
-   * Gets a specific privateKey from the respective Key database using keyId. Does not return if key
-   * not in Active status
-   */
-  public EncryptionKey getEncryptedPrivateKey(String keyId) throws ServiceException {
-    return keyDb.getKey(keyId);
-  }
-
   @Override
   protected void execute(Matcher matcher, RequestContext request, ResponseContext response)
       throws ServiceException {
     String id = matcher.group("id");
     try {
-      response.setBody(toApiEncryptionKey(getEncryptedPrivateKey(id)));
+      response.setBody(toApiEncryptionKey(getKey(id)));
     } catch (ServiceException e) {
-      logger.error(logMetricHelper.format("get_encrypted_private_key/error",
-          "errorReason", e.getErrorReason()));
+      logger.error(
+          logMetricHelper.format(
+              "get_encrypted_private_key/error", "errorReason", e.getErrorReason()));
       throw e;
     }
+  }
+
+  private EncryptionKey getKey(String id) throws ServiceException {
+    var key = keyDb.getKey(id);
+    var nowMilli = Instant.now().toEpochMilli();
+    var activationAgeInMillis = nowMilli - key.getActivationTime();
+    var dayInMillis = TimeUnit.DAYS.toMillis(1);
+    var logMsg = "{"
+        + "\"metricName\":\"get_encrypted_private_key/age_in_days\","
+        + "\"setName\":\"" + key.getSetName() + "\","
+        + "\"days\":" + (activationAgeInMillis / dayInMillis)
+        + "}";
+    logger.info(logMsg);
+    return key;
   }
 }

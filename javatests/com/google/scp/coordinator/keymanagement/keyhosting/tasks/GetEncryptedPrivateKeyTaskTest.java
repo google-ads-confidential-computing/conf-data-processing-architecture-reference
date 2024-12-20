@@ -17,13 +17,6 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
-import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.createKey;
-import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.createRandomKey;
-import static com.google.scp.shared.api.model.Code.NOT_FOUND;
-import static java.time.Instant.now;
-import static java.time.temporal.ChronoUnit.DAYS;
-import static java.util.UUID.randomUUID;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Answers.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
@@ -41,8 +34,6 @@ import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
-import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyStatusProto.EncryptionKeyStatus;
-import com.google.scp.shared.api.exception.ServiceException;
 import java.util.regex.Matcher;
 import org.junit.Before;
 import org.junit.Rule;
@@ -76,38 +67,6 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
   public void setUp() throws Exception {
     keyDb.createKey(TEST_KEY);
     super.task = spy(this.task);
-  }
-
-  @Test
-  public void getEncryptedPrivateKey_success() throws ServiceException {
-    EncryptionKey key = createRandomKey(keyDb);
-
-    assertThat(task.getEncryptedPrivateKey(key.getKeyId())).isEqualTo(key);
-  }
-
-  @Test
-  public void getEncryptedPrivateKey_keyIsNotActive() throws ServiceException {
-    EncryptionKey key =
-        createKey(
-            keyDb,
-            /* keyId= */ randomUUID().toString(),
-            /* publicKey= */ randomUUID().toString(),
-            /* publicKeyMaterial= */ randomUUID().toString(),
-            /* privateKey= */ randomUUID().toString(),
-            /* status= */ EncryptionKeyStatus.INACTIVE,
-            /* keyEncryptionKeyUri= */ randomUUID().toString(),
-            /* creationTime= */ now().toEpochMilli(),
-            /* expirationTime= */ now().plus(7, DAYS).toEpochMilli());
-
-    assertThat(task.getEncryptedPrivateKey(key.getKeyId())).isEqualTo(key);
-  }
-
-  @Test
-  public void getEncryptedPrivateKey_errorResponse() {
-    keyDb.setServiceException(new ServiceException(NOT_FOUND, SERVICE_ERROR.name(), "not found"));
-
-    assertThrows(
-        ServiceException.class, () -> task.getEncryptedPrivateKey(randomUUID().toString()));
   }
 
   @Test

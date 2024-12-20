@@ -13,12 +13,18 @@
 # limitations under the License.
 
 # Network Endpoint Group to route to cloud function
+moved {
+  from = google_compute_region_network_endpoint_group.encryption_key_service_network_endpoint_group
+  to   = google_compute_region_network_endpoint_group.encryption_key_service_network_endpoint_group["0"]
+}
+
 resource "google_compute_region_network_endpoint_group" "encryption_key_service_network_endpoint_group" {
-  name                  = "${var.environment}-${var.region}-encryption-key-service-endpoint-group"
+  for_each              = local.cfs
+  name                  = "${var.environment}-${each.value.location}-encryption-key-service-endpoint-group"
   network_endpoint_type = "SERVERLESS"
-  region                = var.region
+  region                = each.value.location
   cloud_run {
-    service = google_cloudfunctions2_function.encryption_key_service_cloudfunction.name
+    service = each.value.name
   }
 }
 
@@ -30,9 +36,12 @@ resource "google_compute_backend_service" "encryption_key_service_loadbalancer_b
 
   enable_cdn = false
 
-  backend {
-    description = var.environment
-    group       = google_compute_region_network_endpoint_group.encryption_key_service_network_endpoint_group.id
+  dynamic "backend" {
+    for_each = google_compute_region_network_endpoint_group.encryption_key_service_network_endpoint_group
+    content {
+      description = var.environment
+      group       = backend.value.id
+    }
   }
 
   log_config {

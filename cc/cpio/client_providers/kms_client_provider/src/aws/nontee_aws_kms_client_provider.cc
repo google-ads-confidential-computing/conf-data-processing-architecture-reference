@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include <aws/core/auth/AWSCredentialsProvider.h>
 #include <aws/core/auth/AWSCredentialsProviderChain.h>
@@ -54,6 +55,7 @@ using google::scp::core::async_executor::aws::AwsAsyncExecutor;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::errors::
     SC_AWS_KMS_CLIENT_PROVIDER_ASSUME_ROLE_NOT_FOUND;
+using google::scp::core::errors::SC_AWS_KMS_CLIENT_PROVIDER_AUDIENCE_NOT_FOUND;
 using google::scp::core::errors::
     SC_AWS_KMS_CLIENT_PROVIDER_CIPHER_TEXT_NOT_FOUND;
 using google::scp::core::errors::SC_AWS_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED;
@@ -67,6 +69,7 @@ using std::make_shared;
 using std::move;
 using std::shared_ptr;
 using std::string;
+using std::vector;
 using std::placeholders::_1;
 using std::placeholders::_2;
 using std::placeholders::_3;
@@ -166,12 +169,35 @@ void NonteeAwsKmsClientProvider::Decrypt(
     return;
   }
 
+  const auto& key_ids = decrypt_context.request->key_ids();
+  const auto& target_audience_for_web_identity =
+      decrypt_context.request->target_audience_for_web_identity();
+  // Key ids is valid only with audience.
+  if (!key_ids.empty() && target_audience_for_web_identity.empty()) {
+    auto execution_result =
+        FailureExecutionResult(SC_AWS_KMS_CLIENT_PROVIDER_AUDIENCE_NOT_FOUND);
+    SCP_ERROR_CONTEXT(kNonteeAwsKmsClientProvider, decrypt_context,
+                      execution_result,
+                      "Failed to get Audience from decryption request.");
+    decrypt_context.result = execution_result;
+    decrypt_context.Finish();
+    return;
+  }
+
   auto request = make_shared<GetRoleCredentialsRequest>();
   request->account_identity = make_shared<AccountIdentity>(account_identity);
   auto aws_options = std::dynamic_pointer_cast<AwsKmsClientOptions>(options_);
   if (aws_options) {
     request->target_audience_for_web_identity =
         aws_options->target_audience_for_web_identity;
+  }
+  if (!target_audience_for_web_identity.empty()) {
+    request->target_audience_for_web_identity =
+        move(target_audience_for_web_identity);
+  }
+  if (!key_ids.empty()) {
+    request->key_ids =
+        make_shared<vector<string>>(key_ids.begin(), key_ids.end());
   }
   AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
       get_role_credentials_context(

@@ -354,7 +354,7 @@ alias(
 
 alias(
     name = "slf4j_log4j",
-    actual = "@maven//:org_slf4j_slf4j_log4j12",
+    actual = "@maven//:org_slf4j_slf4j_reload4j",
     # log4j is only used in tests.
     visibility = ["//javatests:__subpackages__"],
 )
@@ -730,4 +730,39 @@ alias(
 alias(
     name = "conscrypt_openjdk",
     actual = "@maven//:org_conscrypt_conscrypt_openjdk_uber",
+)
+
+alias(
+    name = "opentelemetry_api",
+    actual = "@maven//:io_opentelemetry_opentelemetry_api",
+)
+
+alias(
+    name = "opentelemetry_sdk",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk",
+)
+
+alias(
+    name = "opentelemetry_sdk_common",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_common",
+)
+
+alias(
+    name = "opentelemetry_sdk_metrics",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_metrics",
+)
+
+alias(
+    name = "opentelemetry_sdk_extension_autoconfigure",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_extension_autoconfigure",
+)
+
+alias(
+    name = "google_cloud_opentelemetry_exporter_metrics",
+    actual = "@maven//:com_google_cloud_opentelemetry_exporter_metrics",
+)
+
+alias(
+    name = "google_cloud_opentelemetry_detector_resources",
+    actual = "@maven//:com_google_cloud_opentelemetry_detector_resources",
 )

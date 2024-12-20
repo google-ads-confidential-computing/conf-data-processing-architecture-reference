@@ -48,6 +48,10 @@ message PrivateKey {
   google.protobuf.Timestamp expiration_time = 4;
   // The creation time of the private key.
   google.protobuf.Timestamp creation_time = 5;
+
+  // Optional key set name for the private key, as this is a newly added field,
+  // old keys don't have this field.
+  string key_set_name = 6;
 }
 
 // Private key service endpoint options.
@@ -72,10 +76,10 @@ message PrivateKeyEndpoint {
   // details.
   string gcp_wip_provider = 4;
 
-  // Only needed for GCP to use as the audience when create temporary credentials.
-  // It is Optional. If it is absent, we will use the endpoint above.
-  // Make sure to add the endpoint to the custom audience list of the KeyService
-  // cloud run if you want to skip gcp_cloud_function_url here.
+  // Only needed for GCP to use as the audience when create temporary
+  // credentials. It is Optional. If it is absent, we will use the endpoint
+  // above. Make sure to add the endpoint to the custom audience list of the
+  // KeyService cloud run if you want to skip gcp_cloud_function_url here.
   string gcp_cloud_function_url = 5;
 }
 
@@ -100,4 +104,24 @@ message ListPrivateKeysResponse {
   scp.core.common.proto.ExecutionResult result = 1;
   // Returned private key list.
   repeated PrivateKey private_keys = 2;
+}
+
+// Request to list all active encryption keys in a key set.
+message ListActiveEncryptionKeysRequest {
+  // The list of endpoints hosting the key splits.
+  repeated PrivateKeyEndpoint key_endpoints = 1;
+  // The name of the key set.
+  // If not set, the request will use "" as default key set.
+  // Only for GCP. AWS Key Service does not support key set.
+  optional string key_set_name = 2;
+}
+
+// Response of listing all active encryption keys in a key set.
+message ListActiveEncryptionKeysResponse {
+  // The execution result.
+  scp.core.common.proto.ExecutionResult result = 1;
+  // Returned private key list.
+  repeated PrivateKey private_keys = 2;
+  // Returned key set name.
+  optional string key_set_name = 3;
 }

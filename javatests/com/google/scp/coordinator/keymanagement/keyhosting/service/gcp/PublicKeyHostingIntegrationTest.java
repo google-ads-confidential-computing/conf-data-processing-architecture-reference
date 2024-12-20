@@ -18,7 +18,6 @@ package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.SPANNER_KEY_TABLE_NAME;
-import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import static com.google.scp.shared.api.model.Code.OK;
 import static com.google.scp.shared.testutils.common.HttpRequestUtil.executeRequestWithRetry;
@@ -36,9 +35,9 @@ import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PublicKeyCloudFunctionContainer;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.GcpKeyManagementIntegrationTestEnv;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActivePublicKeysResponseProto.GetActivePublicKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
+import com.google.scp.coordinator.testutils.gcp.GcpMultiCoordinatorTestEnvModule;
 import com.google.scp.protos.shared.api.v1.ErrorResponseProto.ErrorResponse;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer;
@@ -57,7 +56,7 @@ import org.junit.runners.JUnit4;
 /** Integration tests for GCP public key hosting cloud function */
 @RunWith(JUnit4.class)
 public final class PublicKeyHostingIntegrationTest {
-  @Rule public Acai acai = new Acai(GcpKeyManagementIntegrationTestEnv.class);
+  @Rule public Acai acai = new Acai(GcpMultiCoordinatorTestEnvModule.class);
 
   private static final HttpClient client = HttpClient.newHttpClient();
   private static final String correctPath = "/v1alpha/publicKeys";
@@ -129,7 +128,7 @@ public final class PublicKeyHostingIntegrationTest {
     JsonFormat.parser().merge(httpResponse.body(), builder);
     ErrorResponse response = builder.build();
     assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("Unsupported URL path");
+    assertThat(response.getMessage()).contains("Resource not found");
     assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");
   }
 
@@ -142,15 +141,15 @@ public final class PublicKeyHostingIntegrationTest {
             .build();
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-    assertThat(httpResponse.statusCode()).isEqualTo(INVALID_ARGUMENT.getHttpStatusCode());
+    assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
     assertThat(httpResponse.headers().map().containsKey("cache-control")).isFalse();
 
     ErrorResponse.Builder builder = ErrorResponse.newBuilder();
     JsonFormat.parser().merge(httpResponse.body(), builder);
     ErrorResponse response = builder.build();
-    assertThat(response.getCode()).isEqualTo(INVALID_ARGUMENT.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("Unsupported http method");
-    assertThat(response.getDetailsList().toString()).contains("INVALID_HTTP_METHOD");
+    assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
+    assertThat(response.getMessage()).contains("Resource not found");
+    assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");
   }
 
   private URI getFunctionUri(String path) {

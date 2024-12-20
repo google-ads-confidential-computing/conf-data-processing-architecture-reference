@@ -28,7 +28,6 @@ import com.google.acai.Acai;
 import com.google.inject.Inject;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.KeyService;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActivePublicKeysResponseProto.GetActivePublicKeysResponse;

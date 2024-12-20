@@ -36,6 +36,10 @@
 #include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 #include "public/cpio/utils/sync_utils/src/sync_utils.h"
 
+using google::cmrt::sdk::private_key_service::v1::
+    ListActiveEncryptionKeysRequest;
+using google::cmrt::sdk::private_key_service::v1::
+    ListActiveEncryptionKeysResponse;
 using google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest;
 using google::cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse;
 using google::scp::core::AsyncContext;
@@ -148,6 +152,7 @@ ExecutionResult PrivateKeyClient::Stop() noexcept {
 void PrivateKeyClient::ListPrivateKeys(
     AsyncContext<ListPrivateKeysRequest, ListPrivateKeysResponse>&
         context) noexcept {
+  context.setConvertToPublicError(true);
   private_key_client_provider_->ListPrivateKeys(context);
 }
 
@@ -160,6 +165,26 @@ PrivateKeyClient::ListPrivateKeysSync(ListPrivateKeysRequest request) noexcept {
           response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kPrivateKeyClient, kZeroUuid,
                             "Failed to list private keys.");
+  return response;
+}
+
+void PrivateKeyClient::ListActiveEncryptionKeys(
+    AsyncContext<ListActiveEncryptionKeysRequest,
+                 ListActiveEncryptionKeysResponse>& context) noexcept {
+  private_key_client_provider_->ListActiveEncryptionKeys(context);
+}
+
+ExecutionResultOr<ListActiveEncryptionKeysResponse>
+PrivateKeyClient::ListActiveEncryptionKeysSync(
+    ListActiveEncryptionKeysRequest request) noexcept {
+  ListActiveEncryptionKeysResponse response;
+  auto execution_result =
+      SyncUtils::AsyncToSync2<ListActiveEncryptionKeysRequest,
+                              ListActiveEncryptionKeysResponse>(
+          bind(&PrivateKeyClient::ListActiveEncryptionKeys, this, _1),
+          move(request), response);
+  RETURN_AND_LOG_IF_FAILURE(execution_result, kPrivateKeyClient, kZeroUuid,
+                            "Failed to list active encryption keys.");
   return response;
 }
 

@@ -23,4 +23,8 @@ public class CloudFunctionEnvironmentVariables {
   public static final String ENV_VAR_SPANNER_INSTANCE_ID = "SPANNER_INSTANCE_ID";
   public static final String ENV_VAR_SPANNER_DB_NAME = "SPANNER_DB_NAME";
   public static final String ENV_VAR_SPANNER_ENDPOINT = "SPANNER_EMULATOR_HOST";
+
+  public static final String ENV_VAR_GCP_PROJECT_ID_V2 = "PROJECT_ID";
+  public static final String ENV_VAR_SPANNER_INSTANCE_ID_V2 = "SPANNER_INSTANCE";
+  public static final String ENV_VAR_SPANNER_DB_NAME_V2 = "SPANNER_DATABASE";
 }

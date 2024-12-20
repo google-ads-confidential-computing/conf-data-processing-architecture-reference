@@ -111,6 +111,7 @@ const Duration kCustomDurationBeforeReleaseTime =
 const Duration kDefaultJobProcessingTimeout = TimeUtil::SecondsToDuration(120);
 const Duration kDefaultJobExtendingWorkerSleepTime =
     TimeUtil::MillisecondsToDuration(1500);
+const Duration kTestWaitTime = TimeUtil::MillisecondsToDuration(2000);
 constexpr char kQueueMessageReceiptInfo[] = "receipt-info";
 constexpr char kJobId[] = "job-id";
 constexpr char kServerJobId[] = "server-job-id";
@@ -172,11 +173,11 @@ class JobLifecycleHelperTest : public ScpTestBase {
       const ExecutionResult& expected_result,
       const string& expected_instance_resource_name,
       const string& expected_scale_in_hook_name,
-      const bool& expected_termination_scheduled) {
+      const bool expected_termination_scheduled) {
     EXPECT_CALL(*mock_auto_scaling_client_, TryFinishInstanceTermination)
         .WillOnce(
-            [&expected_result, &expected_instance_resource_name,
-             &expected_scale_in_hook_name, &expected_termination_scheduled](
+            [expected_result, expected_instance_resource_name,
+             expected_scale_in_hook_name, expected_termination_scheduled](
                 AsyncContext<TryFinishInstanceTerminationRequest,
                              TryFinishInstanceTerminationResponse>& context) {
               EXPECT_EQ(context.request->instance_resource_name(),
@@ -200,7 +201,7 @@ class JobLifecycleHelperTest : public ScpTestBase {
                         const string& expected_receipt_info) {
     EXPECT_CALL(*mock_job_client_, GetNextJob)
         .WillOnce(
-            [&expected_result, &expected_job, &expected_receipt_info](
+            [expected_result, &expected_job, expected_receipt_info](
                 AsyncContext<GetNextJobRequest, GetNextJobResponse>& context) {
               context.result = expected_result;
               if (expected_result.Successful()) {
@@ -217,7 +218,7 @@ class JobLifecycleHelperTest : public ScpTestBase {
                         const string& job_id, const Job& expected_job) {
     EXPECT_CALL(*mock_job_client_, GetJobById)
         .WillOnce(
-            [&expected_result, &job_id, &expected_job](
+            [expected_result, job_id, &expected_job](
                 AsyncContext<GetJobByIdRequest, GetJobByIdResponse>& context) {
               EXPECT_EQ(context.request->job_id(), job_id);
               context.result = expected_result;
@@ -234,7 +235,7 @@ class JobLifecycleHelperTest : public ScpTestBase {
                                       const string& expected_job_id,
                                       const string& expected_receipt_info) {
     EXPECT_CALL(*mock_job_client_, DeleteOrphanedJobMessage)
-        .WillOnce([&expected_result, &expected_job_id, &expected_receipt_info](
+        .WillOnce([expected_result, expected_job_id, expected_receipt_info](
                       AsyncContext<DeleteOrphanedJobMessageRequest,
                                    DeleteOrphanedJobMessageResponse>& context) {
           context.result = expected_result;
@@ -252,7 +253,7 @@ class JobLifecycleHelperTest : public ScpTestBase {
                              const string& expected_job_id,
                              const JobStatus& expected_job_status) {
     EXPECT_CALL(*mock_job_client_, UpdateJobStatus)
-        .WillOnce([&expected_result, &expected_job_id, &expected_job_status](
+        .WillOnce([expected_result, expected_job_id, expected_job_status](
                       AsyncContext<UpdateJobStatusRequest,
                                    UpdateJobStatusResponse>& context) {
           context.result = expected_result;
@@ -272,8 +273,8 @@ class JobLifecycleHelperTest : public ScpTestBase {
       const string& expected_receipt_info) {
     EXPECT_CALL(*mock_job_client_, UpdateJobVisibilityTimeout)
         .WillOnce(
-            [&expected_result, &expected_job_id, &expected_duration_to_update,
-             &expected_receipt_info](
+            [expected_result, expected_job_id, expected_duration_to_update,
+             expected_receipt_info](
                 AsyncContext<UpdateJobVisibilityTimeoutRequest,
                              UpdateJobVisibilityTimeoutResponse>& context) {
               context.result = expected_result;
@@ -1084,15 +1085,15 @@ TEST_F(JobLifecycleHelperTest, JobExtendSuccess) {
   *get_job_by_id_response.mutable_job() = std::move(job);
 
   EXPECT_CALL(*mock_job_client_, GetJobByIdSync)
-      .WillOnce([&get_job_by_id_response](GetJobByIdRequest request) {
+      .WillRepeatedly([&get_job_by_id_response](GetJobByIdRequest request) {
         EXPECT_EQ(request.job_id(), kJobId);
         return get_job_by_id_response;
       });
 
   UpdateJobVisibilityTimeoutResponse update_job_visibility_timeout_response;
   EXPECT_CALL(*mock_job_client_, UpdateJobVisibilityTimeoutSync)
-      .WillOnce([&update_job_visibility_timeout_response](
-                    UpdateJobVisibilityTimeoutRequest request) {
+      .WillRepeatedly([&update_job_visibility_timeout_response](
+                          UpdateJobVisibilityTimeoutRequest request) {
         EXPECT_EQ(request.job_id(), kJobId);
         EXPECT_EQ(request.duration_to_update(),
                   kDefaultVisibilityTimeoutExtendTime);
@@ -1100,7 +1101,7 @@ TEST_F(JobLifecycleHelperTest, JobExtendSuccess) {
         return update_job_visibility_timeout_response;
       });
 
-  sleep(kDefaultJobExtendingWorkerSleepTime.seconds());
+  sleep(kTestWaitTime.seconds());
 }
 
 TEST_F(JobLifecycleHelperTest, JobExtendWithVisibilityTimeoutExtendableOff) {
@@ -1119,8 +1120,7 @@ TEST_F(JobLifecycleHelperTest, JobExtendWithVisibilityTimeoutExtendableOff) {
 
   EXPECT_CALL(*mock_job_client_, GetJobByIdSync).Times(0);
   EXPECT_CALL(*mock_job_client_, UpdateJobVisibilityTimeoutSync).Times(0);
-
-  sleep(kDefaultJobExtendingWorkerSleepTime.seconds());
+  sleep(kTestWaitTime.seconds());
 }
 
 TEST_F(JobLifecycleHelperTest, JobExtendWithMissingReceiptInfo) {
@@ -1139,8 +1139,7 @@ TEST_F(JobLifecycleHelperTest, JobExtendWithMissingReceiptInfo) {
 
   EXPECT_CALL(*mock_job_client_, GetJobByIdSync).Times(0);
   EXPECT_CALL(*mock_job_client_, UpdateJobVisibilityTimeoutSync).Times(0);
-
-  sleep(kDefaultJobExtendingWorkerSleepTime.seconds());
+  sleep(kTestWaitTime.seconds());
 }
 
 TEST_F(JobLifecycleHelperTest, JobExtendWithGetJobByIdFailed) {
@@ -1162,8 +1161,7 @@ TEST_F(JobLifecycleHelperTest, JobExtendWithGetJobByIdFailed) {
         return FailureExecutionResult(SC_UNKNOWN);
       });
   EXPECT_CALL(*mock_job_client_, UpdateJobVisibilityTimeoutSync).Times(0);
-
-  sleep(kDefaultJobExtendingWorkerSleepTime.seconds());
+  sleep(kTestWaitTime.seconds());
 }
 
 TEST_F(JobLifecycleHelperTest, JobExtendOverProcessingTimeout) {
@@ -1189,8 +1187,7 @@ TEST_F(JobLifecycleHelperTest, JobExtendOverProcessingTimeout) {
         return get_job_by_id_response;
       });
   EXPECT_CALL(*mock_job_client_, UpdateJobVisibilityTimeoutSync).Times(0);
-
-  sleep(kDefaultJobExtendingWorkerSleepTime.seconds());
+  sleep(kTestWaitTime.seconds());
 }
 
 TEST_F(JobLifecycleHelperTest, JobExtendWithUpdateVisibilityTimeoutFailed) {
@@ -1211,15 +1208,14 @@ TEST_F(JobLifecycleHelperTest, JobExtendWithUpdateVisibilityTimeoutFailed) {
   GetJobByIdResponse get_job_by_id_response;
   *get_job_by_id_response.mutable_job() = std::move(job);
   EXPECT_CALL(*mock_job_client_, GetJobByIdSync)
-      .WillOnce([&get_job_by_id_response](GetJobByIdRequest request) {
+      .WillRepeatedly([&get_job_by_id_response](GetJobByIdRequest request) {
         return get_job_by_id_response;
       });
   EXPECT_CALL(*mock_job_client_, UpdateJobVisibilityTimeoutSync)
-      .WillOnce([](UpdateJobVisibilityTimeoutRequest request) {
+      .WillRepeatedly([](UpdateJobVisibilityTimeoutRequest request) {
         return FailureExecutionResult(SC_UNKNOWN);
       });
-
-  sleep(kDefaultJobExtendingWorkerSleepTime.seconds());
+  sleep(kTestWaitTime.seconds());
 }
 
 }  // namespace google::scp::cpio

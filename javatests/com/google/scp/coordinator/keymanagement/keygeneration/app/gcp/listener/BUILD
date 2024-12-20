@@ -17,32 +17,6 @@ load("@rules_java//java:defs.bzl", "java_library", "java_test")
 package(default_visibility = ["//visibility:public"])
 
 java_test(
-    name = "CreateKeysPubSubListenerTest",
-    srcs = ["CreateKeysPubSubListenerTest.java"],
-    deps = [
-        ":gcp",
-        "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/gcp/listener",
-        "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/external:acai",
-        "//java/external:gcp_pubsub",
-        "//java/external:gcp_pubsub_v1",
-        "//java/external:google_truth",
-        "//java/external:grpc_api",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:mockito",
-        "//java/external:protobuf_java",
-        "//java/external:testcontainers",
-        "//java/external:tink",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils",
-        "//javatests/com/google/scp/shared/testutils/gcp",
-    ],
-)
-
-java_test(
     name = "CreateSplitKeysPubSubListenerTest",
     srcs = ["CreateSplitKeysPubSubListenerTest.java"],
     deps = [

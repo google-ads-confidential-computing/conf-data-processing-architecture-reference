@@ -16,6 +16,7 @@
 #include "test_http1_server.h"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -30,6 +31,7 @@ namespace http = beast::http;
 
 using boost::asio::ip::tcp;
 using boost::asio::local::stream_protocol;
+using std::make_shared;
 using std::atomic_bool;
 using std::make_pair;
 using std::move;
@@ -76,19 +78,19 @@ ExecutionResultOr<in_port_t> GetUnusedPortNumber() {
 
 TestHttp1Server::TestHttp1Server(TestHttp1ServerType server_type)
     : server_type_(server_type) {
-  atomic_bool ready(false);
+  auto ready = make_shared<atomic_bool>(false);
   if (server_type_ == TestHttp1ServerType::TCP) {
     thread_ = thread(
-        std::bind(&TestHttp1Server::RunOnTcpSocket, this, std::ref(ready)));
+        std::bind(&TestHttp1Server::RunOnTcpSocket, this, ready));
   } else if (server_type == TestHttp1ServerType::UNIX) {
     thread_ = thread(
-        std::bind(&TestHttp1Server::RunOnUnixSocket, this, std::ref(ready)));
+        std::bind(&TestHttp1Server::RunOnUnixSocket, this, ready));
   } else {
     std::cerr << "Invalid TestHttp1ServerType "
               << static_cast<int>(server_type_) << std::endl;
     exit(1);
   }
-  WaitUntil([&ready]() { return ready.load(); });
+  WaitUntil([&ready]() { return ready->load(); });
 }
 
 // Initiate the asynchronous operations associated with the connection.
@@ -124,7 +126,7 @@ void TestHttp1Server::ReadFromSocketAndWriteResponse(Socket& socket) {
   HandleErrorIfPresent(ec, "close");
 }
 
-void TestHttp1Server::RunOnTcpSocket(atomic_bool& ready) {
+void TestHttp1Server::RunOnTcpSocket(std::shared_ptr<atomic_bool> ready) {
   boost::asio::io_context ioc(/*concurrency_hint=*/1);
   tcp::endpoint ep(tcp::v4(), /*port=*/0);
   tcp::acceptor acceptor(ioc, ep);
@@ -144,13 +146,13 @@ void TestHttp1Server::RunOnTcpSocket(atomic_bool& ready) {
         exit(EXIT_FAILURE);
       }
     });
-    ready = true;
+    *ready = true;
     ioc.run_for(milliseconds(100));
     ioc.restart();
   }
 }
 
-void TestHttp1Server::RunOnUnixSocket(atomic_bool& ready) {
+void TestHttp1Server::RunOnUnixSocket(std::shared_ptr<atomic_bool> ready) {
   ::unlink(unix_socket_path_.c_str());
   boost::asio::io_context ioc(/*concurrency_hint=*/1);
   stream_protocol::endpoint ep(unix_socket_path_);
@@ -170,7 +172,7 @@ void TestHttp1Server::RunOnUnixSocket(atomic_bool& ready) {
         exit(EXIT_FAILURE);
       }
     });
-    ready = true;
+    *ready = true;
     ioc.run_for(milliseconds(100));
     ioc.restart();
   }
@@ -190,7 +192,7 @@ string TestHttp1Server::GetPath() const {
 
 string TestHttp1Server::GetSocketPath() const {
   if (server_type_ == TestHttp1ServerType::TCP) {
-    std::cerr << "Getting UNIX socket path when in TCP mode" <<std::endl;
+    std::cerr << "Getting UNIX socket path when in TCP mode" << std::endl;
     return "/dev/null";
   } else {
     return unix_socket_path_;

@@ -19,6 +19,7 @@
 
 #include "core/curl_client/src/error_codes.h"
 #include "core/test/utils/http1_helper/test_http1_server.h"
+#include "core/test/utils/scp_test_base.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 
 using boost::beast::http::status;
@@ -45,7 +46,8 @@ constexpr Byte kRequestBody[] = {'a', 'b', '\0', 'c'};
 constexpr Byte kResponseBody[] = {'\0', 'd', 'e', 'f'};
 
 class Http1CurlWrapperTest
-    : public ::testing::TestWithParam<tuple<status, ExecutionResult>> {
+    : public ScpTestBase,
+      public ::testing::WithParamInterface<tuple<status, ExecutionResult>> {
  protected:
   Http1CurlWrapperTest()
       : response_body_(kResponseBody, sizeof(kResponseBody)),

@@ -47,9 +47,15 @@ resource "google_storage_bucket_object" "encryption_key_service_package_bucket_o
   source = local.cloudfunction_package_zip
 }
 
+moved {
+  from = google_cloudfunctions2_function.encryption_key_service_cloudfunction
+  to   = google_cloudfunctions2_function.encryption_key_service_cloudfunction["0"]
+}
+
 resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction" {
-  name     = "${var.environment}-${var.region}-${local.cloudfunction_name_suffix}"
-  location = var.region
+  for_each = { for idx, region in var.regions : idx => region }
+  name     = "${var.environment}-${each.value}-${local.cloudfunction_name_suffix}"
+  location = each.value
 
   build_config {
     runtime     = "java11"
@@ -93,6 +99,28 @@ resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction
   }
 }
 
+locals {
+  cloud_functions         = [for cf in google_cloudfunctions2_function.encryption_key_service_cloudfunction : cf]
+  cloud_function_a_name   = local.cloud_functions[0].name
+  cloud_function_a_region = local.cloud_functions[0].location
+
+  b_idx                   = var.add_secondary_region_to_encryption_service ? 1 : 0
+  cloud_function_b_name   = local.cloud_functions[local.b_idx].name
+  cloud_function_b_region = local.cloud_functions[local.b_idx].location
+
+  cfs = { for idx, cf in local.cloud_functions : idx => cf }
+
+  service_accounts_cfs = [
+    for pair in setproduct(local.cloud_functions, var.allowed_operator_service_accounts) : {
+      location        = pair[0].location
+      name            = pair[0].name
+      service_account = pair[1]
+    }
+  ]
+
+  sa_cfs = { for idx, sa_cf in local.service_accounts_cfs : idx => sa_cf }
+}
+
 # IAM entry for service account to read from the database
 resource "google_spanner_database_iam_member" "encryption_key_service_spannerdb_iam_policy" {
   instance = var.spanner_instance_name
@@ -101,25 +129,30 @@ resource "google_spanner_database_iam_member" "encryption_key_service_spannerdb_
   member   = "serviceAccount:${local.encryption_key_service_account_email}"
 }
 
+moved {
+  from = google_cloud_run_service_iam_member.encryption_key_service_iam_policy[0]
+  to   = google_cloud_run_service_iam_member.encryption_key_service_iam_policy["0"]
+}
+
 # IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
 resource "google_cloud_run_service_iam_member" "encryption_key_service_iam_policy" {
-  count = var.allowed_operator_user_group != null ? 1 : 0
+  for_each = var.allowed_operator_user_group != null ? local.cfs : {}
 
   project  = var.project_id
-  location = google_cloudfunctions2_function.encryption_key_service_cloudfunction.location
-  service  = google_cloudfunctions2_function.encryption_key_service_cloudfunction.name
+  location = each.value.location
+  service  = each.value.name
 
   role   = "roles/run.invoker"
   member = "group:${var.allowed_operator_user_group}"
 }
 
 resource "google_cloud_run_service_iam_member" "encryption_key_service_invoker_service_accounts" {
-  for_each = toset(var.allowed_operator_service_accounts)
+  for_each = local.sa_cfs
 
   project  = var.project_id
-  location = google_cloudfunctions2_function.encryption_key_service_cloudfunction.location
-  service  = google_cloudfunctions2_function.encryption_key_service_cloudfunction.name
+  location = each.value.location
+  service  = each.value.name
 
   role   = "roles/run.invoker"
-  member = "serviceAccount:${each.key}"
+  member = "serviceAccount:${each.value.location}"
 }

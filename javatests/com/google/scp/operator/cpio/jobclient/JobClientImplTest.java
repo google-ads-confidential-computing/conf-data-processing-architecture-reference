@@ -18,11 +18,13 @@ package com.google.scp.operator.cpio.jobclient;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static com.google.scp.shared.clients.configclient.model.ErrorReason.INVALID_PARAMETER_NAME;
 import static com.google.scp.shared.clients.configclient.model.WorkerParameter.JOB_COMPLETION_NOTIFICATIONS_TOPIC_ID;
 import static com.google.scp.shared.clients.configclient.model.WorkerParameter.NOTIFICATIONS_TOPIC_ID;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -41,6 +43,7 @@ import com.google.inject.multibindings.OptionalBinder;
 import com.google.protobuf.util.Durations;
 import com.google.scp.operator.cpio.jobclient.JobClient.JobClientException;
 import com.google.scp.operator.cpio.jobclient.JobHandlerModule.JobClientJobMaxNumAttemptsBinding;
+import com.google.scp.operator.cpio.jobclient.model.ErrorReason;
 import com.google.scp.operator.cpio.jobclient.model.GetJobRequest;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
@@ -54,6 +57,7 @@ import com.google.scp.operator.cpio.lifecycleclient.local.LocalLifecycleModule;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.local.LocalMetricClient;
 import com.google.scp.operator.cpio.notificationclient.NotificationClient;
+import com.google.scp.operator.cpio.notificationclient.NotificationClient.NotificationClientException;
 import com.google.scp.operator.cpio.notificationclient.model.PublishMessageRequest;
 import com.google.scp.operator.protos.shared.backend.CreateJobRequestProto.CreateJobRequest;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
@@ -71,6 +75,7 @@ import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb.JobMetadataDbException;
 import com.google.scp.operator.shared.dao.metadatadb.testing.FakeMetadataDb;
 import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import com.google.scp.shared.clients.configclient.local.Annotations.ParameterValues;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.time.Clock;
@@ -467,6 +472,75 @@ public final class JobClientImplTest {
     verify(notificationClient, times(1)).publishMessage(argument.capture());
     assertThat(argument.getValue().messageBody()).contains(globalTopicId);
     assertThat(argument.getValue().notificationTopic()).isEqualTo(internalTopicId);
+  }
+
+  @Test
+  public void markJobCompleted_marksJobCompletion_sendNotificationFailed() throws Exception {
+    doThrow(new NotificationClientException(null))
+        .when(notificationClient)
+        .publishMessage(org.mockito.Mockito.any(PublishMessageRequest.class));
+
+    String internalTopicId = "internal_topic_id";
+    when(parameterClient.getParameter(JOB_COMPLETION_NOTIFICATIONS_TOPIC_ID.name()))
+        .thenReturn(Optional.of(internalTopicId));
+    String globalTopicId = "global_topic_id";
+    when(parameterClient.getParameter(NOTIFICATIONS_TOPIC_ID.name()))
+        .thenReturn(Optional.of(globalTopicId));
+    jobQueue.setJobQueueItemToBeReceived(Optional.of(baseJobQueueItem));
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(baseJobMetadata));
+
+    Job job = jobClient.getJob(GetJobRequest.builder().build()).get();
+    ResultInfo resultInfo =
+        ResultInfo.newBuilder()
+            .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.ofEpochSecond(1234)))
+            .setReturnCode(ReturnCode.SUCCESS.name())
+            .setReturnMessage("success")
+            .setErrorSummary(ErrorSummary.getDefaultInstance())
+            .build();
+    JobResult result =
+        JobResult.builder().setJobKey(job.jobKey()).setResultInfo(resultInfo).build();
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(jobMetadataDb.getLastJobMetadataUpdated()));
+
+    var exception =
+        assertThrows(JobClientException.class, () -> jobClient.markJobCompleted(result));
+    assertThat(exception.reason).isEqualTo(ErrorReason.JOB_COMPLETION_NOTIFICATION_FAILED);
+
+    verify(parameterClient, times(1)).getParameter(JOB_COMPLETION_NOTIFICATIONS_TOPIC_ID.name());
+    verify(parameterClient, times(1)).getParameter(NOTIFICATIONS_TOPIC_ID.name());
+    var argument = ArgumentCaptor.forClass(PublishMessageRequest.class);
+    verify(notificationClient, times(1)).publishMessage(argument.capture());
+    assertThat(argument.getValue().messageBody()).contains(globalTopicId);
+    assertThat(argument.getValue().notificationTopic()).isEqualTo(internalTopicId);
+  }
+
+  @Test
+  public void markJobCompleted_marksJobCompletion_fetchParameterFailed() throws Exception {
+    doThrow(new ParameterClientException("Invalid parameter name.", INVALID_PARAMETER_NAME))
+        .when(parameterClient)
+        .getParameter(NOTIFICATIONS_TOPIC_ID.name());
+    jobQueue.setJobQueueItemToBeReceived(Optional.of(baseJobQueueItem));
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(baseJobMetadata));
+
+    Job job = jobClient.getJob(GetJobRequest.builder().build()).get();
+    ResultInfo resultInfo =
+        ResultInfo.newBuilder()
+            .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.ofEpochSecond(1234)))
+            .setReturnCode(ReturnCode.SUCCESS.name())
+            .setReturnMessage("success")
+            .setErrorSummary(ErrorSummary.getDefaultInstance())
+            .build();
+    JobResult result =
+        JobResult.builder().setJobKey(job.jobKey()).setResultInfo(resultInfo).build();
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(jobMetadataDb.getLastJobMetadataUpdated()));
+
+    var exception =
+        assertThrows(JobClientException.class, () -> jobClient.markJobCompleted(result));
+    assertThat(exception.reason).isEqualTo(ErrorReason.UNSPECIFIED_ERROR);
+
+    verify(parameterClient, times(0)).getParameter(JOB_COMPLETION_NOTIFICATIONS_TOPIC_ID.name());
+    verify(parameterClient, times(1)).getParameter(NOTIFICATIONS_TOPIC_ID.name());
+    verify(notificationClient, times(0))
+        .publishMessage(org.mockito.Mockito.any(PublishMessageRequest.class));
   }
 
   @Test

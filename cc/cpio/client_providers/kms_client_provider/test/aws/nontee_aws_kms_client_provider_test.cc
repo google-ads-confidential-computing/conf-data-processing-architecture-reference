@@ -63,6 +63,7 @@ using google::scp::core::utils::Base64Decode;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::errors::
     SC_AWS_KMS_CLIENT_PROVIDER_ASSUME_ROLE_NOT_FOUND;
+using google::scp::core::errors::SC_AWS_KMS_CLIENT_PROVIDER_AUDIENCE_NOT_FOUND;
 using google::scp::core::errors::
     SC_AWS_KMS_CLIENT_PROVIDER_CIPHER_TEXT_NOT_FOUND;
 using google::scp::core::errors::SC_AWS_KMS_CLIENT_PROVIDER_KEY_ARN_NOT_FOUND;
@@ -259,6 +260,33 @@ TEST_F(TeeAwsKmsClientProviderTest, SuccessToDecrypt) {
   WaitUntil([&]() { return condition.load(); });
 }
 
+TEST_F(TeeAwsKmsClientProviderTest, SuccessToDecryptWithKeyIdsAndAudience) {
+  ExpectCallGetRoleCredentials();
+  EXPECT_SUCCESS(client_->Init());
+  EXPECT_SUCCESS(client_->Run());
+
+  auto kms_decrpyt_request = make_shared<DecryptRequest>();
+  kms_decrpyt_request->set_kms_region(kRegion);
+  kms_decrpyt_request->set_account_identity(kAssumeRoleArn);
+  kms_decrpyt_request->set_key_resource_name(kKeyArn);
+  kms_decrpyt_request->set_ciphertext(kCiphertext);
+  kms_decrpyt_request->mutable_key_ids()->Add("test1");
+  kms_decrpyt_request->mutable_key_ids()->Add("test2");
+  kms_decrpyt_request->set_target_audience_for_web_identity("testAudience");
+  atomic<bool> condition = false;
+
+  AsyncContext<DecryptRequest, DecryptResponse> context(
+      kms_decrpyt_request,
+      [&](AsyncContext<DecryptRequest, DecryptResponse>& context) {
+        EXPECT_SUCCESS(context.result);
+        EXPECT_EQ(context.response->plaintext(), kPlaintext);
+        condition = true;
+      });
+
+  client_->Decrypt(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
 TEST_F(TeeAwsKmsClientProviderTest, MissingCipherText) {
   EXPECT_SUCCESS(client_->Init());
   EXPECT_SUCCESS(client_->Run());
@@ -298,6 +326,32 @@ TEST_F(TeeAwsKmsClientProviderTest, MissingKeyArn) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(
                         SC_AWS_KMS_CLIENT_PROVIDER_KEY_ARN_NOT_FOUND)));
+      });
+  client_->Decrypt(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST_F(TeeAwsKmsClientProviderTest, MissingAudienceWhileKeyIdsExists) {
+  EXPECT_SUCCESS(client_->Init());
+  EXPECT_SUCCESS(client_->Run());
+
+  auto kms_decrpyt_request = make_shared<DecryptRequest>();
+  kms_decrpyt_request->set_kms_region(kRegion);
+  kms_decrpyt_request->set_account_identity(kAssumeRoleArn);
+  kms_decrpyt_request->set_ciphertext(kCiphertext);
+  kms_decrpyt_request->set_key_resource_name(kKeyArn);
+  kms_decrpyt_request->mutable_key_ids()->Add("test1");
+  kms_decrpyt_request->mutable_key_ids()->Add("test2");
+
+  atomic<bool> condition = false;
+
+  AsyncContext<DecryptRequest, DecryptResponse> context(
+      kms_decrpyt_request,
+      [&](AsyncContext<DecryptRequest, DecryptResponse>& context) {
+        condition = true;
+        EXPECT_THAT(context.result,
+                    ResultIs(FailureExecutionResult(
+                        SC_AWS_KMS_CLIENT_PROVIDER_AUDIENCE_NOT_FOUND)));
       });
   client_->Decrypt(context);
   WaitUntil([&]() { return condition.load(); });

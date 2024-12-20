@@ -66,6 +66,12 @@ class PrivateKeyClientProvider : public PrivateKeyClientProviderInterface {
           cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>&
           context) noexcept override;
 
+  void ListActiveEncryptionKeys(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest,
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>&
+          context) noexcept override;
+
  protected:
   /// The overrall status of the whole ListPrivateKeys call.
   struct ListPrivateKeysStatus {
@@ -121,6 +127,35 @@ class PrivateKeyClientProvider : public PrivateKeyClientProviderInterface {
       std::shared_ptr<ListPrivateKeysStatus> list_keys_status,
       size_t uri_index) noexcept;
 
+  /**
+   * @brief Is called after FetchPrivateKey is completed.
+   *
+   * @param list_active_encryption_keys_context ListActiveEncryptionKeys
+   * context.
+   * @param list_private_key_context ListPrivateKeys context.
+   *
+   */
+  virtual void OnFetchActiveEncryptionKeysCallback(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest,
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>&
+          list_active_encryption_keys_context,
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest,
+          cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>&
+          list_private_keys_context) noexcept;
+
+  /**
+   * @brief Base class for listing private keys.
+   *
+   * @param list_private_keys_context ListPrivateKeys context.
+   *
+   */
+  void ListPrivateKeysBase(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest,
+          cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>&
+          list_private_keys_context) noexcept;
   /**
    * @brief Is called after Decrpyt is completed.
    *

@@ -419,6 +419,48 @@ void ConfigurationFetcher::GetUInt64ByName(
   GetConfiguration(string_context);
 }
 
+ExecutionResultOr<bool> ConfigurationFetcher::GetBoolByNameSync(
+    string parameter_name) noexcept {
+  bool parameter;
+  auto execution_result = SyncUtils::AsyncToSync2<string, bool>(
+      bind(&ConfigurationFetcher::GetBoolByName, this, _1), parameter_name,
+      parameter);
+  RETURN_AND_LOG_IF_FAILURE(execution_result, kConfigurationFetcher, kZeroUuid,
+                            "Failed to GetParameterByName for %s.",
+                            parameter_name.c_str());
+  return parameter;
+}
+
+void ConfigurationFetcher::GetBoolByName(
+    AsyncContext<string, bool> context) noexcept {
+  if (context.request->empty()) {
+    context.result =
+        FailureExecutionResult(SC_CONFIGURATION_FETCHER_INVALID_PARAMETER_NAME);
+    SCP_ERROR_CONTEXT(kConfigurationFetcher, context, context.result,
+                      "Parameter name is empty.");
+    context.Finish();
+    return;
+  }
+  AsyncContext<std::string, std::string> string_context(
+      context.request,
+      [context](
+          core::AsyncContext<std::string, std::string> string_context) mutable {
+        context.result = string_context.result;
+        if (context.result.Successful()) {
+          auto convert_result =
+              ConfigurationFetcherUtils::StringToBool(*string_context.response);
+          if (convert_result.Successful()) {
+            context.response = std::make_shared<bool>(convert_result.release());
+          } else {
+            context.result = convert_result.result();
+          }
+        }
+        context.Finish();
+      });
+
+  GetConfiguration(string_context);
+}
+
 ExecutionResultOr<LogOption> ConfigurationFetcher::GetCommonLogOptionSync(
     GetConfigurationRequest request) noexcept {
   LogOption parameter;

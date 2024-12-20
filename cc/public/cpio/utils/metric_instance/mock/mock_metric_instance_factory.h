@@ -37,22 +37,31 @@ class MockMetricInstanceFactory : public MetricInstanceFactoryInterface {
       return std::make_unique<MockSimpleMetric>();
     });
     ON_CALL(*this, ConstructAggregateMetricInstance(testing::_))
-        .WillByDefault([] { return std::make_unique<MockAggregateMetric>(); });
+        .WillByDefault([] {
+          return std::make_unique<testing::NiceMock<MockAggregateMetric>>();
+        });
     ON_CALL(*this, ConstructAggregateMetricInstance(testing::_, testing::_))
-        .WillByDefault([] { return std::make_unique<MockAggregateMetric>(); });
+        .WillByDefault([] {
+          return std::make_unique<testing::NiceMock<MockAggregateMetric>>();
+        });
     ON_CALL(*this, ConstructAggregateMetricInstance(testing::_, testing::_,
                                                     testing::_))
-        .WillByDefault([] { return std::make_unique<MockAggregateMetric>(); });
+        .WillByDefault([] {
+          return std::make_unique<testing::NiceMock<MockAggregateMetric>>();
+        });
     ON_CALL(*this, ConstructTimeAggregateMetricInstance(testing::_))
-        .WillByDefault(
-            [] { return std::make_unique<MockTimeAggregateMetric>(); });
+        .WillByDefault([] {
+          return std::make_unique<testing::NiceMock<MockTimeAggregateMetric>>();
+        });
     ON_CALL(*this, ConstructTimeAggregateMetricInstance(testing::_, testing::_))
-        .WillByDefault(
-            [] { return std::make_unique<MockTimeAggregateMetric>(); });
+        .WillByDefault([] {
+          return std::make_unique<testing::NiceMock<MockTimeAggregateMetric>>();
+        });
     ON_CALL(*this, ConstructTimeAggregateMetricInstance(testing::_, testing::_,
                                                         testing::_))
-        .WillByDefault(
-            [] { return std::make_unique<MockTimeAggregateMetric>(); });
+        .WillByDefault([] {
+          return std::make_unique<testing::NiceMock<MockTimeAggregateMetric>>();
+        });
   }
 
   MOCK_METHOD(std::unique_ptr<SimpleMetricInterface>,

@@ -381,17 +381,7 @@ public final class JobClientImpl implements JobClient {
       }
 
       // Publish a notification of job completion.
-      try {
-        sendJobCompletedNotification(jobResult);
-      } catch (NotificationClientException
-          | ParameterClientException
-          | InvalidProtocolBufferException e) {
-        logger.log(
-            Level.INFO,
-            String.format(
-                "Failed to publish notification for the completion of jobId '%s'.", jobKey),
-            e);
-      }
+      sendJobCompletedNotification(jobResult);
 
       // Update the metadata db with the result
       JobMetadata updatedMetadata =
@@ -415,53 +405,71 @@ public final class JobClientImpl implements JobClient {
     }
   }
 
-  private void sendJobCompletedNotification(JobResult jobResult)
-      throws NotificationClientException,
-          ParameterClientException,
-          JobClientException,
-          InvalidProtocolBufferException {
+  private void sendJobCompletedNotification(JobResult jobResult) throws JobClientException {
     if (notificationClient.isPresent()) {
-      String jobKey = toJobKeyString(jobResult.jobKey());
-      Optional<String> topicIdInJobResult = jobResult.topicId();
-      Optional<String> globalTopicId = parameterClient.getParameter(NOTIFICATIONS_TOPIC_ID.name());
-      Optional<String> internalTopicId =
-          parameterClient.getParameter(JOB_COMPLETION_NOTIFICATIONS_TOPIC_ID.name());
-      if (!internalTopicId.isPresent()) {
-        if (isTopicIdPresent(topicIdInJobResult) || isTopicIdPresent(globalTopicId)) {
-          recordJobClientError(ErrorReason.JOB_COMPLETION_NOTIFICATIONS_NOT_ENABLED);
-          throw new JobClientException(
-              String.format(
-                  "Try to send out notification for job completion but it is not enabled. JobKey:"
-                      + " '%s'",
-                  jobKey),
-              ErrorReason.JOB_COMPLETION_NOTIFICATIONS_NOT_ENABLED);
+      try {
+        String jobKey = toJobKeyString(jobResult.jobKey());
+        Optional<String> topicIdInJobResult = jobResult.topicId();
+        Optional<String> globalTopicId =
+            parameterClient.getParameter(NOTIFICATIONS_TOPIC_ID.name());
+        Optional<String> internalTopicId =
+            parameterClient.getParameter(JOB_COMPLETION_NOTIFICATIONS_TOPIC_ID.name());
+        if (!internalTopicId.isPresent()) {
+          if (isTopicIdPresent(topicIdInJobResult) || isTopicIdPresent(globalTopicId)) {
+            recordJobClientError(ErrorReason.JOB_COMPLETION_NOTIFICATIONS_NOT_ENABLED);
+            throw new JobClientException(
+                String.format(
+                    "Try to send out notification for job completion but it is not enabled. JobKey:"
+                        + " '%s'",
+                    jobKey),
+                ErrorReason.JOB_COMPLETION_NOTIFICATIONS_NOT_ENABLED);
+          }
+        } else {
+          if (isTopicIdPresent(globalTopicId)) {
+            publishJobCompletionMessage(jobKey, globalTopicId.get(), internalTopicId.get());
+          }
+          if (isTopicIdPresent(topicIdInJobResult)) {
+            publishJobCompletionMessage(jobKey, topicIdInJobResult.get(), internalTopicId.get());
+          }
         }
-      } else {
-        if (isTopicIdPresent(globalTopicId)) {
-          publishJobCompletionMessage(jobKey, globalTopicId.get(), internalTopicId.get());
-        }
-        if (isTopicIdPresent(topicIdInJobResult)) {
-          publishJobCompletionMessage(jobKey, topicIdInJobResult.get(), internalTopicId.get());
-        }
+      } catch (ParameterClientException e) {
+        logger.log(Level.SEVERE, "Failed to read parameter.", e);
+        throw new JobClientException(e, ErrorReason.UNSPECIFIED_ERROR);
       }
     }
   }
 
   private void publishJobCompletionMessage(String jobKey, String topicId, String internalTopicId)
-      throws NotificationClientException, InvalidProtocolBufferException {
+      throws JobClientException {
     var jobNotificationEvent =
         JobNotificationEvent.newBuilder()
             .setJobId(jobKey)
             .setJobStatus(JobStatus.FINISHED)
             .setTopicId(topicId)
             .build();
-    String messageBody = JsonFormat.printer().print(jobNotificationEvent);
+    String messageBody;
+    try {
+      messageBody = JsonFormat.printer().print(jobNotificationEvent);
+    } catch (InvalidProtocolBufferException e) {
+      logger.log(
+          Level.SEVERE,
+          String.format(
+              "Failed to parse job notification event %s", jobNotificationEvent.toString()),
+          e);
+      throw new JobClientException(e, ErrorReason.UNSPECIFIED_ERROR);
+    }
     PublishMessageRequest publishMessageRequest =
         PublishMessageRequest.builder()
             .setNotificationTopic(internalTopicId)
             .setMessageBody(messageBody)
             .build();
-    notificationClient.get().publishMessage(publishMessageRequest);
+    try {
+      notificationClient.get().publishMessage(publishMessageRequest);
+    } catch (NotificationClientException e) {
+      logger.log(
+          Level.SEVERE, String.format("Failed to publish notification for job %s", jobKey), e);
+      throw new JobClientException(e, ErrorReason.JOB_COMPLETION_NOTIFICATION_FAILED);
+    }
   }
 
   private boolean isTopicIdPresent(Optional<String> topicId) {

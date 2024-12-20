@@ -13,7 +13,7 @@
 # limitations under the License.
 
 output "encryption_key_service_cloudfunction_url" {
-  value = google_cloudfunctions2_function.encryption_key_service_cloudfunction.service_config[0].uri
+  value = google_cloudfunctions2_function.encryption_key_service_cloudfunction["0"].service_config[0].uri
 }
 
 output "encryption_key_service_loadbalancer_ip" {

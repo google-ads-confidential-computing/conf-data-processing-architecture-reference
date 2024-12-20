@@ -40,6 +40,10 @@ class NoSQLDatabaseProviderUtils {
   static ExecutionResult FromString(
       const char* value, const size_t length,
       NoSQLDatabaseValidAttributeValueTypes& no_sql_database_valid_attribute) {
+    if (value == nullptr) {
+      return FailureExecutionResult(
+          errors::SC_NO_SQL_DATABASE_INVALID_PARAMETER_TYPE);
+    }
     try {
       if (std::is_same<T, int>::value) {
         no_sql_database_valid_attribute = std::stoi(std::string(value, length));

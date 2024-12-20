@@ -43,6 +43,13 @@ variable "operator_package_bucket_location" {
   type        = string
 }
 
+variable "enable_metric_aggregation" {
+  description = "Enable metric aggregation."
+  type        = bool
+  default     = false
+}
+
+
 ################################################################################
 # Global Alarm Variables.
 ################################################################################

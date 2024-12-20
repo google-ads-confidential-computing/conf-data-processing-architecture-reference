@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.KeyDataProto.KeyData;
+import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.util.Set;
@@ -58,19 +59,23 @@ public final class EncryptionKeyConverter {
                             .build())
                 .iterator());
 
-    return com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto
-        .EncryptionKey.newBuilder()
-        .setKeyId(keyId)
-        .setSetName(encryptionKey.getSetName())
-        .setPublicKey(encryptionKey.getPublicKeysetHandle())
-        .setPublicKeyMaterial(encryptionKey.getPublicKeyMaterial())
-        .setActivationTime(encryptionKey.getActivationTime())
-        .setExpirationTime(encryptionKey.getExpirationTime())
-        .setCreationTime(encryptionKey.getCreationTime())
-        .setTtlTime((long) encryptionKey.getTtlTime())
-        .addAllKeySplitData(keySplitData)
-        .setKeyType(encryptionKey.getEncryptionKeyType().name())
-        .build();
+    EncryptionKeyProto.EncryptionKey.Builder keyBuilder =
+        EncryptionKeyProto.EncryptionKey.newBuilder()
+            .setKeyId(keyId)
+            .setSetName(encryptionKey.getSetName())
+            .setPublicKey(encryptionKey.getPublicKeysetHandle())
+            .setPublicKeyMaterial(encryptionKey.getPublicKeyMaterial())
+            .setActivationTime(encryptionKey.getActivationTime())
+            .setCreationTime(encryptionKey.getCreationTime())
+            .addAllKeySplitData(keySplitData)
+            .setKeyType(encryptionKey.getEncryptionKeyType().name());
+    if (encryptionKey.hasTtlTime()) {
+      keyBuilder.setTtlTime((long) encryptionKey.getTtlTime());
+    }
+    if (encryptionKey.hasExpirationTime()) {
+      keyBuilder.setExpirationTime(encryptionKey.getExpirationTime());
+    }
+    return keyBuilder.build();
   }
 
   /**
@@ -106,10 +111,15 @@ public final class EncryptionKeyConverter {
             .setPublicKeysetHandle(encryptionKey.getPublicKey())
             .setPublicKeyMaterial(encryptionKey.getPublicKeyMaterial())
             .setActivationTime(encryptionKey.getActivationTime())
-            .setExpirationTime(encryptionKey.getExpirationTime())
             .setCreationTime(encryptionKey.getCreationTime())
-            .setTtlTime(Long.valueOf(encryptionKey.getTtlTime()).intValue())
             .addAllKeyData(keyData);
+
+    if (encryptionKey.hasExpirationTime()) {
+      encryptionKeyBuilder.setExpirationTime(encryptionKey.getExpirationTime());
+    }
+    if (encryptionKey.hasTtlTime()) {
+      encryptionKeyBuilder.setTtlTime(Long.valueOf(encryptionKey.getTtlTime()).intValue());
+    }
 
     Set<String> keyTypeValues = ProtoUtil.getValidEnumValues(EncryptionKeyType.class);
     if (keyTypeValues.contains(encryptionKey.getKeyType())) {

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <string>
+#include <vector>
 
 #include <aws/core/Aws.h>
 #include <aws/sts/STSClient.h>
@@ -70,6 +71,7 @@ using std::dynamic_pointer_cast;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
+using std::vector;
 
 namespace {
 constexpr char kResourceNameMock[] =
@@ -81,6 +83,7 @@ constexpr char kAccessKey[] = "access_key";
 constexpr char kTeeSessionToken[] = "tee_session_token";
 constexpr char kSecurityToken[] = "session_token";
 constexpr char kAudience[] = "www.google.com";
+const vector<string> kKeyIds = {"test1", "test2"};
 }  // namespace
 
 namespace google::scp::cpio::client_providers::test {
@@ -247,6 +250,63 @@ TEST_F(AwsRoleCredentialsProviderTest, AssumRoleWithWebIdentitySuccess) {
   auto request = make_shared<GetRoleCredentialsRequest>();
   request->account_identity = make_shared<string>(kAssumeRoleArn);
   request->target_audience_for_web_identity = kAudience;
+  AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
+      get_credentials_context(
+          move(request),
+          [&](AsyncContext<GetRoleCredentialsRequest,
+                           GetRoleCredentialsResponse>& context) {
+            EXPECT_SUCCESS(context.result);
+
+            EXPECT_EQ(*context.response->access_key_id, kKeyId);
+            EXPECT_EQ(*context.response->access_key_secret, kAccessKey);
+            EXPECT_EQ(*context.response->security_token, kSecurityToken);
+
+            finished = true;
+          });
+  role_credentials_provider_->GetRoleCredentials(get_credentials_context);
+
+  WaitUntil([&]() { return finished.load(); });
+}
+
+TEST_F(AwsRoleCredentialsProviderTest,
+       AssumRoleWithWebIdentityAndKeyIdsSuccess) {
+  EXPECT_CALL(*mock_auth_token_provider_, GetTeeSessionToken)
+      .WillOnce([](AsyncContext<GetTeeSessionTokenRequest,
+                                GetSessionTokenResponse>& context) {
+        EXPECT_EQ(*context.request->token_target_audience_uri, kAudience);
+        EXPECT_EQ(*context.request->token_type, "LIMITED_AWS");
+        EXPECT_EQ(*context.request->key_ids, kKeyIds);
+
+        context.result = SuccessExecutionResult();
+        context.response = make_shared<GetSessionTokenResponse>();
+        context.response->session_token = make_shared<string>(kTeeSessionToken);
+        context.Finish();
+      });
+
+  EXPECT_CALL(*mock_sts_client_, AssumeRoleWithWebIdentityAsync)
+      .WillOnce(
+          [&](const AssumeRoleWithWebIdentityRequest& request,
+              const AssumeRoleWithWebIdentityResponseReceivedHandler& handler,
+              const shared_ptr<const AsyncCallerContext>& context) {
+            EXPECT_EQ(request.GetRoleArn(), kAssumeRoleArn);
+            EXPECT_EQ(request.GetRoleSessionName(), kSessionName);
+            EXPECT_EQ(request.GetWebIdentityToken(), kTeeSessionToken);
+
+            AssumeRoleWithWebIdentityResult result;
+            Credentials credentials;
+            credentials.SetAccessKeyId(kKeyId);
+            credentials.SetSecretAccessKey(kAccessKey);
+            credentials.SetSessionToken(kSecurityToken);
+            result.SetCredentials(credentials);
+            AssumeRoleWithWebIdentityOutcome outcome(result);
+            handler(mock_sts_client_.get(), request, outcome, context);
+          });
+
+  atomic<bool> finished = false;
+  auto request = make_shared<GetRoleCredentialsRequest>();
+  request->account_identity = make_shared<string>(kAssumeRoleArn);
+  request->target_audience_for_web_identity = kAudience;
+  request->key_ids = make_shared<vector<string>>(kKeyIds);
   AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
       get_credentials_context(
           move(request),

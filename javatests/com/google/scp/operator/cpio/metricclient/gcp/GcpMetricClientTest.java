@@ -19,18 +19,23 @@ package com.google.scp.operator.cpio.metricclient.gcp;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.cloud.monitoring.v3.MetricServiceClient;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
+import io.opentelemetry.api.metrics.Meter;
 import java.io.IOException;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -38,21 +43,36 @@ import org.mockito.junit.MockitoRule;
 public class GcpMetricClientTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
-  private GcpMetricClient metricClient;
+  GcpMetricClient metricClient;
+
+  @Mock private MetricServiceClient metricServiceClient;
 
   @Mock private ParameterClient parameterClient;
 
+  @Mock private Meter meter;
+
+  private static final String PROJECT_ID = "testProject123";
+  private static final String ENV_NAME = "test-env";
+
   @Before
-  public void setUp() throws IOException {
-    MetricServiceClient msClient = MetricServiceClient.create();
+  public void setUp() throws IOException, ParameterClientException {
+    parameterClient = Mockito.mock((ParameterClient.class));
+    metricServiceClient = Mockito.mock((MetricServiceClient.class));
+    meter = Mockito.mock((Meter.class));
+    when(parameterClient.getEnvironmentName()).thenReturn(Optional.of(ENV_NAME));
     metricClient =
         new GcpMetricClient(
-            msClient, parameterClient, "testProject123", "testInstance123", "testZone123");
+            metricServiceClient,
+            meter,
+            parameterClient,
+            PROJECT_ID,
+            "testInstance123",
+            "testZone123",
+            false);
   }
 
   @Test
-  public void testRecordMetric_ApiCallSuccessButThrowExceptionDueToFakeCall()
-      throws ParameterClientException {
+  public void testRecordMetric_UseMetricServiceClient() throws ParameterClientException {
     // arrange
     CustomMetric metric =
         CustomMetric.builder()
@@ -65,10 +85,39 @@ public class GcpMetricClientTest {
     try {
       metricClient.recordMetric(metric);
     } catch (Exception e) {
-      // assert
-      assertThat(e.getMessage()).contains("io.grpc.StatusRuntimeException");
       // verify
       verify(parameterClient, times(1)).getEnvironmentName();
+    }
+  }
+
+  @Test
+  public void testRecordMetric_UseOpenTelemetry() throws ParameterClientException {
+    // arrange
+    metricClient =
+        new GcpMetricClient(
+            metricServiceClient,
+            meter,
+            parameterClient,
+            PROJECT_ID,
+            "testInstance123",
+            "testZone123",
+            true);
+    var argument = ArgumentCaptor.forClass(String.class);
+    CustomMetric metric =
+        CustomMetric.builder()
+            .setName("testMetric")
+            .setNameSpace("scp/test")
+            .setUnit("Double")
+            .setValue(1.2)
+            .build();
+    // act
+    try {
+      metricClient.recordMetric(metric);
+    } catch (Exception e) {
+      // verify
+      verify(parameterClient, times(1)).getEnvironmentName();
+      verify(meter, times(1)).gaugeBuilder(argument.capture());
+      assertThat(argument.getValue()).isEqualTo("scp/test/test-env/testmetric");
     }
   }
 }

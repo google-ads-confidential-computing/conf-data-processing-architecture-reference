@@ -98,6 +98,9 @@ struct EncryptionKey {
    */
   std::shared_ptr<std::string> resource_name;
 
+  // The key set name for this key.
+  std::shared_ptr<std::string> keyset_name;
+
   /// The type of key, and how it is split.
   EncryptionKeyType encryption_key_type;
 

@@ -34,6 +34,7 @@ cc_library(
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
+        "//cc/public/cpio/interface:cpio_errors",
         "@boost//:asio_ssl",
         "@boost//:system",
         "@com_github_nghttp2_nghttp2//:nghttp2",

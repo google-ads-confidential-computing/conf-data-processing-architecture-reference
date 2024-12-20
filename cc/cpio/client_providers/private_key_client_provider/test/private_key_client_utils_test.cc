@@ -68,6 +68,7 @@ constexpr char kTestKeyId[] = "name_test";
 constexpr char kTestResourceName[] = "encryptionKeys/name_test";
 constexpr char kTestPublicKeysetHandle[] = "publicKeysetHandle";
 constexpr char kTestPublicKeyMaterial[] = "publicKeysetHandle";
+constexpr char kTestKeysetName[] = "keysetName";
 constexpr int kTestExpirationTime = 123456;
 constexpr int kTestCreationTime = 111111;
 constexpr char kTestPublicKeySignature[] = "publicKeySignature";
@@ -93,7 +94,8 @@ constexpr char kSinglePartyKeyMaterialJson[] =
 }  // namespace
 
 namespace google::scp::cpio::client_providers::test {
-shared_ptr<EncryptionKey> CreateEncryptionKeyBase() {
+shared_ptr<EncryptionKey> CreateEncryptionKeyBase(
+    const string& key_set_name = kTestKeysetName) {
   auto encryption_key = make_shared<EncryptionKey>();
   encryption_key->key_id = make_shared<string>(kTestKeyId);
   encryption_key->resource_name = make_shared<string>(kTestResourceName);
@@ -103,12 +105,16 @@ shared_ptr<EncryptionKey> CreateEncryptionKeyBase() {
       make_shared<string>(kTestPublicKeyMaterial);
   encryption_key->public_keyset_handle =
       make_shared<string>(kTestPublicKeysetHandle);
+  if (!key_set_name.empty()) {
+    encryption_key->keyset_name = make_shared<string>(key_set_name);
+  }
   return encryption_key;
 }
 
 shared_ptr<EncryptionKey> CreateEncryptionKey(
-    const string& key_resource_name = kTestKeyEncryptionKeyUriWithPrefix) {
-  auto encryption_key = CreateEncryptionKeyBase();
+    const string& key_resource_name = kTestKeyEncryptionKeyUriWithPrefix,
+    const string& key_set_name = kTestKeysetName) {
+  auto encryption_key = CreateEncryptionKeyBase(key_set_name);
   encryption_key->encryption_key_type =
       EncryptionKeyType::kMultiPartyHybridEvenKeysplit;
   auto key_data = make_shared<KeyData>();
@@ -215,8 +221,9 @@ TEST(PrivateKeyClientUtilsTest,
 
 DecryptResult CreateDecryptResult(
     string plaintext, ExecutionResult decrypt_result = SuccessExecutionResult(),
-    bool multi_party_key = true) {
-  auto encryption_key = CreateEncryptionKey();
+    bool multi_party_key = true, string keyset_name = kTestKeysetName) {
+  auto encryption_key =
+      CreateEncryptionKey(kTestKeyEncryptionKeyUriWithPrefix, keyset_name);
   if (!multi_party_key) {
     encryption_key = CreateSinglePartyEncryptionKey();
   }
@@ -242,6 +249,33 @@ TEST(PrivateKeyClientUtilsTest, ConsturctPrivateKeySuccess) {
   auto private_key = *private_key_or;
   EXPECT_EQ(private_key.key_id(), "name_test");
   EXPECT_EQ(private_key.public_key(), kTestPublicKeyMaterial);
+  EXPECT_EQ(private_key.key_set_name(), kTestKeysetName);
+  ExpectTimestampEquals(private_key.expiration_time(),
+                        TimeUtil::MillisecondsToTimestamp(kTestExpirationTime));
+  ExpectTimestampEquals(private_key.creation_time(),
+                        TimeUtil::MillisecondsToTimestamp(kTestCreationTime));
+  string encoded_key = *Base64Encode("Test message");
+  EXPECT_EQ(private_key.private_key(), encoded_key);
+}
+
+TEST(PrivateKeyClientUtilsTest, ConsturctPrivateKeySuccessWithoutKeysetName) {
+  vector<DecryptResult> decrypt_results;
+  decrypt_results.emplace_back(
+      CreateDecryptResult("\270G\005\364$\253\273\331\353\336\216>",
+                          SuccessExecutionResult(), true, ""));
+  decrypt_results.emplace_back(
+      CreateDecryptResult("\327\002\204 \232\377\002\330\225DB\f",
+                          SuccessExecutionResult(), true, ""));
+  decrypt_results.emplace_back(CreateDecryptResult(
+      "; \362\240\2369\334r\r\373\253W", SuccessExecutionResult(), true, ""));
+
+  auto private_key_or =
+      PrivateKeyClientUtils::ConstructPrivateKey(decrypt_results);
+  EXPECT_SUCCESS(private_key_or);
+  auto private_key = *private_key_or;
+  EXPECT_EQ(private_key.key_id(), "name_test");
+  EXPECT_EQ(private_key.public_key(), kTestPublicKeyMaterial);
+  EXPECT_EQ(private_key.key_set_name(), "");
   ExpectTimestampEquals(private_key.expiration_time(),
                         TimeUtil::MillisecondsToTimestamp(kTestExpirationTime));
   ExpectTimestampEquals(private_key.creation_time(),

@@ -35,8 +35,11 @@ public enum ErrorReason {
   JOB_ERROR_SUMMARY_UPDATE_FAILED,
   // The delay was out of range
   JOB_DELAY_OUT_OF_RANGE,
-  // The job result has topic id but the enable_job_completion_notifications or enable_job_completion_notifications_per_job is not enabled.
+  // The job result has topic id but the enable_job_completion_notifications or
+  // enable_job_completion_notifications_per_job is not enabled.
   JOB_COMPLETION_NOTIFICATIONS_NOT_ENABLED,
+  // Failed to publish job notification
+  JOB_COMPLETION_NOTIFICATION_FAILED,
   // An unspecified fatal error occurred.
   UNSPECIFIED_ERROR
 }

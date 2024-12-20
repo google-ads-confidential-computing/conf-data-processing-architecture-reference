@@ -57,7 +57,7 @@ message EncryptionKey {
    * processing server to determine when clients are expected to stop encrypting
    * new payloads with this key.
    */
-  int64 expiration_time = 6;
+  optional int64 expiration_time = 6;
   /**
    * Timestamp, represented in epoch seconds, when this key is removed from
    * database and will stop being returned to payload processing servers.
@@ -65,7 +65,7 @@ message EncryptionKey {
    * TTL time is represented in seconds, rather than milliseconds, due to
    * DynamoDB TTL requirements.
    */
-  int32 ttl_time = 7;
+  optional int32 ttl_time = 7;
   /** List of KeyData. */
   repeated KeyData key_data = 8;
 }

@@ -45,6 +45,17 @@ class PrivateKeyClientProviderInterface : public core::ServiceInterface {
           cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest,
           cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>&
           context) noexcept = 0;
+  /**
+   * @brief Fetches list of active encryption keys in a keyset.
+   *
+   * @param context context of the operation.
+   * @return ExecutionResult result of the operation.
+   */
+  virtual void ListActiveEncryptionKeys(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest,
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>&
+          context) noexcept = 0;
 };
 
 class PrivateKeyClientProviderFactory {

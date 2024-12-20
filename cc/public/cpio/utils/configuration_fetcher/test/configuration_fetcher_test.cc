@@ -90,6 +90,7 @@ using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
 using std::unordered_set;
+using testing::NiceMock;
 using testing::UnorderedElementsAre;
 
 namespace {
@@ -150,8 +151,8 @@ class MockConfigurationFetcherWithOverrides : public ConfigurationFetcher {
 class ConfigurationFetcherTest : public ScpTestBase {
  protected:
   void SetUp() override {
-    mock_instance_client_ = make_shared<MockInstanceClient>();
-    mock_parameter_client_ = make_shared<MockParameterClient>();
+    mock_instance_client_ = make_shared<NiceMock<MockInstanceClient>>();
+    mock_parameter_client_ = make_shared<NiceMock<MockParameterClient>>();
     EXPECT_SUCCESS(mock_instance_client_->Init());
     EXPECT_SUCCESS(mock_instance_client_->Run());
     EXPECT_SUCCESS(mock_parameter_client_->Init());
@@ -173,7 +174,7 @@ class ConfigurationFetcherTest : public ScpTestBase {
   void ExpectGetCurrentInstanceResourceName(const ExecutionResult& result) {
     EXPECT_CALL(*mock_instance_client_, GetCurrentInstanceResourceName)
         .WillOnce(
-            [&result](
+            [result](  // Avoid capturing reference of reference.
                 AsyncContext<GetCurrentInstanceResourceNameRequest,
                              GetCurrentInstanceResourceNameResponse>& context) {
               context.result = result;
@@ -190,7 +191,8 @@ class ConfigurationFetcherTest : public ScpTestBase {
   void ExpectGetInstanceDetails(const ExecutionResult& result,
                                 const string& label) {
     EXPECT_CALL(*mock_instance_client_, GetInstanceDetailsByResourceName)
-        .WillOnce([&](AsyncContext<GetInstanceDetailsByResourceNameRequest,
+        .WillOnce([result, label](  // Avoid capturing reference of reference.
+                      AsyncContext<GetInstanceDetailsByResourceNameRequest,
                                    GetInstanceDetailsByResourceNameResponse>&
                           context) {
           context.result = result;
@@ -437,6 +439,39 @@ TEST_F(ConfigurationFetcherTest, GetUInt64NameSyncSucceeded) {
 TEST_F(ConfigurationFetcherTest,
        GetUInt64ByNameSyncFailedDueToEmptyParameterName) {
   EXPECT_THAT(fetcher_->GetUInt64ByNameSync(""),
+              ResultIs(FailureExecutionResult(
+                  SC_CONFIGURATION_FETCHER_INVALID_PARAMETER_NAME)));
+}
+
+TEST_F(ConfigurationFetcherTest, GetBoolByNameSucceeded) {
+  auto bool_param_name = "bool_param";
+  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
+  ExpectGetParameter(SuccessExecutionResult(), bool_param_name, "true");
+  atomic<bool> finished = false;
+  auto get_context = AsyncContext<string, bool>(
+      make_shared<string>(bool_param_name),
+      [&finished](AsyncContext<string, bool> context) {
+        EXPECT_SUCCESS(context.result);
+        EXPECT_TRUE(*context.response);
+        finished = true;
+      });
+  fetcher_->GetBoolByName(get_context);
+  WaitUntil([&]() { return finished.load(); });
+}
+
+TEST_F(ConfigurationFetcherTest, GetBoolNameSyncSucceeded) {
+  auto bool_param_name = "bool_param";
+  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
+  ExpectGetParameter(SuccessExecutionResult(), bool_param_name, "true");
+  EXPECT_THAT(fetcher_->GetBoolByNameSync(bool_param_name),
+              IsSuccessfulAndHolds(true));
+}
+
+TEST_F(ConfigurationFetcherTest,
+       GetBoolByNameSyncFailedDueToEmptyParameterName) {
+  EXPECT_THAT(fetcher_->GetBoolByNameSync(""),
               ResultIs(FailureExecutionResult(
                   SC_CONFIGURATION_FETCHER_INVALID_PARAMETER_NAME)));
 }

@@ -27,7 +27,7 @@ public final class Constants {
 
   public static final String SPANNER_TEST_INSTANCE_ID = "test-instance";
 
-  public static final String SPANNER_COORD_B_TEST_INSTANCE_ID = "test-instance-b";
+  public static final String SPANNER_COORD_B_TEST_DB_NAME = "test-database-b";
 
   public static final String SPANNER_TEST_JOB_DB_NAME = "JobTestTable";
 }

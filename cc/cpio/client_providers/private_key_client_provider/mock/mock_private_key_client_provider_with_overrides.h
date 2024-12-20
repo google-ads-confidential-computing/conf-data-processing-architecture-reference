@@ -47,6 +47,15 @@ class MockPrivateKeyClientProviderWithOverrides
           cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>&)>
       list_private_keys_by_ids_mock;
 
+  std::function<core::ExecutionResult(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest,
+          cmrt::sdk::private_key_service::v1::
+              ListActiveEncryptionKeysResponse>&)>
+      list_active_encryption_keys_mock;
+
+  core::ExecutionResult list_active_encryption_keys_results_mock;
+
   core::ExecutionResult list_private_keys_by_ids_result_mock;
 
   void ListPrivateKeys(
@@ -69,6 +78,29 @@ class MockPrivateKeyClientProviderWithOverrides
     }
 
     return PrivateKeyClientProvider::ListPrivateKeys(context);
+  }
+
+  void ListActiveEncryptionKeys(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest,
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>&
+          context) noexcept override {
+    if (list_active_encryption_keys_mock) {
+      return list_active_encryption_keys_mock(context);
+    }
+    if (list_active_encryption_keys_results_mock) {
+      context.result = list_active_encryption_keys_results_mock;
+      if (list_active_encryption_keys_results_mock ==
+          core::SuccessExecutionResult()) {
+        context.response =
+            std::make_shared<cmrt::sdk::private_key_service::v1::
+                                 ListActiveEncryptionKeysResponse>();
+      }
+      context.Finish();
+      return list_active_encryption_keys_results_mock;
+    }
+
+    return PrivateKeyClientProvider::ListActiveEncryptionKeys(context);
   }
 
   std::shared_ptr<MockKmsClientProvider> GetKmsClientProvider() {

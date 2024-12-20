@@ -25,14 +25,13 @@ module "load_balancer_alarms" {
   source = "../shared/loadbalancer_alarms"
   count  = var.alarms_enabled ? 1 : 0
 
-  environment             = var.environment
-  notification_channel_id = var.notification_channel_id
-  load_balancer_name      = google_compute_url_map.get_public_key_loadbalancer.name
-  service_prefix          = "${var.environment} Public Key Service"
+  environment        = var.environment
+  load_balancer_name = google_compute_url_map.get_public_key_loadbalancer.name
+  service_prefix     = "${var.environment} Public Key Service"
 
   eval_period_sec            = var.alarm_eval_period_sec
   duration_sec               = var.alarm_duration_sec
-  error_5xx_threshold        = var.get_public_key_lb_5xx_threshold
+  error_5xx_ratio_threshold  = var.get_public_key_lb_5xx_ratio_threshold
   max_latency_ms             = var.get_public_key_lb_max_latency_ms
   load_balancer_severity_map = var.public_key_alerts_severity_overrides
 }
@@ -41,16 +40,16 @@ module "cloud_function_alarms" {
   source   = "../shared/cloudfunction_alarms"
   for_each = var.alarms_enabled ? google_cloudfunctions2_function.get_public_key_cloudfunction : {}
 
-  environment             = var.environment
-  notification_channel_id = var.notification_channel_id
-  function_name           = each.value.name
-  service_prefix          = "${var.environment}-${each.value.location} Public Key Service"
+  environment    = var.environment
+  function_name  = each.value.name
+  service_prefix = "${var.environment}-${each.value.location} Public Key Service"
 
   eval_period_sec                 = var.alarm_eval_period_sec
   duration_sec                    = var.alarm_duration_sec
-  error_5xx_threshold             = var.get_public_key_cloudfunction_5xx_threshold
+  error_5xx_ratio_threshold       = var.get_public_key_cloudfunction_5xx_ratio_threshold
   execution_time_max              = var.get_public_key_cloudfunction_max_execution_time_max
   execution_error_ratio_threshold = var.get_public_key_cloudfunction_error_ratio_threshold
+  alert_on_memory_usage_threshold = var.cloudfunction_alert_on_memory_usage_threshold
   cloud_function_severity_map     = var.public_key_alerts_severity_overrides
 }
 
@@ -104,11 +103,10 @@ resource "google_monitoring_alert_policy" "get_public_key_empty_key_set_error_al
       }
       aggregations {
         alignment_period   = "${var.alarm_eval_period_sec}s"
-        per_series_aligner = "ALIGN_MAX"
+        per_series_aligner = "ALIGN_SUM"
       }
     }
   }
-  notification_channels = [var.notification_channel_id]
 
   user_labels = {
     environment = var.environment
@@ -137,11 +135,10 @@ resource "google_monitoring_alert_policy" "get_public_key_general_error_alert" {
       }
       aggregations {
         alignment_period   = "${var.alarm_eval_period_sec}s"
-        per_series_aligner = "ALIGN_MAX"
+        per_series_aligner = "ALIGN_SUM"
       }
     }
   }
-  notification_channels = [var.notification_channel_id]
 
   user_labels = {
     environment = var.environment

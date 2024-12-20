@@ -35,6 +35,7 @@ namespace google::scp::cpio::client_providers {
 enum class ListingMethod {
   kByKeyId = 1,
   kByMaxAge = 2,
+  kByActiveKeys = 3,
 };
 
 /// Objects for decrypt result.

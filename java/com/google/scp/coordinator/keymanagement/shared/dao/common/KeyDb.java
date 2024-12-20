@@ -18,8 +18,10 @@ package com.google.scp.coordinator.keymanagement.shared.dao.common;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
+import com.google.scp.shared.api.model.Code;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.stream.Stream;
@@ -98,6 +100,22 @@ public interface KeyDb {
   @Deprecated
   default Stream<EncryptionKey> listRecentKeys(Duration maxAge) throws ServiceException {
     return listRecentKeys(DEFAULT_SET_NAME, maxAge);
+  }
+
+  /**
+   * all recently created {@link EncryptionKey}s up to a specific age.
+   *
+   * @param maxAgeSeconds Maximum age of {@link EncryptionKey} that should be returned.
+   */
+  @Deprecated
+  default Stream<EncryptionKey> listRecentKeys(int maxAgeSeconds) throws ServiceException {
+    if (maxAgeSeconds < 0) {
+      throw new ServiceException(
+          Code.INVALID_ARGUMENT,
+          KeyManagementErrorReason.INVALID_ARGUMENT.name(),
+          String.format("%s should be positive.", maxAgeSeconds));
+    }
+    return listRecentKeys(Duration.ofSeconds(maxAgeSeconds));
   }
 
   /**

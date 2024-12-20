@@ -53,6 +53,13 @@ message DecryptRequest {
   // https://cloud.google.com/iam/docs/workload-identity-federation#pools
   // for details. Required when running code inside TEE.
   string gcp_wip_provider = 5;
+
+  // Key ids for container image signatures.
+  // Only valid when web identity audience is present.
+  repeated string key_ids = 6;
+
+  // Target web identity audience used for fetching role credential.
+  string target_audience_for_web_identity = 7;
 }
 
 // Response of decrypting some text.

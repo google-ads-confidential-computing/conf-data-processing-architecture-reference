@@ -27,7 +27,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.DisableActivationTime;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.KeyService;
 import com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptionKeyRequestProto.GetEncryptionKeyRequest;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto.EncryptionKey;

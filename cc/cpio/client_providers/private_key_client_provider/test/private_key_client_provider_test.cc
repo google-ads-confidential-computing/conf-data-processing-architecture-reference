@@ -40,6 +40,10 @@
 
 using google::cmrt::sdk::kms_service::v1::DecryptRequest;
 using google::cmrt::sdk::kms_service::v1::DecryptResponse;
+using google::cmrt::sdk::private_key_service::v1::
+    ListActiveEncryptionKeysRequest;
+using google::cmrt::sdk::private_key_service::v1::
+    ListActiveEncryptionKeysResponse;
 using google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest;
 using google::cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse;
 using google::cmrt::sdk::private_key_service::v1::PrivateKey;
@@ -228,6 +232,8 @@ class PrivateKeyClientProviderTest : public ScpTestBase {
  protected:
   void SetUp() override {
     list_request_ = make_shared<ListPrivateKeysRequest>();
+    list_active_encryption_keys_request_ =
+        make_shared<ListActiveEncryptionKeysRequest>();
     PrivateKeyEndpoint endpoint_1;
     endpoint_1.set_account_identity(kTestAccountIdentity1);
     endpoint_1.set_gcp_wip_provider(kTestGcpWipProvider1);
@@ -243,9 +249,12 @@ class PrivateKeyClientProviderTest : public ScpTestBase {
     endpoint_3.set_gcp_wip_provider(kTestGcpWipProvider3);
     endpoint_3.set_key_service_region(kTestRegion3);
     endpoint_3.set_endpoint(kTestEndpoint3);
-    *list_request_->add_key_endpoints() = std::move(endpoint_1);
-    *list_request_->add_key_endpoints() = std::move(endpoint_2);
-    *list_request_->add_key_endpoints() = std::move(endpoint_3);
+    *list_request_->add_key_endpoints() = endpoint_1;
+    *list_request_->add_key_endpoints() = endpoint_2;
+    *list_request_->add_key_endpoints() = endpoint_3;
+    *list_active_encryption_keys_request_->add_key_endpoints() = endpoint_1;
+    *list_active_encryption_keys_request_->add_key_endpoints() = endpoint_2;
+    *list_active_encryption_keys_request_->add_key_endpoints() = endpoint_3;
 
     auto private_key_client_options = make_shared<PrivateKeyClientOptions>();
     private_key_client_provider =
@@ -353,6 +362,8 @@ class PrivateKeyClientProviderTest : public ScpTestBase {
   shared_ptr<MockPrivateKeyFetcherProvider> mock_private_key_fetcher;
   shared_ptr<MockKmsClientProvider> mock_kms_client;
   shared_ptr<ListPrivateKeysRequest> list_request_;
+  shared_ptr<ListActiveEncryptionKeysRequest>
+      list_active_encryption_keys_request_;
 };
 
 TEST_F(PrivateKeyClientProviderTest, ListPrivateKeysByIdsSuccess) {
@@ -404,6 +415,68 @@ TEST_F(PrivateKeyClientProviderTest, ListPrivateKeysByAgeSuccess) {
       });
 
   private_key_client_provider->ListPrivateKeys(context);
+  WaitUntil([&]() { return response_count.load() == 1; });
+}
+
+TEST_F(PrivateKeyClientProviderTest, GetActiveEncryptionKeysSuccess) {
+  auto mock_result = SuccessExecutionResult();
+  SetMockKmsClient(mock_result, 9);
+  SetMockPrivateKeyFetchingClientForListByAge(
+      kMockSuccessKeyFetchingResultsForListByAge,
+      CreateSuccessKeyFetchingResponseMapForListByAge(), 3);
+  list_active_encryption_keys_request_->set_key_set_name(kTestKeySetName);
+
+  string encoded_private_key = *Base64Encode(kTestPrivateKey);
+  atomic<size_t> response_count = 0;
+  AsyncContext<ListActiveEncryptionKeysRequest,
+               ListActiveEncryptionKeysResponse>
+      context(list_active_encryption_keys_request_,
+              [&](AsyncContext<ListActiveEncryptionKeysRequest,
+                               ListActiveEncryptionKeysResponse>& context) {
+                auto expected_keys =
+                    BuildExpectedPrivateKeys(encoded_private_key);
+                EXPECT_THAT(context.response->private_keys(),
+                            Pointwise(EqualsProto(), expected_keys));
+                EXPECT_EQ(context.response->key_set_name(), kTestKeySetName);
+                EXPECT_SUCCESS(context.result);
+                response_count.fetch_add(1);
+              });
+  private_key_client_provider->ListActiveEncryptionKeys(context);
+  WaitUntil([&]() { return response_count.load() == 1; });
+}
+
+TEST_F(PrivateKeyClientProviderTest, GetActiveEncryptionKeysFetchKeysFailed) {
+  PrivateKeyFetchingResponse mock_fetching_response;
+  GetPrivateKeyFetchingResponse(mock_fetching_response, 0, 0);
+  EXPECT_CALL(*mock_private_key_fetcher, FetchPrivateKey)
+      .Times(3)
+      .WillRepeatedly([=](AsyncContext<PrivateKeyFetchingRequest,
+                                       PrivateKeyFetchingResponse>& context) {
+        if (*context.request->key_set_name == kTestKeySetName) {
+          context.result = FailureExecutionResult(SC_UNKNOWN);
+          context.Finish();
+          return SuccessExecutionResult();
+        }
+
+        context.response =
+            make_shared<PrivateKeyFetchingResponse>(mock_fetching_response);
+        context.result = SuccessExecutionResult();
+        context.Finish();
+        return context.result;
+      });
+  list_active_encryption_keys_request_->set_key_set_name(kTestKeySetName);
+  atomic<size_t> response_count = 0;
+  AsyncContext<ListActiveEncryptionKeysRequest,
+               ListActiveEncryptionKeysResponse>
+      context(list_active_encryption_keys_request_,
+              [&](AsyncContext<ListActiveEncryptionKeysRequest,
+                               ListActiveEncryptionKeysResponse>& context) {
+                EXPECT_THAT(context.result,
+                            ResultIs(FailureExecutionResult(SC_UNKNOWN)));
+                response_count.fetch_add(1);
+              });
+
+  private_key_client_provider->ListActiveEncryptionKeys(context);
   WaitUntil([&]() { return response_count.load() == 1; });
 }
 

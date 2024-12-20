@@ -30,11 +30,15 @@ import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.exception.SharedErrorReason;
 import com.google.scp.shared.api.model.Code;
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ListRecentEncryptionKeysTask extends ApiTask {
+  private static final Logger logger = LoggerFactory.getLogger(ListRecentEncryptionKeysTask.class);
 
   static final String MAX_AGE_SECONDS_PARAM_NAME = "maxAgeSeconds";
 
@@ -49,7 +53,15 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
   @Override
   protected void execute(Matcher matcher, RequestContext request, ResponseContext response)
       throws ServiceException {
-    Stream<EncryptionKey> keys = keyDb.listRecentKeys(matcher.group("name"), getMaxAage(request));
+    var setName = matcher.group("name");
+    var maxAge = getMaxAage(request);
+    var logMsg = "{"
+        + "\"metricName\":\"list_recent_encrypted_keys/age_in_days\","
+        + "\"setName\":\"" + setName + "\","
+        + "\"days\":" + maxAge.toDays()
+        + "}";
+    logger.info(logMsg);
+    Stream<EncryptionKey> keys = keyDb.listRecentKeys(setName, maxAge);
     response.setBody(
         ListRecentEncryptionKeysResponse.newBuilder()
             .addAllKeys(

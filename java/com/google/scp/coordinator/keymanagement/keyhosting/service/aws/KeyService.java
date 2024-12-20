@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keyhosting.service.common;
+package com.google.scp.coordinator.keymanagement.keyhosting.service.aws;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.scp.coordinator.keymanagement.keyhosting.service.common.KeyHostingUtil.getMaxAgeCacheControlValue;
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
 import static com.google.scp.shared.api.util.RequestUtil.getVariableFromPath;
@@ -28,13 +29,12 @@ import static java.time.Instant.ofEpochMilli;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.service.common.GetActivePublicKeysResponseWithHeaders;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncodedPublicKeyListConverter;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncryptionKeyConverter;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetActivePublicKeysTask;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetEncryptedPrivateKeyTask;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.ListRecentEncryptionKeysTask;
+import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActivePublicKeysResponseProto.GetActivePublicKeysResponse;
-import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptedPrivateKeyRequestProto.GetEncryptedPrivateKeyRequest;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptionKeyRequestProto.GetEncryptionKeyRequest;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysRequestProto.ListRecentEncryptionKeysRequest;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
@@ -48,27 +48,23 @@ import org.slf4j.LoggerFactory;
 public final class KeyService {
 
   private static final String KEY_ID_FIELD = "keyId";
-  private static final String PRIVATE_KEY_RESOURCE_PATTERN = "privateKeys/:" + KEY_ID_FIELD;
   private static final String ENCRYPTION_KEY_RESOURCE_PATTERN = "encryptionKeys/:" + KEY_ID_FIELD;
 
   private final Logger logger = LoggerFactory.getLogger(KeyService.class);
 
-  private final GetActivePublicKeysTask getActivePublicKeysTask;
-  private final GetEncryptedPrivateKeyTask getEncryptedPrivateKeyTask;
-  private final ListRecentEncryptionKeysTask listRecentEncryptionKeysTask;
+  private final KeyDb keyDb;
+  private final int keyLimit;
   private final EncodedPublicKeyListConverter encodedPublicKeyListConverter;
   private final Long cacheControlMaximum;
 
   @Inject
   public KeyService(
-      GetActivePublicKeysTask getActivePublicKeysTask,
-      GetEncryptedPrivateKeyTask getEncryptedPrivateKeyTask,
-      ListRecentEncryptionKeysTask listRecentEncryptionKeysTask,
+      KeyDb keyDb,
+      @KeyLimit Integer keyLimit,
       EncodedPublicKeyListConverter encodedPublicKeyListConverter,
       @CacheControlMaximum Long cacheControlMaximum) {
-    this.getActivePublicKeysTask = getActivePublicKeysTask;
-    this.getEncryptedPrivateKeyTask = getEncryptedPrivateKeyTask;
-    this.listRecentEncryptionKeysTask = listRecentEncryptionKeysTask;
+    this.keyDb = keyDb;
+    this.keyLimit = keyLimit;
     this.encodedPublicKeyListConverter = encodedPublicKeyListConverter;
     this.cacheControlMaximum = cacheControlMaximum;
   }
@@ -79,7 +75,8 @@ public final class KeyService {
    */
   public GetActivePublicKeysResponseWithHeaders getActivePublicKeys() throws ServiceException {
     try {
-      ImmutableList<EncryptionKey> keys = getActivePublicKeysTask.getActivePublicKeys();
+      ImmutableList<EncryptionKey> keys =
+          keyDb.getActiveKeysWithPublicKey(DEFAULT_SET_NAME, keyLimit);
       GetActivePublicKeysResponse.Builder responseBuilder =
           GetActivePublicKeysResponse.newBuilder()
               .addAllKeys(encodedPublicKeyListConverter.convert(keys));
@@ -111,7 +108,7 @@ public final class KeyService {
    */
   public ListRecentEncryptionKeysResponse listRecentKeys(ListRecentEncryptionKeysRequest request)
       throws ServiceException {
-    Stream<EncryptionKey> keys = listRecentEncryptionKeysTask.execute(request.getMaxAgeSeconds());
+    Stream<EncryptionKey> keys = keyDb.listRecentKeys(request.getMaxAgeSeconds());
     return ListRecentEncryptionKeysResponse.newBuilder()
         .addAllKeys(keys.map(EncryptionKeyConverter::toApiEncryptionKey).collect(toImmutableList()))
         .build();
@@ -121,8 +118,7 @@ public final class KeyService {
   public com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto
           .EncryptionKey
       getEncryptionKey(GetEncryptionKeyRequest request) throws ServiceException {
-    return EncryptionKeyConverter.toApiEncryptionKey(
-        getEncryptedPrivateKeyTask.getEncryptedPrivateKey(getEncryptionKeyId(request)));
+    return EncryptionKeyConverter.toApiEncryptionKey(keyDb.getKey(getEncryptionKeyId(request)));
   }
 
   /**
@@ -136,12 +132,6 @@ public final class KeyService {
   private static Long calculateCacheControlValue(Long expirationTime, Long maximumTime) {
     long remainingSeconds = between(now(), ofEpochMilli(expirationTime)).toSeconds();
     return Math.min(remainingSeconds, maximumTime);
-  }
-
-  /** Extracts the private key ID from the resource name in the request. */
-  private static String getPrivateKeyId(GetEncryptedPrivateKeyRequest request)
-      throws ServiceException {
-    return getVariableFromPath(PRIVATE_KEY_RESOURCE_PATTERN, request.getName(), KEY_ID_FIELD);
   }
 
   /** Extracts the encryption key ID from the resource name in the request. */

@@ -16,8 +16,6 @@ syntax = "proto3";
 
 package google.scp.coordinator.protos.keymanagement.shared.backend;
 
-import "coordinator/protos/keymanagement/shared/backend/encryption_key_status.proto";
-
 option java_package = "com.google.scp.coordinator.protos.keymanagement.shared.backend";
 option java_outer_classname = "DataKeyProto";
 

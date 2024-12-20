@@ -438,7 +438,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, ParseMultiplePrivateKeysSuccess) {
 }
 
 TEST_F(PrivateKeyFetchingClientUtilsTest,
-       ParsePrivateKeyWithoutPublicKeySuccess) {
+       ParsePrivateKeyWithoutPublicKeySuccessWithoutSetName) {
   string bytes_str = R"({
         "name": "encryptionKeys/123456",
         "encryptionKeyType": "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT",
@@ -468,6 +468,55 @@ TEST_F(PrivateKeyFetchingClientUtilsTest,
   EXPECT_EQ(response.encryption_keys.size(), 1);
   const auto& encryption_key = *response.encryption_keys.begin();
   EXPECT_EQ(*encryption_key->key_id, "123456");
+  EXPECT_EQ(*encryption_key->resource_name, "encryptionKeys/123456");
+  EXPECT_EQ(encryption_key->encryption_key_type,
+            EncryptionKeyType::kMultiPartyHybridEvenKeysplit);
+  EXPECT_EQ(*encryption_key->public_keyset_handle, "");
+  EXPECT_EQ(*encryption_key->public_key_material, "");
+  EXPECT_EQ(encryption_key->expiration_time_in_ms, 1669943990485);
+  EXPECT_EQ(encryption_key->creation_time_in_ms, 1669252790485);
+  EXPECT_EQ(*encryption_key->key_data[0]->key_encryption_key_uri,
+            "aws-kms://arn:aws:kms:us-east-1:1234567:key");
+  EXPECT_EQ(*encryption_key->key_data[0]->public_key_signature, "");
+  EXPECT_EQ(*encryption_key->key_data[0]->key_material, "test=test");
+  EXPECT_EQ(*encryption_key->key_data[1]->key_encryption_key_uri,
+            "aws-kms://arn:aws:kms:us-east-1:12345:key");
+  EXPECT_EQ(*encryption_key->key_data[1]->public_key_signature, "");
+  EXPECT_EQ(*encryption_key->key_data[1]->key_material, "");
+}
+
+TEST_F(PrivateKeyFetchingClientUtilsTest,
+       ParsePrivateKeyWithoutPublicKeySuccessWithSetName) {
+  string bytes_str = R"({
+        "name": "encryptionKeys/123456",
+        "encryptionKeyType": "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT",
+        "publicKeysetHandle": "",
+        "publicKeyMaterial": "",
+        "creationTime": "1669252790485",
+        "expirationTime": "1669943990485",
+        "ttlTime": 0,
+        "setName": "testSetName",
+        "keyData": [
+            {
+                "publicKeySignature": "",
+                "keyEncryptionKeyUri": "aws-kms://arn:aws:kms:us-east-1:1234567:key",
+                "keyMaterial": "test=test"
+            },
+            {
+                "publicKeySignature": "",
+                "keyEncryptionKeyUri": "aws-kms://arn:aws:kms:us-east-1:12345:key",
+                "keyMaterial": ""
+            }
+        ]
+    })";
+  PrivateKeyFetchingResponse response;
+  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+      BytesBuffer(bytes_str), response);
+
+  EXPECT_SUCCESS(result);
+  EXPECT_EQ(response.encryption_keys.size(), 1);
+  const auto& encryption_key = *response.encryption_keys.begin();
+  EXPECT_EQ(*encryption_key->keyset_name, "testSetName");
   EXPECT_EQ(*encryption_key->resource_name, "encryptionKeys/123456");
   EXPECT_EQ(encryption_key->encryption_key_type,
             EncryptionKeyType::kMultiPartyHybridEvenKeysplit);

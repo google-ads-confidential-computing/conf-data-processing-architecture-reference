@@ -44,5 +44,13 @@ class MockPrivateKeyClientProvider : public PrivateKeyClientProviderInterface {
           cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest,
           cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>&)),
       (override, noexcept));
+
+  MOCK_METHOD(
+      void, ListActiveEncryptionKeys,
+      ((core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest,
+          cmrt::sdk::private_key_service::v1::
+              ListActiveEncryptionKeysResponse>&)),
+      (override, noexcept));
 };
 }  // namespace google::scp::cpio::client_providers::mock

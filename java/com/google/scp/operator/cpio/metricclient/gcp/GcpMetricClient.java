@@ -30,6 +30,7 @@ import com.google.monitoring.v3.TimeSeries;
 import com.google.monitoring.v3.TypedValue;
 import com.google.protobuf.util.Timestamps;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
+import com.google.scp.operator.cpio.metricclient.gcp.Annotations.EnableMetricAggregation;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
@@ -37,6 +38,10 @@ import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpInstanceId;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectId;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpZone;
 import io.grpc.StatusRuntimeException;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
+import io.opentelemetry.api.metrics.Meter;
+import io.opentelemetry.api.metrics.ObservableDoubleGauge;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -55,79 +60,106 @@ public final class GcpMetricClient implements MetricClient {
   private final String projectId;
   private final ParameterClient parameterClient;
   private final MetricServiceClient msClient;
+  private final Meter meter;
+  private final Boolean enableMetricAggregation;
 
   @Inject
   GcpMetricClient(
       MetricServiceClient msClient,
+      Meter meter,
       ParameterClient parameterClient,
       @GcpProjectId String projectId,
       @GcpInstanceId String instanceId,
-      @GcpZone String zone) {
+      @GcpZone String zone,
+      @EnableMetricAggregation Boolean enableMetricAggregation) {
     this.msClient = msClient;
+    this.meter = meter;
     this.parameterClient = parameterClient;
     this.instanceId = instanceId;
     this.zone = zone;
     this.projectId = projectId;
+    this.enableMetricAggregation = enableMetricAggregation;
   }
 
   @Override
   public void recordMetric(CustomMetric metric) throws MetricClientException {
     try {
-      ProjectName projectName = ProjectName.of(projectId);
-      TimeInterval interval =
-          TimeInterval.newBuilder()
-              .setEndTime(Timestamps.fromMillis(System.currentTimeMillis()))
-              .build();
-      TypedValue value = TypedValue.newBuilder().setDoubleValue(metric.value()).build();
-      Point point = Point.newBuilder().setInterval(interval).setValue(value).build();
-
-      List<Point> pointList = new ArrayList<>();
-      pointList.add(point);
-
-      Map<String, String> metricLabels = new HashMap<String, String>(metric.labels());
-      String metricType =
-          String.format(
-              "custom.googleapis.com/%s/%s/%s",
-              metric.nameSpace(),
-              this.getEnvironmentName(),
-              metric.name().replace(' ', '_').toLowerCase());
-      Metric gcpMetric = Metric.newBuilder().setType(metricType).putAllLabels(metricLabels).build();
-      Map<String, String> resourceLabels = new HashMap<>();
-      resourceLabels.put("instance_id", instanceId);
-      resourceLabels.put("zone", zone);
-      resourceLabels.put("project_id", projectId);
-
-      MonitoredResource resource =
-          MonitoredResource.newBuilder()
-              .setType("gce_instance")
-              .putAllLabels(resourceLabels)
-              .build();
-
-      // Prepares the time series request
-      TimeSeries timeSeries =
-          TimeSeries.newBuilder()
-              .setMetric(gcpMetric)
-              .setResource(resource)
-              .addAllPoints(pointList)
-              .setValueType(ValueType.DOUBLE)
-              .setMetricKind(MetricKind.GAUGE)
-              .build();
-
-      List<TimeSeries> timeSeriesList = new ArrayList<>();
-      timeSeriesList.add(timeSeries);
-
-      // Writes time series data
-      CreateTimeSeriesRequest request =
-          CreateTimeSeriesRequest.newBuilder()
-              .setName(projectName.toString())
-              .addAllTimeSeries(timeSeriesList)
-              .build();
-
-      // write metric
-      msClient.createTimeSeries(request);
+      if (enableMetricAggregation) {
+        writeMetricThroughOpenTelemetryExporter(metric);
+      } else {
+        writeMetricThroughMetricServiceClient(metric);
+      }
     } catch (ApiException | StatusRuntimeException e) {
       throw new MetricClientException(e);
     }
+  }
+
+  private void writeMetricThroughOpenTelemetryExporter(CustomMetric metric) {
+    String metricName = getMetricName(metric);
+    ObservableDoubleGauge asyncGauge =
+        meter
+            .gaugeBuilder(metricName)
+            .setUnit(metric.unit())
+            .buildWithCallback(
+                observableMeasurement -> {
+                  double currentValue = metric.value();
+                  AttributesBuilder attributesBuilder = Attributes.builder();
+                  metric.labels().forEach((key, value) -> attributesBuilder.put(key, value));
+                  observableMeasurement.record(currentValue, attributesBuilder.build());
+                });
+  }
+
+  private void writeMetricThroughMetricServiceClient(CustomMetric metric)
+      throws ApiException, StatusRuntimeException {
+    ProjectName projectName = ProjectName.of(projectId);
+    TimeInterval interval =
+        TimeInterval.newBuilder()
+            .setEndTime(Timestamps.fromMillis(System.currentTimeMillis()))
+            .build();
+    TypedValue value = TypedValue.newBuilder().setDoubleValue(metric.value()).build();
+    Point point = Point.newBuilder().setInterval(interval).setValue(value).build();
+
+    List<Point> pointList = new ArrayList<>();
+    pointList.add(point);
+
+    Map<String, String> metricLabels = new HashMap<String, String>(metric.labels());
+    String metricType =
+        String.format(
+            "custom.googleapis.com/%s/%s/%s",
+            metric.nameSpace(),
+            this.getEnvironmentName(),
+            metric.name().replace(' ', '_').toLowerCase());
+    Metric gcpMetric = Metric.newBuilder().setType(metricType).putAllLabels(metricLabels).build();
+    Map<String, String> resourceLabels = new HashMap<>();
+    resourceLabels.put("instance_id", instanceId);
+    resourceLabels.put("zone", zone);
+    resourceLabels.put("project_id", projectId);
+
+    MonitoredResource resource =
+        MonitoredResource.newBuilder().setType("gce_instance").putAllLabels(resourceLabels).build();
+
+    // Prepares the time series request
+    TimeSeries timeSeries =
+        TimeSeries.newBuilder()
+            .setMetric(gcpMetric)
+            .setResource(resource)
+            .addAllPoints(pointList)
+            .setValueType(ValueType.DOUBLE)
+            .setMetricKind(MetricKind.GAUGE)
+            .build();
+
+    List<TimeSeries> timeSeriesList = new ArrayList<>();
+    timeSeriesList.add(timeSeries);
+
+    // Writes time series data
+    CreateTimeSeriesRequest request =
+        CreateTimeSeriesRequest.newBuilder()
+            .setName(projectName.toString())
+            .addAllTimeSeries(timeSeriesList)
+            .build();
+
+    // write metric
+    msClient.createTimeSeries(request);
   }
 
   private String getEnvironmentName() {
@@ -143,5 +175,13 @@ public final class GcpMetricClient implements MetricClient {
               "Defaulting to environment name %s for custom monitoring metrics.", DEFAULT_ENV));
     }
     return environment.orElse(DEFAULT_ENV);
+  }
+
+  private String getMetricName(CustomMetric metric) {
+    return String.format(
+        "%s/%s/%s",
+        metric.nameSpace(),
+        this.getEnvironmentName(),
+        metric.name().replace(' ', '_').toLowerCase());
   }
 }

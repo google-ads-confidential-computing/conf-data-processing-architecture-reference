@@ -155,6 +155,13 @@ module "notifications_topic_id" {
   parameter_value = module.notifications[0].notifications_pubsub_topic_id
 }
 
+module "enable_metric_aggregation" {
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = "ENABLE_METRIC_AGGREGATION"
+  parameter_value = var.enable_metric_aggregation
+}
+
 module "frontend" {
   source           = "../../modules/frontend"
   environment      = var.environment

@@ -174,6 +174,7 @@ public class EncryptionKeyConverterTest {
     String path = "encryptionKeys/abc";
     String publicKey = "public-key";
     String publicKeyMaterial = "public key material";
+    String setName = "testSetName";
     String encryptionKeyUri = UUID.randomUUID().toString();
     long activationTime = 12345;
     long creationTime = 54321;
@@ -192,6 +193,7 @@ public class EncryptionKeyConverterTest {
             .setKeyId(keyId)
             .setPublicKey(publicKey)
             .setPublicKeyMaterial(publicKeyMaterial)
+            .setSetName(setName)
             .setKeyEncryptionKeyUri(encryptionKeyUri)
             // Need to clear before adding, otherwise there will be duplicate KeySplitData elements.
             .clearKeySplitData()
@@ -208,6 +210,7 @@ public class EncryptionKeyConverterTest {
     assertThat(encryptionKey.getName()).isEqualTo(path);
     assertThat(encryptionKey.getPublicKeysetHandle()).isEqualTo(publicKey);
     assertThat(encryptionKey.getPublicKeyMaterial()).isEqualTo(publicKeyMaterial);
+    assertThat(encryptionKey.getSetName()).isEqualTo(setName);
     assertThat(encryptionKey.getActivationTime()).isEqualTo(activationTime);
     assertThat(encryptionKey.getCreationTime()).isEqualTo(creationTime);
     assertThat(encryptionKey.getExpirationTime()).isEqualTo(expirationTime);

@@ -17,6 +17,30 @@ load("@rules_java//java:defs.bzl", "java_test")
 package(default_visibility = ["//visibility:public"])
 
 java_test(
+    name = "KeyServiceTest",
+    srcs = [
+        "KeyServiceTest.java",
+    ],
+    deps = [
+        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
+        "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
+        "//coordinator/protos/keymanagement/shared/backend:java_proto",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:key_service",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
+        "//java/com/google/scp/coordinator/keymanagement/shared/model",
+        "//java/com/google/scp/shared/api/exception",
+        "//java/com/google/scp/shared/api/model",
+        "//java/external:acai",
+        "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils",
+    ],
+)
+
+java_test(
     name = "PublicKeyApiGatewayHandlerTest",
     srcs = [
         "PublicKeyApiGatewayHandlerTest.java",
@@ -25,6 +49,7 @@ java_test(
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:PublicKeyApiGatewayHandler",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:key_service",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
@@ -54,6 +79,7 @@ java_test(
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:GetEncryptionKeyApiGatewayHandler",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:key_service",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
@@ -149,6 +175,7 @@ java_test(
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:ListRecentEncryptionKeysApiGatewayHandler",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/aws:key_service",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
         "//java/com/google/scp/shared/api/model",

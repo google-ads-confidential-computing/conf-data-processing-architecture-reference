@@ -85,6 +85,7 @@ constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
 constexpr char kKeySetNameSuffix[] = "/sets";
 constexpr char kListKeysByTimeUri[] = ":recent";
 constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
+constexpr char kActiveKeysSuffix[] = "activeKeys";
 }  // namespace
 
 namespace google::scp::cpio::client_providers::test {
@@ -279,6 +280,55 @@ TEST_F(GcpPrivateKeyFetcherProviderTest,
         EXPECT_EQ(*signed_request_.path, uri);
         EXPECT_EQ(*signed_request_.query,
                   absl::StrCat(kMaxAgeSecondsQueryParameter, "1000000"));
+        condition = true;
+        return SuccessExecutionResult();
+      });
+
+  gcp_private_key_fetcher_provider_->SignHttpRequest(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST_F(GcpPrivateKeyFetcherProviderTest,
+       SignHttpRequestForActiveEncryptionKeysWithVersionSuffix) {
+  atomic<bool> condition = false;
+
+  EXPECT_CALL(*credentials_provider_,
+              GetSessionTokenForTargetAudience(
+                  TargetAudienceUriEquals(kPrivateKeyCloudfunctionUri)))
+      .WillOnce([=](AsyncContext<GetSessionTokenForTargetAudienceRequest,
+                                 GetSessionTokenResponse>& context) {
+        context.response = make_shared<GetSessionTokenResponse>();
+        context.response->session_token =
+            make_shared<string>(kSessionTokenMock);
+        context.result = SuccessExecutionResult();
+        context.Finish();
+      });
+
+  auto endpoint = make_shared<PrivateKeyEndpoint>();
+  endpoint->set_endpoint(kPrivateKeyBaseUriWithVersionSuffix);
+  endpoint->set_key_service_region(kRegion);
+  endpoint->set_account_identity(kAccountIdentity);
+  endpoint->set_gcp_cloud_function_url(kPrivateKeyCloudfunctionUri);
+  request_->key_endpoint = move(endpoint);
+  request_->key_id = nullptr;
+  request_->key_set_name = make_shared<string>(kKeySetName);
+  request_->max_age_seconds = 0;
+
+  AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
+      request_,
+      [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
+        EXPECT_SUCCESS(context.result);
+        const auto& signed_request_ = *context.response;
+
+        EXPECT_EQ(signed_request_.method, HttpMethod::GET);
+        EXPECT_THAT(signed_request_.headers,
+                    Pointee(UnorderedElementsAre(Pair(
+                        kAuthorizationHeaderKey,
+                        absl::StrCat(kBearerTokenPrefix, kSessionTokenMock)))));
+        string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberBetaSuffix,
+                                  kEncryptionKeyUrlSuffix, kKeySetNameSuffix,
+                                  "/", kKeySetName, "/", kActiveKeysSuffix);
+        EXPECT_EQ(*signed_request_.path, uri);
         condition = true;
         return SuccessExecutionResult();
       });

@@ -8,6 +8,7 @@ bazel-*
 .idea/
 *.iml
 *~
+tf_dev_test_env/
 .terraform
 # NOTE: .terraform.lock.hcl should be checked into git
 # https://www.terraform.io/docs/language/dependency-lock.html#lock-file-location

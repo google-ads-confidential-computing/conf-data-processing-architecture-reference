@@ -389,7 +389,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       String keyEncryptionKeyUri,
       Optional<PublicKeySign> signatureKey)
       throws ServiceException, IOException {
-
+    // LINT.IfChange
     EncryptionKey.Builder unsignedEncryptionKey =
         EncryptionKey.newBuilder()
             .setKeyId(keyId)
@@ -398,6 +398,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             .setCreationTime(creationTime.toEpochMilli())
             .setActivationTime(activation.toEpochMilli())
             .setKeyType(EncryptionKeyType.MULTI_PARTY_HYBRID_EVEN_KEYSPLIT.name());
+    // LINT.ThenChange(/java/com/google/scp/coordinator/keymanagement/keystorage/converters/EncryptionKeyConverter.java)
 
     if (publicKeysetHandle.isPresent()) {
       unsignedEncryptionKey

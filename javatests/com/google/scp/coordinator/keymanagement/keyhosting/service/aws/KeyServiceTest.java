@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keyhosting.service.common;
+package com.google.scp.coordinator.keymanagement.keyhosting.service.aws;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
@@ -34,6 +34,8 @@ import com.google.acai.Acai;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.inject.Inject;
+import com.google.scp.coordinator.keymanagement.keyhosting.service.aws.KeyService;
+import com.google.scp.coordinator.keymanagement.keyhosting.service.common.GetActivePublicKeysResponseWithHeaders;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;

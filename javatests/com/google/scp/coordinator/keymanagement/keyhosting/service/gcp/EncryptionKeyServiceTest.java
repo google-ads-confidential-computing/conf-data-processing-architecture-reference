@@ -33,6 +33,7 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbTestModule;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
+import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActiveEncryptionKeysResponseProto.GetActiveEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -175,6 +176,18 @@ public final class EncryptionKeyServiceTest {
   }
 
   @Test
+  public void v1betaGetActiveEncryptionKeys_specificSetName_returnsExpected() throws Exception {
+    // Given
+    String endpoint = "/v1beta/sets/test-set/activeKeys";
+
+    // When
+    GetActiveEncryptionKeysResponse keys = getActiveEncryptionKeys(endpoint);
+
+    // Then
+    assertThat(keys.getKeysList()).isNotEmpty();
+  }
+
+  @Test
   public void v1betaListRecentEncryptionKeys_missingMaxAgeSeconds_returnsExpectedError()
       throws Exception {
     // Given
@@ -220,6 +233,25 @@ public final class EncryptionKeyServiceTest {
       String body = EntityUtils.toString(response.getEntity());
       ListRecentEncryptionKeysResponse.Builder keysBuilder =
           ListRecentEncryptionKeysResponse.newBuilder();
+      JsonFormat.parser().merge(body, keysBuilder);
+      return keysBuilder.build();
+    }
+  }
+
+  private GetActiveEncryptionKeysResponse getActiveEncryptionKeys(String endpoint)
+      throws IOException {
+    HttpClientBuilder builder =
+        HttpClients.custom()
+            .setDefaultRequestConfig(
+                // Prevent HTTP client library from stripping empty path params.
+                RequestConfig.custom().setNormalizeUri(false).build());
+    try (CloseableHttpClient client = builder.build()) {
+      HttpResponse response =
+          client.execute(
+              new HttpGet(String.format("http://%s%s", container.getEmulatorEndpoint(), endpoint)));
+      String body = EntityUtils.toString(response.getEntity());
+      GetActiveEncryptionKeysResponse.Builder keysBuilder =
+          GetActiveEncryptionKeysResponse.newBuilder();
       JsonFormat.parser().merge(body, keysBuilder);
       return keysBuilder.build();
     }

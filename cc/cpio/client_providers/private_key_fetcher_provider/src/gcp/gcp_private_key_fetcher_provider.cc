@@ -54,6 +54,7 @@ constexpr char kBearerTokenPrefix[] = "Bearer ";
 constexpr char kVersionNumberBetaSuffix[] = "/v1beta";
 constexpr char kVersionNumberSuffix[] = "/v1";
 constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
+constexpr char kActiveEncryptionKeyUrlSuffix[] = "/activeKeys";
 constexpr char kKeySetName[] = "sets";
 constexpr char kListKeysByTimeUri[] = ":recent";
 constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
@@ -137,7 +138,14 @@ shared_ptr<HttpRequest> GcpPrivateKeyFetcherProvider::CreateHttpRequest(
     http_request->path = make_shared<Uri>(base_uri);
     return http_request;
   }
-
+  if ((!request.key_id || request.key_id->empty()) &&
+      request.max_age_seconds == 0) {
+    base_uri = absl::StrCat(
+        endpoint, kVersionNumberBetaSuffix, kEncryptionKeyUrlSuffix, "/",
+        kKeySetName, "/", *request.key_set_name, kActiveEncryptionKeyUrlSuffix);
+    http_request->path = make_shared<Uri>(base_uri);
+    return http_request;
+  }
   base_uri =
       absl::StrCat(endpoint, kVersionNumberBetaSuffix, "/", kKeySetName, "/");
   if (request.key_set_name) {

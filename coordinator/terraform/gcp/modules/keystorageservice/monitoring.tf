@@ -20,13 +20,12 @@ module "keystorageservice_loadbalancer_alarms" {
   source = "../shared/loadbalancer_alarms"
   count  = var.alarms_enabled ? 1 : 0
 
-  environment             = var.environment
-  notification_channel_id = var.notification_channel_id
-  load_balancer_name      = var.load_balancer_name
-  service_prefix          = "${var.environment} Key Storage Service"
+  environment        = var.environment
+  load_balancer_name = var.load_balancer_name
+  service_prefix     = "${var.environment} Key Storage Service"
 
   eval_period_sec            = var.alarm_eval_period_sec
-  error_5xx_threshold        = var.lb_5xx_threshold
+  error_5xx_ratio_threshold  = var.lb_5xx_ratio_threshold
   max_latency_ms             = var.lb_max_latency_ms
   duration_sec               = var.alarm_duration_sec
   load_balancer_severity_map = var.key_storage_severity_map
@@ -36,15 +35,15 @@ module "keystorageservice_cloudfunction_alarms" {
   source = "../shared/cloudfunction_alarms"
   count  = var.alarms_enabled ? 1 : 0
 
-  environment             = var.environment
-  notification_channel_id = var.notification_channel_id
-  function_name           = local.function_name
-  service_prefix          = "${var.environment} Key Storage Service"
+  environment    = var.environment
+  function_name  = local.function_name
+  service_prefix = "${var.environment} Key Storage Service"
 
   eval_period_sec                 = var.alarm_eval_period_sec
-  error_5xx_threshold             = var.cloudfunction_5xx_threshold
+  error_5xx_ratio_threshold       = var.cloudfunction_5xx_ratio_threshold
   execution_time_max              = var.cloudfunction_max_execution_time_max
   execution_error_ratio_threshold = var.cloudfunction_error_ratio_threshold
+  alert_on_memory_usage_threshold = var.cloudfunction_alert_on_memory_usage_threshold
   duration_sec                    = var.alarm_duration_sec
   cloud_function_severity_map     = var.key_storage_severity_map
 }

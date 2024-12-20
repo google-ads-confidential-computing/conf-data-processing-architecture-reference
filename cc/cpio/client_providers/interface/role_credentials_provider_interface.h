@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "core/interface/async_context.h"
 #include "core/interface/async_executor_interface.h"
@@ -44,6 +45,7 @@ struct GetRoleCredentialsRequest {
   // If present, fetch the role credentials with web identity in the http
   // request.
   std::string target_audience_for_web_identity;
+  std::shared_ptr<std::vector<std::string>> key_ids;
 };
 
 /// Represents the get credentials response object.

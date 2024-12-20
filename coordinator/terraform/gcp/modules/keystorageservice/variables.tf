@@ -75,6 +75,11 @@ variable "key_storage_service_jar" {
   type        = string
 }
 
+variable "key_storage_service_source_path" {
+  description = "GCS path to Key Storage Service source archive in the package bucket."
+  type        = string
+}
+
 variable "key_storage_cloudfunction_memory" {
   type        = number
   description = "Memory size in MB for cloud function."
@@ -124,11 +129,6 @@ variable "alarms_enabled" {
   type        = bool
 }
 
-variable "notification_channel_id" {
-  description = "Notification channel to which to send alarms."
-  type        = string
-}
-
 variable "alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
   type        = string
@@ -141,17 +141,22 @@ variable "alarm_duration_sec" {
 
 variable "cloudfunction_error_ratio_threshold" {
   description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = string
+  type        = number
 }
 
 variable "cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
-  type        = string
+  type        = number
 }
 
-variable "cloudfunction_5xx_threshold" {
+variable "cloudfunction_5xx_ratio_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  type        = number
+}
+
+variable "cloudfunction_alert_on_memory_usage_threshold" {
+  description = "Memory usage of the Cloud Function should be higher than this value to alert."
+  type        = number
 }
 
 variable "lb_max_latency_ms" {
@@ -159,7 +164,7 @@ variable "lb_max_latency_ms" {
   type        = string
 }
 
-variable "lb_5xx_threshold" {
+variable "lb_5xx_ratio_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
 }

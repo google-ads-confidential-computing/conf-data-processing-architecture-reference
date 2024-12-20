@@ -12,36 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_java//java:defs.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
-
-java_library(
-    name = "LocalPublicKeyHttpFunction",
-    testonly = True,
-    srcs = [
-        "LocalPublicKeyHttpFunction.java",
-    ],
-    deps = [
-        ":KeyHostingHttpFunctionModule",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PublicKeyServiceHttpFunction",
-        "//java/external:guice",
-    ],
-)
-
-java_binary(
-    name = "LocalPublicKeyHttpCloudFunction",
-    testonly = True,
-    runtime_deps = [
-        ":LocalPublicKeyHttpFunction",
-    ],
-)
-
-alias(
-    name = "LocalPublicKeyHttpCloudFunctionDeploy",
-    testonly = True,
-    actual = ":LocalPublicKeyHttpCloudFunction_deploy.jar",
-)
 
 java_library(
     name = "KeyHostingHttpFunctionModule",
@@ -57,31 +30,4 @@ java_library(
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:spanner_key_db_test_util",
     ],
-)
-
-java_library(
-    name = "LocalEncryptionKeyServiceHttpFunction",
-    testonly = True,
-    srcs = [
-        "LocalEncryptionKeyServiceHttpFunction.java",
-    ],
-    deps = [
-        ":KeyHostingHttpFunctionModule",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:EncryptionKeyServiceHttpFunction",
-        "//java/external:guice",
-    ],
-)
-
-java_binary(
-    name = "LocalEncryptionKeyServiceHttpCloudFunction",
-    testonly = True,
-    runtime_deps = [
-        ":LocalEncryptionKeyServiceHttpFunction",
-    ],
-)
-
-alias(
-    name = "LocalEncryptionKeyServiceHttpCloudFunctionDeploy",
-    testonly = True,
-    actual = ":LocalEncryptionKeyServiceHttpCloudFunction_deploy.jar",
 )

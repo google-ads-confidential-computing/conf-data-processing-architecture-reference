@@ -30,6 +30,7 @@ cc_test(
         "//cc:cc_base_include_dir",
         "//cc/core/curl_client/src:http1_curl_client_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/core/test/utils:utils_lib",
         "//cc/core/test/utils/http1_helper:test_http1_server",
         "//cc/core/utils/src:core_utils",
         "//cc/public/core/test/interface:execution_result_matchers",

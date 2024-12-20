@@ -16,22 +16,26 @@
 
 package com.google.scp.coordinator.keymanagement.testutils.gcp.cloudfunction;
 
-import static com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer.startContainerAndConnectToSpanner;
 import static com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer.startContainerAndConnectToSpannerWithEnvs;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.OptionalBinder;
+import com.google.inject.multibindings.ProvidesIntoOptional;
 import com.google.kms.LocalKmsServerContainer;
+import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyCoordinatorAEnvironmentVariables;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyCoordinatorBEnvironmentVariables;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyServiceCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyServiceCoordinatorBCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageCloudFunctionContainer;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageCloudFunctionContainerWithKms;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageEnvironmentVariables;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.LocalKmsEnvironmentVariables;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PublicKeyCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.TestLocalKmsServerContainer;
 import com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer;
@@ -41,6 +45,8 @@ import java.util.Optional;
 
 /** Module that defines Cloud Function containers needed for Key Management integration tests. */
 public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
+
+  public static final String KMS_ENDPOINT_ENV_VAR_NAME = "KMS_ENDPOINT";
 
   public KeyManagementCloudFunctionContainersModule() {}
 
@@ -76,12 +82,18 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
   @Singleton
   @PublicKeyCloudFunctionContainer
   public CloudFunctionEmulatorContainer getFunctionContainer(
+      SpannerKeyDbConfig keyDbConfig,
       SpannerEmulatorContainer spannerEmulatorContainer) {
-    return startContainerAndConnectToSpanner(
+    return startContainerAndConnectToSpannerWithEnvs(
         spannerEmulatorContainer,
-        "LocalPublicKeyHttpCloudFunction_deploy.jar",
-        "javatests/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/testing/",
-        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.testing.LocalPublicKeyHttpFunction");
+        Optional.of(
+            ImmutableMap.of(
+                "SPANNER_INSTANCE", keyDbConfig.spannerInstanceId(),
+                "SPANNER_DATABASE", keyDbConfig.spannerDbName(),
+                "PROJECT_ID", keyDbConfig.gcpProjectId())),
+        "PublicKeyService_deploy.jar",
+        "java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/",
+        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PublicKeyService");
   }
 
   /**
@@ -97,9 +109,9 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
     return startContainerAndConnectToSpannerWithEnvs(
         spannerEmulatorContainer,
         envVariables,
-        "LocalEncryptionKeyServiceHttpCloudFunction_deploy.jar",
-        "javatests/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/testing/",
-        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.testing.LocalEncryptionKeyServiceHttpFunction");
+        "EncryptionKeyService_deploy.jar",
+        "java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/",
+        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.EncryptionKeyService");
   }
 
   /**
@@ -115,9 +127,9 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
     return startContainerAndConnectToSpannerWithEnvs(
         spannerEmulatorContainer,
         envVariables,
-        "LocalEncryptionKeyServiceHttpCloudFunction_deploy.jar",
-        "javatests/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/testing/",
-        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.testing.LocalEncryptionKeyServiceHttpFunction");
+        "EncryptionKeyService_deploy.jar",
+        "java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/",
+        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.EncryptionKeyService");
   }
 
   /** Starts and provides a container for Key Storage Cloud Function Integration tests. */
@@ -144,5 +156,47 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
         "LocalGcpKmsServer_deploy.jar",
         "javatests/com/google/kms/",
         "com.google.kms.LocalGcpKmsServer");
+  }
+
+  /**
+   * Provides the environment variable, which is local kms server's endpoint, the test will use for
+   * encryption/decryption.
+   */
+  @ProvidesIntoOptional(ProvidesIntoOptional.Type.ACTUAL)
+  @Singleton
+  @LocalKmsEnvironmentVariables
+  public Optional<Map<String, String>> providesEnvVariables(
+      @TestLocalKmsServerContainer LocalKmsServerContainer container) {
+    return Optional.of(
+        ImmutableMap.of(
+            KMS_ENDPOINT_ENV_VAR_NAME,
+            "http://"
+                + container
+                .getContainerInfo()
+                .getNetworkSettings()
+                .getNetworks()
+                .entrySet()
+                .stream()
+                .findFirst()
+                .get()
+                .getValue()
+                .getIpAddress()
+                + ":"
+                + container.getHttpPort()));
+  }
+
+  /** Starts and provides a container for Key Storage Cloud Function Integration tests. */
+  @Provides
+  @Singleton
+  @KeyStorageCloudFunctionContainerWithKms
+  public CloudFunctionEmulatorContainer getKeyStorageFunctionContainerWithKms(
+      SpannerEmulatorContainer spannerEmulatorContainer,
+      @LocalKmsEnvironmentVariables Optional<Map<String, String>> envVariables) {
+    return startContainerAndConnectToSpannerWithEnvs(
+        spannerEmulatorContainer,
+        envVariables,
+        "LocalKeyStorageServiceHttpCloudFunction_deploy.jar",
+        "javatests/com/google/scp/coordinator/keymanagement/keystorage/service/gcp/testing/",
+        "com.google.scp.coordinator.keymanagement.keystorage.service.gcp.testing.LocalKeyStorageServiceHttpFunction");
   }
 }

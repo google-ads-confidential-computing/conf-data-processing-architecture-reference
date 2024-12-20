@@ -110,6 +110,23 @@ class ConfigurationFetcherInterface : public core::ServiceInterface {
   virtual void GetUInt64ByName(
       core::AsyncContext<std::string, uint64_t> context) noexcept = 0;
 
+  /**
+   * @brief Gets a parameter by name and converts it into a bool.
+   *
+   * @param parameter_name Name of the parameter to get.
+   * @return core::ExecutionResultOr<bool> the parameter or result.
+   */
+  virtual core::ExecutionResultOr<bool> GetBoolByNameSync(
+      std::string parameter_name) noexcept = 0;
+
+  /**
+   * @brief Get parameter by name and converts it into a bool.
+   *
+   * @param context the async context for the operation.
+   */
+  virtual void GetBoolByName(
+      core::AsyncContext<std::string, bool> context) noexcept = 0;
+
   /**** Shared configurations start */
   /**
    * @brief Get common LogOption.

@@ -50,6 +50,8 @@ using std::dynamic_pointer_cast;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
+using testing::_;
+using testing::Matcher;
 using testing::NiceMock;
 
 namespace google::scp::cpio::client_providers {
@@ -59,7 +61,8 @@ FakeInstanceGroupManagersClientFactory::CreateClient(
   auto connection =
       make_shared<NiceMock<MockRegionInstanceGroupManagersConnection>>();
   auto client = make_shared<RegionInstanceGroupManagersClient>(connection);
-  ON_CALL(*connection, DeleteInstances)
+  ON_CALL(*connection,
+          DeleteInstances(Matcher<DeleteInstancesRequest const&>(_)))
       .WillByDefault([&](DeleteInstancesRequest const& request) {
         Operation op;
         op.set_name("delete-instances");

@@ -16,7 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.keystorage.tasks.aws;
 
-import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.DataKeyEncryptionUtil.decryptWithDataKey;
+import static com.google.scp.coordinator.keymanagement.keystorage.tasks.aws.DataKeyEncryptionUtil.decryptWithDataKey;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
 import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 

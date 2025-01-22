@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keystorage.tasks.common;
+package com.google.scp.coordinator.keymanagement.keystorage.tasks.aws;
 
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.fromBinaryCiphertext;
 import static java.nio.charset.StandardCharsets.UTF_8;

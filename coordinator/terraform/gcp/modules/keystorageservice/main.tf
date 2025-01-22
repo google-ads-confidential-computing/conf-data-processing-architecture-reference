@@ -15,7 +15,7 @@
 terraform {
   required_providers {
     google = {
-      source  = "hashicorp/google"
+      source  = "hashicorp/google-beta"
       version = ">= 4.36"
     }
   }
@@ -51,7 +51,7 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
   description = "Cloud Function for key storage service"
 
   build_config {
-    runtime     = "java11"
+    runtime     = var.use_java21_runtime ? "java21" : "java11"
     entry_point = "com.google.scp.coordinator.keymanagement.keystorage.service.gcp.KeyStorageServiceHttpFunction"
     source {
       storage_source {

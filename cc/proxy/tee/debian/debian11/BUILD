@@ -74,7 +74,7 @@ container_image(
 genrule(
     name = "reproducible_proxy_outputs_debian11",
     srcs = [
-        "//:source_code_tar",
+        "//:source_code.tar",
         ":build_container_debian11.tar",
         "@bazelisk//file:bazelisk",
     ],
@@ -87,13 +87,14 @@ genrule(
     export OUTPUT_DIR=`mktemp -d -t PROXY_BUILD_OUTPUTS_XXXXX`
     docker load < $(location :build_container_debian11.tar)
     docker run --rm \
-      -v `realpath $(location //:source_code_tar)`:/source_code.tar \
+      -v `realpath $(location //:source_code.tar)`:/source_code.tar \
       -v `realpath $(location @bazelisk//file:bazelisk)`:/bin/bazel \
       -v `realpath "$${OUTPUT_DIR}"`:/output \
       bazel/cc/proxy/tee/debian/debian11:build_container_debian11 \
       bash -c '
         set -eux
         tar xf /source_code.tar -C /
+        ls
         cd /scp
         bazel build \
           //cc/proxy/src:proxify \

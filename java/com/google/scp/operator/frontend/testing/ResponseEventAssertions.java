@@ -27,6 +27,7 @@ import com.google.protobuf.util.JsonFormat.Printer;
 /** Contains common assertions used for testing APIGatewayProxyResponseEvents. */
 public final class ResponseEventAssertions {
   private static final Printer JSON_PRINTER = JsonFormat.printer();
+
   /**
    * Asserts that the content body of an APIGatewayProxyResponseEvent contains the JSON serialized
    * String of a given input.
@@ -34,7 +35,7 @@ public final class ResponseEventAssertions {
   public static <TBody extends Message> void assertThatResponseBodyContains(
       APIGatewayProxyResponseEvent responseEvent, TBody equalTo)
       throws InvalidProtocolBufferException {
-    String bodyJson = JSON_PRINTER.includingDefaultValueFields().print(equalTo);
+    String bodyJson = JSON_PRINTER.alwaysPrintFieldsWithNoPresence().print(equalTo);
     assertThat(responseEvent.getBody()).isEqualTo(bodyJson);
   }
 

@@ -14,7 +14,8 @@
 
 
 resource "google_monitoring_alert_policy" "key_db_spanner_alert" {
-  display_name = "${var.environment} Key DB Too Much Memory Error "
+  display_name = "${var.environment} Key DB Cpu Utiliziation Too High Alert "
+  project      = var.project_id
 
   # Required but not relevant since there is only 1 condition
   combiner = "OR"

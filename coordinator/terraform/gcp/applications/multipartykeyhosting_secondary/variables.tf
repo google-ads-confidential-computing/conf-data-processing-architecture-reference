@@ -194,6 +194,18 @@ variable "key_storage_service_cloudfunction_max_instances" {
   type        = number
 }
 
+variable "keystorageservice_use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+}
+
+variable "encryptionkeyservice_use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+}
+
 ################################################################################
 # Key Management Variables.
 ################################################################################
@@ -297,9 +309,9 @@ variable "keystorageservice_lb_max_latency_ms" {
   type        = string
 }
 
-variable "keystorageservice_lb_5xx_ratio_threshold" {
+variable "keystorageservice_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  type        = number
 }
 
 variable "keystorageservice_alarm_duration_sec" {
@@ -341,9 +353,9 @@ variable "encryptionkeyservice_lb_max_latency_ms" {
   type        = string
 }
 
-variable "encryptionkeyservice_lb_5xx_ratio_threshold" {
+variable "encryptionkeyservice_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  type        = number
 }
 
 variable "encryptionkeyservice_alarm_duration_sec" {

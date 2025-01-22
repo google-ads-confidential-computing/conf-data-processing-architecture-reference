@@ -16,8 +16,8 @@
 
 package com.google.scp.coordinator.keymanagement.testutils;
 
-import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.DataKeyEncryptionUtil.decryptWithDataKey;
-import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.DataKeyEncryptionUtil.encryptWithDataKey;
+import static com.google.scp.coordinator.keymanagement.keystorage.tasks.aws.DataKeyEncryptionUtil.decryptWithDataKey;
+import static com.google.scp.coordinator.keymanagement.keystorage.tasks.aws.DataKeyEncryptionUtil.encryptWithDataKey;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toBinaryCiphertext;
 
 import com.google.crypto.tink.Aead;
@@ -42,7 +42,7 @@ public final class FakeDataKeyUtil {
   private static Aead defaultKeyEncryptionKey;
   // Contains the AEAD for each data key created with using this class in order to allow the data
   // key to be conveniently encrypted or decrypted.
-  private static final HashMap<String, Aead> aeadByUri = new HashMap<String, Aead>();
+  private static final HashMap<String, Aead> aeadByUri = new HashMap<>();
 
   static {
     try {

@@ -69,18 +69,15 @@ public final class SpannerKeyDb implements KeyDb {
   private static final String TABLE_NAME = "KeySets";
   private static final String NATURAL_ORDERING =
       EXPIRY_TIME_COLUMN + " DESC, " + ACTIVATION_TIME_COLUMN + " DESC, " + KEY_ID_COLUMN + " DESC";
-  private static final int EXPIRATION_TIME_CEILING_SECOND = 1;
   private static final JsonFormat.Printer JSON_PRINTER = JsonFormat.printer();
   private static final JsonFormat.Parser JSON_PARSER = JsonFormat.parser();
   private static final Logger LOGGER = LoggerFactory.getLogger(SpannerKeyDb.class);
 
   private final DatabaseClient dbClient;
-  private final Integer readStalenessSeconds;
 
   @Inject
-  public SpannerKeyDb(@KeyDbClient DatabaseClient dbClient, SpannerKeyDbConfig config) {
+  public SpannerKeyDb(@KeyDbClient DatabaseClient dbClient) {
     this.dbClient = dbClient;
-    this.readStalenessSeconds = config.readStalenessSeconds();
   }
 
   @Override
@@ -117,7 +114,8 @@ public final class SpannerKeyDb implements KeyDb {
             .to(setName)
             .build();
     ImmutableList.Builder<EncryptionKey> keysBuilder = ImmutableList.builder();
-    try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
+    try (var readContext = dbClient.singleUse()) {
+      var resultSet = readContext.executeQuery(statement);
       while (resultSet.next()) {
         keysBuilder.add(buildEncryptionKey(resultSet));
       }
@@ -145,7 +143,6 @@ public final class SpannerKeyDb implements KeyDb {
                     // Filter keys with matching set name, if it's the default set, includes keys
                     // with null set name.
                     + " AND (SetName = @setName OR (@setName = @defaultSetName AND SetName IS NULL))"
-                    + " AND (SetName = @setName OR (@setName = @defaultSetName AND SetName IS NULL))"
                     + " ORDER BY "
                     + NATURAL_ORDERING)
             .bind("nowParam")
@@ -158,7 +155,8 @@ public final class SpannerKeyDb implements KeyDb {
             .to(setName)
             .build();
     Stream.Builder<EncryptionKey> keysBuilder = Stream.builder();
-    try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
+    try (var readContext = dbClient.singleUse()) {
+      var resultSet = readContext.executeQuery(statement);
       while (resultSet.next()) {
         keysBuilder.add(buildEncryptionKey(resultSet));
       }
@@ -174,13 +172,14 @@ public final class SpannerKeyDb implements KeyDb {
             .to(keyId)
             .build();
     ImmutableList.Builder<EncryptionKey> keysBuilder = ImmutableList.builder();
-    try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
+    try (var readContext = dbClient.singleUse()) {
+      var resultSet = readContext.executeQuery(statement);
       while (resultSet.next()) {
         keysBuilder.add(buildEncryptionKey(resultSet));
       }
     }
     ImmutableList<EncryptionKey> keys = keysBuilder.build();
-    if (keys.size() == 0) {
+    if (keys.isEmpty()) {
       throw new ServiceException(
           NOT_FOUND, MISSING_KEY.name(), "Unable to find item with keyId " + keyId);
     } else if (keys.size() > 1) {

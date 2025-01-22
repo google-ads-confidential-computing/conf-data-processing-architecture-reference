@@ -533,3 +533,48 @@ variable "joblifecyclehelper_job_waiting_time_threshold" {
   type        = number
   default     = 1000000
 }
+
+################################################################################
+# OpenTelemetry Collector variables
+################################################################################
+
+variable "enable_remote_metric_aggregation" {
+  description = "When true, install the collector module to operator_service"
+  type        = bool
+  default     = true
+}
+variable "collector_instance_type" {
+  description = "GCE instance type for worker."
+  type        = string
+  default     = "n2d-standard-2"
+}
+
+variable "user_provided_collector_sa_email" {
+  description = "User provided service account email for OpenTelemetry Collector."
+  type        = string
+  default     = ""
+}
+
+variable "collector_service_port" {
+  description = "The gRPC port that receives traffic destined for the OpenTelemetry collector."
+  type        = number
+  default     = 4317
+}
+
+variable "collector_send_batch_max_size" {
+  description = "The upper limit of a single batch. This property ensures that larger batches are split into smaller units. It must be greater than or equal to send_batch_size."
+  type        = number
+  default     = 200
+}
+
+variable "collector_send_batch_size" {
+  description = "Number of metric data points after which batching will be started regardless of the timeout. All data points in this buffer will be split to smaller batches based on collector_send_batch_max_size."
+  type        = number
+  default     = 200
+}
+
+variable "collector_send_batch_timeout" {
+  description = "Time duration after which a batch will be sent regardless of size."
+  type        = string
+  default     = "5s"
+}

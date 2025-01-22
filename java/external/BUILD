@@ -766,3 +766,8 @@ alias(
     name = "google_cloud_opentelemetry_detector_resources",
     actual = "@maven//:com_google_cloud_opentelemetry_detector_resources",
 )
+
+alias(
+    name = "org_threeten_bp",
+    actual = "@maven//:org_threeten_threetenbp",
+)

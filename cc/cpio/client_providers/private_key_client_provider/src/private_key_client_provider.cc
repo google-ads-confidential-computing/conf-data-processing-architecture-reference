@@ -475,11 +475,11 @@ void PrivateKeyClientProvider::OnDecryptCallback(
           list_private_keys_context.Finish();
           return;
         }
-        *list_private_keys_context.response->add_private_keys() =
-            move(*private_key_or);
         SCP_DEBUG_CONTEXT(kPrivateKeyClientProvider, list_private_keys_context,
                           "Successfully obtained private key for key %s.",
                           private_key_or->key_id().c_str());
+        *list_private_keys_context.response->add_private_keys() =
+            move(*private_key_or);
       }
     }
 

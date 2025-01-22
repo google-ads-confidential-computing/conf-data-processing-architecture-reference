@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
+package com.google.scp.coordinator.keymanagement.keygeneration.tasks.aws;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
@@ -29,6 +29,7 @@ import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KeyTemplate.OutputPrefixType;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.aws.CreateKeysTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;

@@ -79,6 +79,7 @@ class MockWriter : public ServerCallbackWriter<SomeResponse> {
               (override));
   MOCK_METHOD(ServerReactor*, reactor, (), (override));
   MOCK_METHOD(void, CallOnDone, (), (override));
+  MOCK_METHOD(::grpc_call*, call, (), (override));
 };
 
 class TestWriteReactor : public WriteReactor<SomeRequest, SomeResponse> {

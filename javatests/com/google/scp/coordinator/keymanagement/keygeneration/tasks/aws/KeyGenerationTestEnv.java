@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
+package com.google.scp.coordinator.keymanagement.keygeneration.tasks.aws;
 
 import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KeysetHandle;

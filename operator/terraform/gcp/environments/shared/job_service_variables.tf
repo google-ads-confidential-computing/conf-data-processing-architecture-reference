@@ -322,8 +322,8 @@ variable "worker_instance_force_replace" {
   default     = false
 }
 
-variable "enable_metric_aggregation" {
-  description = "Enable metric aggregation."
+variable "enable_native_metric_aggreation" {
+  description = "Enable native metric aggregation."
   type        = bool
   default     = false
 }

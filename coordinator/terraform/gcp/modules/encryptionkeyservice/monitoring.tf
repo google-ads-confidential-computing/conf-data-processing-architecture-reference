@@ -25,10 +25,15 @@ module "encryptionkeyservice_loadbalancer_alarms" {
   service_prefix     = "${var.environment} Encryption Key Service"
 
   eval_period_sec            = var.alarm_eval_period_sec
-  error_5xx_ratio_threshold  = var.lb_5xx_ratio_threshold
+  error_5xx_threshold        = var.lb_5xx_threshold
   max_latency_ms             = var.lb_max_latency_ms
   duration_sec               = var.alarm_duration_sec
   load_balancer_severity_map = var.encryption_key_service_severity_map
+}
+
+moved {
+  from = module.encryptionkeyservice_cloudfunction_alarms[0]
+  to   = module.encryptionkeyservice_cloudfunction_alarms["0"]
 }
 
 module "encryptionkeyservice_cloudfunction_alarms" {

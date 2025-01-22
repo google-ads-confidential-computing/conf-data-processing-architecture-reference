@@ -102,6 +102,12 @@ variable "spanner_instance_name" {
   type        = string
 }
 
+variable "use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+}
+
 ################################################################################
 # Alarm Variables.
 ################################################################################
@@ -146,9 +152,9 @@ variable "get_public_key_lb_max_latency_ms" {
   type        = string
 }
 
-variable "get_public_key_lb_5xx_ratio_threshold" {
+variable "get_public_key_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  type        = number
 }
 
 variable "get_public_key_empty_key_set_error_threshold" {

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.google.scp.operator.notification.service.gcp;
 
 import static com.google.scp.shared.gcp.util.JsonHelper.getField;
@@ -35,13 +34,10 @@ import org.slf4j.Logger;
 /** This class will receive events triggered by the completion of TEE jobs. */
 public class JobNotificationEventHandler
     extends CloudEventFunctionHandlerBase<JobNotificationEvent> {
-
   private static final Logger logger = getLogger(JobNotificationEventHandler.class);
-
   private static final String JOB_ID_FIELD_NAME = "jobId";
   private static final String JOB_STATUS_FIELD_NAME = "jobStatus";
   private static final String TOPIC_ID_FIELD_NAME = "topicId";
-
   private final NotificationClient notificationClient;
 
   public JobNotificationEventHandler() {

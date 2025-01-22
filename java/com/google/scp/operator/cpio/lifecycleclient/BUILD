@@ -74,7 +74,6 @@ java_library(
         "//java/external:guice",
         "//java/external:javax_inject",
         "//java/external:slf4j",
-        "//java/external:slf4j_simple",
         "//operator/protos/shared/backend/asginstance:java_proto",
     ],
 )

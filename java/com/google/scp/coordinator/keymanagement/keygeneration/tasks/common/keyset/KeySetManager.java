@@ -37,17 +37,12 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.shared.util.KeyParams;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** Provides key sets management functionalities. */
 public final class KeySetManager {
-
-  private static final Logger logger = LoggerFactory.getLogger(KeySetManager.class);
 
   private static final Duration FETCHER_CACHE_DURATION = Duration.ofSeconds(20L);
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -66,8 +61,7 @@ public final class KeySetManager {
       @KeyGenerationKeyCount Integer count,
       @KeyGenerationValidityInDays Integer validityInDays,
       @KeyGenerationTtlInDays Integer ttlInDays,
-      ConfigCacheDuration configCacheDuration)
-      throws GeneralSecurityException {
+      ConfigCacheDuration configCacheDuration) {
     defaultCount = count;
     defaultValidityInDays = validityInDays;
     defaultTtlInDays = ttlInDays;

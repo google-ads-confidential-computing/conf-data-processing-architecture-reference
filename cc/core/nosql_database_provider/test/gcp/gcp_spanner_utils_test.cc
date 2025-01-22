@@ -159,7 +159,7 @@ TEST(GcpSpannerUtilsTest,
   ASSERT_TRUE(float_val_or.ok()) << float_val_or.status().message();
   EXPECT_EQ(*float_val_or, 1.5f);
 
-  value_type = static_cast<double>(1.5f);
+  value_type = static_cast<double>(1.5);
   EXPECT_EQ(
       GcpSpannerUtils::ConvertNoSQLDatabaseAttributeValueTypeToSpannerValue(
           value_type, spanner_val),

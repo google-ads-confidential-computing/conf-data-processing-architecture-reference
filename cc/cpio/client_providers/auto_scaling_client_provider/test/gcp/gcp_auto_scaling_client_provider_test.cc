@@ -92,6 +92,7 @@ using std::string;
 using std::unique_ptr;
 using testing::_;
 using testing::Eq;
+using testing::Matcher;
 using testing::NiceMock;
 using testing::Return;
 
@@ -206,7 +207,9 @@ TEST_F(GcpAutoScalingClientProviderTest, MissingInstanceResourceName) {
       };
 
   EXPECT_CALL(*mock_instance_database_client_, GetInstanceByName).Times(0);
-  EXPECT_CALL(*connection_, DeleteInstances).Times(0);
+  EXPECT_CALL(*connection_,
+              DeleteInstances(Matcher<DeleteInstancesRequest const&>(_)))
+      .Times(0);
 
   auto_scaling_client_provider_->TryFinishInstanceTermination(
       try_termination_context_);
@@ -228,7 +231,12 @@ TEST_F(GcpAutoScalingClientProviderTest, InputInvalidInstanceResourceName) {
       };
 
   EXPECT_CALL(*mock_instance_database_client_, GetInstanceByName).Times(0);
-  EXPECT_CALL(*connection_, DeleteInstances).Times(0);
+  EXPECT_CALL(
+      *connection_,
+      DeleteInstances(
+          Matcher<google::cloud::cpp::compute::region_instance_group_managers::
+                      v1::DeleteInstancesRequest const&>(_)))
+      .Times(0);
 
   auto_scaling_client_provider_->TryFinishInstanceTermination(
       try_termination_context_);
@@ -252,7 +260,12 @@ TEST_F(GcpAutoScalingClientProviderTest, MissingLifecycleHookName) {
   };
 
   EXPECT_CALL(*mock_instance_database_client_, GetInstanceByName).Times(0);
-  EXPECT_CALL(*connection_, DeleteInstances).Times(0);
+  EXPECT_CALL(
+      *connection_,
+      DeleteInstances(
+          Matcher<google::cloud::cpp::compute::region_instance_group_managers::
+                      v1::DeleteInstancesRequest const&>(_)))
+      .Times(0);
 
   auto_scaling_client_provider_->TryFinishInstanceTermination(
       try_termination_context_);
@@ -296,7 +309,12 @@ TEST_F(GcpAutoScalingClientProviderTest, GetInstanceFailed) {
         context.result = FailureExecutionResult(SC_UNKNOWN);
         context.Finish();
       });
-  EXPECT_CALL(*connection_, DeleteInstances).Times(0);
+  EXPECT_CALL(
+      *connection_,
+      DeleteInstances(
+          Matcher<google::cloud::cpp::compute::region_instance_group_managers::
+                      v1::DeleteInstancesRequest const&>(_)))
+      .Times(0);
 
   auto_scaling_client_provider_->TryFinishInstanceTermination(
       try_termination_context_);
@@ -323,7 +341,12 @@ TEST_F(GcpAutoScalingClientProviderTest, InstanceNotFoundInDatabase) {
             SC_INSTANCE_DATABASE_CLIENT_PROVIDER_RECORD_NOT_FOUND);
         context.Finish();
       });
-  EXPECT_CALL(*connection_, DeleteInstances).Times(0);
+  EXPECT_CALL(
+      *connection_,
+      DeleteInstances(
+          Matcher<google::cloud::cpp::compute::region_instance_group_managers::
+                      v1::DeleteInstancesRequest const&>(_)))
+      .Times(0);
 
   auto_scaling_client_provider_->TryFinishInstanceTermination(
       try_termination_context_);
@@ -345,7 +368,12 @@ TEST_F(GcpAutoScalingClientProviderTest, InstanceAlreadyTerminated) {
             InstanceStatus::TERMINATED);
         context.Finish();
       });
-  EXPECT_CALL(*connection_, DeleteInstances).Times(0);
+  EXPECT_CALL(
+      *connection_,
+      DeleteInstances(
+          Matcher<google::cloud::cpp::compute::region_instance_group_managers::
+                      v1::DeleteInstancesRequest const&>(_)))
+      .Times(0);
 
   try_termination_context_.callback =
       [this](AsyncContext<TryFinishInstanceTerminationRequest,
@@ -375,7 +403,12 @@ TEST_F(GcpAutoScalingClientProviderTest, NotInTerminatingWaitState) {
             InstanceStatus::UNKNOWN_INSTANCE_STATUS);
         context.Finish();
       });
-  EXPECT_CALL(*connection_, DeleteInstances).Times(0);
+  EXPECT_CALL(
+      *connection_,
+      DeleteInstances(
+          Matcher<google::cloud::cpp::compute::region_instance_group_managers::
+                      v1::DeleteInstancesRequest const&>(_)))
+      .Times(0);
 
   try_termination_context_.callback =
       [this](AsyncContext<TryFinishInstanceTerminationRequest,
@@ -405,7 +438,11 @@ TEST_F(GcpAutoScalingClientProviderTest, TerminateInstanceFailed) {
             InstanceStatus::TERMINATING_WAIT);
         context.Finish();
       });
-  EXPECT_CALL(*connection_, DeleteInstances)
+  EXPECT_CALL(
+      *connection_,
+      DeleteInstances(
+          Matcher<google::cloud::cpp::compute::region_instance_group_managers::
+                      v1::DeleteInstancesRequest const&>(_)))
       .WillOnce([&](DeleteInstancesRequest const& request) {
         EXPECT_THAT(request, EqualsProto(expected_delete_request_));
         return make_ready_future(
@@ -441,7 +478,11 @@ TEST_F(GcpAutoScalingClientProviderTest, ScheduleTerminationSuccessfully) {
             InstanceStatus::TERMINATING_WAIT);
         context.Finish();
       });
-  EXPECT_CALL(*connection_, DeleteInstances)
+  EXPECT_CALL(
+      *connection_,
+      DeleteInstances(
+          Matcher<google::cloud::cpp::compute::region_instance_group_managers::
+                      v1::DeleteInstancesRequest const&>(_)))
       .WillOnce([&](DeleteInstancesRequest const& request) {
         EXPECT_THAT(request, EqualsProto(expected_delete_request_));
         Operation op;

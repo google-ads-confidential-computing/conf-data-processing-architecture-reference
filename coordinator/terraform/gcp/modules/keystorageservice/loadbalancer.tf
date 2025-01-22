@@ -14,8 +14,8 @@
 # limitations under the License.
 
 module "lb-http_serverless_negs" {
+  version = "~> 12.0.0"
   source  = "GoogleCloudPlatform/lb-http/google//modules/serverless_negs"
-  version = "~> 6.1"
   name    = "${var.environment}-${var.load_balancer_name}"
   project = var.project_id
 

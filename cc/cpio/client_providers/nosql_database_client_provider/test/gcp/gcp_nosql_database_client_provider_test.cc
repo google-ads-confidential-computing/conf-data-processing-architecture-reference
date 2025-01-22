@@ -121,6 +121,7 @@ using testing::Eq;
 using testing::ExplainMatchResult;
 using testing::FieldsAre;
 using testing::IsEmpty;
+using testing::Matcher;
 using testing::NiceMock;
 using testing::NotNull;
 using testing::PrintToString;
@@ -359,7 +360,8 @@ TEST_F(GcpNoSQLDatabaseClientProviderTests, CreateTableNoSortKeySuccess) {
   absl::RemoveExtraAsciiWhitespace(&create_table_statement);
   expected_request.add_statements(move(create_table_statement));
   EXPECT_CALL(*database_connection_,
-              UpdateDatabaseDdl(EqualsProto(expected_request)))
+              UpdateDatabaseDdl(Matcher<UpdateDatabaseDdlRequest const&>(
+                  EqualsProto(expected_request))))
       .WillOnce(ReturnEmptyUpdateMetadata);
 
   gcp_spanner_.CreateTable(create_table_context_);
@@ -394,7 +396,8 @@ TEST_F(GcpNoSQLDatabaseClientProviderTests, CreateTableWithSortKeySuccess) {
   absl::RemoveExtraAsciiWhitespace(&create_table_statement);
   expected_request.add_statements(move(create_table_statement));
   EXPECT_CALL(*database_connection_,
-              UpdateDatabaseDdl(EqualsProto(expected_request)))
+              UpdateDatabaseDdl(Matcher<UpdateDatabaseDdlRequest const&>(
+                  EqualsProto(expected_request))))
       .WillOnce(ReturnEmptyUpdateMetadata);
 
   gcp_spanner_.CreateTable(create_table_context_);
@@ -494,7 +497,8 @@ TEST_F(GcpNoSQLDatabaseClientProviderTests, CreateTablePropagatesFailure) {
     finish_called_ = true;
   };
 
-  EXPECT_CALL(*database_connection_, UpdateDatabaseDdl)
+  EXPECT_CALL(*database_connection_,
+              UpdateDatabaseDdl(Matcher<UpdateDatabaseDdlRequest const&>(_)))
       .WillOnce(
           Return(ByMove(make_ready_future(StatusOr<UpdateDatabaseDdlMetadata>(
               Status(google::cloud::StatusCode::kInternal, "Error"))))));
@@ -516,7 +520,8 @@ TEST_F(GcpNoSQLDatabaseClientProviderTests, DeleteTableSuccess) {
   expected_request.add_statements(
       absl::StrCat("DROP TABLE ", kBudgetKeyTableName));
   EXPECT_CALL(*database_connection_,
-              UpdateDatabaseDdl(EqualsProto(expected_request)))
+              UpdateDatabaseDdl(Matcher<UpdateDatabaseDdlRequest const&>(
+                  EqualsProto(expected_request))))
       .WillOnce(ReturnEmptyUpdateMetadata);
 
   gcp_spanner_.DeleteTable(delete_table_context_);
@@ -546,7 +551,8 @@ TEST_F(GcpNoSQLDatabaseClientProviderTests, DeleteTablePropagatesFailure) {
     finish_called_ = true;
   };
 
-  EXPECT_CALL(*database_connection_, UpdateDatabaseDdl)
+  EXPECT_CALL(*database_connection_,
+              UpdateDatabaseDdl(Matcher<UpdateDatabaseDdlRequest const&>(_)))
       .WillOnce(
           Return(ByMove(make_ready_future(StatusOr<UpdateDatabaseDdlMetadata>(
               Status(google::cloud::StatusCode::kInternal, "Error"))))));

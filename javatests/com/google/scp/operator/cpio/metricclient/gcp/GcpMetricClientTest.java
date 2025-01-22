@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.cloud.monitoring.v3.MetricServiceClient;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
+import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import io.opentelemetry.api.metrics.Meter;
@@ -91,7 +92,7 @@ public class GcpMetricClientTest {
   }
 
   @Test
-  public void testRecordMetric_UseOpenTelemetry() throws ParameterClientException {
+  public void testRecordMetric_UseOpenTelemetry_DefaultType() throws ParameterClientException {
     // arrange
     metricClient =
         new GcpMetricClient(
@@ -117,6 +118,102 @@ public class GcpMetricClientTest {
       // verify
       verify(parameterClient, times(1)).getEnvironmentName();
       verify(meter, times(1)).gaugeBuilder(argument.capture());
+      assertThat(argument.getValue()).isEqualTo("scp/test/test-env/testmetric");
+    }
+  }
+
+  @Test
+  public void testRecordMetric_UseOpenTelemetry_GaugeType() throws ParameterClientException {
+    // arrange
+    metricClient =
+        new GcpMetricClient(
+            metricServiceClient,
+            meter,
+            parameterClient,
+            PROJECT_ID,
+            "testInstance123",
+            "testZone123",
+            true);
+    var argument = ArgumentCaptor.forClass(String.class);
+    CustomMetric metric =
+        CustomMetric.builder()
+            .setName("testMetric")
+            .setNameSpace("scp/test")
+            .setUnit("Double")
+            .setValue(1.2)
+            .setMetricType(MetricType.DOUBLE_GAUGE)
+            .build();
+    // act
+    try {
+      metricClient.recordMetric(metric);
+    } catch (Exception e) {
+      // verify
+      verify(parameterClient, times(1)).getEnvironmentName();
+      verify(meter, times(1)).gaugeBuilder(argument.capture());
+      assertThat(argument.getValue()).isEqualTo("scp/test/test-env/testmetric");
+    }
+  }
+
+  @Test
+  public void testRecordMetric_UseOpenTelemetry_SumType() throws ParameterClientException {
+    // arrange
+    metricClient =
+        new GcpMetricClient(
+            metricServiceClient,
+            meter,
+            parameterClient,
+            PROJECT_ID,
+            "testInstance123",
+            "testZone123",
+            true);
+    var argument = ArgumentCaptor.forClass(String.class);
+    CustomMetric metric =
+        CustomMetric.builder()
+            .setName("testMetric")
+            .setNameSpace("scp/test")
+            .setUnit("Double")
+            .setValue(1.2)
+            .setMetricType(MetricType.DOUBLE_COUNTER)
+            .build();
+    // act
+    try {
+      metricClient.recordMetric(metric);
+    } catch (Exception e) {
+      // verify
+      verify(parameterClient, times(1)).getEnvironmentName();
+      verify(meter, times(1)).counterBuilder(argument.capture());
+      assertThat(argument.getValue()).isEqualTo("scp/test/test-env/testmetric");
+    }
+  }
+
+  @Test
+  public void testRecordMetric_UseOpenTelemetry_HistogramType() throws ParameterClientException {
+    // arrange
+    metricClient =
+        new GcpMetricClient(
+            metricServiceClient,
+            meter,
+            parameterClient,
+            PROJECT_ID,
+            "testInstance123",
+            "testZone123",
+            true);
+    var argument = ArgumentCaptor.forClass(String.class);
+    CustomMetric metric =
+        CustomMetric.builder()
+            .setName("testMetric")
+            .setNameSpace("scp/test")
+            .setUnit("Double")
+            .setValue(1.2)
+            .setMetricType(MetricType.HISTOGRAM)
+            .build();
+    // act
+    try {
+      metricClient.recordMetric(metric);
+    } catch (Exception e) {
+      // verify
+      verify(parameterClient, times(1)).getEnvironmentName();
+      verify(meter, times(1)).histogramBuilder(argument.capture());
       assertThat(argument.getValue()).isEqualTo("scp/test/test-env/testmetric");
     }
   }

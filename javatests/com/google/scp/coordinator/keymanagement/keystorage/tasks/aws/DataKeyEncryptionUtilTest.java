@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keystorage.tasks.common;
+package com.google.scp.coordinator.keymanagement.keystorage.tasks.aws;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.DataKeyEncryptionUtil.decryptWithDataKey;
-import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.DataKeyEncryptionUtil.encryptWithDataKey;
+import static com.google.scp.coordinator.keymanagement.keystorage.tasks.aws.DataKeyEncryptionUtil.decryptWithDataKey;
+import static com.google.scp.coordinator.keymanagement.keystorage.tasks.aws.DataKeyEncryptionUtil.encryptWithDataKey;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toBinaryCiphertext;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;

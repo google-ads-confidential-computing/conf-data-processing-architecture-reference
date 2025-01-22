@@ -16,7 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.aws;
 
-import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.DataKeyEncryptionUtil.encryptWithDataKey;
+import static com.google.scp.coordinator.keymanagement.keystorage.tasks.aws.DataKeyEncryptionUtil.encryptWithDataKey;
 
 import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.PublicKeySign;

@@ -30,24 +30,24 @@ pkg_files(
 # copied.
 pkg_mklink(
     name = "operator_service_link",
-    src = "../shared/operator_service.tf",
-    dest = "demo/operator_service.tf",
+    link_name = "demo/operator_service.tf",
+    target = "../shared/operator_service.tf",
 )
 
 pkg_mklink(
     name = "operator_service_vars_link",
-    src = "../shared/variables.tf",
-    dest = "demo/variables.tf",
+    link_name = "demo/variables.tf",
+    target = "../shared/variables.tf",
 )
 
 pkg_mklink(
     name = "operator_service_parameter_vars_link",
-    src = "../shared/parameter_variables.tf",
-    dest = "demo/parameter_variables.tf",
+    link_name = "demo/parameter_variables.tf",
+    target = "../shared/parameter_variables.tf",
 )
 
 pkg_mklink(
     name = "ami_params_link",
-    src = "../shared/ami_params.auto.tfvars",
-    dest = "demo/ami_params.auto.tfvars",
+    link_name = "demo/ami_params.auto.tfvars",
+    target = "../shared/ami_params.auto.tfvars",
 )

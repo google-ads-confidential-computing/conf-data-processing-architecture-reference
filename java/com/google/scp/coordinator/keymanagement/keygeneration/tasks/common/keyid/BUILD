@@ -28,12 +28,10 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/crypto/tink",
         "//java/com/google/scp/shared/util",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:protobuf_java",
         "//java/external:slf4j",
-        "//java/external:tink",
     ],
 )

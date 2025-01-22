@@ -113,11 +113,13 @@ using google::crypto::tink::HpkePublicKey;
 using google::crypto::tink::KeyData;
 using google::crypto::tink::Keyset;
 using google::scp::core::AsyncContext;
+using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::PublicPrivateKeyPairId;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::common::AutoExpiryConcurrentMap;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::errors::SC_CRYPTO_CLIENT_PROVIDER_AEAD_DECRYPT_FAILED;
 using google::scp::core::errors::SC_CRYPTO_CLIENT_PROVIDER_AEAD_ENCRYPT_FAILED;
@@ -176,6 +178,7 @@ namespace {
 /// Filename for logging errors
 constexpr char kCryptoClientProvider[] = "CryptoClientProvider";
 constexpr char kDefaultExporterContext[] = "aead key";
+constexpr int kPrimitiveWithCacheLifetimeSeconds = 3600;
 }  // namespace
 
 namespace google::scp::cpio::client_providers {
@@ -390,6 +393,36 @@ ExecutionResultOr<unique_ptr<KeysetHandle>> CreateKeysetHandle(
   return std::move(*keyset_handle);
 }
 
+CryptoClientProvider::CryptoClientProvider(
+    const shared_ptr<CryptoClientOptions>& options,
+    const shared_ptr<AsyncExecutorInterface>& async_executor)
+    : options_(options) {
+  if (async_executor) {
+    auto on_garbage_collection_func = [](auto&, auto&,
+                                         auto should_delete_entry) {
+      should_delete_entry(true);
+    };
+    hybrid_encrypt_primitive_cache_ =
+        make_unique<AutoExpiryConcurrentMap<string, shared_ptr<HybridEncrypt>>>(
+            kPrimitiveWithCacheLifetimeSeconds,
+            true /* extend_entry_lifetime_on_access */,
+            true /* block_entry_while_eviction */, on_garbage_collection_func,
+            async_executor);
+    hybrid_decrypt_primitive_cache_ =
+        make_unique<AutoExpiryConcurrentMap<string, shared_ptr<HybridDecrypt>>>(
+            kPrimitiveWithCacheLifetimeSeconds,
+            true /* extend_entry_lifetime_on_access */,
+            true /* block_entry_while_eviction */, on_garbage_collection_func,
+            async_executor);
+    mac_primitive_cache_ =
+        make_unique<AutoExpiryConcurrentMap<string, shared_ptr<Mac>>>(
+            kPrimitiveWithCacheLifetimeSeconds,
+            true /* extend_entry_lifetime_on_access */,
+            true /* block_entry_while_eviction */, on_garbage_collection_func,
+            async_executor);
+  }
+}
+
 ExecutionResult CryptoClientProvider::Init() noexcept {
   // Support to use Tink's primitives.
   auto register_result = HybridConfig::Register();
@@ -420,25 +453,73 @@ ExecutionResult CryptoClientProvider::Init() noexcept {
               register_result.ToString().c_str());
     return execution_result;
   }
+
+  if (hybrid_encrypt_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(
+        hybrid_encrypt_primitive_cache_->Init(), kCryptoClientProvider,
+        kZeroUuid, "Failed to init hybrid_encrypt_primitive_cache_.");
+  }
+  if (hybrid_decrypt_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(
+        hybrid_decrypt_primitive_cache_->Init(), kCryptoClientProvider,
+        kZeroUuid, "Failed to init hybrid_decrypt_primitive_cache_.");
+  }
+  if (mac_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(mac_primitive_cache_->Init(),
+                              kCryptoClientProvider, kZeroUuid,
+                              "Failed to init mac_primitive_cache_.");
+  }
   return SuccessExecutionResult();
 }
 
 ExecutionResult CryptoClientProvider::Run() noexcept {
+  if (hybrid_encrypt_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(hybrid_encrypt_primitive_cache_->Run(),
+                              kCryptoClientProvider, kZeroUuid,
+                              "Failed to run hybrid_encrypt_primitive_cache_.");
+  }
+
+  if (hybrid_decrypt_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(hybrid_decrypt_primitive_cache_->Run(),
+                              kCryptoClientProvider, kZeroUuid,
+                              "Failed to run hybrid_decrypt_primitive_cache_.");
+  }
+  if (mac_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(mac_primitive_cache_->Run(),
+                              kCryptoClientProvider, kZeroUuid,
+                              "Failed to run mac_primitive_cache_.");
+  }
   return SuccessExecutionResult();
 }
 
 ExecutionResult CryptoClientProvider::Stop() noexcept {
+  if (hybrid_encrypt_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(
+        hybrid_encrypt_primitive_cache_->Stop(), kCryptoClientProvider,
+        kZeroUuid, "Failed to stop hybrid_encrypt_primitive_cache_.");
+  }
+  if (hybrid_decrypt_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(
+        hybrid_decrypt_primitive_cache_->Stop(), kCryptoClientProvider,
+        kZeroUuid, "Failed to stop hybrid_decrypt_primitive_cache_.");
+  }
+  if (mac_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(mac_primitive_cache_->Stop(),
+                              kCryptoClientProvider, kZeroUuid,
+                              "Failed to stop mac_primitive_cache_.");
+  }
   return SuccessExecutionResult();
 }
 
-ExecutionResultOr<HybridEncrypt*>
+ExecutionResultOr<std::shared_ptr<HybridEncrypt>>
 CryptoClientProvider::GetHybridEncryptPrimitive(const string& key) noexcept {
-  std::shared_lock s_lock(hybrid_encrypt_primitive_map_mutex_);
-  if (auto it = hybrid_encrypt_primitive_map_.find(key);
-      it != hybrid_encrypt_primitive_map_.end()) {
-    return it->second.get();
+  std::shared_ptr<::crypto::tink::HybridEncrypt> primitive_found;
+  if (hybrid_encrypt_primitive_cache_ &&
+      hybrid_encrypt_primitive_cache_->Find(key, primitive_found)
+          .Successful()) {
+    return primitive_found;
   }
-  s_lock.unlock();
+
   auto keyset_handle_or = CreateKeysetHandle(key);
   if (!keyset_handle_or.Successful()) {
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, keyset_handle_or.result(),
@@ -455,11 +536,16 @@ CryptoClientProvider::GetHybridEncryptPrimitive(const string& key) noexcept {
               primitive_or.status().ToString().c_str());
     return execution_result;
   }
-  std::unique_lock u_lock(hybrid_encrypt_primitive_map_mutex_);
-  const auto [it, success] = hybrid_encrypt_primitive_map_.insert(
-      std::make_pair(key, std::move(*primitive_or)));
-  u_lock.unlock();
-  return it->second.get();
+
+  if (!hybrid_encrypt_primitive_cache_) {
+    return move(*primitive_or);
+  }
+
+  std::pair<std::string, std::shared_ptr<HybridEncrypt>> primitive_pair;
+  primitive_pair.first = key;
+  primitive_pair.second = move(*primitive_or);
+  hybrid_encrypt_primitive_cache_->Insert(primitive_pair, primitive_found);
+  return primitive_pair.second;
 }
 
 ExecutionResultOr<HpkeEncryptResponse>
@@ -592,14 +678,15 @@ ExecutionResultOr<HpkeEncryptResponse> CryptoClientProvider::HpkeEncryptSync(
   return response;
 }
 
-ExecutionResultOr<HybridDecrypt*>
+ExecutionResultOr<std::shared_ptr<HybridDecrypt>>
 CryptoClientProvider::GetHybridDecryptPrimitive(const string& key) noexcept {
-  std::shared_lock s_lock(hybrid_decrypt_primitive_map_mutex_);
-  if (auto it = hybrid_decrypt_primitive_map_.find(key);
-      it != hybrid_decrypt_primitive_map_.end()) {
-    return it->second.get();
+  std::shared_ptr<::crypto::tink::HybridDecrypt> primitive_found;
+  if (hybrid_decrypt_primitive_cache_ &&
+      hybrid_decrypt_primitive_cache_->Find(key, primitive_found)
+          .Successful()) {
+    return primitive_found;
   }
-  s_lock.unlock();
+
   auto keyset_handle_or = CreateKeysetHandle(key);
   if (!keyset_handle_or.Successful()) {
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, keyset_handle_or.result(),
@@ -616,11 +703,16 @@ CryptoClientProvider::GetHybridDecryptPrimitive(const string& key) noexcept {
               primitive_or.status().ToString().c_str());
     return execution_result;
   }
-  std::unique_lock u_lock(hybrid_decrypt_primitive_map_mutex_);
-  const auto [it, success] = hybrid_decrypt_primitive_map_.insert(
-      std::make_pair(key, std::move(*primitive_or)));
-  u_lock.unlock();
-  return it->second.get();
+
+  if (!hybrid_decrypt_primitive_cache_) {
+    return move(*primitive_or);
+  }
+
+  std::pair<std::string, std::shared_ptr<HybridDecrypt>> primitive_pair;
+  primitive_pair.first = key;
+  primitive_pair.second = move(*primitive_or);
+  hybrid_decrypt_primitive_cache_->Insert(primitive_pair, primitive_found);
+  return primitive_pair.second;
 }
 
 ExecutionResultOr<HpkeDecryptResponse>
@@ -992,13 +1084,14 @@ CryptoClientProvider::AeadDecryptStreamSync(
   return move(dec_stream_result.value());
 }
 
-ExecutionResultOr<Mac*> CryptoClientProvider::GetMacPrimitive(
+ExecutionResultOr<shared_ptr<Mac>> CryptoClientProvider::GetMacPrimitive(
     const string& key) noexcept {
-  std::shared_lock s_lock(mac_primitive_map_mutex_);
-  if (auto it = mac_primitive_map_.find(key); it != mac_primitive_map_.end()) {
-    return it->second.get();
+  std::shared_ptr<Mac> primitive_found;
+  if (mac_primitive_cache_ &&
+      mac_primitive_cache_->Find(key, primitive_found).Successful()) {
+    return primitive_found;
   }
-  s_lock.unlock();
+
   auto keyset_handle_or = CreateKeysetHandle(key);
   if (!keyset_handle_or.Successful()) {
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, keyset_handle_or.result(),
@@ -1015,11 +1108,16 @@ ExecutionResultOr<Mac*> CryptoClientProvider::GetMacPrimitive(
               primitive_or.status().ToString().c_str());
     return execution_result;
   }
-  std::unique_lock u_lock(mac_primitive_map_mutex_);
-  const auto [it, success] =
-      mac_primitive_map_.insert(std::make_pair(key, std::move(*primitive_or)));
-  u_lock.unlock();
-  return it->second.get();
+
+  if (!mac_primitive_cache_) {
+    return move(*primitive_or);
+  }
+
+  std::pair<std::string, std::shared_ptr<Mac>> primitive_pair;
+  primitive_pair.first = key;
+  primitive_pair.second = move(*primitive_or);
+  mac_primitive_cache_->Insert(primitive_pair, primitive_found);
+  return primitive_pair.second;
 }
 
 ExecutionResultOr<ComputeMacResponse> CryptoClientProvider::ComputeMacSync(

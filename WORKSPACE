@@ -23,9 +23,9 @@ rules_jvm_external_setup()
 
 # Declare explicit protobuf version and hash, to override any implicit dependencies.
 # Please update both while upgrading to new versions.
-PROTOBUF_CORE_VERSION_FOR_CC = "24.4"
+PROTOBUF_CORE_VERSION_FOR_CC = "28.0"
 
-PROTOBUF_SHA_256_FOR_CC = "616bb3536ac1fff3fb1a141450fa28b875e985712170ea7f1bfe5e5fc41e2cd8"
+PROTOBUF_SHA_256_FOR_CC = "13e7749c30bc24af6ee93e092422f9dc08491c7097efa69461f88eb5f61805ce"
 
 #############################
 # CC SDK Dependencies Rules #
@@ -76,6 +76,16 @@ load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 
 grpc_extra_deps()
 
+bind(
+    name = "cares",
+    actual = "@com_github_cares_cares//:ares",
+)
+
+bind(
+    name = "madler_zlib",
+    actual = "@zlib//:zlib",
+)
+
 ###############
 # Proto rules #
 ###############
@@ -98,6 +108,16 @@ boost_deps()
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
 
 rules_foreign_cc_dependencies()
+
+# Load OpenTelemetry dependencies after load.
+load("@io_opentelemetry_cpp//bazel:repository.bzl", "opentelemetry_cpp_deps")
+
+opentelemetry_cpp_deps()
+
+# (required after v1.8.0) Load extra dependencies required for OpenTelemetry
+load("@io_opentelemetry_cpp//bazel:extra_deps.bzl", "opentelemetry_extra_deps")
+
+opentelemetry_extra_deps()
 
 #################################
 # SCP Shared Dependencies Rules #
@@ -213,6 +233,14 @@ container_pull(
     digest = "sha256:1e4181aaff242e2b305bb4abbe811eb122d68ffd7fd87c25c19468a1bc387ce6",
     registry = "gcr.io",
     repository = "distroless/java17-debian11",
+)
+
+container_pull(
+    name = "java_base_21",
+    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2025-01-12.
+    digest = "sha256:d6ba76b612098d03aa8f0782295c859a7b24476528f96401ca4bdf5bfe38161f",
+    registry = "gcr.io",
+    repository = "distroless/java21-debian12",
 )
 
 # Distroless debug image for running Java. Need to use debug image to install more dependencies for CC.

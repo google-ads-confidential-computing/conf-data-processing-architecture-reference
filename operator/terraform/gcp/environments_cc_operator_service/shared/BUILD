@@ -20,14 +20,14 @@ package(default_visibility = ["//visibility:public"])
 # copied.
 pkg_mklink(
     name = "shared_operator_service_vars_link",
-    src = "../../applications/cc_operator_service/variables.tf",
-    dest = "shared/variables.tf",
+    link_name = "shared/variables.tf",
+    target = "../../applications/cc_operator_service/variables.tf",
 )
 
 pkg_mklink(
     name = "shared_operator_service_parameter_vars_link",
-    src = "../../applications/cc_operator_service/parameter_variables.tf",
-    dest = "shared/parameter_variables.tf",
+    link_name = "shared/parameter_variables.tf",
+    target = "../../applications/cc_operator_service/parameter_variables.tf",
 )
 
 pkg_files(

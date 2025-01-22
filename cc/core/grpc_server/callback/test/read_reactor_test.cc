@@ -77,6 +77,8 @@ class MockReader : public ServerCallbackReader<SomeRequest> {
   MOCK_METHOD(void, Read, (SomeRequest*), (override));
   MOCK_METHOD(ServerReactor*, reactor, (), (override));
   MOCK_METHOD(void, CallOnDone, (), (override));
+  MOCK_METHOD(::grpc_call*, call, (), (override));
+  MOCK_METHOD(void, RunAsync, ((absl::AnyInvocable<void()>)), (override));
 };
 
 class TestReadReactor : public ReadReactor<SomeRequest, SomeResponse> {

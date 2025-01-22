@@ -215,15 +215,15 @@ TEST(GcpNoSQLDatabaseClientUtilsTest,
                   attribute),
               IsSuccessfulAndHolds(Value(1)));
 
-  attribute.set_value_float(1.5f);
+  attribute.set_value_float(1.5);
   EXPECT_THAT(GcpNoSQLDatabaseClientUtils::ConvertItemAttributeToSpannerValue(
                   attribute),
               IsSuccessfulAndHolds(Value(1.5f)));
 
-  attribute.set_value_double(1.5);
+  attribute.set_value_double(1.5L);
   EXPECT_THAT(GcpNoSQLDatabaseClientUtils::ConvertItemAttributeToSpannerValue(
                   attribute),
-              IsSuccessfulAndHolds(Value(1.5f)));
+              IsSuccessfulAndHolds(Value(1.5)));
 }
 
 TEST(GcpNoSQLDatabaseClientUtilsTest,

@@ -155,11 +155,11 @@ module "notifications_topic_id" {
   parameter_value = module.notifications[0].notifications_pubsub_topic_id
 }
 
-module "enable_metric_aggregation" {
+module "enable_native_metric_aggreation" {
   source          = "../../modules/parameters"
   environment     = var.environment
-  parameter_name  = "ENABLE_METRIC_AGGREGATION"
-  parameter_value = var.enable_metric_aggregation
+  parameter_name  = "ENABLE_NATIVE_METRIC_AGGREGATION"
+  parameter_value = var.enable_native_metric_aggreation
 }
 
 module "frontend" {
@@ -314,13 +314,15 @@ module "job_completion_notifications_cloud_function" {
   cloud_function_zip  = var.job_completion_notifications_cloud_function_path.zip_file_name
   vpc_connector_id    = var.vpcsc_compatible ? module.vpc.connectors[var.region] : null
 
-  min_instance_count          = 0
-  max_instance_count          = 1
-  concurrency                 = 1
-  cpu_count                   = var.job_completion_notifications_cloud_function_cpu_count
-  memory_mb                   = var.job_completion_notifications_cloud_function_memory_mb
-  trigger_pubsub_id           = module.job_completion_notifications[0].notifications_pubsub_topic_id
-  trigger_pubsub_retry_policy = "RETRY_POLICY_DO_NOT_RETRY" # It is fine to wait until the next invocation
+  min_instance_count = 0
+  max_instance_count = 1
+  concurrency        = 1
+  cpu_count          = var.job_completion_notifications_cloud_function_cpu_count
+  memory_mb          = var.job_completion_notifications_cloud_function_memory_mb
+  trigger_pubsub_id  = module.job_completion_notifications[0].notifications_pubsub_topic_id
+
+  # We need to retry failed invocations to guarantee the message will be delivered.
+  trigger_pubsub_retry_policy = "RETRY_POLICY_RETRY"
 
   runtime_cloud_function_service_account_email = var.job_completion_notifications_service_account_email
   event_trigger_service_account_email          = var.job_completion_notifications_service_account_email

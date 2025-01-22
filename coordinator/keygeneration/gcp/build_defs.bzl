@@ -18,7 +18,7 @@ def keygeneration_container(name, tag, registry, repository):
     container_name = name + "_container"
     container_image(
         name = container_name,
-        base = "@java_base//image",
+        base = "@java_base_21//image",
         cmd = [
             "KeyGenerationApp_deploy.jar",
             "--multiparty",

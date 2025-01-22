@@ -90,3 +90,22 @@ java_test(
         "//javatests/com/google/scp/shared/testutils/aws",
     ],
 )
+
+java_test(
+    name = "DataKeyEncryptionUtilTest",
+    srcs = [
+        "DataKeyEncryptionUtilTest.java",
+    ],
+    deps = [
+        "//coordinator/protos/keymanagement/shared/backend:java_proto",
+        "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/aws",
+        "//java/com/google/scp/coordinator/keymanagement/shared/model",
+        "//java/com/google/scp/shared/api/exception",
+        "//java/com/google/scp/shared/crypto/tink",
+        "//java/com/google/scp/shared/util",
+        "//java/external:google_truth",
+        "//java/external:mockito",
+        "//java/external:protobuf_java",
+        "//java/external:tink",
+    ],
+)

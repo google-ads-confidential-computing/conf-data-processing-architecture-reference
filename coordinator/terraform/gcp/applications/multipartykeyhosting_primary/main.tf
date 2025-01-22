@@ -15,7 +15,7 @@
 terraform {
   required_providers {
     google = {
-      source  = "hashicorp/google"
+      source  = "hashicorp/google-beta"
       version = ">= 4.36"
     }
   }
@@ -66,6 +66,7 @@ resource "google_storage_bucket" "mpkhs_primary_package_bucket" {
 
 module "keydb" {
   source                   = "../../modules/keydb"
+  project_id               = var.project_id
   environment              = var.environment
   spanner_instance_config  = var.spanner_instance_config
   spanner_processing_units = var.spanner_processing_units
@@ -138,6 +139,7 @@ module "publickeyhostingservice" {
   get_public_key_cloudfunction_memory_mb     = var.get_public_key_cloudfunction_memory_mb
   get_public_key_cloudfunction_min_instances = var.get_public_key_cloudfunction_min_instances
   get_public_key_cloudfunction_max_instances = var.get_public_key_cloudfunction_max_instances
+  use_java21_runtime                         = var.publickeyservice_use_java21_runtime
 
   # Load balance vars
   enable_get_public_key_cdn                          = var.enable_get_public_key_cdn
@@ -157,7 +159,7 @@ module "publickeyhostingservice" {
   get_public_key_cloudfunction_error_ratio_threshold  = var.get_public_key_cloudfunction_error_ratio_threshold
   get_public_key_cloudfunction_max_execution_time_max = var.get_public_key_cloudfunction_max_execution_time_max
   cloudfunction_alert_on_memory_usage_threshold       = var.publickeyservice_cloudfunction_alert_on_memory_usage_threshold
-  get_public_key_lb_5xx_ratio_threshold               = var.get_public_key_lb_5xx_ratio_threshold
+  get_public_key_lb_5xx_threshold                     = var.get_public_key_lb_5xx_threshold
   get_public_key_lb_max_latency_ms                    = var.get_public_key_lb_max_latency_ms
   get_public_key_empty_key_set_error_threshold        = var.get_public_key_empty_key_set_error_threshold
   get_public_key_general_error_threshold              = var.get_public_key_general_error_threshold
@@ -184,6 +186,7 @@ module "encryptionkeyservice" {
   encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
   encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
   encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
+  use_java21_runtime                                 = var.encryptionkeyservice_use_java21_runtime
 
   # Domain Management
   enable_domain_management = var.enable_domain_management
@@ -197,7 +200,7 @@ module "encryptionkeyservice" {
   cloudfunction_error_ratio_threshold               = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
   cloudfunction_max_execution_time_max              = var.encryptionkeyservice_cloudfunction_max_execution_time_max
   cloudfunction_alert_on_memory_usage_threshold     = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold
-  lb_5xx_ratio_threshold                            = var.encryptionkeyservice_lb_5xx_ratio_threshold
+  lb_5xx_threshold                                  = var.encryptionkeyservice_lb_5xx_threshold
   lb_max_latency_ms                                 = var.encryptionkeyservice_lb_max_latency_ms
   get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
   encryption_key_service_severity_map               = var.alert_severity_overrides

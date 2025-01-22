@@ -16,31 +16,6 @@ load("@rules_java//java:defs.bzl", "java_library", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
-java_test(
-    name = "CreateKeysTaskTest",
-    srcs = [
-        "CreateKeysTaskTest.java",
-        "KeyGenerationTestEnv.java",
-    ],
-    deps = [
-        "//coordinator/protos/keymanagement/shared/backend:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
-        "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/com/google/scp/coordinator/keymanagement/shared/util",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/external:acai",
-        "//java/external:google_truth",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:mockito",
-        "//java/external:tink",
-        "//javatests/com/google/scp/coordinator/keymanagement/testutils",
-    ],
-)
-
 java_library(
     name = "common",
     srcs = [

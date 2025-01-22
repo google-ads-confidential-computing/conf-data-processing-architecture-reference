@@ -31,11 +31,11 @@ public interface SignDataKeyTask {
    * Returns a new DataKey with a context and MAC signature added, allowing the returned DataKey to
    * be used with {@code verifyDataKey}.
    */
-  public DataKey signDataKey(DataKey dataKey) throws ServiceException;
+  DataKey signDataKey(DataKey dataKey) throws ServiceException;
 
   /**
    * Validates that the provided data key has a proper signature and has not expired, throwing if
    * validation of either of those fields fails.
    */
-  public void verifyDataKey(DataKey dataKey) throws ServiceException;
+  void verifyDataKey(DataKey dataKey) throws ServiceException;
 }

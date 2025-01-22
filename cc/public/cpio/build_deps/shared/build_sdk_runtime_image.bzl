@@ -57,7 +57,7 @@ def build_sdk_runtime_image(
                 {
                     Label("//cc/public/cpio/build_deps/shared:reproducible_build_config"): [
                         Label("//cc/public/tools:build_reproducible_container_image.sh"),
-                        Label("//:source_code_tar"),
+                        Label("//:source_code.tar"),
                         Label("//cc/tools/build:prebuilt_cc_build_container_image.tar"),
                     ],
                     Label("//cc/public/cpio/build_deps/shared:non_reproducible_build_config"): [],
@@ -68,7 +68,7 @@ def build_sdk_runtime_image(
         # NOTE: This order matters
         # Arguments:
         # $1 is the output tar, that is, the path where this rule generates its output ($@)
-        # $2 is the packaged SCP source code ($(location //:source_code_tar))
+        # $2 is the packaged SCP source code ($(location //:source_code.tar))
         # $3 is the build container image tag
         # $4 is the name of the container to be built
         # $5 is the build container target path
@@ -76,7 +76,7 @@ def build_sdk_runtime_image(
         cmd =
             select(
                 {
-                    Label("//cc/public/cpio/build_deps/shared:reproducible_build_config"): "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar)  $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s %s %s" % (container_name, "%s:%s.tar" % (native.package_name(), container_name), "--//cc/cpio/server/interface:is_test_server=" + str(is_test_server), "--//cc/public/cpio/interface:platform=" + platform, "--//cc/public/cpio/interface:run_inside_tee=" + str(inside_tee)),
+                    Label("//cc/public/cpio/build_deps/shared:reproducible_build_config"): "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code.tar)  $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s %s %s" % (container_name, "%s:%s.tar" % (native.package_name(), container_name), "--//cc/cpio/server/interface:is_test_server=" + str(is_test_server), "--//cc/public/cpio/interface:platform=" + platform, "--//cc/public/cpio/interface:run_inside_tee=" + str(inside_tee)),
                     Label("//cc/public/cpio/build_deps/shared:non_reproducible_build_config"): "",
                 },
                 no_match_error = "Please provide reproducible_build flag",

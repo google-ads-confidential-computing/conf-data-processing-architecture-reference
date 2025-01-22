@@ -18,10 +18,13 @@ package com.google.scp.shared.gcp.util;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.protobuf.util.JsonFormat;
+import com.google.protobuf.util.JsonFormat.Parser;
 import io.cloudevents.CloudEvent;
 import java.util.Base64;
 
 public class JsonHelper {
+  private static final Parser JSON_PARSER = JsonFormat.parser();
   private static final String MESSAGE_FIELD_NAME = "message";
   private static final String DATA_FIELD_NAME = "data";
   private static final ObjectMapper jsonObjectMapper = new ObjectMapper();
@@ -30,7 +33,7 @@ public class JsonHelper {
     // Class com.google.events.cloud.pubsub.v1.MessagePublishedData
     var messagePublishedDataJson = parseJson(new String(event.getData().toBytes()));
 
-    // Class com.google.events.cloud.pubsub.v1.Message
+    // Class com.google.events.cloud.pubsub.v1.PubsubMessage
     var msgJson = getField(messagePublishedDataJson, MESSAGE_FIELD_NAME);
     var dataJson = getField(msgJson, DATA_FIELD_NAME);
     var decodedData = new String(Base64.getDecoder().decode(dataJson.asText()));

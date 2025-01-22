@@ -28,7 +28,7 @@ import java.io.UncheckedIOException;
 public abstract class ResponseContext {
 
   private static final JsonFormat.Printer jsonPrinter =
-      JsonFormat.printer().omittingInsignificantWhitespace().includingDefaultValueFields();
+      JsonFormat.printer().omittingInsignificantWhitespace().alwaysPrintFieldsWithNoPresence();
 
   /* Sets the response body. */
   public abstract void setBody(String body);

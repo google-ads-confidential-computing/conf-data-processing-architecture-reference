@@ -35,6 +35,5 @@ java_library(
         "//java/external:jackson_databind",
         "//java/external:protobuf_java",
         "//java/external:slf4j",
-        "//java/external:tink",
     ],
 )

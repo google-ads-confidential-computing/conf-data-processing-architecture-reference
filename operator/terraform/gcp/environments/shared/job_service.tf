@@ -53,16 +53,16 @@ module "job_service" {
   job_metadata_table_ttl_days                   = var.job_metadata_table_ttl_days
 
   # Worker
-  instance_type                 = var.instance_type
-  instance_disk_image_family    = var.instance_disk_image_family
-  instance_disk_image           = var.instance_disk_image
-  worker_instance_disk_type     = var.worker_instance_disk_type
-  worker_instance_disk_size_gb  = var.worker_instance_disk_size_gb
-  max_job_processing_time       = var.max_job_processing_time
-  max_job_num_attempts          = var.max_job_num_attempts
-  user_provided_worker_sa_email = var.user_provided_worker_sa_email
-  worker_instance_force_replace = var.worker_instance_force_replace
-  enable_metric_aggregation     = var.enable_metric_aggregation
+  instance_type                   = var.instance_type
+  instance_disk_image_family      = var.instance_disk_image_family
+  instance_disk_image             = var.instance_disk_image
+  worker_instance_disk_type       = var.worker_instance_disk_type
+  worker_instance_disk_size_gb    = var.worker_instance_disk_size_gb
+  max_job_processing_time         = var.max_job_processing_time
+  max_job_num_attempts            = var.max_job_num_attempts
+  user_provided_worker_sa_email   = var.user_provided_worker_sa_email
+  worker_instance_force_replace   = var.worker_instance_force_replace
+  enable_native_metric_aggreation = var.enable_native_metric_aggreation
 
   # Worker Alarms
   worker_alarm_duration_sec     = var.worker_alarm_duration_sec

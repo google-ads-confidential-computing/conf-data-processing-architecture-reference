@@ -28,6 +28,4 @@ def protobuf(version = DEFAULT_PROTOBUF_CORE_VERSION, hash = DEFAULT_PROTOBUF_SH
         urls = [
             "https://github.com/protocolbuffers/protobuf/archive/v%s.tar.gz" % version,
         ],
-        patch_args = ["-p1"],
-        patches = [Label("//build_defs/shared:protobuf.patch")],
     )

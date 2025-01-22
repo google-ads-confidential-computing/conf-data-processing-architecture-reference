@@ -99,6 +99,12 @@ variable "allowed_operator_service_accounts" {
   default     = []
 }
 
+variable "use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+}
+
 ################################################################################
 # Alarm Variables.
 ################################################################################
@@ -143,9 +149,9 @@ variable "lb_max_latency_ms" {
   type        = string
 }
 
-variable "lb_5xx_ratio_threshold" {
+variable "lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = string
+  type        = number
 }
 
 variable "get_encrypted_private_key_general_error_threshold" {

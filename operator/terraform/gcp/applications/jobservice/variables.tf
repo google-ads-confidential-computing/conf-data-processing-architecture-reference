@@ -43,8 +43,8 @@ variable "operator_package_bucket_location" {
   type        = string
 }
 
-variable "enable_metric_aggregation" {
-  description = "Enable metric aggregation."
+variable "enable_native_metric_aggreation" {
+  description = "Enable native metric aggregation."
   type        = bool
   default     = false
 }

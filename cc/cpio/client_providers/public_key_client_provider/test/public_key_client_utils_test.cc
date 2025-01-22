@@ -18,6 +18,7 @@
 
 #include <gtest/gtest.h>
 
+#include <iomanip>
 #include <locale>
 #include <memory>
 #include <regex>

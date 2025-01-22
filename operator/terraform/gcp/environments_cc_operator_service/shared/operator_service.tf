@@ -81,6 +81,15 @@ module "operator_service" {
   vpcsc_compatible           = var.vpcsc_compatible
   vpc_connector_machine_type = var.vpc_connector_machine_type
 
+  # OpenTelemetry Collector
+  enable_remote_metric_aggregation = var.enable_remote_metric_aggregation
+  collector_instance_type          = var.collector_instance_type
+  user_provided_collector_sa_email = var.user_provided_collector_sa_email
+  collector_service_port           = var.collector_service_port
+  collector_send_batch_max_size    = var.collector_send_batch_max_size
+  collector_send_batch_size        = var.collector_send_batch_size
+  collector_send_batch_timeout     = var.collector_send_batch_timeout
+
   # Frontend Service
   operator_package_bucket_location                                = var.operator_package_bucket_location
   frontend_service_jar                                            = var.frontend_service_jar

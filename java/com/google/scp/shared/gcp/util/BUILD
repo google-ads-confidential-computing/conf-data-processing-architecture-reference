@@ -42,7 +42,6 @@ java_library(
         "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
         "//java/external:slf4j",
-        "//java/external:slf4j_simple",
         "//shared/protos/api/v1:java_proto",
     ],
 )
@@ -65,7 +64,10 @@ java_library(
     name = "json_util",
     srcs = ["JsonHelper.java"],
     deps = [
+        "//java/external:gcp_cloudevent_types",
         "//java/external:io_cloudevents_api",
         "//java/external:jackson_databind",
+        "//java/external:protobuf_java",
+        "//java/external:protobuf_java_util",
     ],
 )

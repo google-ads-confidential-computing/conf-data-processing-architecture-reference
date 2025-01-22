@@ -15,7 +15,8 @@
 terraform {
   required_providers {
     google = {
-      source = "hashicorp/google"
+      source  = "hashicorp/google-beta"
+      version = ">= 6.4.0"
     }
   }
 }
@@ -28,6 +29,7 @@ resource "google_spanner_instance" "keydb_instance" {
 }
 
 resource "google_spanner_database" "keydb" {
+  project                  = var.project_id
   instance                 = google_spanner_instance.keydb_instance.name
   name                     = "${var.environment}-keydb"
   version_retention_period = "7d"
@@ -62,4 +64,22 @@ resource "google_spanner_database" "keydb" {
   ]
 
   deletion_protection = true
+}
+
+resource "google_spanner_backup_schedule" "keydb_backup_schedule_full_backup" {
+  instance = google_spanner_instance.keydb_instance.name
+
+  database = google_spanner_database.keydb.name
+
+  name = "${var.environment}-keydb-backup-schedule-full-backup"
+
+  retention_duration = "7776000s" // 90 days
+
+  spec {
+    cron_spec {
+      text = "0 0 * * *" // once a day at 12:00 midnight in UTC.
+    }
+  }
+  // The schedule creates only full backups.
+  full_backup_spec {}
 }

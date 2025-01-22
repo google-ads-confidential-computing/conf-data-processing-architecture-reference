@@ -91,7 +91,7 @@ container_image(
 genrule(
     name = "reproducible_proxy_outputs",
     srcs = [
-        "//:source_code_tar",
+        "//:source_code.tar",
         ":build_container.tar",
         "@bazelisk//file:bazelisk",
     ],
@@ -105,7 +105,7 @@ genrule(
     export OUTPUT_DIR=`mktemp -d -t PROXY_BUILD_OUTPUTS_XXXXX`
     docker load < $(location :build_container.tar)
     docker run --rm \
-      -v `realpath $(location //:source_code_tar)`:/source_code.tar \
+      -v `realpath $(location //:source_code.tar)`:/source_code.tar \
       -v `realpath $(location @bazelisk//file:bazelisk)`:/bin/bazel \
       -v `realpath "$${OUTPUT_DIR}"`:/output \
       bazel/cc/proxy:build_container \
@@ -113,6 +113,7 @@ genrule(
         set -eux
         yum install glibc-devel-2.26-63.amzn2 glibc-headers-2.26-63.amzn2 gcc-7.3.1-15.amzn2 gcc-c++-7.3.1-15.amzn2 tar git -y > /dev/null
         tar xf /source_code.tar -C /
+        ls
         cd /scp
         # Remove clang flags
         sed -i '/fbracket-depth=512/d' .bazelrc

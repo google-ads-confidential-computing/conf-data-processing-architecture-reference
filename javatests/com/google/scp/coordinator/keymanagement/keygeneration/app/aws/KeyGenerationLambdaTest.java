@@ -23,7 +23,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateKeysTask;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 import org.junit.Rule;

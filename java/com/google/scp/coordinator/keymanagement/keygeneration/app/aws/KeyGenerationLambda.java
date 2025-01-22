@@ -25,7 +25,6 @@ import com.google.inject.Key;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationKeyCount;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationTtlInDays;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationValidityInDays;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateKeysTask;
 import com.google.scp.shared.api.exception.ServiceException;
 
 /**

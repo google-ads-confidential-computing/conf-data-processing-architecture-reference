@@ -49,9 +49,9 @@ def sdk_common(protobuf_version, protobuf_repo_hash, import_aws, import_gcp):
     if import_aws:
         enclaves_kmstools_libraries()
     go_deps()
+    protobuf(protobuf_version, protobuf_repo_hash)
     java_grpc()
     nghttp2()
-    protobuf(protobuf_version, protobuf_repo_hash)
     import_google_cloud_cpp()
     if import_gcp:
         google_cloud_sdk()

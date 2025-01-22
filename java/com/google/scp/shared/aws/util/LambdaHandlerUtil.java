@@ -33,7 +33,7 @@ public final class LambdaHandlerUtil {
   private static final Logger logger = LoggerFactory.getLogger(LambdaHandlerUtil.class);
 
   private static final JsonFormat.Printer DEFAULT_JSON_PRINTER =
-      JsonFormat.printer().includingDefaultValueFields();
+      JsonFormat.printer().alwaysPrintFieldsWithNoPresence();
 
   private LambdaHandlerUtil() {}
 

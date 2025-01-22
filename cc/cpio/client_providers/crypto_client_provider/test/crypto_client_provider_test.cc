@@ -38,6 +38,7 @@
 #include <tink/util/secret_data.h>
 
 #include "absl/strings/escaping.h"
+#include "cc/core/async_executor/src/async_executor.h"
 #include "core/interface/async_context.h"
 #include "core/test/utils/conditional_wait.h"
 #include "core/test/utils/proto_test_utils.h"
@@ -95,6 +96,8 @@ using google::crypto::tink::KeyStatusType;
 using google::crypto::tink::OutputPrefixType;
 using google::protobuf::Any;
 using google::scp::core::AsyncContext;
+using google::scp::core::AsyncExecutor;
+using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;
 using google::scp::core::ExecutionStatus;
@@ -161,10 +164,15 @@ class CryptoClientProviderTest : public ScpTestBase {
  protected:
   void SetUp() override {
     auto options = make_shared<CryptoClientOptions>();
-    client_ = make_unique<CryptoClientProvider>(options);
-
+    async_executor_ = make_shared<AsyncExecutor>(2, 10);
+    client_ = make_unique<CryptoClientProvider>(options, async_executor_);
+    client_without_cache_ = make_unique<CryptoClientProvider>(options);
+    EXPECT_SUCCESS(async_executor_->Init());
+    EXPECT_SUCCESS(async_executor_->Run());
     EXPECT_SUCCESS(client_->Init());
     EXPECT_SUCCESS(client_->Run());
+    EXPECT_SUCCESS(client_without_cache_->Init());
+    EXPECT_SUCCESS(client_without_cache_->Run());
 
     auto keyset_handle_1_or = KeysetHandle::GenerateNew(
         HybridKeyTemplates::HpkeX25519HkdfSha256ChaCha20Poly1305Raw());
@@ -233,7 +241,11 @@ class CryptoClientProviderTest : public ScpTestBase {
     return *Base64Encode(key_buf.str());
   }
 
-  void TearDown() override { EXPECT_SUCCESS(client_->Stop()); }
+  void TearDown() override {
+    EXPECT_SUCCESS(client_->Stop());
+    EXPECT_SUCCESS(client_without_cache_->Stop());
+    EXPECT_SUCCESS(async_executor_->Stop());
+  }
 
   static HpkeParams GetDefaultHpkeParams() {
     HpkeParams hpke_params;
@@ -593,7 +605,9 @@ class CryptoClientProviderTest : public ScpTestBase {
     return request;
   }
 
+  std::shared_ptr<AsyncExecutorInterface> async_executor_;
   unique_ptr<CryptoClientProvider> client_;
+  unique_ptr<CryptoClientProvider> client_without_cache_;
   string HpkeX25519HkdfSha256ChaCha20Poly1305Raw_encoded_tink_private_key;
   string HpkeX25519HkdfSha256ChaCha20Poly1305Raw_encoded_tink_public_key;
   string HpkeX25519HkdfSha256Aes256GcmRaw_encoded_tink_private_key;
@@ -712,6 +726,32 @@ TEST_F(CryptoClientProviderTest, MultipleHpkeEncryptAndDecryptSuccess) {
           encrypt_response_or->secret());
       AssertHpkeDecryptResponse(client_->HpkeDecryptSync(decrypt_request),
                                 encrypt_response_or->secret());
+    }));
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+}
+
+TEST_F(CryptoClientProviderTest,
+       ClientWithoutCacheMultipleHpkeEncryptAndDecryptSuccess) {
+  vector<thread> threads;
+  for (auto i = 0; i < 10; ++i) {
+    threads.push_back(thread([this, i]() {
+      auto encrypt_request = CreateHpkeEncryptRequest(
+          false /*is_bidirectional*/, false /*is_raw_key*/);
+      auto encrypt_response_or =
+          client_without_cache_->HpkeEncryptSync(encrypt_request);
+      AssertHpkeEncryptResponse(false, encrypt_response_or);
+
+      auto decrypt_request = CreateHpkeDecryptRequest(
+          encrypt_response_or->encrypted_data().ciphertext(),
+          false /*is_bidirectional*/, false /*is_raw_key*/,
+          encrypt_response_or->secret());
+      AssertHpkeDecryptResponse(
+          client_without_cache_->HpkeDecryptSync(decrypt_request),
+          encrypt_response_or->secret());
     }));
   }
 
@@ -995,6 +1035,35 @@ TEST_F(CryptoClientProviderTest, MultipleComputeMacSuccessfully) {
   for (auto i = 0; i < 10; ++i) {
     threads.push_back(thread([this, &request, i]() {
       EXPECT_THAT(client_->ComputeMacSync(move(request))->mac(),
+                  testing::Not(testing::IsEmpty()));
+    }));
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+}
+
+TEST_F(CryptoClientProviderTest,
+       ClientWithoutCacheMultipleComputeMacSuccessfully) {
+  auto keyset_handle = KeysetHandle::GenerateNew(MacKeyTemplates::HmacSha256());
+  std::stringbuf key_buf(std::ios_base::out);
+  auto keyset_writer =
+      BinaryKeysetWriter::New(std::make_unique<std::ostream>(&key_buf));
+  auto write_result = CleartextKeysetHandle::Write(keyset_writer->get(),
+                                                   *keyset_handle->release());
+  EXPECT_TRUE(write_result.ok()) << write_result;
+
+  ComputeMacRequest request;
+  ASSERT_SUCCESS_AND_ASSIGN(*request.mutable_key(),
+                            Base64Encode(key_buf.str()));
+  string data = "some sensitive data";
+  request.set_data(data);
+
+  vector<thread> threads;
+  for (auto i = 0; i < 10; ++i) {
+    threads.push_back(thread([this, &request, i]() {
+      EXPECT_THAT(client_without_cache_->ComputeMacSync(move(request))->mac(),
                   testing::Not(testing::IsEmpty()));
     }));
   }

@@ -152,7 +152,8 @@ class GcpSpannerUtils {
     } else if (const float* float_val = std::get_if<float>(&attribute_value)) {
       // Technically floats are not supported by spanner::Value but it will be
       // converted to a double.
-      out_value = google::cloud::spanner::Value(*float_val);
+      out_value =
+          google::cloud::spanner::Value(static_cast<double>(*float_val));
     } else if (const double* double_val =
                    std::get_if<double>(&attribute_value)) {
       out_value = google::cloud::spanner::Value(*double_val);

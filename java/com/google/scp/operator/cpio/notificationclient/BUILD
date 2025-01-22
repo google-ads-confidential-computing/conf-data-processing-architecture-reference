@@ -48,7 +48,6 @@ java_library(
         ":model",
         "//java/external:guice",
         "//java/external:slf4j",
-        "//java/external:slf4j_simple",
     ],
 )
 
@@ -99,6 +98,5 @@ java_library(
         "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
         "//java/external:slf4j",
-        "//java/external:slf4j_simple",
     ],
 )

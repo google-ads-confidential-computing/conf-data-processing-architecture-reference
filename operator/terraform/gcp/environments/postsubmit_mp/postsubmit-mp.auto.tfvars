@@ -32,3 +32,5 @@ job_completion_notifications_cloud_function_memory_mb = "512"
 
 worker_scale_in_jar  = "/tmp/postsubmit_mp/jars/WorkerScaleInCloudFunction_deploy.jar"
 frontend_service_jar = "/tmp/postsubmit_mp/jars/FrontendServiceHttpCloudFunction_deploy.jar"
+
+enable_native_metric_aggreation = true

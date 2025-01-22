@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
+package com.google.scp.coordinator.keymanagement.keygeneration.app.aws;
 
 import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.KeyGenerationUtil.countExistingValidKeys;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCiphertext;

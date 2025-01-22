@@ -30,7 +30,7 @@ container_image(
 genrule(
     name = "reproducible_proxy_outputs_al2023",
     srcs = [
-        "//:source_code_tar",
+        "//:source_code.tar",
         ":build_container_al2023.tar",
         "@bazelisk//file:bazelisk",
     ],
@@ -41,7 +41,7 @@ genrule(
     export OUTPUT_DIR=`mktemp -d -t PROXY_BUILD_OUTPUTS_XXXXX`
     docker load < $(location :build_container_al2023.tar)
     docker run --rm \
-      -v `realpath $(location //:source_code_tar)`:/source_code.tar \
+      -v `realpath $(location //:source_code.tar)`:/source_code.tar \
       -v `realpath $(location @bazelisk//file:bazelisk)`:/bin/bazel \
       -v `realpath "$${OUTPUT_DIR}"`:/output \
       bazel/cc/proxy/parent_instance/aws/al2023:build_container_al2023 \
@@ -49,6 +49,7 @@ genrule(
         set -eux
         dnf install glibc-devel-2.34-52.amzn2023.0.3 clang-15.0.6-3.amzn2023.0.2 tar git -y > /dev/null
         tar xf /source_code.tar -C /
+        ls
         cd /scp
         export CXX=/usr/bin/clang++-15
         export CC=/usr/bin/clang-15

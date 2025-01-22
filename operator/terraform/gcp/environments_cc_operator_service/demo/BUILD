@@ -20,26 +20,26 @@ package(default_visibility = ["//visibility:public"])
 # copied.
 pkg_mklink(
     name = "operator_service_link",
-    src = "../../environments_cc_operator_service/shared/operator_service.tf",
-    dest = "demo/operator_service.tf",
+    link_name = "demo/operator_service.tf",
+    target = "../../environments_cc_operator_service/shared/operator_service.tf",
 )
 
 pkg_mklink(
     name = "operator_service_vars_link",
-    src = "../../environments_cc_operator_service/shared/variables.tf",
-    dest = "demo/variables.tf",
+    link_name = "demo/variables.tf",
+    target = "../../environments_cc_operator_service/shared/variables.tf",
 )
 
 pkg_mklink(
     name = "operator_service_parameter_vars_link",
-    src = "../../environments_cc_operator_service/shared/parameter_variables.tf",
-    dest = "demo/parameter_variables.tf",
+    link_name = "demo/parameter_variables.tf",
+    target = "../../environments_cc_operator_service/shared/parameter_variables.tf",
 )
 
 pkg_mklink(
     name = "operator_service_outputs_link",
-    src = "../../environments_cc_operator_service/shared/outputs.tf",
-    dest = "demo/outputs.tf",
+    link_name = "demo/outputs.tf",
+    target = "../../environments_cc_operator_service/shared/outputs.tf",
 )
 
 pkg_files(

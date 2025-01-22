@@ -15,7 +15,7 @@
 terraform {
   required_providers {
     google = {
-      source  = "hashicorp/google"
+      source  = "hashicorp/google-beta"
       version = ">= 4.48"
     }
   }
@@ -58,7 +58,7 @@ resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction
   location = each.value
 
   build_config {
-    runtime     = "java11"
+    runtime     = var.use_java21_runtime ? "java21" : "java11"
     entry_point = "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.EncryptionKeyService"
     source {
       storage_source {
@@ -111,14 +111,14 @@ locals {
   cfs = { for idx, cf in local.cloud_functions : idx => cf }
 
   service_accounts_cfs = [
-    for pair in setproduct(local.cloud_functions, var.allowed_operator_service_accounts) : {
+    for pair in setproduct(local.cloud_functions, toset(var.allowed_operator_service_accounts)) : {
       location        = pair[0].location
       name            = pair[0].name
       service_account = pair[1]
     }
   ]
 
-  sa_cfs = { for idx, sa_cf in local.service_accounts_cfs : idx => sa_cf }
+  sa_cfs = { for sa_cf in local.service_accounts_cfs : "${sa_cf.location}/${sa_cf.service_account}" => sa_cf }
 }
 
 # IAM entry for service account to read from the database
@@ -146,7 +146,21 @@ resource "google_cloud_run_service_iam_member" "encryption_key_service_iam_polic
   member = "group:${var.allowed_operator_user_group}"
 }
 
+# While this is technically redundant with the addition of _all_regions below,
+# do not remove because Terraform is not smart enough to not delete the role
+# from the service account.
 resource "google_cloud_run_service_iam_member" "encryption_key_service_invoker_service_accounts" {
+  for_each = toset(var.allowed_operator_service_accounts)
+
+  project  = var.project_id
+  location = local.cloud_function_a_region
+  service  = local.cloud_function_a_name
+
+  role   = "roles/run.invoker"
+  member = "serviceAccount:${each.value}"
+}
+
+resource "google_cloud_run_service_iam_member" "encryption_key_service_invoker_service_accounts_all_regions" {
   for_each = local.sa_cfs
 
   project  = var.project_id
@@ -154,5 +168,5 @@ resource "google_cloud_run_service_iam_member" "encryption_key_service_invoker_s
   service  = each.value.name
 
   role   = "roles/run.invoker"
-  member = "serviceAccount:${each.value.location}"
+  member = "serviceAccount:${each.value.service_account}"
 }

@@ -92,6 +92,7 @@ java_library(
     name = "keygeneration",
     srcs = [
         "AwsKeyGenerationModule.java",
+        "CreateKeysTask.java",
         "KeyGenerationLambda.java",
     ],
     runtime_deps = [
@@ -99,11 +100,14 @@ java_library(
         "//java/external:slf4j_simple",
     ],
     deps = [
+        "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/crypto/tink/integration/awskmsv2",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/common",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/aws",
+        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/shared/api/exception",
+        "//java/com/google/scp/shared/api/model",
         "//java/com/google/scp/shared/util",
         "//java/external:aws_auth",
         "//java/external:aws_dynamodb",
@@ -112,7 +116,9 @@ java_library(
         "//java/external:aws_lambda_java_events",
         "//java/external:aws_regions",
         "//java/external:aws_url_connection_client",
+        "//java/external:guava",
         "//java/external:guice",
+        "//java/external:slf4j",
         "//java/external:tink",
     ],
 )

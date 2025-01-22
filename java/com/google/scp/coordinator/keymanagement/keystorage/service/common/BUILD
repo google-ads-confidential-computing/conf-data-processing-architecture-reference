@@ -32,6 +32,5 @@ java_library(
         "//java/com/google/scp/shared/util",
         "//java/external:guava",
         "//java/external:guice",
-        "//java/external:tink",
     ],
 )

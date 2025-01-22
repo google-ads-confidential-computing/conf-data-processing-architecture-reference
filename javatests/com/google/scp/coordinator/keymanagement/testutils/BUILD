@@ -27,7 +27,7 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
-        "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/common",
+        "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/aws",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/aws",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",

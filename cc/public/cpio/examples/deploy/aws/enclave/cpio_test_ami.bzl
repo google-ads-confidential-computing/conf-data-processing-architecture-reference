@@ -55,19 +55,19 @@ def cpio_test_ami(
         name = reproducible_container_name,
         srcs = [
             Label("//cc/public/tools:build_reproducible_container_image.sh"),
-            Label("//:source_code_tar"),
+            Label("//:source_code.tar"),
             Label("//cc/tools/build:prebuilt_cc_build_container_image.tar"),
         ],
         outs = ["%s.tar" % reproducible_container_name],
         # NOTE: This order matters
         # Arguments:
         # $1 is the output tar, that is, the path where this rule generates its output ($@)
-        # $2 is the packaged SCP source code ($(location //:source_code_tar))
+        # $2 is the packaged SCP source code ($(location //:source_code.tar))
         # $3 is the build container image TAR path
         # $4 is the name of the container to be built
         # $5 is the build container target path
         # $6+ are the build args
-        cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code_tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s %s" % (container_name, "//cc/public/cpio/examples/deploy/aws/enclave:%s.tar" % container_name, "--//cc/public/cpio/interface:run_inside_tee=True", "--//cc/public/cpio/interface:platform=aws"),
+        cmd = "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code.tar) $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s %s" % (container_name, "//cc/public/cpio/examples/deploy/aws/enclave:%s.tar" % container_name, "--//cc/public/cpio/interface:run_inside_tee=True", "--//cc/public/cpio/interface:platform=aws"),
         tags = ["manual"],
     )
 

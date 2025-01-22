@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableMap;
 @AutoValue
 public abstract class CustomMetric {
 
-  /** Returns a new instance of the builder for this class. */
+  /** Returns a new instance of the builder for this class. Metric type default as DOUBLE_GAUGE. */
   public static Builder builder() {
-    return new AutoValue_CustomMetric.Builder();
+    return new AutoValue_CustomMetric.Builder().setMetricType(MetricType.DOUBLE_GAUGE);
   }
 
   /**
@@ -56,6 +56,13 @@ public abstract class CustomMetric {
    */
   @JsonProperty("unit")
   public abstract String unit();
+
+  /**
+   * Metric value type. It describes how the metric data is reported. If metric aggregation is not
+   * enabled, only DOUBLE_GAUGE is suppoted.
+   */
+  @JsonProperty("type")
+  public abstract MetricType metricType();
 
   /**
    * A set of key-value pairs. The key represents label name and the value represents label value.
@@ -97,6 +104,10 @@ public abstract class CustomMetric {
      */
     @JsonProperty("unit")
     public abstract Builder setUnit(String unit);
+
+    /** Set the metric type. */
+    @JsonProperty("type")
+    public abstract Builder setMetricType(MetricType metricType);
 
     /**
      * Set the key-value pairs representing labels. The key represents label name and the value

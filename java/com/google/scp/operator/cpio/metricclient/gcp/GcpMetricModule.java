@@ -16,18 +16,18 @@
 
 package com.google.scp.operator.cpio.metricclient.gcp;
 
-import static com.google.scp.shared.clients.configclient.model.WorkerParameter.ENABLE_METRIC_AGGREGATION;
+import static com.google.scp.shared.clients.configclient.model.WorkerParameter.ENABLE_NATIVE_METRIC_AGGREGATION;
 
-import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.monitoring.v3.MetricServiceClient;
 import com.google.cloud.opentelemetry.detectors.GCPResource;
 import com.google.cloud.opentelemetry.metric.GoogleCloudMetricExporter;
 import com.google.cloud.opentelemetry.metric.MetricConfiguration;
+import com.google.cloud.opentelemetry.metric.MetricDescriptorStrategy;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.MetricModule;
-import com.google.scp.operator.cpio.metricclient.gcp.Annotations.EnableMetricAggregation;
+import com.google.scp.operator.cpio.metricclient.gcp.Annotations.EnableNativeMetricAggregation;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectId;
@@ -48,12 +48,12 @@ public class GcpMetricModule extends MetricModule {
   }
 
   @Provides
-  @EnableMetricAggregation
-  public Boolean provideEnableMetricAggregation(ParameterClient parameterClient)
+  @EnableNativeMetricAggregation
+  public Boolean provideEnableNativeMetricAggregation(ParameterClient parameterClient)
       throws ParameterClientException {
-    Optional<String> enableMetricAggregationParam =
-        parameterClient.getParameter(ENABLE_METRIC_AGGREGATION.name());
-    return enableMetricAggregationParam.map(Boolean::valueOf).orElse(false);
+    Optional<String> enableNativeMetricAggregationParam =
+        parameterClient.getParameter(ENABLE_NATIVE_METRIC_AGGREGATION.name());
+    return enableNativeMetricAggregationParam.map(Boolean::valueOf).orElse(false);
   }
 
   @Provides
@@ -64,13 +64,13 @@ public class GcpMetricModule extends MetricModule {
 
   @Provides
   @Singleton
-  MetricExporter provideOpenTelemetryMetricExporter(
-      @GcpProjectId String gcpProjectId, GoogleCredentials credentials) throws IOException {
+  MetricExporter provideOpenTelemetryMetricExporter(@GcpProjectId String gcpProjectId)
+      throws IOException {
     return GoogleCloudMetricExporter.createWithConfiguration(
         MetricConfiguration.builder()
             .setProjectId(gcpProjectId)
-            .setCredentials(credentials)
-            .setPrefix("custom.custom.googleapis.com")
+            .setPrefix("custom.googleapis.com")
+            .setDescriptorStrategy(MetricDescriptorStrategy.NEVER_SEND)
             .build());
   }
 

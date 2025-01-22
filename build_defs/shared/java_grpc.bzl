@@ -15,7 +15,7 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-GAPIC_GENERATOR_JAVA_VERSION = "2.19.0"
+GAPIC_GENERATOR_JAVA_VERSION = "2.44.0"
 
 def java_grpc():
     maybe(

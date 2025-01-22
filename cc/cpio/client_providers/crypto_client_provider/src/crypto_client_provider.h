@@ -27,7 +27,9 @@
 #include <tink/input_stream.h>
 #include <tink/mac.h>
 
+#include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
 #include "core/interface/async_context.h"
+#include "core/interface/async_executor_interface.h"
 #include "core/interface/service_interface.h"
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
@@ -43,9 +45,17 @@ namespace google::scp::cpio::client_providers {
  */
 class CryptoClientProvider : public CryptoClientInterface {
  public:
+  /**
+   * @brief Construct a new Crypto Client Provider object
+   *
+   * @param options
+   * @param async_executor Optional parameter, the primitives will be cached if
+   * there is async_executor provided.
+   */
   explicit CryptoClientProvider(
-      const std::shared_ptr<CryptoClientOptions>& options)
-      : options_(options) {}
+      const std::shared_ptr<CryptoClientOptions>& options,
+      const std::shared_ptr<scp::core::AsyncExecutorInterface>& async_executor =
+          nullptr);
 
   core::ExecutionResult Init() noexcept override;
 
@@ -95,28 +105,21 @@ class CryptoClientProvider : public CryptoClientInterface {
   std::shared_ptr<CryptoClientOptions> options_;
 
  private:
-  core::ExecutionResultOr<::crypto::tink::HybridEncrypt*>
+  core::ExecutionResultOr<std::shared_ptr<::crypto::tink::HybridEncrypt>>
   GetHybridEncryptPrimitive(const std::string& key) noexcept;
-  core::ExecutionResultOr<::crypto::tink::HybridDecrypt*>
+  core::ExecutionResultOr<std::shared_ptr<::crypto::tink::HybridDecrypt>>
   GetHybridDecryptPrimitive(const std::string& key) noexcept;
-  core::ExecutionResultOr<::crypto::tink::Mac*> GetMacPrimitive(
+  core::ExecutionResultOr<std::shared_ptr<::crypto::tink::Mac>> GetMacPrimitive(
       const std::string& key) noexcept;
 
-  // Map from tink_binary_key to HybridEncrypt primitive.
-  std::unordered_map<std::string,
-                     std::unique_ptr<::crypto::tink::HybridEncrypt>>
-      hybrid_encrypt_primitive_map_;
-  std::shared_mutex hybrid_encrypt_primitive_map_mutex_;
-
-  // Map from tink_binary_key to HybridDecrypt primitive.
-  std::unordered_map<std::string,
-                     std::unique_ptr<::crypto::tink::HybridDecrypt>>
-      hybrid_decrypt_primitive_map_;
-  std::shared_mutex hybrid_decrypt_primitive_map_mutex_;
-
-  // Map from tink_binary_key to Mac primitive.
-  std::unordered_map<std::string, std::unique_ptr<::crypto::tink::Mac>>
-      mac_primitive_map_;
-  std::shared_mutex mac_primitive_map_mutex_;
+  std::unique_ptr<scp::core::common::AutoExpiryConcurrentMap<
+      std::string, std::shared_ptr<::crypto::tink::HybridEncrypt>>>
+      hybrid_encrypt_primitive_cache_;
+  std::unique_ptr<scp::core::common::AutoExpiryConcurrentMap<
+      std::string, std::shared_ptr<::crypto::tink::HybridDecrypt>>>
+      hybrid_decrypt_primitive_cache_;
+  std::unique_ptr<scp::core::common::AutoExpiryConcurrentMap<
+      std::string, std::shared_ptr<::crypto::tink::Mac>>>
+      mac_primitive_cache_;
 };
 }  // namespace google::scp::cpio::client_providers

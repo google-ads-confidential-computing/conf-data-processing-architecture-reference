@@ -19,9 +19,7 @@ def protobuf_javascript(scp_repo_name = ""):
     maybe(
         http_archive,
         name = "com_google_protobuf_javascript",
-        sha256 = "35bca1729532b0a77280bf28ab5937438e3dcccd6b31a282d9ae84c896b6f6e3",
-        strip_prefix = "protobuf-javascript-3.21.2",
-        urls = ["https://github.com/protocolbuffers/protobuf-javascript/archive/refs/tags/v3.21.2.tar.gz"],
-        patch_args = ["-p1"],
-        patches = [scp_repo_name + "//build_defs/cc/shared:protobuf_javascript.patch"],
+        sha256 = "8cef92b4c803429af0c11c4090a76b6a931f82d21e0830760a17f9c6cb358150",
+        strip_prefix = "protobuf-javascript-3.21.4",
+        urls = ["https://github.com/protocolbuffers/protobuf-javascript/archive/refs/tags/v3.21.4.tar.gz"],
     )

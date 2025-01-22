@@ -59,7 +59,7 @@ public final class SpannerJobDb implements JobDb {
   private static final Logger logger = LoggerFactory.getLogger(SpannerJobDb.class);
 
   private static final JsonFormat.Printer JSON_PRINTER =
-      JsonFormat.printer().includingDefaultValueFields();
+      JsonFormat.printer().alwaysPrintFieldsWithNoPresence();
   private static final JsonFormat.Parser JSON_PARSER = JsonFormat.parser().ignoringUnknownFields();
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

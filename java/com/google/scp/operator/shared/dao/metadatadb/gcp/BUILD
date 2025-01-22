@@ -35,7 +35,6 @@ java_library(
         "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
         "//java/external:slf4j",
-        "//java/external:slf4j_simple",
         "//operator/protos/shared/backend:java_proto",
         "//operator/protos/shared/backend/asginstance:java_proto",
         "//operator/protos/shared/backend/metadatadb:java_proto",

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -28,26 +27,17 @@ buildifier(
     mode = "fix",
 )
 
-# This rule is used to copy the source code from other bazel rules.
-# This can be used for reproducible builds.
-# Only cc targets are needed at this point, so only the files needed to build
-# cc targets are copied.
-pkg_tar(
-    name = "source_code_tar",
+exports_files([
+    "original_source_code.tar",
+])
+
+genrule(
+    name = "copy_source_code_tar",
     srcs = [
-        ".bazelrc",
-        ".bazelversion",
-        "BUILD",
-        "WORKSPACE",
-        "build_defs",
-        "cc",
-        "java",
-        "javatests",
-        "licenses",
-        "operator",
-    ] + glob(["*.bzl"]),
-    mode = "0777",
-    package_dir = "scp",
+        "//:original_source_code.tar",
+    ],
+    outs = ["source_code.tar"],
+    cmd = "cp $(location //:original_source_code.tar) $@",
 )
 
 package_group(

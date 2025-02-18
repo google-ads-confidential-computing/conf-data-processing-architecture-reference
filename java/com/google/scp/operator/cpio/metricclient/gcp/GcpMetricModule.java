@@ -80,7 +80,7 @@ public class GcpMetricModule extends MetricModule {
     Resource gcpResource = Resource.create(new GCPResource().getAttributes());
     PeriodicMetricReader metricReader =
         PeriodicMetricReader.builder(metricExporter)
-            .setInterval(java.time.Duration.ofSeconds(30))
+            .setInterval(java.time.Duration.ofSeconds(5))
             .build();
     SdkMeterProvider sdkMeterProvider =
         SdkMeterProvider.builder()

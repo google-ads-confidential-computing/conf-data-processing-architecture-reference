@@ -16,16 +16,20 @@
 
 package com.google.scp.operator.cpio.cryptoclient;
 
+import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_BAD_GATEWAY;
+import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.gax.rpc.ApiException;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.google.crypto.tink.HybridDecrypt;
 import com.google.crypto.tink.HybridEncrypt;
@@ -62,6 +66,10 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
 
   private static final Logger logger =
       LoggerFactory.getLogger(MultiPartyHybridEncryptionKeyServiceImpl.class);
+
+  private static final ImmutableSet<Integer> RETRYABLE_HTTP_STATUS_CODES =
+      ImmutableSet.of(STATUS_CODE_SERVICE_UNAVAILABLE /* 503 */, STATUS_CODE_BAD_GATEWAY /* 504 */);
+
   private static final int MAX_CACHE_SIZE = 100;
   private static final long CACHE_ENTRY_TTL_SEC = 3600;
   private static final int CONCURRENCY_LEVEL = Runtime.getRuntime().availableProcessors();
@@ -242,6 +250,13 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
       return new KeyFetchException(e, ErrorReason.KEY_DECRYPTION_ERROR);
     }
     logger.error("Exception for key decryption: ", e);
+    logger.info("End of exception log.");
+    if (e instanceof GoogleJsonResponseException) {
+      var jsonException = (GoogleJsonResponseException) e;
+      if (RETRYABLE_HTTP_STATUS_CODES.contains(jsonException.getStatusCode())) {
+        return new KeyFetchException(e, ErrorReason.KEY_SERVICE_UNAVAILABLE);
+      }
+    }
     if (e instanceof ConnectException) {
       return new KeyFetchException(e, ErrorReason.KEY_SERVICE_UNAVAILABLE);
     }

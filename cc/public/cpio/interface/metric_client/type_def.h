@@ -30,10 +30,44 @@ struct MetricClientOptions {
   MetricClientOptions() = default;
 
   MetricClientOptions(const MetricClientOptions& options)
-      : enable_batch_recording(options.enable_batch_recording),
+      : enable_remote_metric_aggregation(
+            options.enable_remote_metric_aggregation),
+        enable_native_metric_aggregation(
+            options.enable_native_metric_aggregation),
+        remote_metric_collector_address(
+            options.remote_metric_collector_address),
+        metric_exporter_interval(options.metric_exporter_interval),
+        enable_batch_recording(options.enable_batch_recording),
         namespace_for_batch_recording(options.namespace_for_batch_recording),
         batch_recording_time_duration(options.batch_recording_time_duration) {}
 
+  /**
+   * @brief Pushes metrics to a remote OpenTelemetry Collector server if true.
+   *
+   * If enabled, must specify remote_metric_collector_address.
+   */
+  bool enable_remote_metric_aggregation = false;
+  /**
+   * @brief Aggregates metric at application level if true. Cannot be used in
+   * conjunction with enable_remote_metric_aggregation.
+   *
+   */
+  bool enable_native_metric_aggregation = false;
+  /**
+   * @brief The hostname or IP address of the remote OpenTelemetry Collector
+   * instance specified with a gRPC port.
+   *
+   * Example: "10.2.0.1:4317"
+   */
+  std::string remote_metric_collector_address;
+  /**
+   * @brief The interval of how frequent the OpenTelemetry API exporters
+   * send aggregated metrics to the remote OpenTelemetry Collector.
+   *
+   * Default value is 5,000 ms.
+   */
+  std::chrono::milliseconds metric_exporter_interval =
+      std::chrono::milliseconds(5000);
   /**
    * @brief Pushes metrics in batches if true. In most times, when the
    * batch_recording_time_duration is met, the push is triggered. Cloud has

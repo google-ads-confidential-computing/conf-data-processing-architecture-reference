@@ -261,6 +261,37 @@ class ConfigurationFetcher : public ConfigurationFetcherInterface {
       core::AsyncContext<GetConfigurationRequest, std::string> context) noexcept
       override;
 
+  core::ExecutionResultOr<bool>
+  GetMetricClientEnableRemoteMetricAggregationSync(
+      GetConfigurationRequest request) noexcept override;
+
+  void GetMetricClientEnableRemoteMetricAggregation(
+      core::AsyncContext<GetConfigurationRequest, bool> context) noexcept
+      override;
+
+  core::ExecutionResultOr<bool>
+  GetMetricClientEnableNativeMetricAggregationSync(
+      GetConfigurationRequest request) noexcept override;
+
+  void GetMetricClientEnableNativeMetricAggregation(
+      core::AsyncContext<GetConfigurationRequest, bool> context) noexcept
+      override;
+
+  void GetMetricClientRemoteMetricCollectorAddress(
+      core::AsyncContext<GetConfigurationRequest, std::string> context) noexcept
+      override;
+
+  core::ExecutionResultOr<std::string>
+  GetMetricClientRemoteMetricCollectorAddressSync(
+      GetConfigurationRequest request) noexcept override;
+
+  void GetMetricClientMetricExporterIntervalInMs(
+      core::AsyncContext<GetConfigurationRequest, size_t> context) noexcept
+      override;
+
+  core::ExecutionResultOr<size_t> GetMetricClientMetricExporterIntervalInMsSync(
+      GetConfigurationRequest request) noexcept override;
+
   void GetMetricClientEnableBatchRecording(
       core::AsyncContext<GetConfigurationRequest, bool> context) noexcept
       override;

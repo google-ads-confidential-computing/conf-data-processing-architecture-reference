@@ -27,7 +27,7 @@ proto_library(
     name = "kms_service_proto",
     srcs = ["kms_service.proto"],
     deps = [
-        "//cc/core/common/proto:core_common_proto",
+        "//cc/public/core/interface:execution_result_proto",
         "@com_google_protobuf//:duration_proto",
     ],
 )

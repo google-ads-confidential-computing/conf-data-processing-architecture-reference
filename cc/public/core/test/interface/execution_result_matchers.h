@@ -22,9 +22,9 @@
 #include <type_traits>
 
 #include "absl/strings/str_format.h"
-#include "core/common/proto/common.pb.h"
 #include "public/core/interface/errors.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result.pb.h"
 
 namespace google::scp::core::test {
 namespace internal {
@@ -80,7 +80,7 @@ MATCHER_P(ResultIs, expected_result, "") {
         GetErrorMessage(result.status_code));
   };
   constexpr bool is_proto = std::is_base_of_v<
-      google::scp::core::common::proto::ExecutionResult,
+      google::scp::core::proto::ExecutionResult,
       std::remove_cv_t<std::remove_reference_t<decltype(arg)>>>;
   if constexpr (std::is_base_of_v<
                     google::scp::core::ExecutionResult,

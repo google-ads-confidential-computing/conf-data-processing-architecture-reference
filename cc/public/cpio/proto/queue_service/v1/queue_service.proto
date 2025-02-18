@@ -20,7 +20,7 @@ option java_multiple_files = true;
 option java_outer_classname = "QueueServiceProto";
 option java_package = "com.google.cmrt.sdk.queue_service.v1";
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 import "google/protobuf/duration.proto";
 
 // For faster allocations of sub-messages.
@@ -50,7 +50,7 @@ message EnqueueMessageRequest {
 // Response of enqueuing message.
 message EnqueueMessageResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Message Id.
   string message_id = 2;
 }
@@ -62,7 +62,7 @@ message GetTopMessageRequest {
 // Response of getting the top message from the queue.
 message GetTopMessageResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Message Id.
   string message_id = 2;
   // Message body.
@@ -87,7 +87,7 @@ message UpdateMessageVisibilityTimeoutRequest {
 // Response of updating the visibility timeout of a message.
 message UpdateMessageVisibilityTimeoutResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // Request to delete message.
@@ -99,5 +99,5 @@ message DeleteMessageRequest {
 // Response of deleting message.
 message DeleteMessageResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }

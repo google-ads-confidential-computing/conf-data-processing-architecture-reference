@@ -25,8 +25,8 @@ cc_library(
     ],
     deps = [
         "//cc:cc_base_include_dir",
-        "//cc/core/common/proto:core_common_proto_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/public/core/interface:execution_result_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
     ],
 )

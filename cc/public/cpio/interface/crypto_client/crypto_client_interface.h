@@ -134,10 +134,14 @@ class CryptoClientFactory {
    * @brief Creates CryptoClient.
    *
    * @param options configurations for CryptoClient.
+   * @param async_executor Optional parameter. If async_executor is provided,
+   * primitives will be cached.
    * @return std::unique_ptr<CryptoClientInterface> CryptoClient object.
    */
   static std::unique_ptr<CryptoClientInterface> Create(
-      CryptoClientOptions options);
+      CryptoClientOptions options,
+      const std::shared_ptr<scp::core::AsyncExecutorInterface>& async_executor =
+          nullptr);
 };
 }  // namespace google::scp::cpio
 

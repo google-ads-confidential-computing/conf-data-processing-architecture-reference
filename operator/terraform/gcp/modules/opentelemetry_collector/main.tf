@@ -89,7 +89,7 @@ resource "google_compute_instance" "collector" {
 }
 
 resource "google_compute_firewall" "allow_grpc_otel_collector" {
-  name    = "allow-grpc-otel-collector"
+  name    = "${var.environment}-allow-grpc-otel-collector"
   network = var.network
 
   allow {

@@ -49,7 +49,10 @@ java_test(
     srcs = [
         "ActuateKeySetTaskTest.java",
     ],
-    tags = ["no_sandbox"],
+    tags = [
+        "exclusive",
+        "no_sandbox",
+    ],
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common/keyset",

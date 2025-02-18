@@ -143,6 +143,13 @@ public final class SpannerKeyDb implements KeyDb {
                     // Filter keys with matching set name, if it's the default set, includes keys
                     // with null set name.
                     + " AND (SetName = @setName OR (@setName = @defaultSetName AND SetName IS NULL))"
+                    // Add expiry time to improve usage of KeySetsByNameExpiryActivationDesc.
+                    // Expiry time can be null for no rotation keys.
+                    + " AND ("
+                    + EXPIRY_TIME_COLUMN
+                    + " >= @nowParam OR "
+                    + EXPIRY_TIME_COLUMN
+                    + " IS NULL) "
                     + " ORDER BY "
                     + NATURAL_ORDERING)
             .bind("nowParam")

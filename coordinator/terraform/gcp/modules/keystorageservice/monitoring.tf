@@ -40,7 +40,7 @@ module "keystorageservice_cloudfunction_alarms" {
   service_prefix = "${var.environment} Key Storage Service"
 
   eval_period_sec                 = var.alarm_eval_period_sec
-  error_5xx_ratio_threshold       = var.cloudfunction_5xx_ratio_threshold
+  error_5xx_threshold             = var.cloudfunction_5xx_threshold
   execution_time_max              = var.cloudfunction_max_execution_time_max
   execution_error_ratio_threshold = var.cloudfunction_error_ratio_threshold
   alert_on_memory_usage_threshold = var.cloudfunction_alert_on_memory_usage_threshold

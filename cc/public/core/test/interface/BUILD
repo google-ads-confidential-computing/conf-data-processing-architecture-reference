@@ -24,8 +24,8 @@ cc_library(
     ],
     deps = [
         "//cc:cc_base_include_dir",
-        "//cc/core/common/proto:core_common_proto_lib",
         "//cc/public/core/interface:errors",
+        "//cc/public/core/interface:execution_result_cc_proto",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest",
     ],

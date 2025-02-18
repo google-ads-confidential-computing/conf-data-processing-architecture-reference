@@ -84,6 +84,7 @@ ExecutionResultOr<string> AwsInstanceClientUtils::GetCurrentRegionCode(
         kAwsInstanceClientUtils, kZeroUuid, region_code_or.result(),
         "Failed to parse instance resource name %s to get aws region code",
         instance_resource_name.c_str());
+    return region_code_or.result();
   }
 
   return move(*region_code_or);

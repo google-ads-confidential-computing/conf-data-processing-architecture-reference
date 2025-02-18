@@ -127,8 +127,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       return keyStorageClient.createKey(unsignedCoordinatorBKey, encryptedKeySplitB);
     } catch (KeyStorageServiceException e) {
       logger.error(
-          logMetricHelper.format(
-              "create_split_key/key_storage_error", "errorReason", e.getMessage()));
+          logMetricHelper.format("key_generation/error", "errorReason", e.getMessage()));
       throw new ServiceException(
           Code.INVALID_ARGUMENT, "Key Storage Service failed to validate, sign, and store key", e);
     }

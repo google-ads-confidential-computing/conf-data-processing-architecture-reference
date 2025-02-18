@@ -162,6 +162,28 @@ module "enable_native_metric_aggreation" {
   parameter_value = var.enable_native_metric_aggreation
 }
 
+module "opentelemetry_collector" {
+  count = var.enable_remote_metric_aggregation ? 1 : 0
+
+  source      = "../../modules/opentelemetry_collector"
+  environment = var.environment
+  project_id  = var.project_id
+  network     = module.vpc.network
+
+  user_provided_collector_sa_email = var.user_provided_collector_sa_email
+  collector_instance_type          = var.collector_instance_type
+  collector_service_port           = var.collector_service_port
+  collector_startup_script = templatefile("../../modules/opentelemetry_collector/collector_startup.tftpl", {
+    otel_collector_image_uri = "otel/opentelemetry-collector-contrib:0.117.0"
+
+    grpc_receiver_port  = var.collector_service_port
+    metric_prefix       = "custom.googleapis.com"
+    send_batch_max_size = var.collector_send_batch_max_size
+    send_batch_size     = var.collector_send_batch_size
+    send_batch_timeout  = var.collector_send_batch_timeout
+  })
+}
+
 module "frontend" {
   source           = "../../modules/frontend"
   environment      = var.environment

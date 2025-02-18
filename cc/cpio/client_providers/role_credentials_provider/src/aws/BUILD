@@ -24,7 +24,7 @@ cc_library(
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
         "//cc/core/interface:interface_lib",
-        "//cc/cpio/client_providers/instance_client_provider/src/aws:aws_instance_client_provider_lib",
+        "//cc/cpio/client_providers/instance_client_provider/src/aws:aws_instance_client_utils",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
         "//cc/cpio/common/src/aws:aws_utils_lib",
         "//cc/public/cpio/interface:type_def",
@@ -34,12 +34,22 @@ cc_library(
 )
 
 cc_library(
-    name = "aws_role_credentials_provider_lib",
+    name = "aws_role_credentials_provider_no_factory",
     srcs = [
         "//cc/cpio/client_providers/role_credentials_provider/src/aws:aws_role_credentials_provider_srcs",
     ],
     deps = [
         ":aws_role_credentials_provider_deps",
+    ],
+)
+
+cc_library(
+    name = "aws_role_credentials_provider_lib",
+    srcs = [
+        "aws_role_credentials_provider_factory.cc",
+    ],
+    deps = [
+        ":aws_role_credentials_provider_no_factory",
     ],
 )
 

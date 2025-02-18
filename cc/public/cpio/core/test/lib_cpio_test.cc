@@ -149,7 +149,8 @@ TEST(LibCpioTest, SetExternalIoAsyncExecutor) {
 
 TEST(LibCpioTest, InitializedCpioSucceedsTest) {
   TestCpioOptions options;
-  options.log_option = LogOption::kSysLog;
+  options.log_option = LogOption::kConsoleLog;
+  options.enabled_log_levels.emplace(LogLevel::kDebug);
   options.region = kRegion;
 
   MetricClientOptions metric_client_options;
@@ -162,6 +163,10 @@ TEST(LibCpioTest, InitializedCpioSucceedsTest) {
 }
 
 TEST(LibCpioDeathTest, UninitializedCpioFailsTest) {
+  TestCpioOptions options;
+  options.log_option = LogOption::kConsoleLog;
+  options.enabled_log_levels.emplace(LogLevel::kDebug);
+  options.region = kRegion;
   // Named "*DeathTest" to be run first for GlobalCpio static state.
   // https://github.com/google/googletest/blob/main/docs/advanced.md#death-tests-and-threads
   MetricClientOptions metric_client_options;

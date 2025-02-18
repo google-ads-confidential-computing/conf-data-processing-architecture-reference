@@ -20,7 +20,7 @@ option java_multiple_files = true;
 option java_outer_classname = "PrivateKeyServiceProto";
 option java_package = "com.google.cmrt.sdk.private_key_service.v1";
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 import "google/protobuf/timestamp.proto";
 
 // For faster allocations of sub-messages.
@@ -101,7 +101,7 @@ message ListPrivateKeysRequest {
 // Response of listing private keys by key IDs or age.
 message ListPrivateKeysResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Returned private key list.
   repeated PrivateKey private_keys = 2;
 }
@@ -119,7 +119,7 @@ message ListActiveEncryptionKeysRequest {
 // Response of listing all active encryption keys in a key set.
 message ListActiveEncryptionKeysResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Returned private key list.
   repeated PrivateKey private_keys = 2;
   // Returned key set name.

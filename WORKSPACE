@@ -48,6 +48,11 @@ rules_cc_toolchains()
 # CC Dependencies #
 ###########################
 
+# Add our own newer opentelemetry before gcp c++ sdk
+load("//build_defs/shared:opentelemetry.bzl", "opentelemetry_cpp")
+
+opentelemetry_cpp()
+
 # Load indirect dependencies due to
 #     https://github.com/bazelbuild/bazel/issues/1943
 load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl", "google_cloud_cpp_deps")
@@ -109,7 +114,6 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 
 rules_foreign_cc_dependencies()
 
-# Load OpenTelemetry dependencies after load.
 load("@io_opentelemetry_cpp//bazel:repository.bzl", "opentelemetry_cpp_deps")
 
 opentelemetry_cpp_deps()

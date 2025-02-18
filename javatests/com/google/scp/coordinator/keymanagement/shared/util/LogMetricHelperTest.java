@@ -32,7 +32,18 @@ public final class LogMetricHelperTest {
     String test1 = logMetricHelper.format("test/metric1", "testField1", "testValue1");
     String result1 =
         "{\"metricName\":\"test-namespace/test/metric1\",\"testField1\":\"testValue1\"}";
-    assertThat(test1.equals(result1));
+    assertThat(test1).isEqualTo(result1);
+  }
+
+  @Test
+  public void verify2LabelLogIsCorrect() {
+    LogMetricHelper logMetricHelper = new LogMetricHelper("test-namespace");
+    String test =
+        logMetricHelper.format("test/metric1", "testField1", "testValue1", "field2", "value2");
+    String expected =
+        "{\"metricName\":\"test-namespace/test/metric1\",\"testField1\":\"testValue1\"" +
+            ",\"field2\":\"value2\"}";
+    assertThat(test).isEqualTo(expected);
   }
 
   @Test

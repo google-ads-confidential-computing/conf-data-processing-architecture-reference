@@ -26,7 +26,6 @@
 #include "core/test/utils/conditional_wait.h"
 #include "core/test/utils/scp_test_base.h"
 #include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_provider.h"
 #include "cpio/client_providers/queue_client_provider/mock/aws/mock_sqs_client.h"
 #include "cpio/client_providers/queue_client_provider/src/aws/error_codes.h"
 #include "cpio/common/src/aws/error_codes.h"

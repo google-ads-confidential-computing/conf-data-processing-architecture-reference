@@ -324,18 +324,4 @@ shared_ptr<KMSClient> NonteeAwsKmsClientProvider::GetKmsClient(
   return make_shared<KMSClient>(aws_credentials,
                                 *CreateClientConfiguration(kms_region));
 }
-
-#ifndef TEST_CPIO
-std::shared_ptr<KmsClientProviderInterface> KmsClientProviderFactory::Create(
-    const shared_ptr<KmsClientOptions>& options,
-    const shared_ptr<RoleCredentialsProviderInterface>&
-        role_credentials_provider,
-    const shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
-    const std::shared_ptr<core::AsyncExecutorInterface>&
-        cpu_async_executor) noexcept {
-  return make_shared<NonteeAwsKmsClientProvider>(
-      options, role_credentials_provider, io_async_executor,
-      cpu_async_executor);
-}
-#endif
 }  // namespace google::scp::cpio::client_providers

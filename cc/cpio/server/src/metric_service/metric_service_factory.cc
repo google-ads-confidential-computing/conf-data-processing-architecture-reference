@@ -64,6 +64,35 @@ MetricServiceFactory::CreateMetricClientOptions() noexcept {
   TryReadConfigBool(
       config_provider_,
       ClientConfigurationKeys_Name(
+          ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_ENABLE_REMOTE_METRIC_AGGREGATION),
+      options->enable_remote_metric_aggregation);
+  TryReadConfigBool(
+      config_provider_,
+      ClientConfigurationKeys_Name(
+          ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_ENABLE_NATIVE_METRIC_AGGREGATION),
+      options->enable_native_metric_aggregation);
+  TryReadConfigString(
+      config_provider_,
+      ClientConfigurationKeys_Name(
+          ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_REMOTE_METRIC_COLLECTOR_ADDRESS),
+      options->remote_metric_collector_address);
+  int32_t exporter_interval_in_ms;
+  if (TryReadConfigInt(
+          config_provider_,
+          ClientConfigurationKeys_Name(
+              ClientConfigurationKeys::
+                  CMRT_METRIC_CLIENT_METRIC_EXPORTER_INTERVAL_IN_MS),
+          exporter_interval_in_ms)
+          .Successful()) {
+    options->metric_exporter_interval =
+        std::chrono::milliseconds(exporter_interval_in_ms);
+  }
+  TryReadConfigBool(
+      config_provider_,
+      ClientConfigurationKeys_Name(
           ClientConfigurationKeys::CMRT_METRIC_CLIENT_ENABLE_BATCH_RECORDING),
       options->enable_batch_recording);
   TryReadConfigString(config_provider_,

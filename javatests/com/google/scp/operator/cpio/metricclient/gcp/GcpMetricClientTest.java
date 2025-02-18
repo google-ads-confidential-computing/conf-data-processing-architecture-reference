@@ -17,11 +17,13 @@
 package com.google.scp.operator.cpio.metricclient.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.cloud.monitoring.v3.MetricServiceClient;
+import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.shared.clients.configclient.ParameterClient;
@@ -111,15 +113,7 @@ public class GcpMetricClientTest {
             .setUnit("Double")
             .setValue(1.2)
             .build();
-    // act
-    try {
-      metricClient.recordMetric(metric);
-    } catch (Exception e) {
-      // verify
-      verify(parameterClient, times(1)).getEnvironmentName();
-      verify(meter, times(1)).gaugeBuilder(argument.capture());
-      assertThat(argument.getValue()).isEqualTo("scp/test/test-env/testmetric");
-    }
+    assertThrows(MetricClientException.class, () -> metricClient.recordMetric(metric));
   }
 
   @Test

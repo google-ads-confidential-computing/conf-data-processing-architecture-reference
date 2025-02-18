@@ -20,9 +20,9 @@
 #include <grpcpp/generic/async_generic_service.h>
 
 #include "core/common/concurrent_queue/src/concurrent_queue.h"
-#include "core/common/proto/common.pb.h"
 #include "core/interface/errors.h"
 #include "core/interface/streaming_context.h"
+#include "public/core/interface/execution_result.pb.h"
 
 #include "binary_semaphore.h"
 
@@ -134,7 +134,7 @@ class WriteReactor : public grpc::ServerWriteReactor<TResponse> {
   // Context to pass to InitiateCall.
   ConsumerStreamingContext<TRequest, TResponse> context_;
 
-  const common::proto::ExecutionResult kSuccessResultProto =
+  const core::proto::ExecutionResult kSuccessResultProto =
       SuccessExecutionResult().ToProto();
   // The result of the async operation.
   ExecutionResult result_ = SuccessExecutionResult();

@@ -22,7 +22,7 @@ option java_package = "com.google.cmrt.sdk.crypto_service.v1";
 
 import "cc/public/cpio/proto/public_key_service/v1/public_key_service.proto";
 import "cc/public/cpio/proto/private_key_service/v1/private_key_service.proto";
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
@@ -193,7 +193,7 @@ message HpkeEncryptedData {
 // Result from HpkeEcrypt.
 message HpkeEncryptResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Encrypted data.
   HpkeEncryptedData encrypted_data = 2;
   // Only be present in bi-directional encryption to decrypt the response. Don't
@@ -232,7 +232,7 @@ message HpkeDecryptRequest {
 // Result from HpkeDecrypt.
 message HpkeDecryptResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Decrypted payload.
   bytes payload = 2;
   // Only be present in bi-directional encryption to encrypt the response. Don't
@@ -260,7 +260,7 @@ message AeadEncryptedData {
 // Result from AeadEncrypt.
 message AeadEncryptResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Encrypted data.
   AeadEncryptedData encrypted_data = 2;
 }
@@ -278,7 +278,7 @@ message AeadDecryptRequest {
 // Result from AeadDecrypt.
 message AeadDecryptResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Decypted payload.
   bytes payload = 2;
 }
@@ -295,7 +295,7 @@ message ComputeMacRequest {
 
 // Compute Message Authentication Code Response
 message ComputeMacResponse {
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // The result MAC
   bytes mac = 2;
 }

@@ -16,14 +16,14 @@ syntax = "proto3";
 
 package google.scp.core;
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 
 message SomeRequest {
   int64 field = 1;
 }
 
 message SomeResponse {
-  common.proto.ExecutionResult result = 1;
+  proto.ExecutionResult result = 1;
 
   int64 field = 2;
 }

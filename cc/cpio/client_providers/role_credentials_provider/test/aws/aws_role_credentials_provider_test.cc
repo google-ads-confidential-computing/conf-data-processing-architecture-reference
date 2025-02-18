@@ -274,7 +274,7 @@ TEST_F(AwsRoleCredentialsProviderTest,
       .WillOnce([](AsyncContext<GetTeeSessionTokenRequest,
                                 GetSessionTokenResponse>& context) {
         EXPECT_EQ(*context.request->token_target_audience_uri, kAudience);
-        EXPECT_EQ(*context.request->token_type, "LIMITED_AWS");
+        EXPECT_EQ(*context.request->token_type, "AWS_PRINCIPALTAGS");
         EXPECT_EQ(*context.request->key_ids, kKeyIds);
 
         context.result = SuccessExecutionResult();

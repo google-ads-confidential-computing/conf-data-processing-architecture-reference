@@ -18,7 +18,7 @@
 #
 # These values should be modified for each of your environments.
 
-environment = "lib-postsubmit"
+environment = "s-lib-postsubmit"
 project_id  = "admcloud-adtech1"
 region      = "us-central1"
 region_zone = "us-central1-c"
@@ -27,8 +27,7 @@ operator_package_bucket_location = "US"
 spanner_instance_config          = "regional-us-central1"
 spanner_processing_units         = 300
 
-worker_image                     = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:lib-postsubmit"
-allowed_operator_service_account = "postsubmit-a-opallowedusr@admcloud-coordinator1.iam.gserviceaccount.com,postsubmit-b-opallowedusr@admcloud-coordinator2.iam.gserviceaccount.com"
+worker_image                     = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:s-lib-postsubmit"
 worker_logging_enabled           = true
 worker_container_log_redirect    = "true"
 worker_memory_monitoring_enabled = true
@@ -37,7 +36,10 @@ instance_disk_image_family = {
   image_project = "confidential-space-images",
   image_family  = "confidential-space"
 }
-user_provided_worker_sa_email        = "lib-postsubmit-worker@admcloud-adtech1.iam.gserviceaccount.com"
+# Needs to be a stable image for proper coordinator attestation
+instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-241000"
+# SA allow listed in coordinator attestation, as well as worker identity
+user_provided_worker_sa_email        = "s-lib-postsubmit-worker@admcloud-adtech1.iam.gserviceaccount.com"
 spanner_database_deletion_protection = false
 max_worker_instances                 = 1
 alarms_enabled                       = true
@@ -49,13 +51,13 @@ job_lifecycle_helper_parameter_values = {
   job_lifecycle_helper_job_processing_timeout          = "120",
   job_lifecycle_helper_job_extending_worker_sleep_time = "15",
   job_lifecycle_helper_enable_metric_recording         = true,
-  job_lifecycle_helper_metric_namespace                = "lib-postsubmit",
+  job_lifecycle_helper_metric_namespace                = "s-lib-postsubmit",
 }
 metric_client_parameter_values = {
   enable_batch_recording              = true,
-  namespace_for_batch_recording       = "lib-postsubmit",
+  namespace_for_batch_recording       = "s-lib-postsubmit",
   batch_recording_time_duration_in_ms = "5000",
 }
 
-worker_scale_in_jar  = "/tmp/lib_postsubmit/jars/WorkerScaleInCloudFunction_deploy.jar"
-frontend_service_jar = "/tmp/lib_postsubmit/jars/FrontendServiceHttpCloudFunction_deploy.jar"
+worker_scale_in_jar  = "/tmp/standalone_lib_postsubmit/jars/WorkerScaleInCloudFunction_deploy.jar"
+frontend_service_jar = "/tmp/standalone_lib_postsubmit/jars/FrontendServiceHttpCloudFunction_deploy.jar"

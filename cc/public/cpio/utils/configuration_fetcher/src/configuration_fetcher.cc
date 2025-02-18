@@ -1063,6 +1063,125 @@ void ConfigurationFetcher::GetQueueClientQueueName(
   GetConfiguration(context_with_parameter_name);
 }
 
+void ConfigurationFetcher::GetMetricClientEnableRemoteMetricAggregation(
+    AsyncContext<GetConfigurationRequest, bool> context) noexcept {
+  auto context_with_parameter_name =
+      ConfigurationFetcherUtils::ContextConvertCallback<bool>(
+          MetricClientProto::ClientConfigurationKeys_Name(
+              MetricClientProto::ClientConfigurationKeys::
+                  CMRT_METRIC_CLIENT_ENABLE_REMOTE_METRIC_AGGREGATION),
+          context, bind(ConfigurationFetcherUtils::StringToBool, _1));
+  GetConfiguration(context_with_parameter_name);
+}
+
+ExecutionResultOr<bool>
+ConfigurationFetcher::GetMetricClientEnableRemoteMetricAggregationSync(
+    GetConfigurationRequest request) noexcept {
+  bool result;
+  auto execution_result = SyncUtils::AsyncToSync2<GetConfigurationRequest,
+                                                  bool>(
+      bind(&ConfigurationFetcher::GetMetricClientEnableRemoteMetricAggregation,
+           this, _1),
+      request, result);
+  RETURN_AND_LOG_IF_FAILURE(
+      execution_result, kConfigurationFetcher, kZeroUuid,
+      "Failed to GetMetricClientEnableRemoteMetricAggregation %s.",
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_ENABLE_REMOTE_METRIC_AGGREGATION)
+          .c_str());
+  return result;
+}
+
+void ConfigurationFetcher::GetMetricClientEnableNativeMetricAggregation(
+    AsyncContext<GetConfigurationRequest, bool> context) noexcept {
+  auto context_with_parameter_name =
+      ConfigurationFetcherUtils::ContextConvertCallback<bool>(
+          MetricClientProto::ClientConfigurationKeys_Name(
+              MetricClientProto::ClientConfigurationKeys::
+                  CMRT_METRIC_CLIENT_ENABLE_NATIVE_METRIC_AGGREGATION),
+          context, bind(ConfigurationFetcherUtils::StringToBool, _1));
+  GetConfiguration(context_with_parameter_name);
+}
+
+ExecutionResultOr<bool>
+ConfigurationFetcher::GetMetricClientEnableNativeMetricAggregationSync(
+    GetConfigurationRequest request) noexcept {
+  bool result;
+  auto execution_result = SyncUtils::AsyncToSync2<GetConfigurationRequest,
+                                                  bool>(
+      bind(&ConfigurationFetcher::GetMetricClientEnableNativeMetricAggregation,
+           this, _1),
+      request, result);
+  RETURN_AND_LOG_IF_FAILURE(
+      execution_result, kConfigurationFetcher, kZeroUuid,
+      "Failed to GetMetricClientEnableRemoteMetricAggregation %s.",
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_ENABLE_NATIVE_METRIC_AGGREGATION)
+          .c_str());
+  return result;
+}
+
+void ConfigurationFetcher::GetMetricClientRemoteMetricCollectorAddress(
+    AsyncContext<GetConfigurationRequest, string> context) noexcept {
+  auto context_with_parameter_name = ContextConvertCallback(
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_REMOTE_METRIC_COLLECTOR_ADDRESS),
+      context);
+  GetConfiguration(context_with_parameter_name);
+}
+
+ExecutionResultOr<string>
+ConfigurationFetcher::GetMetricClientRemoteMetricCollectorAddressSync(
+    GetConfigurationRequest request) noexcept {
+  string result;
+  auto execution_result = SyncUtils::AsyncToSync2<GetConfigurationRequest,
+                                                  string>(
+      bind(&ConfigurationFetcher::GetMetricClientRemoteMetricCollectorAddress,
+           this, _1),
+      request, result);
+  RETURN_AND_LOG_IF_FAILURE(
+      execution_result, kConfigurationFetcher, kZeroUuid,
+      "Failed to GetMetricClientRemoteMetricCollectorAddress %s.",
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_REMOTE_METRIC_COLLECTOR_ADDRESS)
+          .c_str());
+  return result;
+}
+
+void ConfigurationFetcher::GetMetricClientMetricExporterIntervalInMs(
+    AsyncContext<GetConfigurationRequest, size_t> context) noexcept {
+  auto context_with_parameter_name =
+      ConfigurationFetcherUtils::ContextConvertCallback<size_t>(
+          MetricClientProto::ClientConfigurationKeys_Name(
+              MetricClientProto::ClientConfigurationKeys::
+                  CMRT_METRIC_CLIENT_METRIC_EXPORTER_INTERVAL_IN_MS),
+          context, bind(ConfigurationFetcherUtils::StringToUInt<size_t>, _1));
+  GetConfiguration(context_with_parameter_name);
+}
+
+ExecutionResultOr<size_t>
+ConfigurationFetcher::GetMetricClientMetricExporterIntervalInMsSync(
+    GetConfigurationRequest request) noexcept {
+  size_t result;
+  auto execution_result =
+      SyncUtils::AsyncToSync2<GetConfigurationRequest, size_t>(
+          bind(&ConfigurationFetcher::GetMetricClientMetricExporterIntervalInMs,
+               this, _1),
+          request, result);
+  RETURN_AND_LOG_IF_FAILURE(
+      execution_result, kConfigurationFetcher, kZeroUuid,
+      "Failed to GetMetricClientMetricExporterIntervalInMs %s.",
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_METRIC_EXPORTER_INTERVAL_IN_MS)
+          .c_str());
+  return result;
+}
+
 void ConfigurationFetcher::GetMetricClientEnableBatchRecording(
     AsyncContext<GetConfigurationRequest, bool> context) noexcept {
   auto context_with_parameter_name =

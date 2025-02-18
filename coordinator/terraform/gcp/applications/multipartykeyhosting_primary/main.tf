@@ -130,7 +130,7 @@ module "publickeyhostingservice" {
   regions     = [var.primary_region, var.secondary_region]
 
   # Function vars
-  package_bucket_name                        = google_storage_bucket.mpkhs_primary_package_bucket.name
+  package_bucket_name                        = var.use_tf_created_bucket_for_binary ? google_storage_bucket.mpkhs_primary_package_bucket.name : var.mpkhs_primary_package_bucket
   spanner_database_name                      = module.keydb.keydb_name
   spanner_instance_name                      = module.keydb.keydb_instance_name
   cloudfunction_timeout_seconds              = var.cloudfunction_timeout_seconds
@@ -155,7 +155,7 @@ module "publickeyhostingservice" {
   alarms_enabled                                      = var.alarms_enabled
   alarm_eval_period_sec                               = var.get_public_key_alarm_eval_period_sec
   alarm_duration_sec                                  = var.get_public_key_alarm_duration_sec
-  get_public_key_cloudfunction_5xx_ratio_threshold    = var.get_public_key_cloudfunction_5xx_ratio_threshold
+  get_public_key_cloudfunction_5xx_threshold          = var.get_public_key_cloudfunction_5xx_threshold
   get_public_key_cloudfunction_error_ratio_threshold  = var.get_public_key_cloudfunction_error_ratio_threshold
   get_public_key_cloudfunction_max_execution_time_max = var.get_public_key_cloudfunction_max_execution_time_max
   cloudfunction_alert_on_memory_usage_threshold       = var.publickeyservice_cloudfunction_alert_on_memory_usage_threshold
@@ -177,7 +177,7 @@ module "encryptionkeyservice" {
   allowed_operator_service_accounts          = module.allowed_operators.all_service_accounts
 
   # Function vars
-  package_bucket_name                                = google_storage_bucket.mpkhs_primary_package_bucket.name
+  package_bucket_name                                = var.use_tf_created_bucket_for_binary ? google_storage_bucket.mpkhs_primary_package_bucket.name : var.mpkhs_primary_package_bucket
   spanner_database_name                              = module.keydb.keydb_name
   spanner_instance_name                              = module.keydb.keydb_instance_name
   cloudfunction_timeout_seconds                      = var.cloudfunction_timeout_seconds
@@ -196,7 +196,7 @@ module "encryptionkeyservice" {
   alarms_enabled                                    = var.alarms_enabled
   alarm_eval_period_sec                             = var.encryptionkeyservice_alarm_eval_period_sec
   alarm_duration_sec                                = var.encryptionkeyservice_alarm_duration_sec
-  cloudfunction_5xx_ratio_threshold                 = var.encryptionkeyservice_cloudfunction_5xx_ratio_threshold
+  cloudfunction_5xx_threshold                       = var.encryptionkeyservice_cloudfunction_5xx_threshold
   cloudfunction_error_ratio_threshold               = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
   cloudfunction_max_execution_time_max              = var.encryptionkeyservice_cloudfunction_max_execution_time_max
   cloudfunction_alert_on_memory_usage_threshold     = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold

@@ -28,7 +28,7 @@ proto_library(
         "job_lifecycle_helper.proto",
     ],
     deps = [
-        "//cc/core/common/proto:core_common_proto",
+        "//cc/public/core/interface:execution_result_proto",
         "//cc/public/cpio/proto/job_service/v1:job_service_proto",
         "@com_google_protobuf//:duration_proto",
     ],

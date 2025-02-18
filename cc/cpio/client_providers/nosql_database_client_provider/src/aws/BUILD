@@ -30,7 +30,7 @@ cc_library(
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src/aws:core_aws_async_executor_lib",
-        "//cc/cpio/client_providers/instance_client_provider/src/aws:aws_instance_client_provider_lib",
+        "//cc/cpio/client_providers/instance_client_provider/src/aws:aws_instance_client_utils",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
         "//cc/cpio/client_providers/nosql_database_client_provider/src/common:nosql_database_provider_common_lib",
         "//cc/cpio/common/src/aws:aws_utils_lib",

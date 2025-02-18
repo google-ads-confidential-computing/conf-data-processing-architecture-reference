@@ -127,7 +127,7 @@ public final class JobClientImplTest {
             .setServerJobId("123")
             .setReceiptInfo("receipt")
             .setJobProcessingTimeout(Durations.fromSeconds(3600))
-            .setJobProcessingStartTime(ProtoUtil.toProtoTimestamp(Instant.now()))
+            .setJobProcessingStartTime(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
             .build();
     requestInfo =
         RequestInfo.newBuilder()

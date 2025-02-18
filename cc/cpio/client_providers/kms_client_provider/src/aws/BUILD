@@ -17,7 +17,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 package(default_visibility = ["//cc:scp_cc_internal_pkg"])
 
 cc_library(
-    name = "nontee_aws_kms_client_provider_lib",
+    name = "nontee_aws_kms_client_provider_no_factory",
     srcs = [
         ":nontee_aws_kms_client_provider_srcs",
     ],
@@ -39,7 +39,23 @@ cc_library(
 )
 
 cc_library(
-    name = "tee_aws_kms_client_provider_lib",
+    name = "nontee_aws_kms_client_provider_lib",
+    srcs = [
+        "nontee_aws_kms_client_provider_factory.cc",
+    ],
+    deps = [
+        ":nontee_aws_kms_client_provider_no_factory",
+        "//cc:cc_base_include_dir",
+        "//cc/core/interface:interface_lib",
+        "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
+        "//cc/cpio/common/src/aws:aws_utils_lib",
+        "//cc/public/cpio/interface/kms_client:type_def",
+        "//cc/public/cpio/interface/kms_client/aws:type_def",
+    ],
+)
+
+cc_library(
+    name = "tee_aws_kms_client_provider_no_factory",
     srcs = [
         ":tee_aws_kms_client_provider_srcs",
     ],
@@ -55,6 +71,22 @@ cc_library(
         "//cc/public/cpio/interface/kms_client:type_def",
         "@aws_sdk_cpp//:kms",
         "@tink_cc",
+    ],
+)
+
+cc_library(
+    name = "tee_aws_kms_client_provider_lib",
+    srcs = [
+        "tee_aws_kms_client_provider_factory.cc",
+    ],
+    deps = [
+        ":tee_aws_kms_client_provider_no_factory",
+        "//cc:cc_base_include_dir",
+        "//cc/core/interface:interface_lib",
+        "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
+        "//cc/cpio/common/src/aws:aws_utils_lib",
+        "//cc/public/cpio/interface/kms_client:type_def",
+        "//cc/public/cpio/interface/kms_client/aws:type_def",
     ],
 )
 

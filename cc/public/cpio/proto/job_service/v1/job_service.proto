@@ -20,7 +20,7 @@ option java_multiple_files = true;
 option java_outer_classname = "JobServiceProto";
 option java_package = "com.google.cmrt.sdk.job_service.v1";
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -109,7 +109,7 @@ message PutJobRequest {
 // Response of putting a job.
 message PutJobResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // The job data.
   Job job = 2;
 }
@@ -127,7 +127,7 @@ message GetNextJobRequest {
 // In this case, the result is a SuccessExecutionResult but the job is invalid.
 message GetNextJobResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // The job data.
   Job job = 2;
   // An identifier associated with the act of receiving the job from the queue.
@@ -145,7 +145,7 @@ message GetJobByIdRequest {
 // Response of getting the job by id.
 message GetJobByIdResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // The job data.
   Job job = 2;
 }
@@ -168,7 +168,7 @@ message UpdateJobBodyRequest {
 // Response of updating body of a job.
 message UpdateJobBodyResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // The time the job is updated.
   google.protobuf.Timestamp updated_time = 2;
 }
@@ -196,7 +196,7 @@ message UpdateJobStatusRequest {
 // Response of updating job status.
 message UpdateJobStatusResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // The updated job status.
   JobStatus job_status = 2;
   // The time the job is updated.
@@ -221,7 +221,7 @@ message UpdateJobVisibilityTimeoutRequest {
 // Response of updating visibility timeout of a job.
 message UpdateJobVisibilityTimeoutResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // Request to delete orphaned job message.
@@ -236,5 +236,5 @@ message DeleteOrphanedJobMessageRequest {
 // Response of deleting orphaned job message.
 message DeleteOrphanedJobMessageResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }

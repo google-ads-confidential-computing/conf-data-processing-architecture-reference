@@ -155,7 +155,7 @@ variable "cloudfunction_max_execution_time_max" {
   type        = number
 }
 
-variable "cloudfunction_5xx_ratio_threshold" {
+variable "cloudfunction_5xx_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }

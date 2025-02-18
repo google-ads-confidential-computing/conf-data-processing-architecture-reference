@@ -19,7 +19,7 @@
 
 #include <utility>
 
-#include "core/common/proto/common.pb.h"
+#include "public/core/interface/execution_result.pb.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 
 using std::function;
@@ -39,41 +39,40 @@ TEST(ExecutionResultTest, ToProto) {
   auto success = SuccessExecutionResult();
   auto actual_result = success.ToProto();
   EXPECT_EQ(actual_result.status(),
-            core::common::proto::ExecutionStatus::EXECUTION_STATUS_SUCCESS);
+            core::proto::ExecutionStatus::EXECUTION_STATUS_SUCCESS);
   EXPECT_EQ(actual_result.status_code(), 0);
 
   FailureExecutionResult failure(2);
   actual_result = failure.ToProto();
   EXPECT_EQ(actual_result.status(),
-            core::common::proto::ExecutionStatus::EXECUTION_STATUS_FAILURE);
+            core::proto::ExecutionStatus::EXECUTION_STATUS_FAILURE);
   EXPECT_EQ(actual_result.status_code(), 2);
 
   RetryExecutionResult retry(2);
   actual_result = retry.ToProto();
   EXPECT_EQ(actual_result.status(),
-            core::common::proto::ExecutionStatus::EXECUTION_STATUS_RETRY);
+            core::proto::ExecutionStatus::EXECUTION_STATUS_RETRY);
   EXPECT_EQ(actual_result.status_code(), 2);
 }
 
 TEST(ExecutionResultTest, FromProto) {
-  core::common::proto::ExecutionResult success_proto;
+  core::proto::ExecutionResult success_proto;
   success_proto.set_status(
-      core::common::proto::ExecutionStatus::EXECUTION_STATUS_SUCCESS);
+      core::proto::ExecutionStatus::EXECUTION_STATUS_SUCCESS);
   auto actual_result = ExecutionResult(success_proto);
   EXPECT_EQ(actual_result.status, ExecutionStatus::Success);
   EXPECT_EQ(actual_result.status_code, 0);
 
-  core::common::proto::ExecutionResult failure_proto;
+  core::proto::ExecutionResult failure_proto;
   failure_proto.set_status(
-      core::common::proto::ExecutionStatus::EXECUTION_STATUS_FAILURE);
+      core::proto::ExecutionStatus::EXECUTION_STATUS_FAILURE);
   failure_proto.set_status_code(2);
   actual_result = ExecutionResult(failure_proto);
   EXPECT_EQ(actual_result.status, ExecutionStatus::Failure);
   EXPECT_EQ(actual_result.status_code, 2);
 
-  core::common::proto::ExecutionResult retry_proto;
-  retry_proto.set_status(
-      core::common::proto::ExecutionStatus::EXECUTION_STATUS_RETRY);
+  core::proto::ExecutionResult retry_proto;
+  retry_proto.set_status(core::proto::ExecutionStatus::EXECUTION_STATUS_RETRY);
   retry_proto.set_status_code(2);
   actual_result = ExecutionResult(retry_proto);
   EXPECT_EQ(actual_result.status, ExecutionStatus::Retry);
@@ -81,9 +80,9 @@ TEST(ExecutionResultTest, FromProto) {
 }
 
 TEST(ExecutionResultTest, FromUnknownProto) {
-  core::common::proto::ExecutionResult unknown_proto;
+  core::proto::ExecutionResult unknown_proto;
   unknown_proto.set_status(
-      core::common::proto::ExecutionStatus::EXECUTION_STATUS_UNKNOWN);
+      core::proto::ExecutionStatus::EXECUTION_STATUS_UNKNOWN);
   auto actual_result = ExecutionResult(unknown_proto);
   EXPECT_EQ(actual_result.status, ExecutionStatus::Failure);
   EXPECT_EQ(actual_result.status_code, 0);

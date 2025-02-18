@@ -16,6 +16,8 @@
 
 package com.google.scp.operator.cpio.cryptoclient;
 
+import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_BAD_GATEWAY;
+import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -26,6 +28,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.api.client.googleapis.json.GoogleJsonError;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.http.HttpHeaders;
+import com.google.api.client.http.HttpResponseException;
 import com.google.api.gax.grpc.GrpcStatusCode;
 import com.google.api.gax.rpc.ApiException;
 import com.google.common.collect.ImmutableList;
@@ -216,6 +222,46 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
 
     assertEquals(ErrorReason.KEY_DECRYPTION_ERROR, exception.getReason());
+  }
+
+  @Test
+  public void getDecrypter_getAead_JsonException_serverUnavailable() throws Exception {
+    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
+    GoogleJsonError jsonError = new GoogleJsonError();
+    var jsonException =
+        new GoogleJsonResponseException(
+            new HttpResponseException.Builder(
+                STATUS_CODE_SERVICE_UNAVAILABLE, "Unavailable server", new HttpHeaders()),
+            jsonError);
+    when(aeadServicePrimary.getAead(anyString()))
+        .thenThrow(new GeneralSecurityException(jsonException));
+
+    KeyFetchException exception =
+        assertThrows(
+            KeyFetchException.class,
+            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
+
+    assertEquals(ErrorReason.KEY_SERVICE_UNAVAILABLE, exception.getReason());
+  }
+
+  @Test
+  public void getDecrypter_getAead_JsonException_badGateway() throws Exception {
+    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
+    GoogleJsonError jsonError = new GoogleJsonError();
+    var jsonException =
+        new GoogleJsonResponseException(
+            new HttpResponseException.Builder(
+                STATUS_CODE_BAD_GATEWAY, "Bad gateway", new HttpHeaders()),
+            jsonError);
+    when(aeadServicePrimary.getAead(anyString()))
+        .thenThrow(new GeneralSecurityException(jsonException));
+
+    KeyFetchException exception =
+        assertThrows(
+            KeyFetchException.class,
+            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
+
+    assertEquals(ErrorReason.KEY_SERVICE_UNAVAILABLE, exception.getReason());
   }
 
   @Test

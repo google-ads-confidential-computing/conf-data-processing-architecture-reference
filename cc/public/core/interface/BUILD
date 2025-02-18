@@ -12,9 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library")
+load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//visibility:public"])
+
+proto_library(
+    name = "execution_result_proto",
+    srcs = glob(
+        [
+            "execution_result.proto",
+        ],
+    ),
+)
+
+cc_proto_library(
+    name = "execution_result_cc_proto",
+    deps = [":execution_result_proto"],
+)
+
+##########################################
+# Java
+##########################################
+java_proto_library(
+    name = "execution_result_java_proto",
+    deps = [":execution_result_proto"],
+)
 
 cc_library(
     name = "errors",
@@ -39,7 +63,7 @@ cc_library(
             "execution_result_or_macros.h",
         ],
     deps = [
+        ":execution_result_cc_proto",
         "//cc:cc_base_include_dir",
-        "//cc/core/common/proto:core_common_proto_lib",
     ],
 )

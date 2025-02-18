@@ -80,6 +80,8 @@ java_test(
         "//java/external:acai",
         "//java/external:gcp_api_gax",
         "//java/external:gcp_gax_grpc",
+        "//java/external:google_api_client",
+        "//java/external:google_http_client",
         "//java/external:google_truth",
         "//java/external:grpc_api",
         "//java/external:guice",

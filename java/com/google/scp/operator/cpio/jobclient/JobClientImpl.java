@@ -24,6 +24,7 @@ import static java.util.function.Predicate.not;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.operator.cpio.jobclient.JobHandlerModule.JobClientJobValidatorsBinding;
 import com.google.scp.operator.cpio.jobclient.model.ErrorReason;
@@ -36,6 +37,7 @@ import com.google.scp.operator.cpio.lifecycleclient.LifecycleClient.LifecycleCli
 import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
+import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.operator.cpio.notificationclient.NotificationClient;
 import com.google.scp.operator.cpio.notificationclient.NotificationClient.NotificationClientException;
 import com.google.scp.operator.cpio.notificationclient.model.PublishMessageRequest;
@@ -204,6 +206,7 @@ public final class JobClientImpl implements JobClient {
                     .setName("JobValidationFailure")
                     .setValue(1.0)
                     .setUnit("Count")
+                    .setMetricType(MetricType.DOUBLE_COUNTER)
                     .addLabel("Validator", failedCheck.get().getClass().getSimpleName())
                     .build();
             metricClient.recordMetric(metric);
@@ -226,14 +229,17 @@ public final class JobClientImpl implements JobClient {
         return Optional.empty();
       }
 
+      Timestamp processingStartTime = ProtoUtil.toProtoTimestamp(Instant.now(clock));
       metadataDb.updateJobMetadata(
           metadata.get().toBuilder()
               .setJobStatus(JobStatus.IN_PROGRESS)
-              .setRequestProcessingStartedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
+              .setRequestProcessingStartedAt(processingStartTime)
               .setNumAttempts(metadata.get().getNumAttempts() + 1)
               .build());
       // Cache job in memory, to be able to retrieve the queue item when job completes.
-      cache.put(toJobKeyString(metadata.get().getJobKey()), queueItem.get());
+      cache.put(
+          toJobKeyString(metadata.get().getJobKey()),
+          queueItem.get().toBuilder().setJobProcessingStartTime(processingStartTime).build());
 
       logger.info(
           String.format(
@@ -631,6 +637,7 @@ public final class JobClientImpl implements JobClient {
               .setName("JobClientError")
               .setValue(1.0)
               .setUnit("Count")
+              .setMetricType(MetricType.DOUBLE_COUNTER)
               .addLabel("ErrorReason", errorReason.toString())
               .build();
       metricClient.recordMetric(metric);

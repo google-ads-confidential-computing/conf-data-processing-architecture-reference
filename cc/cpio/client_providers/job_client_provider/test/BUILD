@@ -21,7 +21,7 @@ proto_library(
     name = "hello_world_proto",
     srcs = ["hello_world.proto"],
     deps = [
-        "//cc/core/common/proto:core_common_proto",
+        "//cc/public/core/interface:execution_result_proto",
         "@com_google_protobuf//:timestamp_proto",
     ],
 )

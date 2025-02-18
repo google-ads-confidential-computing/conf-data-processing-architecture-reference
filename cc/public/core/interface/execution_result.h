@@ -20,7 +20,7 @@
 #include <utility>
 #include <variant>
 
-#include "core/common/proto/common.pb.h"
+#include "public/core/interface/execution_result.pb.h"
 
 #include "execution_result_macros.h"
 #include "execution_result_or_macros.h"
@@ -38,7 +38,7 @@ enum class ExecutionStatus {
 };
 
 /// Convert ExecutionStatus to Proto.
-core::common::proto::ExecutionStatus ToStatusProto(ExecutionStatus& status);
+core::proto::ExecutionStatus ToStatusProto(ExecutionStatus& status);
 
 /// Status code returned from operation execution.
 typedef uint64_t StatusCode;
@@ -62,8 +62,7 @@ struct ExecutionResult {
   constexpr ExecutionResult()
       : ExecutionResult(ExecutionStatus::Failure, SC_UNKNOWN) {}
 
-  explicit ExecutionResult(
-      const core::common::proto::ExecutionResult result_proto);
+  explicit ExecutionResult(const core::proto::ExecutionResult result_proto);
 
   bool operator==(const ExecutionResult& other) const {
     return status == other.status && status_code == other.status_code;
@@ -73,7 +72,7 @@ struct ExecutionResult {
     return !operator==(other);
   }
 
-  core::common::proto::ExecutionResult ToProto();
+  core::proto::ExecutionResult ToProto();
 
   bool Successful() const { return *this == SuccessExecutionResult(); }
 

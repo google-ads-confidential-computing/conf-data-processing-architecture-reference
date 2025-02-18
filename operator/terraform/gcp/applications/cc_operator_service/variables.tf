@@ -179,6 +179,7 @@ variable "worker_restart_policy" {
 variable "allowed_operator_service_account" {
   description = "The service account provided by coordinator for operator worker to impersonate."
   type        = string
+  default     = ""
 }
 
 variable "user_provided_worker_sa_email" {
@@ -541,8 +542,9 @@ variable "joblifecyclehelper_job_waiting_time_threshold" {
 variable "enable_remote_metric_aggregation" {
   description = "When true, install the collector module to operator_service"
   type        = bool
-  default     = true
+  default     = false
 }
+
 variable "collector_instance_type" {
   description = "GCE instance type for worker."
   type        = string

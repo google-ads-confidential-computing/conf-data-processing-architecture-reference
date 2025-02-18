@@ -244,6 +244,38 @@ class MockConfigurationFetcher
               ((core::AsyncContext<GetConfigurationRequest, std::string>)),
               (noexcept, override));
 
+  MOCK_METHOD(void, GetMetricClientEnableRemoteMetricAggregation,
+              ((core::AsyncContext<GetConfigurationRequest, bool>)),
+              (noexcept, override));
+
+  MOCK_METHOD(core::ExecutionResultOr<bool>,
+              GetMetricClientEnableRemoteMetricAggregationSync,
+              ((GetConfigurationRequest)), (noexcept, override));
+
+  MOCK_METHOD(void, GetMetricClientEnableNativeMetricAggregation,
+              ((core::AsyncContext<GetConfigurationRequest, bool>)),
+              (noexcept, override));
+
+  MOCK_METHOD(core::ExecutionResultOr<bool>,
+              GetMetricClientEnableNativeMetricAggregationSync,
+              ((GetConfigurationRequest)), (noexcept, override));
+
+  MOCK_METHOD(void, GetMetricClientRemoteMetricCollectorAddress,
+              ((core::AsyncContext<GetConfigurationRequest, std::string>)),
+              (noexcept, override));
+
+  MOCK_METHOD(core::ExecutionResultOr<std::string>,
+              GetMetricClientRemoteMetricCollectorAddressSync,
+              ((GetConfigurationRequest)), (noexcept, override));
+
+  MOCK_METHOD(void, GetMetricClientMetricExporterIntervalInMs,
+              ((core::AsyncContext<GetConfigurationRequest, size_t>)),
+              (noexcept, override));
+
+  MOCK_METHOD(core::ExecutionResultOr<size_t>,
+              GetMetricClientMetricExporterIntervalInMsSync,
+              ((GetConfigurationRequest)), (noexcept, override));
+
   MOCK_METHOD(core::ExecutionResultOr<bool>,
               GetMetricClientEnableBatchRecordingSync,
               ((GetConfigurationRequest)), (noexcept, override));
@@ -252,13 +284,13 @@ class MockConfigurationFetcher
               ((core::AsyncContext<GetConfigurationRequest, bool>)),
               (noexcept, override));
 
-  MOCK_METHOD(core::ExecutionResultOr<std::string>,
-              GetMetricClientNamespaceForBatchRecordingSync,
-              ((GetConfigurationRequest)), (noexcept, override));
-
   MOCK_METHOD(void, GetMetricClientNamespaceForBatchRecording,
               ((core::AsyncContext<GetConfigurationRequest, std::string>)),
               (noexcept, override));
+
+  MOCK_METHOD(core::ExecutionResultOr<std::string>,
+              GetMetricClientNamespaceForBatchRecordingSync,
+              ((GetConfigurationRequest)), (noexcept, override));
 
   MOCK_METHOD(core::ExecutionResultOr<size_t>,
               GetMetricClientBatchRecordingTimeDurationInMsSync,

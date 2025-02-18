@@ -20,7 +20,7 @@ option java_multiple_files = true;
 option java_outer_classname = "BlobStorageServiceProto";
 option java_package = "com.google.cmrt.sdk.blob_storage_service.v1";
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 import "cc/public/cpio/proto/common/v1/cloud_identity_info.proto";
 import "google/protobuf/duration.proto";
 
@@ -61,7 +61,7 @@ message DeleteBucketRequest {
 // Response of deleting a bucket.
 message DeleteBucketResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // Describes a blob in blob storage.
@@ -109,7 +109,7 @@ message Blob {
 // Response of getting a blob's contents from storage.
 message GetBlobResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 
   // The contents of the acquired blob. If a byte range was supplied in the
   // request, the 0th byte will be the begin byte index.
@@ -139,7 +139,7 @@ message GetBlobStreamRequest {
 // Response of getting a blob stream from storage.
 message GetBlobStreamResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 
   // Portion of the blob returned. data in this field will be either all or a
   // portion of the Blob.
@@ -175,7 +175,7 @@ message ListBlobsMetadataRequest {
 // Response of listing blob metadata.
 message ListBlobsMetadataResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 
   // List of blob metadatas acquired from the request.
   repeated BlobMetadata blob_metadatas = 2;
@@ -198,7 +198,7 @@ message PutBlobRequest {
 // Response of putting a blob in storage.
 message PutBlobResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // Request to insert (part of) a blob in storage.
@@ -218,7 +218,7 @@ message PutBlobStreamRequest {
 // Response of putting a blob stream in storage.
 message PutBlobStreamResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 message DeleteBlobRequest {
@@ -230,7 +230,7 @@ message DeleteBlobRequest {
 
 message DeleteBlobResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // Identity for a blob containing blob metadata and cloud auth info for the blob.

@@ -20,7 +20,7 @@ option java_multiple_files = true;
 option java_outer_classname = "ParameterServiceProto";
 option java_package = "com.google.cmrt.sdk.parameter_service.v1";
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
@@ -41,7 +41,7 @@ message GetParameterRequest {
 // Response of getting parameter.
 message GetParameterResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Returned parameter value.
   string parameter_value = 2;
 }

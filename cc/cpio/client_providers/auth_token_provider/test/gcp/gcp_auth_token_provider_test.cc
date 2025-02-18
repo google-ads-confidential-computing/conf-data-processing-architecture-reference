@@ -539,9 +539,9 @@ TEST_F(GcpAuthTokenProviderTest, GetTeeSessionTokenWithKeyIdsSuccessfully) {
         EXPECT_EQ(
             http_context.request->body.ToString(),
             "{\"audience\": \"www.google.com\", \"token_type\": "
-            "\"LIMITED_AWS\", \"token_type_options\": "
+            "\"LIMITED_AWS\", \"aws_principal_tag_options\": "
             "{\"allowed_principal_tags\": {\"container_image_signatures\": "
-            "{\"key_ids\": [\"test1\",\"test2\"]}}}");
+            "{\"key_ids\": [\"test1\",\"test2\"]}}}}");
 
         http_context.result = SuccessExecutionResult();
         http_context.response = make_shared<HttpResponse>();

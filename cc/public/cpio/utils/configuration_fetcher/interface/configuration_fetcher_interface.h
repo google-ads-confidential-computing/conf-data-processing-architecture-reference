@@ -528,8 +528,76 @@ class ConfigurationFetcherInterface : public core::ServiceInterface {
       core::AsyncContext<GetConfigurationRequest, std::string>
           context) noexcept = 0;
   /**** QueueClient configurations end */
-
   /**** MetricClient configurations start */
+  /**
+   * @brief Get MetricClientEnableRemoteMetricAggregation.
+   *
+   * @param context the async context for the operation.
+   */
+  virtual void GetMetricClientEnableRemoteMetricAggregation(
+      core::AsyncContext<GetConfigurationRequest, bool> context) noexcept = 0;
+  /**
+   * @brief Get MetricClientEnableRemoteMetricAggregationSync.
+   *
+   * @param request get configuration request.
+   * @return core::ExecutionResultOr<bool> the result.
+   */
+  virtual core::ExecutionResultOr<bool>
+  GetMetricClientEnableRemoteMetricAggregationSync(
+      GetConfigurationRequest request) noexcept = 0;
+
+  /**
+   * @brief Get MetricClientEnableNativeMetricAggregation.
+   *
+   * @param context the async context for the operation.
+   */
+  virtual void GetMetricClientEnableNativeMetricAggregation(
+      core::AsyncContext<GetConfigurationRequest, bool> context) noexcept = 0;
+  /**
+   * @brief Get MetricClientEnableNativeMetricAggregationSync.
+   *
+   * @param request get configuration request.
+   * @return core::ExecutionResultOr<bool> the result.
+   */
+  virtual core::ExecutionResultOr<bool>
+  GetMetricClientEnableNativeMetricAggregationSync(
+      GetConfigurationRequest request) noexcept = 0;
+
+  /**
+   * @brief Get MetricClientRemoteMetricCollectorAddress
+   *
+   * @param context the async context for the operation.
+   */
+  virtual void GetMetricClientRemoteMetricCollectorAddress(
+      core::AsyncContext<GetConfigurationRequest, std::string>
+          context) noexcept = 0;
+  /**
+   * @brief Get MetricClientRemoteMetricCollectorAddressSync.
+   *
+   * @param request get configuration request.
+   * @return core::ExecutionResultOr<std::string> the result.
+   */
+  virtual core::ExecutionResultOr<std::string>
+  GetMetricClientRemoteMetricCollectorAddressSync(
+      GetConfigurationRequest request) noexcept = 0;
+
+  /**
+   * @brief Get MetricClientRemoteMetricCollectorAddress
+   *
+   * @param context the async context for the operation.
+   */
+  virtual void GetMetricClientMetricExporterIntervalInMs(
+      core::AsyncContext<GetConfigurationRequest, size_t> context) noexcept = 0;
+  /**
+   * @brief Get MetricClientBatchRecordingTimeDurationInMsSync.
+   *
+   * @param request get configuration request.
+   * @return core::ExecutionResultOr<size_t> the result.
+   */
+  virtual core::ExecutionResultOr<size_t>
+  GetMetricClientMetricExporterIntervalInMsSync(
+      GetConfigurationRequest request) noexcept = 0;
+
   /**
    * @brief Get MetricClientEnableBatchRecording.
    *

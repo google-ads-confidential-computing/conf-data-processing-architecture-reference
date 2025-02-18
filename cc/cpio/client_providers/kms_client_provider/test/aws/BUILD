@@ -101,7 +101,7 @@ cc_library(
         "-DTEST_CPIO=1",
     ],
     deps = [
-        "//cc/cpio/client_providers/kms_client_provider/src/aws:nontee_aws_kms_client_provider_lib",
+        "//cc/cpio/client_providers/kms_client_provider/src/aws:nontee_aws_kms_client_provider_no_factory",
         "//cc/cpio/common/test/aws:test_aws_utils_lib",
         "//cc/public/cpio/test/kms_client:test_aws_kms_client_options",
     ],

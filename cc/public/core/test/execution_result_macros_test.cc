@@ -18,11 +18,11 @@
 #include <utility>
 
 #include "core/common/global_logger/src/global_logger.h"
-#include "core/common/proto/common.pb.h"
 #include "core/interface/async_context.h"
 #include "core/logger/mock/mock_logger.h"
 #include "core/logger/src/log_providers/console_log_provider.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result.pb.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::common::GlobalLogger;

@@ -164,8 +164,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     }
     activeKeys = keyDb.getActiveKeys(setName, numDesiredKeys, now);
     if (activeKeys.size() < numDesiredKeys) {
-      LOGGER.error(
-          logMetricHelper.format("get_active_keys/insufficient_current_key", "setName", setName));
+      LOGGER.error(format(setName, "activeKeys_lt_numDesiredKeys"));
       throw new AssertionError(
           String.format(
               "Unexpected failure to generate sufficient immediately active keys for key set \"%s\". Only %d of %d found.",
@@ -207,8 +206,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       }
       actual = keyDb.getActiveKeys(setName, numDesiredKeys, expiration).size();
       if (actual < numDesiredKeys) {
-        LOGGER.error(
-            logMetricHelper.format("get_active_keys/insufficient_next_key", "setName", setName));
+        LOGGER.error(format(setName, "actual_lt_numDesiredKeys"));
         throw new AssertionError(
             String.format(
                 "Unexpected failure to generate sufficient pending active keys for datetime=%s for key set \"%s\". Only %d of %d found.",
@@ -280,12 +278,11 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       encryptedKeySplitB =
           encryptPeerCoordinatorSplit(keySplits.get(1), dataKey, key.getPublicKeyMaterial());
     } catch (GeneralSecurityException | IOException e) {
-      LOGGER.error(logMetricHelper.format("create_split_key/error", "errorReason", "crypto_error"));
+      LOGGER.error(format(setName, "crypto_error"));
       String msg = "Error generating keys.";
       throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);
     } catch (ServiceException e) {
-      LOGGER.error(
-          logMetricHelper.format("create_split_key/error", "errorReason", e.getErrorReason()));
+      LOGGER.error(format(setName, e.getErrorReason()));
       throw e;
     }
 
@@ -316,9 +313,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             keyIdConflictRetryCount + 1);
         return;
       }
-      LOGGER.error(
-          logMetricHelper.format(
-              "key_db_error/failed_to_insert_placeholder_key", "errorReason", e.getErrorReason()));
+      LOGGER.error(format(setName, e.getErrorReason()));
       LOGGER.error("Failed to insert placeholder key due to database error");
       throw e;
     }
@@ -342,11 +337,13 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     try {
       keyDb.createKey(signedCoordinatorAKey, true);
     } catch (ServiceException e) {
-      LOGGER.error(
-          logMetricHelper.format(
-              "key_db_error/create_key_failure", "errorReason", e.getErrorReason()));
+      LOGGER.error(format(setName, e.getErrorReason()));
       throw e;
     }
+  }
+
+  private String format(String setName, String errorReason) {
+    return logMetricHelper.format("key_generation/error", setName, "errorReason", errorReason);
   }
 
   /**

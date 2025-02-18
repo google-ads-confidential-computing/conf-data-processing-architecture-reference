@@ -20,7 +20,7 @@ option java_multiple_files = true;
 option java_outer_classname = "JobLifecycleHelperProto";
 option java_package = "com.google.cmrt.sdk.job_lifecycle_helper.v1";
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 import "cc/public/cpio/proto/job_service/v1/job_service.proto";
 import "google/protobuf/duration.proto";
 
@@ -37,7 +37,7 @@ message PrepareNextJobRequest {
 // Response of preparing next job.
 message PrepareNextJobResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // The job data of the job that is ready to be processed.
   job_service.v1.Job job = 2;
 }
@@ -54,7 +54,7 @@ message MarkJobCompletedRequest {
 // Response of marking a job completed.
 message MarkJobCompletedResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // Request to release a job for retry.
@@ -75,7 +75,7 @@ message ReleaseJobForRetryRequest {
 // Response of release a job for retry.
 message ReleaseJobForRetryResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // The job message metadata.

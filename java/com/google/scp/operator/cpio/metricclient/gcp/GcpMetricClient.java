@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import javax.inject.Inject;
 
@@ -64,6 +65,10 @@ public final class GcpMetricClient implements MetricClient {
   private final MetricServiceClient msClient;
   private final Meter meter;
   private final Boolean enableNativeMetricAggregation;
+  private static ConcurrentHashMap<String, DoubleCounter> counterCache = new ConcurrentHashMap<>();
+  private static ConcurrentHashMap<String, DoubleGauge> gaugeCache = new ConcurrentHashMap<>();
+  private static ConcurrentHashMap<String, DoubleHistogram> histogramCache =
+      new ConcurrentHashMap<>();
 
   @Inject
   GcpMetricClient(
@@ -104,18 +109,24 @@ public final class GcpMetricClient implements MetricClient {
     switch (metric.metricType()) {
       case DOUBLE_COUNTER:
         DoubleCounter doubleCounter =
-            meter.counterBuilder(metricName).setUnit(metric.unit()).ofDoubles().build();
+            counterCache.putIfAbsent(
+                metricName,
+                meter.counterBuilder(metricName).setUnit(metric.unit()).ofDoubles().build());
         doubleCounter.add(metric.value(), attributesBuilder.build());
         return;
       case DOUBLE_GAUGE:
-        DoubleGauge doubleGauge = meter.gaugeBuilder(metricName).setUnit(metric.unit()).build();
+        DoubleGauge doubleGauge =
+            gaugeCache.putIfAbsent(
+                metricName, meter.gaugeBuilder(metricName).setUnit(metric.unit()).build());
         doubleGauge.set(metric.value(), attributesBuilder.build());
         return;
       case HISTOGRAM:
         DoubleHistogram doubleHistogram =
-            meter.histogramBuilder(metricName).setUnit(metric.unit()).build();
+            histogramCache.putIfAbsent(
+                metricName, meter.histogramBuilder(metricName).setUnit(metric.unit()).build());
         doubleHistogram.record(metric.value(), attributesBuilder.build());
         return;
+      case UNKNOWN:
       default:
         throw new MetricClientException(
             "Metric type " + metric.metricType().toString() + " not supported.");

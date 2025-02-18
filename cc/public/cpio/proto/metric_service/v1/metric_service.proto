@@ -20,7 +20,7 @@ option java_multiple_files = true;
 option java_outer_classname = "MetricServiceProto";
 option java_package = "com.google.cmrt.sdk.metric_service.v1";
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 import "google/protobuf/timestamp.proto";
 
 // For faster allocations of sub-messages.
@@ -43,7 +43,7 @@ message PutMetricsRequest {
 // Response of writing metrics on cloud.
 message PutMetricsResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // Metric unit enum.

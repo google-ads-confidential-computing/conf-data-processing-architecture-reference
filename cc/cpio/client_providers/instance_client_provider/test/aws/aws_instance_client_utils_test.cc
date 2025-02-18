@@ -79,6 +79,18 @@ TEST(AwsInstanceClientUtilsTest, GetCurrentRegionCodeSuccess) {
   EXPECT_EQ(*region_code, kRegionMock);
 }
 
+TEST(AwsInstanceClientUtilsTest,
+     GetCurrentRegionCodeFailedWithInvalidResourceName) {
+  auto instance_client = make_shared<MockInstanceClientProvider>();
+  instance_client->instance_resource_name = "invalid";
+
+  auto region_code =
+      AwsInstanceClientUtils::GetCurrentRegionCode(instance_client);
+  EXPECT_THAT(region_code.result(),
+              ResultIs(FailureExecutionResult(
+                  SC_AWS_INSTANCE_CLIENT_INVALID_INSTANCE_RESOURCE_NAME)));
+}
+
 TEST(AwsInstanceClientUtilsTest, GetCurrentRegionCodeFailedWithResourceName) {
   auto instance_client = make_shared<MockInstanceClientProvider>();
   instance_client->get_instance_resource_name_mock =

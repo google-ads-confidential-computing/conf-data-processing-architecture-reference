@@ -106,6 +106,8 @@ constexpr char kTestCommonThreadCount[] = "10";
 constexpr char kTestCommonThreadPoolQueueCap[] = "10000";
 constexpr char kTestLogOption[] = "ConsoleLog";
 constexpr char kTestMetricNamespace[] = "metric_namespace";
+constexpr char kTestMetricOpenTelemetryCollectorAddress[] =
+    "collector.hostname.google.com";
 constexpr char kTestLogLevels[] = "Debug,Info";
 constexpr char kTestRetryInterval[] = "123456";
 constexpr char kTestRetryLimit[] = "3";
@@ -1234,6 +1236,152 @@ TEST_F(ConfigurationFetcherTest, GetQueueClientQueueNameSyncSucceeded) {
                      kTestQueue);
   EXPECT_THAT(fetcher_->GetQueueClientQueueNameSync(GetConfigurationRequest()),
               IsSuccessfulAndHolds(kTestQueue));
+}
+
+TEST_F(ConfigurationFetcherTest,
+       GetMetricClientEnableRemoteMetricAggregationSucceeded) {
+  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
+  ExpectGetParameter(
+      SuccessExecutionResult(),
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_ENABLE_REMOTE_METRIC_AGGREGATION),
+      "true");
+  atomic<bool> finished = false;
+  auto get_context = AsyncContext<GetConfigurationRequest, bool>(
+      nullptr,
+      [&finished](AsyncContext<GetConfigurationRequest, bool> context) {
+        EXPECT_SUCCESS(context.result);
+        EXPECT_TRUE(*context.response);
+        finished = true;
+      });
+  fetcher_->GetMetricClientEnableRemoteMetricAggregation(get_context);
+  WaitUntil([&]() { return finished.load(); });
+}
+
+TEST_F(ConfigurationFetcherTest,
+       GetMetricClientEnableRemoteMetricAggregationSyncSucceeded) {
+  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
+  ExpectGetParameter(
+      SuccessExecutionResult(),
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_ENABLE_REMOTE_METRIC_AGGREGATION),
+      "false");
+  EXPECT_THAT(fetcher_->GetMetricClientEnableRemoteMetricAggregationSync(
+                  GetConfigurationRequest()),
+              IsSuccessfulAndHolds(false));
+}
+
+TEST_F(ConfigurationFetcherTest,
+       GetMetricClientEnableNativeAggregationSucceeded) {
+  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
+  ExpectGetParameter(
+      SuccessExecutionResult(),
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_ENABLE_NATIVE_METRIC_AGGREGATION),
+      "true");
+  atomic<bool> finished = false;
+  auto get_context = AsyncContext<GetConfigurationRequest, bool>(
+      nullptr,
+      [&finished](AsyncContext<GetConfigurationRequest, bool> context) {
+        EXPECT_SUCCESS(context.result);
+        EXPECT_TRUE(*context.response);
+        finished = true;
+      });
+  fetcher_->GetMetricClientEnableNativeMetricAggregation(get_context);
+  WaitUntil([&]() { return finished.load(); });
+}
+
+TEST_F(ConfigurationFetcherTest,
+       GetMetricClientEnableNativeMetricAggregationSyncSucceeded) {
+  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
+  ExpectGetParameter(
+      SuccessExecutionResult(),
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_ENABLE_NATIVE_METRIC_AGGREGATION),
+      "false");
+  EXPECT_THAT(fetcher_->GetMetricClientEnableNativeMetricAggregationSync(
+                  GetConfigurationRequest()),
+              IsSuccessfulAndHolds(false));
+}
+
+TEST_F(ConfigurationFetcherTest,
+       GetMetricClientRemoteMetricCollectorAddressSucceeded) {
+  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
+  ExpectGetParameter(
+      SuccessExecutionResult(),
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_REMOTE_METRIC_COLLECTOR_ADDRESS),
+      kTestMetricOpenTelemetryCollectorAddress);
+  atomic<bool> finished = false;
+  auto get_context = AsyncContext<GetConfigurationRequest, string>(
+      nullptr,
+      [&finished](AsyncContext<GetConfigurationRequest, string> context) {
+        EXPECT_SUCCESS(context.result);
+        EXPECT_EQ(*context.response, kTestMetricOpenTelemetryCollectorAddress);
+        finished = true;
+      });
+  fetcher_->GetMetricClientRemoteMetricCollectorAddress(get_context);
+  WaitUntil([&]() { return finished.load(); });
+}
+
+TEST_F(ConfigurationFetcherTest,
+       GetMetricClientRemoteMetricCollectorAddressSyncSucceeded) {
+  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
+  ExpectGetParameter(
+      SuccessExecutionResult(),
+      MetricClientProto::ClientConfigurationKeys_Name(
+          MetricClientProto::ClientConfigurationKeys::
+              CMRT_METRIC_CLIENT_REMOTE_METRIC_COLLECTOR_ADDRESS),
+      kTestMetricOpenTelemetryCollectorAddress);
+  EXPECT_THAT(fetcher_->GetMetricClientRemoteMetricCollectorAddressSync(
+                  GetConfigurationRequest()),
+              IsSuccessfulAndHolds(kTestMetricOpenTelemetryCollectorAddress));
+}
+
+TEST_F(ConfigurationFetcherTest,
+       GetMetricClientMetricExporterIntervalInMsSucceeded) {
+  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
+  ExpectGetParameter(SuccessExecutionResult(),
+                     MetricClientProto::ClientConfigurationKeys_Name(
+                         MetricClientProto::ClientConfigurationKeys::
+                             CMRT_METRIC_CLIENT_METRIC_EXPORTER_INTERVAL_IN_MS),
+                     "10000");
+  atomic<bool> finished = false;
+  auto get_context = AsyncContext<GetConfigurationRequest, size_t>(
+      nullptr,
+      [&finished](AsyncContext<GetConfigurationRequest, size_t> context) {
+        EXPECT_SUCCESS(context.result);
+        EXPECT_EQ(*context.response, 10000);
+        finished = true;
+      });
+  fetcher_->GetMetricClientMetricExporterIntervalInMs(get_context);
+  WaitUntil([&]() { return finished.load(); });
+}
+
+TEST_F(ConfigurationFetcherTest,
+       GetMetricClientMetricExporterIntervalInMsSyncSucceeded) {
+  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
+  ExpectGetParameter(SuccessExecutionResult(),
+                     MetricClientProto::ClientConfigurationKeys_Name(
+                         MetricClientProto::ClientConfigurationKeys::
+                             CMRT_METRIC_CLIENT_METRIC_EXPORTER_INTERVAL_IN_MS),
+                     "10000");
+  EXPECT_THAT(fetcher_->GetMetricClientMetricExporterIntervalInMsSync(
+                  GetConfigurationRequest()),
+              IsSuccessfulAndHolds(10000));
 }
 
 TEST_F(ConfigurationFetcherTest, GetMetricClientEnableBatchRecordingSucceeded) {

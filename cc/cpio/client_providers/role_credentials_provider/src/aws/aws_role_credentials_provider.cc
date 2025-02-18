@@ -69,6 +69,7 @@ using std::placeholders::_4;
 namespace {
 constexpr char kAwsRoleCredentialsProvider[] = "AwsRoleCredentialsProvider";
 constexpr char kGcpTokenTypeForAws[] = "LIMITED_AWS";
+constexpr char kGcpTokenTypeForAwsForKeyIds[] = "AWS_PRINCIPALTAGS";
 }  // namespace
 
 namespace google::scp::cpio::client_providers {
@@ -160,6 +161,8 @@ void AwsRoleCredentialsProvider::GetRoleCredentials(
         get_credentials_context.request->target_audience_for_web_identity);
     const auto& key_ids = get_credentials_context.request->key_ids;
     if (key_ids) {
+      get_token_request->token_type =
+          make_shared<string>(kGcpTokenTypeForAwsForKeyIds);
       get_token_request->key_ids = move(key_ids);
     }
     AsyncContext<GetTeeSessionTokenRequest, GetSessionTokenResponse>
@@ -307,19 +310,4 @@ void AwsRoleCredentialsProvider::OnGetRoleCredentialsWithWebIdentityCallback(
 
   get_credentials_context.Finish();
 }
-
-#ifndef TEST_CPIO
-std::shared_ptr<RoleCredentialsProviderInterface>
-RoleCredentialsProviderFactory::Create(
-    const shared_ptr<RoleCredentialsProviderOptions>& options,
-    const shared_ptr<InstanceClientProviderInterface>& instance_client_provider,
-    const shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
-    const shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
-    const shared_ptr<AuthTokenProviderInterface>&
-        auth_token_provider) noexcept {
-  return make_shared<AwsRoleCredentialsProvider>(
-      options, instance_client_provider, cpu_async_executor, io_async_executor,
-      auth_token_provider);
-}
-#endif
 }  // namespace google::scp::cpio::client_providers

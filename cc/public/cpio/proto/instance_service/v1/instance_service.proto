@@ -20,7 +20,7 @@ option java_multiple_files = true;
 option java_outer_classname = "InstanceServiceProto";
 option java_package = "com.google.cmrt.sdk.instance_service.v1";
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
@@ -44,7 +44,7 @@ message GetCurrentInstanceResourceNameRequest {}
 // Response of getting the current instance resource name.
 message GetCurrentInstanceResourceNameResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 
   // Current instance resource name.
   //
@@ -69,7 +69,7 @@ message GetTagsByResourceNameRequest {
 // Response of get tags for a given resource name.
 message GetTagsByResourceNameResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Tags on the instance.
   // The server allows a maximum of 300 TagBindings to return.
   map<string, string> tags = 2;
@@ -105,7 +105,7 @@ message InstanceDetails {
 // Response of fetching instance details for a given resource id.
 message GetInstanceDetailsByResourceNameResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // Instance details.
   InstanceDetails instance_details = 2;
 }

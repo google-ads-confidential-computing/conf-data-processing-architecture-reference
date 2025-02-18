@@ -20,7 +20,7 @@ option java_multiple_files = true;
 option java_outer_classname = "AutoScalingServiceProto";
 option java_package = "com.google.cmrt.sdk.auto_scaling_service.v1";
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
@@ -54,7 +54,7 @@ message TryFinishInstanceTerminationRequest {
 // Response of trying to finshe the instance's termination.
 message TryFinishInstanceTerminationResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
   // The termination is scheduled if true.
   bool termination_scheduled = 2;
 }

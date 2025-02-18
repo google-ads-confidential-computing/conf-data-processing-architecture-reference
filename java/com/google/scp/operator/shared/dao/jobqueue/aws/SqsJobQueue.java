@@ -19,6 +19,7 @@ package com.google.scp.operator.shared.dao.jobqueue.aws;
 import static com.google.common.collect.MoreCollectors.toOptional;
 import static com.google.scp.operator.shared.dao.jobqueue.common.Constants.JSON_BODY_TYPE;
 import static com.google.scp.operator.shared.dao.jobqueue.common.Constants.MESSAGE_BODY_TYPE;
+import static com.google.scp.operator.shared.dao.jobqueue.common.JobQueueUtil.getProcessingTimeSeconds;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
@@ -172,7 +173,7 @@ public final class SqsJobQueue implements JobQueue {
         ChangeMessageVisibilityRequest.builder()
             .queueUrl(queueUrl.get())
             .receiptHandle(jobQueueItem.getReceiptInfo())
-            .visibilityTimeout((int) processingTime.toSeconds())
+            .visibilityTimeout(getProcessingTimeSeconds(processingTime))
             .build();
 
     try {

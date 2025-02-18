@@ -74,6 +74,11 @@ variable "mpkhs_primary_package_bucket" {
   type        = string
 }
 
+variable "use_tf_created_bucket_for_binary" {
+  description = "To indicate using google storage created by terraform."
+  type        = bool
+}
+
 ################################################################################
 # Global Alarm Variables.
 ################################################################################
@@ -439,7 +444,7 @@ variable "get_public_key_cloudfunction_max_execution_time_max" {
   type        = number
 }
 
-variable "get_public_key_cloudfunction_5xx_ratio_threshold" {
+variable "get_public_key_cloudfunction_5xx_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
@@ -488,7 +493,7 @@ variable "encryptionkeyservice_cloudfunction_max_execution_time_max" {
   type        = number
 }
 
-variable "encryptionkeyservice_cloudfunction_5xx_ratio_threshold" {
+variable "encryptionkeyservice_cloudfunction_5xx_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }

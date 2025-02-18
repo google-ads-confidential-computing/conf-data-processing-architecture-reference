@@ -45,7 +45,7 @@ module "encryptionkeyservice_cloudfunction_alarms" {
   service_prefix = "${var.environment}-${each.value.location} Encryption Key Service"
 
   eval_period_sec                 = var.alarm_eval_period_sec
-  error_5xx_ratio_threshold       = var.cloudfunction_5xx_ratio_threshold
+  error_5xx_threshold             = var.cloudfunction_5xx_threshold
   execution_time_max              = var.cloudfunction_max_execution_time_max
   execution_error_ratio_threshold = var.cloudfunction_error_ratio_threshold
   alert_on_memory_usage_threshold = var.cloudfunction_alert_on_memory_usage_threshold
@@ -170,5 +170,5 @@ module "encryptionkeyservice_monitoring_dashboard" {
   source        = "../shared/cloudfunction_dashboards"
   environment   = var.environment
   service_name  = "Encryption Key"
-  function_name = "${each.value.location}-${each.value.name}"
+  function_name = each.value.name
 }

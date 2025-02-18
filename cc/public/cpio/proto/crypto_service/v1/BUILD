@@ -30,7 +30,7 @@ proto_library(
         "crypto_service.proto",
     ],
     deps = [
-        "//cc/core/common/proto:core_common_proto",
+        "//cc/public/core/interface:execution_result_proto",
         "//cc/public/cpio/proto/private_key_service/v1:private_key_service_proto",
         "//cc/public/cpio/proto/public_key_service/v1:public_key_service_proto",
         "@tink_cc//proto:aes_ctr_hmac_streaming_proto",

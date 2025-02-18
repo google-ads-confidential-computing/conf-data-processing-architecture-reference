@@ -17,7 +17,7 @@
 terraform {
   backend "gcs" {
     bucket = "operator-terraform"
-    prefix = "lib-postsubmit/operatorservice.tfstate"
+    prefix = "standalone-lib-postsubmit/operatorservice.tfstate"
   }
 
   required_providers {

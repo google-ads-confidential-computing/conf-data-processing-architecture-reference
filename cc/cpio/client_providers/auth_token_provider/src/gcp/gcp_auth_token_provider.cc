@@ -112,9 +112,10 @@ constexpr char kTeeTokenUnixSocketPath[] =
 constexpr char kTeeTokenRequestBody[] =
     "{\"audience\": \"%s\", \"token_type\": \"%s\"}";
 constexpr char kTeeTokenWithImageSignatureRequestBody[] =
-    "{\"audience\": \"%s\", \"token_type\": \"%s\", \"token_type_options\": "
+    "{\"audience\": \"%s\", \"token_type\": \"%s\", "
+    "\"aws_principal_tag_options\": "
     "{\"allowed_principal_tags\": {\"container_image_signatures\": "
-    "{\"key_ids\": [%s]}}}";
+    "{\"key_ids\": [%s]}}}}";
 constexpr char kContentTypeHeaderKey[] = "Content-Type";
 constexpr char kJsonContentTypeHeaderValue[] = "application/json";
 

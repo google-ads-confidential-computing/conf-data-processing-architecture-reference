@@ -25,7 +25,7 @@ proto_library(
     name = "callback_server_proto",
     srcs = ["callback_server.proto"],
     deps = [
-        "//cc/core/common/proto:core_common_proto",
+        "//cc/public/core/interface:execution_result_proto",
     ],
 )
 

@@ -259,16 +259,4 @@ ExecutionResult TeeAwsKmsClientProvider::DecryptUsingEnclavesKmstoolCli(
   TeeAwsKmsClientProviderUtils::ExtractPlaintext(result, plaintext);
   return SuccessExecutionResult();
 }
-
-#ifndef TEST_CPIO
-std::shared_ptr<KmsClientProviderInterface> KmsClientProviderFactory::Create(
-    const shared_ptr<KmsClientOptions>& options,
-    const shared_ptr<RoleCredentialsProviderInterface>&
-        role_credentials_provider,
-    const shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
-    const std::shared_ptr<core::AsyncExecutorInterface>&
-        cpu_async_executor) noexcept {
-  return make_shared<TeeAwsKmsClientProvider>(role_credentials_provider);
-}
-#endif
 }  // namespace google::scp::cpio::client_providers

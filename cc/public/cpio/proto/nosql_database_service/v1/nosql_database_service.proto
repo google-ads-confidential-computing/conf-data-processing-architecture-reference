@@ -20,7 +20,7 @@ option java_multiple_files = true;
 option java_outer_classname = "NoSQLDatabaseServiceProto";
 option java_package = "com.google.cmrt.sdk.nosql_database_service.v1";
 
-import "cc/core/common/proto/common.proto";
+import "cc/public/core/interface/execution_result.proto";
 import "google/protobuf/duration.proto";
 
 // For faster allocations of sub-messages.
@@ -95,7 +95,7 @@ message CreateTableRequest {
 // Response object of creating a table in the database.
 message CreateTableResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // Request object for deleting a table from the database.
@@ -107,7 +107,7 @@ message DeleteTableRequest {
 // Response object of deleting a table from the database.
 message DeleteTableResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // Describes an item - table name, keys, and attributes.
@@ -134,7 +134,7 @@ message GetDatabaseItemRequest {
 // Response object for getting an object out of the database.
 message GetDatabaseItemResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 
   // The item to get.
   Item item = 2;
@@ -156,7 +156,7 @@ message CreateDatabaseItemRequest {
 // Response object for creating an object in the database.
 message CreateDatabaseItemResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }
 
 // Request object for upserting an object into the database.
@@ -228,5 +228,5 @@ message UpsertDatabaseItemRequest {
 // Response object for getting an object into the database.
 message UpsertDatabaseItemResponse {
   // The execution result.
-  scp.core.common.proto.ExecutionResult result = 1;
+  scp.core.proto.ExecutionResult result = 1;
 }

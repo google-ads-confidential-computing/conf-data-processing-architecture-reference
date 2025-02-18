@@ -56,7 +56,11 @@ public final class GetEncryptedPrivateKeyTask extends ApiTask {
     } catch (ServiceException e) {
       logger.error(
           logMetricHelper.format(
-              "get_encrypted_private_key/error", "errorReason", e.getErrorReason()));
+              "get_encrypted_private_key/error",
+              "errorReason",
+              e.getErrorReason(),
+              "key_id",
+              id));
       throw e;
     }
   }

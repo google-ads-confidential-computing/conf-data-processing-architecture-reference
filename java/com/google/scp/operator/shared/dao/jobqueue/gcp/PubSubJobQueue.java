@@ -18,6 +18,7 @@ package com.google.scp.operator.shared.dao.jobqueue.gcp;
 
 import static com.google.scp.operator.shared.dao.jobqueue.common.Constants.JSON_BODY_TYPE;
 import static com.google.scp.operator.shared.dao.jobqueue.common.Constants.MESSAGE_BODY_TYPE;
+import static com.google.scp.operator.shared.dao.jobqueue.common.JobQueueUtil.getProcessingTimeSeconds;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
@@ -196,7 +197,7 @@ public final class PubSubJobQueue implements JobQueue {
       ModifyAckDeadlineRequest modifyAckDeadlineRequest =
           ModifyAckDeadlineRequest.newBuilder()
               .setSubscription(subscriptionName.get())
-              .setAckDeadlineSeconds((int) processingTime.toSeconds())
+              .setAckDeadlineSeconds(getProcessingTimeSeconds(processingTime))
               .addAckIds(jobQueueItem.getReceiptInfo())
               .build();
 

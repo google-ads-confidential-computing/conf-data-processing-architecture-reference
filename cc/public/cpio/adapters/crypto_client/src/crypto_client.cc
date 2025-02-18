@@ -63,9 +63,12 @@ constexpr char kCryptoClient[] = "CryptoClient";
 }
 
 namespace google::scp::cpio {
-CryptoClient::CryptoClient(const std::shared_ptr<CryptoClientOptions>& options)
+CryptoClient::CryptoClient(
+    const std::shared_ptr<CryptoClientOptions>& options,
+    const std::shared_ptr<scp::core::AsyncExecutorInterface>& async_executor)
     : options_(options) {
-  crypto_client_provider_ = make_shared<CryptoClientProvider>(options_);
+  crypto_client_provider_ =
+      make_shared<CryptoClientProvider>(options, async_executor);
 }
 
 ExecutionResult CryptoClient::Init() noexcept {
@@ -121,7 +124,9 @@ ExecutionResultOr<unique_ptr<OutputStream>> CryptoClient::AeadEncryptStreamSync(
 }
 
 std::unique_ptr<CryptoClientInterface> CryptoClientFactory::Create(
-    CryptoClientOptions options) {
-  return make_unique<CryptoClient>(make_shared<CryptoClientOptions>(options));
+    CryptoClientOptions options,
+    const std::shared_ptr<scp::core::AsyncExecutorInterface>& async_executor) {
+  return make_unique<CryptoClient>(make_shared<CryptoClientOptions>(options),
+                                   async_executor);
 }
 }  // namespace google::scp::cpio

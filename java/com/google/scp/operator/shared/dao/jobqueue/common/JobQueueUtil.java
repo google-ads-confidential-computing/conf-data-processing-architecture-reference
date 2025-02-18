@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-package com.google.scp.operator.cpio.metricclient.model;
+package com.google.scp.operator.shared.dao.jobqueue.common;
 
-/** Supported metric types. All of the metric values are treated as double. */
-public enum MetricType {
-  UNKNOWN,
-  DOUBLE_COUNTER,
-  DOUBLE_GAUGE,
-  HISTOGRAM;
+import java.time.Duration;
+
+/** Common utilities to be used by {@code JobQueue}. */
+public final class JobQueueUtil {
+
+  /** Returns processing time in seconds rounded up. */
+  public static Integer getProcessingTimeSeconds(Duration processingTime) {
+    return (int)
+        Math.ceil(processingTime.getSeconds() + (double) processingTime.getNano() / 1_000_000_000);
+  }
 }

@@ -19,45 +19,45 @@
 
 #include <map>
 
-#include "core/common/proto/common.pb.h"
+#include "public/core/interface/execution_result.pb.h"
 
 using std::map;
 
 namespace google::scp::core {
-map<core::common::proto::ExecutionStatus, ExecutionStatus> ReverseMap(
-    const map<ExecutionStatus, core::common::proto::ExecutionStatus>& m) {
-  map<core::common::proto::ExecutionStatus, ExecutionStatus> r;
+map<core::proto::ExecutionStatus, ExecutionStatus> ReverseMap(
+    const map<ExecutionStatus, core::proto::ExecutionStatus>& m) {
+  map<core::proto::ExecutionStatus, ExecutionStatus> r;
   for (const auto& kv : m) {
     r[kv.second] = kv.first;
   }
   return r;
 }
 
-const map<ExecutionStatus, core::common::proto::ExecutionStatus>
+const map<ExecutionStatus, core::proto::ExecutionStatus>
     kExecutionStatusToProtoMap = {
         {ExecutionStatus::Success,
-         core::common::proto::ExecutionStatus::EXECUTION_STATUS_SUCCESS},
+         core::proto::ExecutionStatus::EXECUTION_STATUS_SUCCESS},
         {ExecutionStatus::Failure,
-         core::common::proto::ExecutionStatus::EXECUTION_STATUS_FAILURE},
+         core::proto::ExecutionStatus::EXECUTION_STATUS_FAILURE},
         {ExecutionStatus::Retry,
-         core::common::proto::ExecutionStatus::EXECUTION_STATUS_RETRY}};
+         core::proto::ExecutionStatus::EXECUTION_STATUS_RETRY}};
 
-const std::map<core::common::proto::ExecutionStatus, ExecutionStatus>
+const std::map<core::proto::ExecutionStatus, ExecutionStatus>
     kProtoToExecutionStatusMap = ReverseMap(kExecutionStatusToProtoMap);
 
-core::common::proto::ExecutionStatus ToStatusProto(ExecutionStatus& status) {
+core::proto::ExecutionStatus ToStatusProto(ExecutionStatus& status) {
   return kExecutionStatusToProtoMap.at(status);
 }
 
-core::common::proto::ExecutionResult ExecutionResult::ToProto() {
-  core::common::proto::ExecutionResult result_proto;
+core::proto::ExecutionResult ExecutionResult::ToProto() {
+  core::proto::ExecutionResult result_proto;
   result_proto.set_status(ToStatusProto(status));
   result_proto.set_status_code(status_code);
   return result_proto;
 }
 
 ExecutionResult::ExecutionResult(
-    const core::common::proto::ExecutionResult result_proto) {
+    const core::proto::ExecutionResult result_proto) {
   auto mapped_status = ExecutionStatus::Failure;
   // Handle proto status UNKNOWN
   if (kProtoToExecutionStatusMap.find(result_proto.status()) !=

@@ -211,6 +211,7 @@ module "autoscaling" {
   cloudfunction_5xx_threshold         = var.autoscaling_cloudfunction_5xx_threshold
   cloudfunction_error_threshold       = var.autoscaling_cloudfunction_error_threshold
   cloudfunction_max_execution_time_ms = var.autoscaling_cloudfunction_max_execution_time_ms
+  use_java21_runtime                  = var.autoscaling_cloudfunction_use_java21_runtime
 }
 
 # Storage bucket containing cloudfunction JARs
@@ -224,7 +225,7 @@ resource "google_storage_bucket" "operator_package_bucket" {
 }
 
 module "opentelemetry_collector" {
-  count = var.enable_remote_metric_aggregation ? 1 : 0
+  count = coalesce(var.metric_client_parameter_values.enable_remote_metric_aggregation, false) ? 1 : 0
 
   source      = "../../modules/opentelemetry_collector"
   environment = var.environment
@@ -270,6 +271,7 @@ module "frontend" {
   frontend_service_cloudfunction_max_instances                    = var.frontend_service_cloudfunction_max_instances
   frontend_service_cloudfunction_max_instance_request_concurrency = var.frontend_service_cloudfunction_max_instance_request_concurrency
   frontend_service_cloudfunction_timeout_sec                      = var.frontend_service_cloudfunction_timeout_sec
+  frontend_service_cloudfunction_runtime_sa_email                 = var.frontend_service_cloudfunction_runtime_sa_email
 
   alarms_enabled                       = var.alarms_enabled
   notification_channel_id              = local.notification_channel_id
@@ -280,4 +282,5 @@ module "frontend" {
   cloudfunction_max_execution_time_max = var.frontend_cloudfunction_max_execution_time_max
   lb_5xx_threshold                     = var.frontend_lb_5xx_threshold
   lb_max_latency_ms                    = var.frontend_lb_max_latency_ms
+  use_java21_runtime                   = var.frontend_service_cloudfunction_use_java21_runtime
 }

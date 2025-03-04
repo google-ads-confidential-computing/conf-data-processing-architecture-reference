@@ -77,6 +77,14 @@ enum MetricUnit {
   METRIC_UNIT_COUNT_PER_SECOND = 26;
 }
 
+// MetricTypeEnum
+enum MetricType {
+  METRIC_TYPE_UNKNOWN = 0;
+  METRIC_TYPE_COUNTER = 1;
+  METRIC_TYPE_GAUGE = 2;
+  METRIC_TYPE_HISTOGRAM = 3;
+}
+
 // One metric data.
 message Metric {
   // Metric name.
@@ -94,4 +102,8 @@ message Metric {
   // The time the metric data was received. This is optional
   // field. The default value of timestamp is current time.
   google.protobuf.Timestamp timestamp = 5;
+
+  // Metric type, required for OpenTelemetry. This is only supported when
+  // enable remote_metric_aggregation, otherwise, only Gauge is available.
+  MetricType type = 6;
 }

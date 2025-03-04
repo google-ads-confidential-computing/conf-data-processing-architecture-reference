@@ -1,5 +1,5 @@
-/**
- * Copyright 2022 Google LLC
+/*
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-terraform {
-  backend "gcs" {
-    bucket = "operator-terraform"
-    prefix = "staging-mp/jobservice.tfstate"
-  }
+#pragma once
 
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = ">= 4.48"
-    }
-  }
-}
+#include <memory>
+#include <string>
+
+#include "cpio/client_providers/otel_metric_client_provider/src/gcp/gcp_otel_metric_client_provider.h"
+
+namespace google::scp::cpio::client_providers {
+static constexpr char kPlaintext[] = "test_plaintext";
+}  // namespace google::scp::cpio::client_providers

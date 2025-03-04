@@ -40,6 +40,7 @@ module "job_service" {
   frontend_service_cloudfunction_max_instances                    = var.frontend_service_cloudfunction_max_instances
   frontend_service_cloudfunction_max_instance_request_concurrency = var.frontend_service_cloudfunction_max_instance_request_concurrency
   frontend_service_cloudfunction_timeout_sec                      = var.frontend_service_cloudfunction_timeout_sec
+  frontend_service_cloudfunction_runtime_sa_email                 = var.frontend_service_cloudfunction_runtime_sa_email
   job_version                                                     = var.job_version
 
   # Frontend Service Alarms
@@ -53,16 +54,15 @@ module "job_service" {
   job_metadata_table_ttl_days                   = var.job_metadata_table_ttl_days
 
   # Worker
-  instance_type                   = var.instance_type
-  instance_disk_image_family      = var.instance_disk_image_family
-  instance_disk_image             = var.instance_disk_image
-  worker_instance_disk_type       = var.worker_instance_disk_type
-  worker_instance_disk_size_gb    = var.worker_instance_disk_size_gb
-  max_job_processing_time         = var.max_job_processing_time
-  max_job_num_attempts            = var.max_job_num_attempts
-  user_provided_worker_sa_email   = var.user_provided_worker_sa_email
-  worker_instance_force_replace   = var.worker_instance_force_replace
-  enable_native_metric_aggreation = var.enable_native_metric_aggreation
+  instance_type                 = var.instance_type
+  instance_disk_image_family    = var.instance_disk_image_family
+  instance_disk_image           = var.instance_disk_image
+  worker_instance_disk_type     = var.worker_instance_disk_type
+  worker_instance_disk_size_gb  = var.worker_instance_disk_size_gb
+  max_job_processing_time       = var.max_job_processing_time
+  max_job_num_attempts          = var.max_job_num_attempts
+  user_provided_worker_sa_email = var.user_provided_worker_sa_email
+  worker_instance_force_replace = var.worker_instance_force_replace
 
   # Worker Alarms
   worker_alarm_duration_sec     = var.worker_alarm_duration_sec
@@ -107,13 +107,15 @@ module "job_service" {
   vpc_connector_machine_type = var.vpc_connector_machine_type
 
   # OpenTelemetry Collector
-  enable_remote_metric_aggregation = var.enable_remote_metric_aggregation
-  collector_instance_type          = var.collector_instance_type
-  user_provided_collector_sa_email = var.user_provided_collector_sa_email
-  collector_service_port           = var.collector_service_port
-  collector_send_batch_max_size    = var.collector_send_batch_max_size
-  collector_send_batch_size        = var.collector_send_batch_size
-  collector_send_batch_timeout     = var.collector_send_batch_timeout
+  enable_native_metric_aggregation   = var.enable_native_metric_aggregation
+  enable_remote_metric_aggregation   = var.enable_remote_metric_aggregation
+  metric_exporter_interval_in_millis = var.metric_exporter_interval_in_millis
+  collector_instance_type            = var.collector_instance_type
+  user_provided_collector_sa_email   = var.user_provided_collector_sa_email
+  collector_service_port             = var.collector_service_port
+  collector_send_batch_max_size      = var.collector_send_batch_max_size
+  collector_send_batch_size          = var.collector_send_batch_size
+  collector_send_batch_timeout       = var.collector_send_batch_timeout
 
   # Notifications
   enable_job_completion_notifications = var.enable_job_completion_notifications
@@ -124,4 +126,9 @@ module "job_service" {
   job_completion_notifications_cloud_function_cpu_count = var.job_completion_notifications_cloud_function_cpu_count
   job_completion_notifications_cloud_function_memory_mb = var.job_completion_notifications_cloud_function_memory_mb
   job_completion_notifications_service_account_email    = var.job_completion_notifications_service_account_email
+
+  # Cloudfunction java21 runtime flag
+  frontend_cloudfunction_use_java21_runtime     = var.frontend_cloudfunction_use_java21_runtime
+  notification_cloudfunction_use_java21_runtime = var.notification_cloudfunction_use_java21_runtime
+  autoscaling_cloudfunction_use_java21_runtime  = var.autoscaling_cloudfunction_use_java21_runtime
 }

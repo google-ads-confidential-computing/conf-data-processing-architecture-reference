@@ -81,16 +81,8 @@ class ConfigurationFetcher : public ConfigurationFetcherInterface {
   core::ExecutionResultOr<std::string> GetCurrentInstanceResourceNameSync(
       GetConfigurationRequest request) noexcept override;
 
-  void GetCurrentInstanceResourceName(
-      core::AsyncContext<GetConfigurationRequest, std::string> context) noexcept
-      override;
-
   core::ExecutionResultOr<std::string> GetEnvironmentNameSync(
       GetConfigurationRequest request) noexcept override;
-
-  void GetEnvironmentName(
-      core::AsyncContext<GetConfigurationRequest, std::string> context) noexcept
-      override;
 
   core::ExecutionResultOr<std::string> GetParameterByNameSync(
       std::string parameter_name) noexcept override;
@@ -348,6 +340,9 @@ class ConfigurationFetcher : public ConfigurationFetcherInterface {
 
  protected:
   virtual void CreateInstanceAndParameterClient() noexcept;
+  virtual core::ExecutionResult InitDependencies() noexcept;
+  virtual core::ExecutionResult RunDependencies() noexcept;
+
   std::shared_ptr<InstanceClientInterface> instance_client_;
   std::shared_ptr<ParameterClientInterface> parameter_client_;
 
@@ -359,36 +354,6 @@ class ConfigurationFetcher : public ConfigurationFetcherInterface {
 
   void GetConfiguration(core::AsyncContext<std::string, std::string>&
                             get_configuration_context) noexcept;
-
-  void GetCurrentInstanceResourceNameCallback(
-      core::AsyncContext<cmrt::sdk::instance_service::v1::
-                             GetCurrentInstanceResourceNameRequest,
-                         cmrt::sdk::instance_service::v1::
-                             GetCurrentInstanceResourceNameResponse>&
-          get_current_instance_response_name_context,
-      core::AsyncContext<GetConfigurationRequest, std::string>&
-          context) noexcept;
-
-  void GetCurrentInstanceResourceNameForEnvNameCallback(
-      core::AsyncContext<GetConfigurationRequest, std::string>&
-          get_current_instance_resource_name_context,
-      core::AsyncContext<GetConfigurationRequest, std::string>&
-          get_env_name_context) noexcept;
-
-  void GetInstanceDetailsByResourceNameCallback(
-      core::AsyncContext<cmrt::sdk::instance_service::v1::
-                             GetInstanceDetailsByResourceNameRequest,
-                         cmrt::sdk::instance_service::v1::
-                             GetInstanceDetailsByResourceNameResponse>&
-          get_instance_details_context,
-      core::AsyncContext<GetConfigurationRequest, std::string>&
-          get_env_name_context) noexcept;
-
-  void GetEnvironmentNameCallback(
-      core::AsyncContext<GetConfigurationRequest, std::string>&
-          get_env_name_context,
-      core::AsyncContext<std::string, std::string>&
-          get_configuration_context) noexcept;
 
   void GetParameterCallback(
       core::AsyncContext<
@@ -409,5 +374,7 @@ class ConfigurationFetcher : public ConfigurationFetcherInterface {
       io_async_executor_;
   std::shared_ptr<client_providers::InstanceClientProviderInterface>
       instance_client_provider_;
+  std::string environment_name_;
+  std::string instance_resource_name_;
 };
 }  // namespace google::scp::cpio

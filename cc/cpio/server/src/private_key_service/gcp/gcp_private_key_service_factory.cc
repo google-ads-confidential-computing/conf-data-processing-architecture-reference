@@ -83,8 +83,13 @@ GcpPrivateKeyServiceFactory::CreatePrivateKeyFetcher() noexcept {
 
 ExecutionResultOr<shared_ptr<ServiceInterface>>
 GcpPrivateKeyServiceFactory::CreateKmsClient() noexcept {
-  kms_client_ = make_shared<GcpKmsClientProvider>(io_async_executor_,
-                                                  cpu_async_executor_);
+  auto kms_client_options = make_shared<KmsClientOptions>();
+  kms_client_options->enable_gcp_kms_client_cache =
+      gcp_client_options_->enable_gcp_kms_client_cache;
+  kms_client_options->gcp_kms_client_cache_lifetime =
+      gcp_client_options_->gcp_kms_client_cache_lifetime;
+  kms_client_ = make_shared<GcpKmsClientProvider>(
+      io_async_executor_, cpu_async_executor_, std::move(kms_client_options));
   return kms_client_;
 }
 

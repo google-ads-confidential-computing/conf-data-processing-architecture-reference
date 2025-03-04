@@ -18,8 +18,10 @@
 
 #include <memory>
 #include <string>
+#include <thread>
+#include <vector>
 
-#include "core/async_executor/mock/mock_async_executor.h"
+#include "core/async_executor/src/async_executor.h"
 #include "core/interface/async_context.h"
 #include "core/test/utils/conditional_wait.h"
 #include "core/test/utils/scp_test_base.h"
@@ -30,8 +32,9 @@
 
 using google::cloud::Status;
 using google::cloud::StatusCode;
-using google::scp::core::async_executor::mock::MockAsyncExecutor;
+using google::scp::core::AsyncExecutor;
 using google::scp::core::test::ScpTestBase;
+using testing::Between;
 using GcsDecryptRequest = google::cloud::kms::v1::DecryptRequest;
 using GcsDecryptResponse = google::cloud::kms::v1::DecryptResponse;
 using google::cmrt::sdk::kms_service::v1::DecryptRequest;
@@ -58,7 +61,9 @@ using std::make_unique;
 using std::move;
 using std::shared_ptr;
 using std::string;
+using std::thread;
 using std::unique_ptr;
+using std::vector;
 using testing::Eq;
 using testing::ExplainMatchResult;
 using testing::Return;
@@ -80,9 +85,15 @@ class MockGcpKmsFactory : public GcpKmsFactory {
 class GcpKmsClientProviderTest : public ScpTestBase {
  protected:
   void SetUp() override {
+    auto options = make_shared<KmsClientOptions>();
+    options->enable_gcp_kms_client_cache = false;
     mock_gcp_kms_factory_ = make_shared<MockGcpKmsFactory>();
-    client_ = make_unique<GcpKmsClientProvider>(mock_io_async_executor_,
-                                                mock_cpu_async_executor_,
+    EXPECT_SUCCESS(io_async_executor_->Init());
+    EXPECT_SUCCESS(io_async_executor_->Run());
+    EXPECT_SUCCESS(cpu_async_executor_->Init());
+    EXPECT_SUCCESS(cpu_async_executor_->Run());
+    client_ = make_unique<GcpKmsClientProvider>(io_async_executor_,
+                                                cpu_async_executor_, options,
                                                 mock_gcp_kms_factory_);
     EXPECT_SUCCESS(client_->Init());
     EXPECT_SUCCESS(client_->Run());
@@ -91,16 +102,21 @@ class GcpKmsClientProviderTest : public ScpTestBase {
         std::make_shared<MockGcpKeyManagementServiceClient>();
   }
 
-  void TearDown() override { EXPECT_SUCCESS(client_->Stop()); }
+  void TearDown() override {
+    EXPECT_SUCCESS(client_->Stop());
+    EXPECT_SUCCESS(io_async_executor_->Stop());
+    EXPECT_SUCCESS(cpu_async_executor_->Stop());
+  }
 
   unique_ptr<GcpKmsClientProvider> client_;
+
   shared_ptr<MockGcpKmsFactory> mock_gcp_kms_factory_;
   shared_ptr<MockGcpKeyManagementServiceClient>
       mock_gcp_key_management_service_client_;
-  shared_ptr<MockAsyncExecutor> mock_io_async_executor_ =
-      make_shared<MockAsyncExecutor>();
-  shared_ptr<MockAsyncExecutor> mock_cpu_async_executor_ =
-      make_shared<MockAsyncExecutor>();
+  shared_ptr<AsyncExecutor> io_async_executor_ =
+      make_shared<AsyncExecutor>(2, 100);
+  shared_ptr<AsyncExecutor> cpu_async_executor_ =
+      make_shared<AsyncExecutor>(2, 100);
 };
 
 TEST_F(GcpKmsClientProviderTest, NullKeyArn) {
@@ -205,28 +221,28 @@ TEST_F(GcpKmsClientProviderTest, FailedToDecode) {
   WaitUntil([&]() { return condition.load(); });
 }
 
-TEST_F(GcpKmsClientProviderTest, SuccessToDecrypt) {
-  EXPECT_CALL(*mock_gcp_kms_factory_, CreateGcpKeyManagementServiceClient(
-                                          kWipProvider, kServiceAccount))
-      .WillOnce(Return(mock_gcp_key_management_service_client_));
-
-  ASSERT_SUCCESS_AND_ASSIGN(string encoded_ciphertext,
-                            Base64Encode(kCiphertext));
-
-  auto kms_decrpyt_request = make_shared<DecryptRequest>();
-  kms_decrpyt_request->set_key_resource_name(kKeyArn);
-  kms_decrpyt_request->set_ciphertext(encoded_ciphertext);
-  kms_decrpyt_request->set_account_identity(kServiceAccount);
-  kms_decrpyt_request->set_gcp_wip_provider(kWipProvider);
-
+void ExpectCallDecrypt(shared_ptr<MockGcpKeyManagementServiceClient>
+                           mock_gcp_key_management_service_client,
+                       int8_t call_decrypt_time) {
   GcsDecryptRequest decrypt_request;
   decrypt_request.set_name(kKeyArn);
   decrypt_request.set_ciphertext(kCiphertext);
   GcsDecryptResponse decrypt_response;
   decrypt_response.set_plaintext(kPlaintext);
-  EXPECT_CALL(*mock_gcp_key_management_service_client_,
+  EXPECT_CALL(*mock_gcp_key_management_service_client,
               Decrypt(RequestMatches(decrypt_request)))
-      .WillOnce(Return(decrypt_response));
+      .Times(call_decrypt_time)
+      .WillRepeatedly(Return(decrypt_response));
+}
+
+void DecryptSuccessfully(GcpKmsClientProvider* client, const string& wip) {
+  ASSERT_SUCCESS_AND_ASSIGN(string encoded_ciphertext,
+                            Base64Encode(kCiphertext));
+  auto kms_decrpyt_request = make_shared<DecryptRequest>();
+  kms_decrpyt_request->set_key_resource_name(kKeyArn);
+  kms_decrpyt_request->set_ciphertext(encoded_ciphertext);
+  kms_decrpyt_request->set_account_identity(kServiceAccount);
+  kms_decrpyt_request->set_gcp_wip_provider(wip);
 
   atomic<bool> condition = false;
   AsyncContext<DecryptRequest, DecryptResponse> context(
@@ -237,44 +253,100 @@ TEST_F(GcpKmsClientProviderTest, SuccessToDecrypt) {
         condition = true;
       });
 
-  client_->Decrypt(context);
+  client->Decrypt(context);
 
   WaitUntil([&]() { return condition.load(); });
 }
 
-TEST_F(GcpKmsClientProviderTest, FailedToDecrypt) {
+TEST_F(GcpKmsClientProviderTest, SuccessToDecrypt) {
+  ExpectCallDecrypt(mock_gcp_key_management_service_client_, 1);
+
   EXPECT_CALL(*mock_gcp_kms_factory_, CreateGcpKeyManagementServiceClient(
                                           kWipProvider, kServiceAccount))
       .WillOnce(Return(mock_gcp_key_management_service_client_));
+  DecryptSuccessfully(client_.get(), kWipProvider);
+}
 
-  string encoded_ciphertext = *Base64Encode(kCiphertext);
-  auto kms_decrpyt_request = make_shared<DecryptRequest>();
-  kms_decrpyt_request->set_key_resource_name(kKeyArn);
-  kms_decrpyt_request->set_ciphertext(encoded_ciphertext);
-  kms_decrpyt_request->set_account_identity(kServiceAccount);
-  kms_decrpyt_request->set_gcp_wip_provider(kWipProvider);
+TEST_F(GcpKmsClientProviderTest, MultiThreadSuccessToDecryptWithoutCache) {
+  ExpectCallDecrypt(mock_gcp_key_management_service_client_, 10);
+  // Call factory 10 times.
+  EXPECT_CALL(*mock_gcp_kms_factory_, CreateGcpKeyManagementServiceClient(
+                                          kWipProvider, kServiceAccount))
+      .Times(10)
+      .WillRepeatedly(Return(mock_gcp_key_management_service_client_));
+  vector<thread> threads;
+  for (auto i = 0; i < 10; ++i) {
+    threads.push_back(
+        thread([this]() { DecryptSuccessfully(client_.get(), kWipProvider); }));
+  }
 
-  GcsDecryptRequest decrypt_request;
-  decrypt_request.set_name(kKeyArn);
-  decrypt_request.set_ciphertext(kCiphertext);
-  GcsDecryptResponse decrypt_response;
-  decrypt_response.set_plaintext(kPlaintext);
-  EXPECT_CALL(*mock_gcp_key_management_service_client_,
-              Decrypt(RequestMatches(decrypt_request)))
-      .WillOnce(Return(Status(StatusCode::kInvalidArgument, "Invalid input")));
+  for (auto& thread : threads) {
+    thread.join();
+  }
+}
 
-  atomic<bool> condition = false;
-  AsyncContext<DecryptRequest, DecryptResponse> context(
-      kms_decrpyt_request,
-      [&](AsyncContext<DecryptRequest, DecryptResponse>& context) {
-        EXPECT_THAT(context.result,
-                    ResultIs(FailureExecutionResult(
-                        SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED)));
-        condition = true;
-      });
+TEST_F(GcpKmsClientProviderTest, MultiThreadSuccessToDecryptWithCache) {
+  auto options = make_shared<KmsClientOptions>();
+  options->enable_gcp_kms_client_cache = true;
+  auto client = make_unique<GcpKmsClientProvider>(
+      io_async_executor_, cpu_async_executor_, options, mock_gcp_kms_factory_);
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
 
-  client_->Decrypt(context);
+  ExpectCallDecrypt(mock_gcp_key_management_service_client_, 10);
+  // Expect at least one factory call will be saved,
+  // Only the first one will be used in cache.
+  EXPECT_CALL(*mock_gcp_kms_factory_, CreateGcpKeyManagementServiceClient(
+                                          kWipProvider, kServiceAccount))
+      .Times(Between(1, 9))
+      .WillRepeatedly(Return(mock_gcp_key_management_service_client_));
+  vector<thread> threads;
+  for (auto i = 0; i < 10; ++i) {
+    threads.push_back(thread([this, &client]() {
+      DecryptSuccessfully(client.get(), kWipProvider);
+    }));
+  }
 
-  WaitUntil([&]() { return condition.load(); });
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  EXPECT_SUCCESS(client->Stop());
+}
+
+TEST_F(GcpKmsClientProviderTest, MultiThreadDifferentWipWithCache) {
+  auto options = make_shared<KmsClientOptions>();
+  options->enable_gcp_kms_client_cache = true;
+  auto client = make_unique<GcpKmsClientProvider>(
+      io_async_executor_, cpu_async_executor_, options, mock_gcp_kms_factory_);
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
+
+  ExpectCallDecrypt(mock_gcp_key_management_service_client_, 10);
+  EXPECT_CALL(*mock_gcp_kms_factory_, CreateGcpKeyManagementServiceClient(
+                                          kWipProvider, kServiceAccount))
+      .Times(Between(1, 4))
+      .WillRepeatedly(Return(mock_gcp_key_management_service_client_));
+  string wip_2 = "WIP2";
+  EXPECT_CALL(*mock_gcp_kms_factory_,
+              CreateGcpKeyManagementServiceClient(wip_2, kServiceAccount))
+      .Times(Between(1, 4))
+      .WillRepeatedly(Return(mock_gcp_key_management_service_client_));
+  vector<thread> threads;
+  for (auto i = 0; i < 10; ++i) {
+    threads.push_back(thread([this, i, wip_2, &client]() {
+      if (i > 4) {
+        DecryptSuccessfully(client.get(), kWipProvider);
+      } else {
+        DecryptSuccessfully(client.get(), wip_2);
+      }
+    }));
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  EXPECT_SUCCESS(client->Stop());
 }
 }  // namespace google::scp::cpio::client_providers::test

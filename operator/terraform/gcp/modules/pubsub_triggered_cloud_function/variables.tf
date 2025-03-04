@@ -121,3 +121,9 @@ variable "vpc_connector_id" {
   type        = string
   default     = null
 }
+
+variable "use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+}

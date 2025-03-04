@@ -48,3 +48,7 @@ alarms_notification_email            = "fakeemail@google.com"
 
 worker_scale_in_jar  = "/tmp/standalone_postsubmit/jars/WorkerScaleInCloudFunction_deploy.jar"
 frontend_service_jar = "/tmp/standalone_postsubmit/jars/FrontendServiceHttpCloudFunction_deploy.jar"
+
+frontend_service_cloudfunction_runtime_sa_email   = "s-cc-postsubmit-fe@admcloud-adtech1.iam.gserviceaccount.com"
+frontend_service_cloudfunction_use_java21_runtime = true
+autoscaling_cloudfunction_use_java21_runtime      = true

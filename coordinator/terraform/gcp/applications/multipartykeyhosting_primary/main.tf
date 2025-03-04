@@ -101,17 +101,11 @@ module "keygenerationservice" {
   key_generation_tee_restart_policy = var.key_generation_tee_restart_policy
 
   # Monitoring Args
-  alarms_enabled                                               = var.alarms_enabled
-  keydb_instance_name                                          = module.keydb.keydb_instance_name
-  key_generation_alignment_period                              = var.key_generation_alignment_period
-  undelivered_messages_threshold                               = var.key_generation_undelivered_messages_threshold
-  key_generation_key_db_create_key_error_threshold             = var.key_generation_key_db_create_key_error_threshold
-  key_generation_key_db_insert_placeholder_key_error_threshold = var.key_generation_key_db_insert_placeholder_key_error_threshold
-  key_generation_key_storage_error_threshold                   = var.key_generation_key_storage_error_threshold
-  key_generation_create_split_key_error_threshold              = var.key_generation_create_split_key_error_threshold
-  key_generation_insufficient_current_key_error_threshold      = var.key_generation_insufficient_current_key_error_threshold
-  key_generation_insufficient_next_key_error_threshold         = var.key_generation_insufficient_next_key_error_threshold
-  key_generation_alerts_severity_overrides                     = var.alert_severity_overrides
+  alarms_enabled                  = var.alarms_enabled
+  keydb_instance_name             = module.keydb.keydb_instance_name
+  key_generation_alignment_period = var.key_generation_alignment_period
+  undelivered_messages_threshold  = var.key_generation_undelivered_messages_threshold
+  key_generation_error_threshold  = var.key_generation_error_threshold
 }
 
 module "allowed_operators" {

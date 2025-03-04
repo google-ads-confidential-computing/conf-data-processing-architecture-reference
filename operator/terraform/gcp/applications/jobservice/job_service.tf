@@ -155,11 +155,34 @@ module "notifications_topic_id" {
   parameter_value = module.notifications[0].notifications_pubsub_topic_id
 }
 
-module "enable_native_metric_aggreation" {
+module "enable_native_metric_aggregation" {
   source          = "../../modules/parameters"
   environment     = var.environment
   parameter_name  = "ENABLE_NATIVE_METRIC_AGGREGATION"
-  parameter_value = var.enable_native_metric_aggreation
+  parameter_value = var.enable_native_metric_aggregation
+}
+
+module "enable_remote_metric_aggregation" {
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = "ENABLE_REMOTE_METRIC_AGGREGATION"
+  parameter_value = var.enable_remote_metric_aggregation
+}
+
+module "metric_exporter_interval_in_millis" {
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = "METRIC_EXPORTER_INTERVAL_IN_MILLIS"
+  parameter_value = var.metric_exporter_interval_in_millis
+}
+
+module "opentelemetry_collector_address" {
+  count          = var.enable_remote_metric_aggregation ? 1 : 0
+  source         = "../../modules/parameters"
+  environment    = var.environment
+  parameter_name = "OPENTELEMETRY_COLLECTOR_ADDRESS"
+  parameter_value = format("%s:%s",
+  module.opentelemetry_collector[0].collector_ip_address, var.collector_service_port)
 }
 
 module "opentelemetry_collector" {
@@ -209,6 +232,7 @@ module "frontend" {
   frontend_service_cloudfunction_max_instances                    = var.frontend_service_cloudfunction_max_instances
   frontend_service_cloudfunction_max_instance_request_concurrency = var.frontend_service_cloudfunction_max_instance_request_concurrency
   frontend_service_cloudfunction_timeout_sec                      = var.frontend_service_cloudfunction_timeout_sec
+  frontend_service_cloudfunction_runtime_sa_email                 = var.frontend_service_cloudfunction_runtime_sa_email
 
   alarms_enabled                       = var.alarms_enabled
   notification_channel_id              = local.notification_channel_id
@@ -219,6 +243,7 @@ module "frontend" {
   cloudfunction_max_execution_time_max = var.frontend_cloudfunction_max_execution_time_max
   lb_5xx_threshold                     = var.frontend_lb_5xx_threshold
   lb_max_latency_ms                    = var.frontend_lb_max_latency_ms
+  use_java21_runtime                   = var.frontend_cloudfunction_use_java21_runtime
 }
 
 module "worker" {
@@ -297,6 +322,7 @@ module "autoscaling" {
   cloudfunction_5xx_threshold         = var.autoscaling_cloudfunction_5xx_threshold
   cloudfunction_error_threshold       = var.autoscaling_cloudfunction_error_threshold
   cloudfunction_max_execution_time_ms = var.autoscaling_cloudfunction_max_execution_time_ms
+  use_java21_runtime                  = var.autoscaling_cloudfunction_use_java21_runtime
 }
 
 module "notifications" {
@@ -348,6 +374,8 @@ module "job_completion_notifications_cloud_function" {
 
   runtime_cloud_function_service_account_email = var.job_completion_notifications_service_account_email
   event_trigger_service_account_email          = var.job_completion_notifications_service_account_email
+
+  use_java21_runtime = var.notification_cloudfunction_use_java21_runtime
 }
 
 # PubSub read/write permissions for global notification topic

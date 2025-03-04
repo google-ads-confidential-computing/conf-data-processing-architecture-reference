@@ -62,6 +62,8 @@
 #include "public/cpio/utils/configuration_fetcher/src/gcp/gcp_parameter_client.h"
 #endif
 
+using google::scp::core::errors::
+    SC_CONFIGURATION_FETCHER_INSTANCE_RESOURCE_NAME_NOT_FOUND;
 namespace NoSQLDatabaseClientProto =
     google::cmrt::sdk::nosql_database_service::v1;
 namespace AutoScalingClientProto = google::cmrt::sdk::auto_scaling_service::v1;
@@ -156,8 +158,7 @@ void ConfigurationFetcher::CreateInstanceAndParameterClient() noexcept {
 #endif
 }
 
-ExecutionResult ConfigurationFetcher::Init() noexcept {
-  CreateInstanceAndParameterClient();
+ExecutionResult ConfigurationFetcher::InitDependencies() noexcept {
   RETURN_IF_FAILURE(
       ConvertToPublicExecutionResult(cpu_async_executor_->Init()));
   RETURN_IF_FAILURE(ConvertToPublicExecutionResult(io_async_executor_->Init()));
@@ -173,7 +174,12 @@ ExecutionResult ConfigurationFetcher::Init() noexcept {
   return SuccessExecutionResult();
 }
 
-ExecutionResult ConfigurationFetcher::Run() noexcept {
+ExecutionResult ConfigurationFetcher::Init() noexcept {
+  CreateInstanceAndParameterClient();
+  return InitDependencies();
+}
+
+ExecutionResult ConfigurationFetcher::RunDependencies() noexcept {
   RETURN_IF_FAILURE(ConvertToPublicExecutionResult(cpu_async_executor_->Run()));
   RETURN_IF_FAILURE(ConvertToPublicExecutionResult(io_async_executor_->Run()));
   RETURN_IF_FAILURE(ConvertToPublicExecutionResult(http1_client_->Run()));
@@ -184,6 +190,45 @@ ExecutionResult ConfigurationFetcher::Run() noexcept {
       ConvertToPublicExecutionResult(instance_client_provider_->Run()));
   RETURN_IF_FAILURE(ConvertToPublicExecutionResult(instance_client_->Run()));
   RETURN_IF_FAILURE(ConvertToPublicExecutionResult(parameter_client_->Run()));
+
+  return SuccessExecutionResult();
+}
+
+ExecutionResult ConfigurationFetcher::Run() noexcept {
+  RETURN_IF_FAILURE(RunDependencies());
+
+  // Prefetch env name
+  if (environment_name_label_.empty()) {
+    return SuccessExecutionResult();
+  }
+  GetCurrentInstanceResourceNameRequest get_instance_resource_name_request;
+  auto get_instance_resource_name_response_or =
+      instance_client_->GetCurrentInstanceResourceNameSync(
+          get_instance_resource_name_request);
+  RETURN_AND_LOG_IF_FAILURE(get_instance_resource_name_response_or.result(),
+                            kConfigurationFetcher, kZeroUuid,
+                            "Failed to fetch instance resource name");
+  instance_resource_name_ =
+      get_instance_resource_name_response_or->instance_resource_name();
+  GetInstanceDetailsByResourceNameRequest request;
+  request.set_instance_resource_name(instance_resource_name_);
+  auto get_instance_details_response_or =
+      instance_client_->GetInstanceDetailsByResourceNameSync(request);
+  RETURN_AND_LOG_IF_FAILURE(get_instance_details_response_or.result(),
+                            kConfigurationFetcher, kZeroUuid,
+                            "Failed to fetch instance details");
+
+  auto it = get_instance_details_response_or->instance_details().labels().find(
+      environment_name_label_);
+  if (it ==
+      get_instance_details_response_or->instance_details().labels().end()) {
+    auto result = FailureExecutionResult(
+        SC_CONFIGURATION_FETCHER_ENVIRONMENT_NAME_NOT_FOUND);
+    SCP_ERROR(kConfigurationFetcher, kZeroUuid, result,
+              "Failed to find environment name");
+    return result;
+  }
+  environment_name_ = it->second;
   return SuccessExecutionResult();
 }
 
@@ -202,151 +247,23 @@ ExecutionResult ConfigurationFetcher::Stop() noexcept {
   return SuccessExecutionResult();
 }
 
+ExecutionResultOr<string> ConfigurationFetcher::GetEnvironmentNameSync(
+    GetConfigurationRequest request) noexcept {
+  if (environment_name_.empty()) {
+    return FailureExecutionResult(
+        SC_CONFIGURATION_FETCHER_ENVIRONMENT_NAME_NOT_FOUND);
+  }
+  return environment_name_;
+}
+
 ExecutionResultOr<string>
 ConfigurationFetcher::GetCurrentInstanceResourceNameSync(
     GetConfigurationRequest request) noexcept {
-  string instance_resource_name;
-  auto execution_result =
-      SyncUtils::AsyncToSync2<GetConfigurationRequest, string>(
-          bind(&ConfigurationFetcher::GetCurrentInstanceResourceName, this, _1),
-          request, instance_resource_name);
-  RETURN_AND_LOG_IF_FAILURE(execution_result, kConfigurationFetcher, kZeroUuid,
-                            "Failed to get current instance resource name.");
-  return instance_resource_name;
-}
-
-void ConfigurationFetcher::GetCurrentInstanceResourceName(
-    AsyncContext<GetConfigurationRequest, string> context) noexcept {
-  auto get_current_instance_resource_name_context =
-      AsyncContext<GetCurrentInstanceResourceNameRequest,
-                   GetCurrentInstanceResourceNameResponse>(
-          make_shared<GetCurrentInstanceResourceNameRequest>(),
-          bind(&ConfigurationFetcher::GetCurrentInstanceResourceNameCallback,
-               this, _1, context),
-          context);
-  instance_client_->GetCurrentInstanceResourceName(
-      get_current_instance_resource_name_context);
-}
-
-void ConfigurationFetcher::GetCurrentInstanceResourceNameCallback(
-    AsyncContext<GetCurrentInstanceResourceNameRequest,
-                 GetCurrentInstanceResourceNameResponse>&
-        get_current_instance_resource_name_context,
-    AsyncContext<GetConfigurationRequest, string>&
-        get_configuration_context) noexcept {
-  get_configuration_context.result =
-      get_current_instance_resource_name_context.result;
-  if (!get_configuration_context.result.Successful()) {
-    SCP_ERROR_CONTEXT(kConfigurationFetcher, get_configuration_context,
-                      get_configuration_context.result,
-                      "Failed to GetCurrentInstanceResourceName");
-    get_configuration_context.Finish();
-    return;
+  if (instance_resource_name_.empty()) {
+    return FailureExecutionResult(
+        SC_CONFIGURATION_FETCHER_INSTANCE_RESOURCE_NAME_NOT_FOUND);
   }
-  get_configuration_context.response =
-      make_shared<string>(get_current_instance_resource_name_context.response
-                              ->instance_resource_name());
-  get_configuration_context.Finish();
-}
-
-ExecutionResultOr<std::string> ConfigurationFetcher::GetEnvironmentNameSync(
-    GetConfigurationRequest request) noexcept {
-  string env_name;
-  auto execution_result =
-      SyncUtils::AsyncToSync2<GetConfigurationRequest, string>(
-          bind(&ConfigurationFetcher::GetEnvironmentName, this, _1), request,
-          env_name);
-  RETURN_AND_LOG_IF_FAILURE(execution_result, kConfigurationFetcher, kZeroUuid,
-                            "Failed to get environment name.");
-  return env_name;
-}
-
-void ConfigurationFetcher::GetEnvironmentName(
-    AsyncContext<GetConfigurationRequest, string> context) noexcept {
-  if (environment_name_label_.empty()) {
-    context.result = FailureExecutionResult(
-        SC_CONFIGURATION_FETCHER_INVALID_ENVIRONMENT_NAME_LABEL);
-    SCP_ERROR_CONTEXT(kConfigurationFetcher, context, context.result,
-                      "Environment name label is empty.");
-    context.Finish();
-    return;
-  }
-
-  auto get_current_instance_resource_name_context =
-      AsyncContext<GetConfigurationRequest, string>(
-          make_shared<GetConfigurationRequest>(),
-          bind(&ConfigurationFetcher::
-                   GetCurrentInstanceResourceNameForEnvNameCallback,
-               this, _1, context),
-          context);
-  GetCurrentInstanceResourceName(get_current_instance_resource_name_context);
-}
-
-void ConfigurationFetcher::GetCurrentInstanceResourceNameForEnvNameCallback(
-    AsyncContext<GetConfigurationRequest, string>&
-        get_current_instance_resource_name_context,
-    AsyncContext<GetConfigurationRequest, string>&
-        get_env_name_context) noexcept {
-  get_env_name_context.result =
-      get_current_instance_resource_name_context.result;
-  if (!get_env_name_context.result.Successful()) {
-    SCP_ERROR_CONTEXT(kConfigurationFetcher, get_env_name_context,
-                      get_env_name_context.result,
-                      "Failed to GetCurrentInstanceResourceName");
-    get_env_name_context.Finish();
-    return;
-  }
-
-  auto request = make_shared<GetInstanceDetailsByResourceNameRequest>();
-  request->set_instance_resource_name(
-      *get_current_instance_resource_name_context.response);
-  auto get_instance_details_context =
-      AsyncContext<GetInstanceDetailsByResourceNameRequest,
-                   GetInstanceDetailsByResourceNameResponse>(
-          move(request),
-          bind(&ConfigurationFetcher::GetInstanceDetailsByResourceNameCallback,
-               this, _1, get_env_name_context),
-          get_env_name_context);
-  instance_client_->GetInstanceDetailsByResourceName(
-      get_instance_details_context);
-}
-
-void ConfigurationFetcher::GetInstanceDetailsByResourceNameCallback(
-    AsyncContext<GetInstanceDetailsByResourceNameRequest,
-                 GetInstanceDetailsByResourceNameResponse>&
-        get_instance_details_context,
-    AsyncContext<GetConfigurationRequest, string>&
-        get_env_name_context) noexcept {
-  if (!get_instance_details_context.result.Successful()) {
-    get_env_name_context.result = get_instance_details_context.result;
-    SCP_ERROR_CONTEXT(
-        kConfigurationFetcher, get_env_name_context,
-        get_env_name_context.result,
-        "Failed to GetInstanceDetailsByResourceName for instance %s",
-        get_instance_details_context.request->instance_resource_name().c_str());
-    get_env_name_context.Finish();
-    return;
-  }
-
-  auto it =
-      get_instance_details_context.response->instance_details().labels().find(
-          environment_name_label_);
-  if (it == get_instance_details_context.response->instance_details()
-                .labels()
-                .end()) {
-    get_env_name_context.result = FailureExecutionResult(
-        SC_CONFIGURATION_FETCHER_ENVIRONMENT_NAME_NOT_FOUND);
-    SCP_ERROR_CONTEXT(
-        kConfigurationFetcher, get_env_name_context,
-        get_env_name_context.result,
-        "Failed to find environment name for instance %s",
-        get_instance_details_context.request->instance_resource_name().c_str());
-    get_env_name_context.Finish();
-    return;
-  }
-
-  get_env_name_context.response = make_shared<string>(it->second);
-  get_env_name_context.Finish();
+  return instance_resource_name_;
 }
 
 ExecutionResultOr<string> ConfigurationFetcher::GetParameterByNameSync(
@@ -1396,39 +1313,14 @@ AsyncContext<string, string> ConfigurationFetcher::ContextConvertCallback(
 
 void ConfigurationFetcher::GetConfiguration(
     AsyncContext<string, string>& get_configuration_context) noexcept {
-  if (environment_name_label_.empty()) {
-    AsyncContext<GetConfigurationRequest, string> get_env_name_context(
-        make_shared<GetConfigurationRequest>(), [](auto&) {},
-        get_configuration_context);
-    GetEnvironmentNameCallback(get_env_name_context, get_configuration_context);
-    return;
-  }
-  auto get_env_name_context = AsyncContext<GetConfigurationRequest, string>(
-      make_shared<GetConfigurationRequest>(),
-      bind(&ConfigurationFetcher::GetEnvironmentNameCallback, this, _1,
-           get_configuration_context),
-      get_configuration_context);
-  GetEnvironmentName(get_env_name_context);
-}
-
-void ConfigurationFetcher::GetEnvironmentNameCallback(
-    AsyncContext<GetConfigurationRequest, string>& get_env_name_context,
-    AsyncContext<string, string>& get_configuration_context) noexcept {
-  string env_name;
+  auto env_name_with_suffix = environment_name_;
   if (!environment_name_label_.empty()) {
-    if (!get_env_name_context.result.Successful()) {
-      get_configuration_context.result = get_env_name_context.result;
-      SCP_ERROR_CONTEXT(kConfigurationFetcher, get_configuration_context,
-                        get_configuration_context.result,
-                        "Failed to GetEnvironmentName.");
-      get_configuration_context.Finish();
-      return;
-    }
-    env_name = *get_env_name_context.response + "-";
+    env_name_with_suffix = absl::StrCat(environment_name_, "-");
   }
 
   auto request = make_shared<GetParameterRequest>();
-  request->set_parameter_name(absl::StrCat(parameter_name_prefix_, env_name,
+  request->set_parameter_name(absl::StrCat(parameter_name_prefix_,
+                                           env_name_with_suffix,
                                            *get_configuration_context.request));
   auto context = AsyncContext<GetParameterRequest, GetParameterResponse>(
       move(request),

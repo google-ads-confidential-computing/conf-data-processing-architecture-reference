@@ -37,3 +37,7 @@ instance_disk_image_family = {
 }
 
 user_provided_worker_sa_email = "perf-mp-worker-account@admcloud-adtech1.iam.gserviceaccount.com"
+
+frontend_cloudfunction_use_java21_runtime     = true
+notification_cloudfunction_use_java21_runtime = true
+autoscaling_cloudfunction_use_java21_runtime  = true

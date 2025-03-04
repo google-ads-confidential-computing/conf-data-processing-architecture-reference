@@ -35,3 +35,7 @@ instance_disk_image_family = {
   image_project = "confidential-space-images",
   image_family  = "confidential-space"
 }
+
+frontend_cloudfunction_use_java21_runtime     = true
+notification_cloudfunction_use_java21_runtime = true
+autoscaling_cloudfunction_use_java21_runtime  = true

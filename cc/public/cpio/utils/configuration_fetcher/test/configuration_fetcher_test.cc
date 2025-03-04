@@ -74,6 +74,8 @@ using google::scp::core::errors::SC_CONFIGURATION_FETCHER_CONVERSION_FAILED;
 using google::scp::core::errors::
     SC_CONFIGURATION_FETCHER_ENVIRONMENT_NAME_NOT_FOUND;
 using google::scp::core::errors::
+    SC_CONFIGURATION_FETCHER_INSTANCE_RESOURCE_NAME_NOT_FOUND;
+using google::scp::core::errors::
     SC_CONFIGURATION_FETCHER_INVALID_ENVIRONMENT_NAME_LABEL;
 using google::scp::core::errors::
     SC_CONFIGURATION_FETCHER_INVALID_PARAMETER_NAME;
@@ -130,19 +132,20 @@ class MockConfigurationFetcherWithOverrides : public ConfigurationFetcher {
         mock_instance_client_(instance_client),
         mock_parameter_client_(parameter_client) {}
 
-  ExecutionResult Init() noexcept override {
-    CreateInstanceAndParameterClient();
-    return SuccessExecutionResult();
-  }
-
-  ExecutionResult Run() noexcept override { return SuccessExecutionResult(); }
-
   ExecutionResult Stop() noexcept override { return SuccessExecutionResult(); }
 
  protected:
   void CreateInstanceAndParameterClient() noexcept override {
     instance_client_ = mock_instance_client_;
     parameter_client_ = mock_parameter_client_;
+  }
+
+  ExecutionResult InitDependencies() noexcept override {
+    return SuccessExecutionResult();
+  }
+
+  ExecutionResult RunDependencies() noexcept override {
+    return SuccessExecutionResult();
   }
 
  private:
@@ -159,11 +162,13 @@ class ConfigurationFetcherTest : public ScpTestBase {
     EXPECT_SUCCESS(mock_instance_client_->Run());
     EXPECT_SUCCESS(mock_parameter_client_->Init());
     EXPECT_SUCCESS(mock_parameter_client_->Run());
-
     fetcher_ = make_unique<MockConfigurationFetcherWithOverrides>(
         mock_instance_client_, mock_parameter_client_, std::nullopt,
         std::nullopt);
+
     EXPECT_SUCCESS(fetcher_->Init());
+    ExpectGetCurrentInstanceResourceNameSync(SuccessExecutionResult());
+    ExpectGetInstanceDetailsSync(SuccessExecutionResult(), env_name_label_);
     EXPECT_SUCCESS(fetcher_->Run());
   }
 
@@ -173,41 +178,35 @@ class ConfigurationFetcherTest : public ScpTestBase {
     EXPECT_SUCCESS(mock_instance_client_->Stop());
   }
 
-  void ExpectGetCurrentInstanceResourceName(const ExecutionResult& result) {
-    EXPECT_CALL(*mock_instance_client_, GetCurrentInstanceResourceName)
-        .WillOnce(
-            [result](  // Avoid capturing reference of reference.
-                AsyncContext<GetCurrentInstanceResourceNameRequest,
-                             GetCurrentInstanceResourceNameResponse>& context) {
-              context.result = result;
-              auto response =
-                  make_shared<GetCurrentInstanceResourceNameResponse>();
-              if (result.Successful()) {
-                response->set_instance_resource_name(kInstanceResourceName);
-                context.response = move(response);
-              }
-              context.Finish();
-            });
+  void ExpectGetCurrentInstanceResourceNameSync(const ExecutionResult& result) {
+    EXPECT_CALL(*mock_instance_client_, GetCurrentInstanceResourceNameSync)
+        .WillOnce([result](GetCurrentInstanceResourceNameRequest request)
+                      -> core::ExecutionResultOr<
+                          GetCurrentInstanceResourceNameResponse> {
+          GetCurrentInstanceResourceNameResponse response;
+          if (result.Successful()) {
+            response.set_instance_resource_name(kInstanceResourceName);
+            return response;
+          }
+          return result;
+        });
   }
 
-  void ExpectGetInstanceDetails(const ExecutionResult& result,
-                                const string& label) {
-    EXPECT_CALL(*mock_instance_client_, GetInstanceDetailsByResourceName)
+  void ExpectGetInstanceDetailsSync(const ExecutionResult& result,
+                                    const string& label) {
+    EXPECT_CALL(*mock_instance_client_, GetInstanceDetailsByResourceNameSync)
         .WillOnce([result, label](  // Avoid capturing reference of reference.
-                      AsyncContext<GetInstanceDetailsByResourceNameRequest,
-                                   GetInstanceDetailsByResourceNameResponse>&
-                          context) {
-          context.result = result;
-          auto response =
-              make_shared<GetInstanceDetailsByResourceNameResponse>();
+                      GetInstanceDetailsByResourceNameRequest request)
+                      -> core::ExecutionResultOr<
+                          GetInstanceDetailsByResourceNameResponse> {
+          GetInstanceDetailsByResourceNameResponse response;
           if (result.Successful() &&
-              context.request->instance_resource_name() ==
-                  kInstanceResourceName) {
-            response->mutable_instance_details()->mutable_labels()->insert(
+              request.instance_resource_name() == kInstanceResourceName) {
+            response.mutable_instance_details()->mutable_labels()->insert(
                 MapPair<string, string>(label, string(kEnvName)));
-            context.response = move(response);
+            return response;
           }
-          context.Finish();
+          return result;
         });
   }
 
@@ -242,80 +241,33 @@ class ConfigurationFetcherTest : public ScpTestBase {
   string env_name_label_ = string(kEnvNameLabel);
 };
 
-TEST_F(ConfigurationFetcherTest, GetCurrentInstanceResourceNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  atomic<bool> finished = false;
-  auto get_context = AsyncContext<GetConfigurationRequest, string>(
-      make_shared<GetConfigurationRequest>(),
-      [&finished](AsyncContext<GetConfigurationRequest, string> context) {
-        EXPECT_SUCCESS(context.result);
-        EXPECT_EQ(*context.response, kInstanceResourceName);
-        finished = true;
-      });
-  fetcher_->GetCurrentInstanceResourceName(get_context);
-  WaitUntil([&]() { return finished.load(); });
-}
-
-TEST_F(ConfigurationFetcherTest, GetCurrentInstanceResourceNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+TEST_F(ConfigurationFetcherTest, GetInstanceResourceNameSyncSucceeded) {
   EXPECT_THAT(
       fetcher_->GetCurrentInstanceResourceNameSync(GetConfigurationRequest()),
       IsSuccessfulAndHolds(kInstanceResourceName));
 }
 
-TEST_F(ConfigurationFetcherTest, GetEnvironmentNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
-  atomic<bool> finished = false;
-  auto get_context = AsyncContext<GetConfigurationRequest, string>(
-      make_shared<GetConfigurationRequest>(),
-      [&finished](AsyncContext<GetConfigurationRequest, string> context) {
-        EXPECT_SUCCESS(context.result);
-        EXPECT_EQ(*context.response, kEnvName);
-        finished = true;
-      });
-  fetcher_->GetEnvironmentName(get_context);
-  WaitUntil([&]() { return finished.load(); });
-}
-
 TEST_F(ConfigurationFetcherTest, GetEnvironmentNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   EXPECT_THAT(fetcher_->GetEnvironmentNameSync(GetConfigurationRequest()),
               IsSuccessfulAndHolds(kEnvName));
 }
 
 TEST_F(ConfigurationFetcherTest,
        GetEnvironmentNameSyncSucceededWithDifferentEnvNameLabel) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetCurrentInstanceResourceNameSync(SuccessExecutionResult());
   string env_name_label = "different_label";
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label);
-  fetcher_ = make_unique<MockConfigurationFetcherWithOverrides>(
+  ExpectGetInstanceDetailsSync(SuccessExecutionResult(), env_name_label);
+  auto fetcher = make_unique<MockConfigurationFetcherWithOverrides>(
       mock_instance_client_, mock_parameter_client_, std::nullopt,
       env_name_label);
-  EXPECT_SUCCESS(fetcher_->Init());
-  EXPECT_SUCCESS(fetcher_->Run());
-  EXPECT_THAT(fetcher_->GetEnvironmentNameSync(GetConfigurationRequest()),
+  EXPECT_SUCCESS(fetcher->Init());
+  EXPECT_SUCCESS(fetcher->Run());
+  EXPECT_THAT(fetcher->GetEnvironmentNameSync(GetConfigurationRequest()),
               IsSuccessfulAndHolds(kEnvName));
-  EXPECT_SUCCESS(fetcher_->Stop());
-}
-
-TEST_F(ConfigurationFetcherTest,
-       GetEnvironmentNameSyncFailedWithEmptyEnvNameLabel) {
-  fetcher_ = make_unique<MockConfigurationFetcherWithOverrides>(
-      mock_instance_client_, mock_parameter_client_, std::nullopt, "");
-  EXPECT_SUCCESS(fetcher_->Init());
-  EXPECT_SUCCESS(fetcher_->Run());
-  EXPECT_THAT(
-      fetcher_->GetEnvironmentNameSync(GetConfigurationRequest()).result(),
-      ResultIs(FailureExecutionResult(
-          SC_CONFIGURATION_FETCHER_INVALID_ENVIRONMENT_NAME_LABEL)));
-  EXPECT_SUCCESS(fetcher_->Stop());
+  EXPECT_SUCCESS(fetcher->Stop());
 }
 
 TEST_F(ConfigurationFetcherTest, GetParameterByNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -336,8 +288,6 @@ TEST_F(ConfigurationFetcherTest, GetParameterByNameSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetParameterByNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -352,26 +302,26 @@ TEST_F(ConfigurationFetcherTest, GetParameterByNameSyncSucceeded) {
 
 TEST_F(ConfigurationFetcherTest,
        GetParameterByNameSyncSucceededWithDifferentParameterNamePrefix) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
+  ExpectGetCurrentInstanceResourceNameSync(SuccessExecutionResult());
   string env_name_label = "different_label";
   string parameter_name_prefix = "different-name-prefix-";
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label);
+  ExpectGetInstanceDetailsSync(SuccessExecutionResult(), env_name_label);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
                              CMRT_JOB_CLIENT_JOB_TABLE_NAME),
                      kTestTable, parameter_name_prefix);
-  fetcher_ = make_unique<MockConfigurationFetcherWithOverrides>(
+  auto fetcher = make_unique<MockConfigurationFetcherWithOverrides>(
       mock_instance_client_, mock_parameter_client_, parameter_name_prefix,
       env_name_label);
-  EXPECT_SUCCESS(fetcher_->Init());
-  EXPECT_SUCCESS(fetcher_->Run());
-  EXPECT_THAT(fetcher_->GetParameterByNameSync(
+  EXPECT_SUCCESS(fetcher->Init());
+  EXPECT_SUCCESS(fetcher->Run());
+  EXPECT_THAT(fetcher->GetParameterByNameSync(
                   JobClientProto::ClientConfigurationKeys_Name(
                       JobClientProto::ClientConfigurationKeys::
                           CMRT_JOB_CLIENT_JOB_TABLE_NAME)),
               IsSuccessfulAndHolds(kTestTable));
-  EXPECT_SUCCESS(fetcher_->Stop());
+  EXPECT_SUCCESS(fetcher->Stop());
 }
 
 TEST_F(ConfigurationFetcherTest,
@@ -402,8 +352,6 @@ TEST_F(ConfigurationFetcherTest,
 }
 
 TEST_F(ConfigurationFetcherTest, GetUInt64ByNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -424,8 +372,6 @@ TEST_F(ConfigurationFetcherTest, GetUInt64ByNameSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetUInt64NameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -447,8 +393,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest, GetBoolByNameSucceeded) {
   auto bool_param_name = "bool_param";
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(), bool_param_name, "true");
   atomic<bool> finished = false;
   auto get_context = AsyncContext<string, bool>(
@@ -464,8 +408,6 @@ TEST_F(ConfigurationFetcherTest, GetBoolByNameSucceeded) {
 
 TEST_F(ConfigurationFetcherTest, GetBoolNameSyncSucceeded) {
   auto bool_param_name = "bool_param";
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(), bool_param_name, "true");
   EXPECT_THAT(fetcher_->GetBoolByNameSync(bool_param_name),
               IsSuccessfulAndHolds(true));
@@ -479,8 +421,6 @@ TEST_F(ConfigurationFetcherTest,
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonLogOptionSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      CommonClientConfigurationKeys_Name(
                          CommonClientConfigurationKeys::CMRT_COMMON_LOG_OPTION),
@@ -498,8 +438,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonLogOptionSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonLogOptionSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      CommonClientConfigurationKeys_Name(
                          CommonClientConfigurationKeys::CMRT_COMMON_LOG_OPTION),
@@ -509,8 +447,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonLogOptionSyncSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonEnabledLogLevelsSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -534,8 +470,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonEnabledLogLevelsSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonEnabledLogLevelsSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -547,8 +481,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonEnabledLogLevelsSyncSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadCountSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -567,8 +499,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadCountSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadCountSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -579,8 +509,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadCountSyncSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadCountExceedingMin) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -600,8 +528,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadCountExceedingMin) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadCountSyncExceedingMax) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -613,8 +539,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadCountSyncExceedingMax) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadPoolQueueCapSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -633,8 +557,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadPoolQueueCapSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadPoolQueueCapSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -646,8 +568,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonCpuThreadPoolQueueCapSyncSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonIoThreadCountSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -666,8 +586,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonIoThreadCountSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonIoThreadCountSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -678,8 +596,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonIoThreadCountSyncSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonIoThreadPoolQueueCapSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -698,8 +614,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonIoThreadPoolQueueCapSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetCommonIoThreadPoolQueueCapSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       CommonClientConfigurationKeys_Name(
@@ -711,8 +625,6 @@ TEST_F(ConfigurationFetcherTest, GetCommonIoThreadPoolQueueCapSyncSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetJobLifecycleHelperRetryLimitSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobLifecycleHelperProto::ClientConfigurationKeys_Name(
                          JobLifecycleHelperProto::ClientConfigurationKeys::
@@ -731,8 +643,6 @@ TEST_F(ConfigurationFetcherTest, GetJobLifecycleHelperRetryLimitSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetJobLifecycleHelperRetryLimitSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobLifecycleHelperProto::ClientConfigurationKeys_Name(
                          JobLifecycleHelperProto::ClientConfigurationKeys::
@@ -745,8 +655,6 @@ TEST_F(ConfigurationFetcherTest, GetJobLifecycleHelperRetryLimitSyncSucceeded) {
 
 TEST_F(ConfigurationFetcherTest,
        GetJobLifecycleHelperVisibilityTimeoutExtendTimeSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       JobLifecycleHelperProto::ClientConfigurationKeys_Name(
@@ -767,8 +675,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetJobLifecycleHelperVisibilityTimeoutExtendTimeSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       JobLifecycleHelperProto::ClientConfigurationKeys_Name(
@@ -782,8 +688,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetJobLifecycleHelperJobProcessingTimeoutSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobLifecycleHelperProto::ClientConfigurationKeys_Name(
                          JobLifecycleHelperProto::ClientConfigurationKeys::
@@ -803,8 +707,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetJobLifecycleHelperJobProcessingTimeoutSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobLifecycleHelperProto::ClientConfigurationKeys_Name(
                          JobLifecycleHelperProto::ClientConfigurationKeys::
@@ -817,8 +719,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetJobLifecycleHelperJobExtendingWorkerSleepTimeSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       JobLifecycleHelperProto::ClientConfigurationKeys_Name(
@@ -839,8 +739,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetJobLifecycleHelperJobExtendingWorkerSleepTimeSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       JobLifecycleHelperProto::ClientConfigurationKeys_Name(
@@ -854,8 +752,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetJobLifecycleHelperEnableMetricRecordingSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       JobLifecycleHelperProto::ClientConfigurationKeys_Name(
@@ -876,8 +772,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetJobLifecycleHelperEnableMetricRecordingSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       JobLifecycleHelperProto::ClientConfigurationKeys_Name(
@@ -891,8 +785,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetJobLifecycleHelperMetricNamespaceSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobLifecycleHelperProto::ClientConfigurationKeys_Name(
                          JobLifecycleHelperProto::ClientConfigurationKeys::
@@ -912,8 +804,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetJobLifecycleHelperMetricNamespaceSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobLifecycleHelperProto::ClientConfigurationKeys_Name(
                          JobLifecycleHelperProto::ClientConfigurationKeys::
@@ -925,8 +815,6 @@ TEST_F(ConfigurationFetcherTest,
 }
 
 TEST_F(ConfigurationFetcherTest, GetJobClientJobQueueNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -945,8 +833,6 @@ TEST_F(ConfigurationFetcherTest, GetJobClientJobQueueNameSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetJobClientJobQueueNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -957,8 +843,6 @@ TEST_F(ConfigurationFetcherTest, GetJobClientJobQueueNameSyncSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetJobClientJobTableNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -977,8 +861,6 @@ TEST_F(ConfigurationFetcherTest, GetJobClientJobTableNameSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetJobClientJobTableNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -989,8 +871,6 @@ TEST_F(ConfigurationFetcherTest, GetJobClientJobTableNameSyncSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetGcpJobClientSpannerInstanceNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -1010,8 +890,6 @@ TEST_F(ConfigurationFetcherTest, GetGcpJobClientSpannerInstanceNameSucceeded) {
 
 TEST_F(ConfigurationFetcherTest,
        GetGcpJobClientSpannerInstanceNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -1023,8 +901,6 @@ TEST_F(ConfigurationFetcherTest,
 }
 
 TEST_F(ConfigurationFetcherTest, GetGcpJobClientSpannerDatabaseNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -1044,8 +920,6 @@ TEST_F(ConfigurationFetcherTest, GetGcpJobClientSpannerDatabaseNameSucceeded) {
 
 TEST_F(ConfigurationFetcherTest,
        GetGcpJobClientSpannerDatabaseNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -1058,15 +932,17 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest, GetJobClientJobTableNameSyncFailed) {
   auto failure = FailureExecutionResult(SC_UNKNOWN);
-  ExpectGetCurrentInstanceResourceName(failure);
+  ExpectGetParameter(failure,
+                     JobClientProto::ClientConfigurationKeys_Name(
+                         JobClientProto::ClientConfigurationKeys::
+                             CMRT_JOB_CLIENT_JOB_TABLE_NAME),
+                     kTestTable);
   EXPECT_THAT(fetcher_->GetJobClientJobTableNameSync(GetConfigurationRequest())
                   .result(),
               ResultIs(failure));
 }
 
 TEST_F(ConfigurationFetcherTest, GetJobClientReadJobRetryIntervalSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -1086,8 +962,6 @@ TEST_F(ConfigurationFetcherTest, GetJobClientReadJobRetryIntervalSucceeded) {
 
 TEST_F(ConfigurationFetcherTest,
        GetJobClientReadJobRetryIntervalSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -1099,8 +973,6 @@ TEST_F(ConfigurationFetcherTest,
 }
 
 TEST_F(ConfigurationFetcherTest, GetJobClientReadJobMaxRetryCountSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -1120,8 +992,6 @@ TEST_F(ConfigurationFetcherTest, GetJobClientReadJobMaxRetryCountSucceeded) {
 
 TEST_F(ConfigurationFetcherTest,
        GetJobClientReadJobMaxRetryCountSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      JobClientProto::ClientConfigurationKeys_Name(
                          JobClientProto::ClientConfigurationKeys::
@@ -1134,8 +1004,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetGcpNoSQLDatabaseClientSpannerInstanceNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       NoSQLDatabaseClientProto::ClientConfigurationKeys_Name(
@@ -1156,8 +1024,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetGcpNoSQLDatabaseClientSpannerInstanceNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       NoSQLDatabaseClientProto::ClientConfigurationKeys_Name(
@@ -1171,8 +1037,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetGcpNoSQLDatabaseClientSpannerDatabaseNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       NoSQLDatabaseClientProto::ClientConfigurationKeys_Name(
@@ -1193,8 +1057,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetGcpNoSQLDatabaseClientSpannerDatabaseNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       NoSQLDatabaseClientProto::ClientConfigurationKeys_Name(
@@ -1207,8 +1069,6 @@ TEST_F(ConfigurationFetcherTest,
 }
 
 TEST_F(ConfigurationFetcherTest, GetQueueClientQueueNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      QueueClientProto::ClientConfigurationKeys_Name(
                          QueueClientProto::ClientConfigurationKeys::
@@ -1227,8 +1087,6 @@ TEST_F(ConfigurationFetcherTest, GetQueueClientQueueNameSucceeded) {
 }
 
 TEST_F(ConfigurationFetcherTest, GetQueueClientQueueNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      QueueClientProto::ClientConfigurationKeys_Name(
                          QueueClientProto::ClientConfigurationKeys::
@@ -1240,8 +1098,6 @@ TEST_F(ConfigurationFetcherTest, GetQueueClientQueueNameSyncSucceeded) {
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientEnableRemoteMetricAggregationSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       MetricClientProto::ClientConfigurationKeys_Name(
@@ -1262,8 +1118,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientEnableRemoteMetricAggregationSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       MetricClientProto::ClientConfigurationKeys_Name(
@@ -1277,8 +1131,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientEnableNativeAggregationSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       MetricClientProto::ClientConfigurationKeys_Name(
@@ -1299,8 +1151,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientEnableNativeMetricAggregationSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       MetricClientProto::ClientConfigurationKeys_Name(
@@ -1314,8 +1164,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientRemoteMetricCollectorAddressSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       MetricClientProto::ClientConfigurationKeys_Name(
@@ -1336,8 +1184,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientRemoteMetricCollectorAddressSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       MetricClientProto::ClientConfigurationKeys_Name(
@@ -1351,8 +1197,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientMetricExporterIntervalInMsSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      MetricClientProto::ClientConfigurationKeys_Name(
                          MetricClientProto::ClientConfigurationKeys::
@@ -1372,8 +1216,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientMetricExporterIntervalInMsSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      MetricClientProto::ClientConfigurationKeys_Name(
                          MetricClientProto::ClientConfigurationKeys::
@@ -1385,8 +1227,6 @@ TEST_F(ConfigurationFetcherTest,
 }
 
 TEST_F(ConfigurationFetcherTest, GetMetricClientEnableBatchRecordingSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      MetricClientProto::ClientConfigurationKeys_Name(
                          MetricClientProto::ClientConfigurationKeys::
@@ -1406,8 +1246,6 @@ TEST_F(ConfigurationFetcherTest, GetMetricClientEnableBatchRecordingSucceeded) {
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientEnableBatchRecordingSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      MetricClientProto::ClientConfigurationKeys_Name(
                          MetricClientProto::ClientConfigurationKeys::
@@ -1420,8 +1258,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientNamespaceForBatchRecordingSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      MetricClientProto::ClientConfigurationKeys_Name(
                          MetricClientProto::ClientConfigurationKeys::
@@ -1441,8 +1277,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientNamespaceForBatchRecordingSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      MetricClientProto::ClientConfigurationKeys_Name(
                          MetricClientProto::ClientConfigurationKeys::
@@ -1455,8 +1289,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientBatchRecordingTimeDurationInMsSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       MetricClientProto::ClientConfigurationKeys_Name(
@@ -1477,8 +1309,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetMetricClientBatchRecordingTimeDurationInMsSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       MetricClientProto::ClientConfigurationKeys_Name(
@@ -1492,8 +1322,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetAutoScalingClientInstanceTableNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      AutoScalingClientProto::ClientConfigurationKeys_Name(
                          AutoScalingClientProto::ClientConfigurationKeys::
@@ -1513,8 +1341,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetAutoScalingClientInstanceTableNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      AutoScalingClientProto::ClientConfigurationKeys_Name(
                          AutoScalingClientProto::ClientConfigurationKeys::
@@ -1527,8 +1353,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetAutoScalingClientSpannerInstanceNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       AutoScalingClientProto::ClientConfigurationKeys_Name(
@@ -1549,8 +1373,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetAutoScalingClientSpannerInstanceNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       AutoScalingClientProto::ClientConfigurationKeys_Name(
@@ -1564,8 +1386,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetAutoScalingClientSpannerDatabaseNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       AutoScalingClientProto::ClientConfigurationKeys_Name(
@@ -1586,8 +1406,6 @@ TEST_F(ConfigurationFetcherTest,
 
 TEST_F(ConfigurationFetcherTest,
        GetAutoScalingClientSpannerDatabaseNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(
       SuccessExecutionResult(),
       AutoScalingClientProto::ClientConfigurationKeys_Name(
@@ -1600,8 +1418,6 @@ TEST_F(ConfigurationFetcherTest,
 }
 
 TEST_F(ConfigurationFetcherTest, GetAutoScalingClientScaleInHookNameSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      AutoScalingClientProto::RequestConfigurationKeys_Name(
                          AutoScalingClientProto::RequestConfigurationKeys::
@@ -1621,8 +1437,6 @@ TEST_F(ConfigurationFetcherTest, GetAutoScalingClientScaleInHookNameSucceeded) {
 
 TEST_F(ConfigurationFetcherTest,
        GetAutoScalingClientScaleInHookNameSyncSucceeded) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
   ExpectGetParameter(SuccessExecutionResult(),
                      AutoScalingClientProto::RequestConfigurationKeys_Name(
                          AutoScalingClientProto::RequestConfigurationKeys::
@@ -1633,64 +1447,35 @@ TEST_F(ConfigurationFetcherTest,
               IsSuccessfulAndHolds(kTestScaleInHookName));
 }
 
-TEST_F(ConfigurationFetcherTest, FailedToGetCurrentInstance) {
+TEST_F(ConfigurationFetcherTest, FailedToGetInstanceResourceName) {
   auto failure = FailureExecutionResult(SC_UNKNOWN);
-  ExpectGetCurrentInstanceResourceName(failure);
-  atomic<bool> finished = false;
-  auto get_job_table_context = AsyncContext<GetConfigurationRequest, string>(
-      nullptr, [&](AsyncContext<GetConfigurationRequest, string> context) {
-        EXPECT_THAT(context.result, ResultIs(failure));
-        finished = true;
-      });
-  fetcher_->GetJobClientJobTableName(get_job_table_context);
-  WaitUntil([&]() { return finished.load(); });
-}
+  ExpectGetCurrentInstanceResourceNameSync(failure);
 
-TEST_F(ConfigurationFetcherTest, FailedToGetInstanceDetails) {
-  auto failure = FailureExecutionResult(SC_UNKNOWN);
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(failure, "");
-  atomic<bool> finished = false;
-  auto get_job_table_context = AsyncContext<GetConfigurationRequest, string>(
-      nullptr, [&](AsyncContext<GetConfigurationRequest, string> context) {
-        EXPECT_THAT(context.result, ResultIs(failure));
-        finished = true;
-      });
-  fetcher_->GetJobClientJobTableName(get_job_table_context);
-  WaitUntil([&]() { return finished.load(); });
-}
-
-TEST_F(ConfigurationFetcherTest, FailedToGetParameter) {
-  auto failure = FailureExecutionResult(SC_UNKNOWN);
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), env_name_label_);
-  ExpectGetParameter(failure,
-                     JobClientProto::ClientConfigurationKeys_Name(
-                         JobClientProto::ClientConfigurationKeys::
-                             CMRT_JOB_CLIENT_JOB_TABLE_NAME),
-                     kTestTable);
-  atomic<bool> finished = false;
-  auto get_job_table_context = AsyncContext<GetConfigurationRequest, string>(
-      nullptr, [&](AsyncContext<GetConfigurationRequest, string> context) {
-        EXPECT_THAT(context.result, ResultIs(failure));
-        finished = true;
-      });
-  fetcher_->GetJobClientJobTableName(get_job_table_context);
-  WaitUntil([&]() { return finished.load(); });
+  auto fetcher = make_unique<MockConfigurationFetcherWithOverrides>(
+      mock_instance_client_, mock_parameter_client_, std::nullopt,
+      std::nullopt);
+  EXPECT_SUCCESS(fetcher->Init());
+  EXPECT_THAT(fetcher->Run(), ResultIs(FailureExecutionResult(SC_UNKNOWN)));
+  EXPECT_THAT(
+      fetcher->GetCurrentInstanceResourceNameSync(GetConfigurationRequest()),
+      ResultIs(FailureExecutionResult(
+          SC_CONFIGURATION_FETCHER_INSTANCE_RESOURCE_NAME_NOT_FOUND)));
 }
 
 TEST_F(ConfigurationFetcherTest, EnvNameNotFound) {
-  ExpectGetCurrentInstanceResourceName(SuccessExecutionResult());
-  ExpectGetInstanceDetails(SuccessExecutionResult(), "invalid_label");
-  atomic<bool> finished = false;
-  auto get_job_table_context = AsyncContext<GetConfigurationRequest, string>(
-      nullptr, [&](AsyncContext<GetConfigurationRequest, string> context) {
-        EXPECT_THAT(context.result,
-                    ResultIs(FailureExecutionResult(
-                        SC_CONFIGURATION_FETCHER_ENVIRONMENT_NAME_NOT_FOUND)));
-        finished = true;
-      });
-  fetcher_->GetJobClientJobTableName(get_job_table_context);
-  WaitUntil([&]() { return finished.load(); });
+  ExpectGetCurrentInstanceResourceNameSync(SuccessExecutionResult());
+  ExpectGetInstanceDetailsSync(SuccessExecutionResult(), "invalid_label");
+
+  auto fetcher = make_unique<MockConfigurationFetcherWithOverrides>(
+      mock_instance_client_, mock_parameter_client_, std::nullopt,
+      std::nullopt);
+  EXPECT_SUCCESS(fetcher->Init());
+  EXPECT_THAT(fetcher->Run(),
+              ResultIs(FailureExecutionResult(
+                  SC_CONFIGURATION_FETCHER_ENVIRONMENT_NAME_NOT_FOUND)));
+
+  EXPECT_THAT(fetcher->GetEnvironmentNameSync(GetConfigurationRequest()),
+              ResultIs(FailureExecutionResult(
+                  SC_CONFIGURATION_FETCHER_ENVIRONMENT_NAME_NOT_FOUND)));
 }
 }  // namespace google::scp::cpio

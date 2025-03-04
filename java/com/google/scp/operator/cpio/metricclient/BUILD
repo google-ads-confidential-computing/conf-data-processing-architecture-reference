@@ -91,6 +91,7 @@ java_library(
         "//java/external:guice",
         "//java/external:javax_inject",
         "//java/external:opentelemetry_api",
+        "//java/external:opentelemetry_exporter_otlp",
         "//java/external:opentelemetry_sdk",
         "//java/external:opentelemetry_sdk_common",
         "//java/external:opentelemetry_sdk_extension_autoconfigure",

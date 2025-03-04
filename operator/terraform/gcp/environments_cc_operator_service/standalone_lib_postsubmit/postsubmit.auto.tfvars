@@ -54,6 +54,9 @@ job_lifecycle_helper_parameter_values = {
   job_lifecycle_helper_metric_namespace                = "s-lib-postsubmit",
 }
 metric_client_parameter_values = {
+  enable_remote_metric_aggregation    = false,
+  enable_native_metric_aggregation    = false,
+  metric_exporter_interval_in_ms      = null,
   enable_batch_recording              = true,
   namespace_for_batch_recording       = "s-lib-postsubmit",
   batch_recording_time_duration_in_ms = "5000",
@@ -61,3 +64,7 @@ metric_client_parameter_values = {
 
 worker_scale_in_jar  = "/tmp/standalone_lib_postsubmit/jars/WorkerScaleInCloudFunction_deploy.jar"
 frontend_service_jar = "/tmp/standalone_lib_postsubmit/jars/FrontendServiceHttpCloudFunction_deploy.jar"
+
+frontend_service_cloudfunction_runtime_sa_email   = "s-lib-postsubmit-fe@admcloud-adtech1.iam.gserviceaccount.com"
+frontend_service_cloudfunction_use_java21_runtime = true
+autoscaling_cloudfunction_use_java21_runtime      = true

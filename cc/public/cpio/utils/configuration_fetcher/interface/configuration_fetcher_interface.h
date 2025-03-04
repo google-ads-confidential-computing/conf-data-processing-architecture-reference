@@ -48,15 +48,6 @@ class ConfigurationFetcherInterface : public core::ServiceInterface {
       GetConfigurationRequest request) noexcept = 0;
 
   /**
-   * @brief Get currrent instance resource name.
-   *
-   * @param context the async context for the operation.
-   */
-  virtual void GetCurrentInstanceResourceName(
-      core::AsyncContext<GetConfigurationRequest, std::string>
-          context) noexcept = 0;
-
-  /**
    * @brief Get environment name stoared as the instance tag
    * environment_name_tag.
    *
@@ -64,16 +55,6 @@ class ConfigurationFetcherInterface : public core::ServiceInterface {
    */
   virtual core::ExecutionResultOr<std::string> GetEnvironmentNameSync(
       GetConfigurationRequest request) noexcept = 0;
-
-  /**
-   * @brief Get environment name stoared as the instance tag
-   * environment_name_tag.
-   *
-   * @param context the async context for the operation.
-   */
-  virtual void GetEnvironmentName(
-      core::AsyncContext<GetConfigurationRequest, std::string>
-          context) noexcept = 0;
 
   /**
    * @brief Get parameter by name.

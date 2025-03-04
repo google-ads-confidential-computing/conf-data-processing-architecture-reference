@@ -40,7 +40,7 @@ resource "google_cloudfunctions2_function" "pubsub_triggered_cloud_function" {
   labels      = { "environment" = var.environment }
 
   build_config {
-    runtime     = "java11"
+    runtime     = var.use_java21_runtime ? "java21" : "java11"
     entry_point = var.function_entrypoint
     source {
       storage_source {

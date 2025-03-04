@@ -758,6 +758,11 @@ alias(
 )
 
 alias(
+    name = "opentelemetry_exporter_otlp",
+    actual = "@maven//:io_opentelemetry_opentelemetry_exporter_otlp",
+)
+
+alias(
     name = "google_cloud_opentelemetry_exporter_metrics",
     actual = "@maven//:com_google_cloud_opentelemetry_exporter_metrics",
 )

@@ -183,33 +183,8 @@ variable "key_generation_undelivered_messages_threshold" {
   type        = number
 }
 
-variable "key_generation_key_storage_error_threshold" {
-  description = "Total key storage errors greater than this to send alert."
-  type        = number
-}
-
-variable "key_generation_key_db_create_key_error_threshold" {
-  description = "Total key db create key errors greater than this to send alert."
-  type        = number
-}
-
-variable "key_generation_key_db_insert_placeholder_key_error_threshold" {
-  description = "Total key db insert placeholder key errors greater than this to send alert."
-  type        = number
-}
-
-variable "key_generation_create_split_key_error_threshold" {
-  description = "Total create split key errors greater than this to send alert."
-  type        = number
-}
-
-variable "key_generation_insufficient_next_key_error_threshold" {
-  description = "Total insufficient next key errors greater than this to send alert."
-  type        = number
-}
-
-variable "key_generation_insufficient_current_key_error_threshold" {
-  description = "Total insufficient current key errors greater than this to send alert."
+variable "key_generation_error_threshold" {
+  description = "Total key generation errors greater than this to send alert."
   type        = number
 }
 

@@ -31,6 +31,7 @@ import com.google.monitoring.v3.TypedValue;
 import com.google.protobuf.util.Timestamps;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.gcp.Annotations.EnableNativeMetricAggregation;
+import com.google.scp.operator.cpio.metricclient.gcp.Annotations.EnableRemoteMetricAggregation;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
@@ -63,8 +64,9 @@ public final class GcpMetricClient implements MetricClient {
   private final String projectId;
   private final ParameterClient parameterClient;
   private final MetricServiceClient msClient;
-  private final Meter meter;
+  private final Optional<Meter> meter;
   private final Boolean enableNativeMetricAggregation;
+  private final Boolean enableRemoteMetricAggregation;
   private static ConcurrentHashMap<String, DoubleCounter> counterCache = new ConcurrentHashMap<>();
   private static ConcurrentHashMap<String, DoubleGauge> gaugeCache = new ConcurrentHashMap<>();
   private static ConcurrentHashMap<String, DoubleHistogram> histogramCache =
@@ -73,12 +75,13 @@ public final class GcpMetricClient implements MetricClient {
   @Inject
   GcpMetricClient(
       MetricServiceClient msClient,
-      Meter meter,
+      Optional<Meter> meter,
       ParameterClient parameterClient,
       @GcpProjectId String projectId,
       @GcpInstanceId String instanceId,
       @GcpZone String zone,
-      @EnableNativeMetricAggregation Boolean enableNativeMetricAggregation) {
+      @EnableNativeMetricAggregation Boolean enableNativeMetricAggregation,
+      @EnableRemoteMetricAggregation Boolean enableRemoteMetricAggregation) {
     this.msClient = msClient;
     this.meter = meter;
     this.parameterClient = parameterClient;
@@ -86,12 +89,13 @@ public final class GcpMetricClient implements MetricClient {
     this.zone = zone;
     this.projectId = projectId;
     this.enableNativeMetricAggregation = enableNativeMetricAggregation;
+    this.enableRemoteMetricAggregation = enableRemoteMetricAggregation;
   }
 
   @Override
   public void recordMetric(CustomMetric metric) throws MetricClientException {
     try {
-      if (enableNativeMetricAggregation) {
+      if (enableNativeMetricAggregation || enableRemoteMetricAggregation) {
         writeMetricThroughOpenTelemetryExporter(metric);
       } else {
         writeMetricThroughMetricServiceClient(metric);
@@ -103,6 +107,10 @@ public final class GcpMetricClient implements MetricClient {
 
   private void writeMetricThroughOpenTelemetryExporter(CustomMetric metric)
       throws MetricClientException {
+    if (!meter.isPresent()) {
+      throw new MetricClientException(
+          "Meter can not be empty for OpenTelemetry Metric Aggregation.");
+    }
     String metricName = getMetricName(metric);
     AttributesBuilder attributesBuilder = Attributes.builder();
     metric.labels().forEach((key, value) -> attributesBuilder.put(key, value));
@@ -111,19 +119,20 @@ public final class GcpMetricClient implements MetricClient {
         DoubleCounter doubleCounter =
             counterCache.putIfAbsent(
                 metricName,
-                meter.counterBuilder(metricName).setUnit(metric.unit()).ofDoubles().build());
+                meter.get().counterBuilder(metricName).setUnit(metric.unit()).ofDoubles().build());
         doubleCounter.add(metric.value(), attributesBuilder.build());
         return;
       case DOUBLE_GAUGE:
         DoubleGauge doubleGauge =
             gaugeCache.putIfAbsent(
-                metricName, meter.gaugeBuilder(metricName).setUnit(metric.unit()).build());
+                metricName, meter.get().gaugeBuilder(metricName).setUnit(metric.unit()).build());
         doubleGauge.set(metric.value(), attributesBuilder.build());
         return;
       case HISTOGRAM:
         DoubleHistogram doubleHistogram =
             histogramCache.putIfAbsent(
-                metricName, meter.histogramBuilder(metricName).setUnit(metric.unit()).build());
+                metricName,
+                meter.get().histogramBuilder(metricName).setUnit(metric.unit()).build());
         doubleHistogram.record(metric.value(), attributesBuilder.build());
         return;
       case UNKNOWN:

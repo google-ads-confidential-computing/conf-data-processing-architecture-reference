@@ -34,6 +34,10 @@ import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPr
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetServiceException;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
+import com.google.scp.operator.cpio.metricclient.MetricClient;
+import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
+import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
+import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
 import com.google.scp.operator.worker.logger.ResultLogger;
@@ -60,6 +64,7 @@ public class SimpleProcessor implements JobProcessor {
   public static final String RESULT_SUCCESS_MESSAGE = "Aggregation job successfully processed";
   public static final String INSUFFICIENT_BUDGET_MESSAGE =
       "Insufficient privacy budget. Missing units: ";
+  public static final String METRIC_NAMESPACE = "scp/simpleprocessor";
   private static final Logger logger = LoggerFactory.getLogger(SimpleProcessor.class);
 
   private final RecordReaderFactory recordReaderFactory;
@@ -67,6 +72,7 @@ public class SimpleProcessor implements JobProcessor {
   private final ResultLogger resultLogger;
   private final Clock clock;
   private final DistributedPrivacyBudgetClient distributedPrivacyBudgetClient;
+  private final MetricClient metricClient;
 
   @Inject
   SimpleProcessor(
@@ -74,12 +80,14 @@ public class SimpleProcessor implements JobProcessor {
       ReportDecrypter reportDecrypter,
       ResultLogger resultLogger,
       Clock clock,
-      DistributedPrivacyBudgetClient distributedPrivacyBudgetClient) {
+      DistributedPrivacyBudgetClient distributedPrivacyBudgetClient,
+      MetricClient metricClient) {
     this.recordReaderFactory = recordReaderFactory;
     this.reportDecrypter = reportDecrypter;
     this.resultLogger = resultLogger;
     this.clock = clock;
     this.distributedPrivacyBudgetClient = distributedPrivacyBudgetClient;
+    this.metricClient = metricClient;
   }
 
   @Override
@@ -90,6 +98,15 @@ public class SimpleProcessor implements JobProcessor {
         BlobStorageClient.getDataLocation(
             job.requestInfo().getInputDataBucketName(), job.requestInfo().getInputDataBlobPrefix());
     try (RecordReader recordReader = recordReaderFactory.of(inputDataLocation)) {
+      CustomMetric metric =
+          CustomMetric.builder()
+              .setNameSpace(METRIC_NAMESPACE)
+              .setName("ProcessJobCount")
+              .setValue(1.0)
+              .setUnit("Count")
+              .setMetricType(MetricType.DOUBLE_COUNTER)
+              .build();
+      metricClient.recordMetric(metric);
 
       Stream<EncryptedReport> encryptedReports =
           recordReader.readEncryptedReports(inputDataLocation);
@@ -163,6 +180,17 @@ public class SimpleProcessor implements JobProcessor {
           .setResultInfo(
               ResultInfo.newBuilder()
                   .setReturnCode(UNSPECIFIED_ERROR.name())
+                  .setReturnMessage(Throwables.getStackTraceAsString(e))
+                  .setErrorSummary(ErrorSummary.getDefaultInstance())
+                  .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
+                  .build())
+          .build();
+    } catch (MetricClientException e) {
+      logger.error("Exception occurred during recording metrics.", e);
+      return jobResultBuilder
+          .setResultInfo(
+              ResultInfo.newBuilder()
+                  .setReturnCode(INTERNAL_ERROR.name())
                   .setReturnMessage(Throwables.getStackTraceAsString(e))
                   .setErrorSummary(ErrorSummary.getDefaultInstance())
                   .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))

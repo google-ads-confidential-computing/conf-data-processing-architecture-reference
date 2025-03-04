@@ -228,6 +228,13 @@ variable "autoscaling_jobs_per_instance" {
   default     = 1
 }
 
+variable "autoscaling_cloudfunction_use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the autoscaling cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+  default     = false
+}
+
 ################################################################################
 # Autoscaling Alarm Variables.
 ################################################################################
@@ -427,6 +434,20 @@ variable "frontend_service_cloudfunction_timeout_sec" {
   default     = 60
 }
 
+variable "frontend_service_cloudfunction_runtime_sa_email" {
+  description = "Email of the service account to use as the runtime identity of the FE service."
+  type        = string
+  nullable    = true
+  default     = null
+}
+
+variable "frontend_service_cloudfunction_use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the frontend service cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+  default     = false
+}
+
 variable "job_table_ttl_days" {
   description = "The number of days to retain job table records."
   type        = number
@@ -538,13 +559,6 @@ variable "joblifecyclehelper_job_waiting_time_threshold" {
 ################################################################################
 # OpenTelemetry Collector variables
 ################################################################################
-
-variable "enable_remote_metric_aggregation" {
-  description = "When true, install the collector module to operator_service"
-  type        = bool
-  default     = false
-}
-
 variable "collector_instance_type" {
   description = "GCE instance type for worker."
   type        = string

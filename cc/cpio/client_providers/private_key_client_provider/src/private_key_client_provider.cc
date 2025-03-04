@@ -200,7 +200,6 @@ void PrivateKeyClientProvider::OnFetchPrivateKeyCallback(
     return;
   }
 
-  list_keys_status->fetching_call_returned_count.fetch_add(1);
   auto execution_result = fetch_private_key_context.result;
   if (list_keys_status->listing_method == ListingMethod::kByKeyId) {
     ExecutionResult out;
@@ -246,6 +245,7 @@ void PrivateKeyClientProvider::OnFetchPrivateKeyCallback(
           "Fetched response without keys from endpoint: %s",
           fetch_private_key_context.request->key_endpoint->endpoint().c_str());
     }
+    list_keys_status->fetching_call_returned_count.fetch_add(1);
     AsyncContext<DecryptRequest, DecryptResponse> decrypt_context(
         make_shared<DecryptRequest>(), [](auto&) {}, list_private_keys_context);
     decrypt_context.result = SuccessExecutionResult();
@@ -256,6 +256,9 @@ void PrivateKeyClientProvider::OnFetchPrivateKeyCallback(
 
   list_keys_status->total_key_split_count.fetch_add(
       fetch_private_key_context.response->encryption_keys.size());
+  // Increase returned count after increasing the count of issued calls in case
+  // some calls are missed.
+  list_keys_status->fetching_call_returned_count.fetch_add(1);
 
   for (const auto& encryption_key :
        fetch_private_key_context.response->encryption_keys) {
@@ -497,8 +500,13 @@ PrivateKeyClientProviderFactory::Create(
     const shared_ptr<AuthTokenProviderInterface>& auth_token_provider,
     const shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
     const shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor) {
+  auto kms_client_options = make_shared<KmsClientOptions>();
+  kms_client_options->enable_gcp_kms_client_cache =
+      options->enable_gcp_kms_client_cache;
+  kms_client_options->gcp_kms_client_cache_lifetime =
+      options->gcp_kms_client_cache_lifetime;
   auto kms_client_provider = KmsClientProviderFactory::Create(
-      make_shared<KmsClientOptions>(), role_credentials_provider,
+      std::move(kms_client_options), role_credentials_provider,
       io_async_executor, cpu_async_executor);
   auto private_key_fetcher = PrivateKeyFetcherProviderFactory::Create(
       http_client, role_credentials_provider, auth_token_provider);

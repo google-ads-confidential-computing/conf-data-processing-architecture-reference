@@ -27,6 +27,9 @@ import com.google.scp.operator.cpio.jobclient.model.GetJobRequest;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
+import com.google.scp.operator.cpio.metricclient.MetricClient;
+import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
+import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.operator.worker.Annotations.BenchmarkMode;
 import com.google.scp.operator.worker.perf.StopwatchExporter;
 import com.google.scp.operator.worker.perf.StopwatchRegistry;
@@ -40,11 +43,13 @@ import org.slf4j.LoggerFactory;
 
 /** Guava service for repeatedly pulling from the pubsub and processing the request */
 final class WorkerPullWorkService extends AbstractExecutionThreadService {
+  public static final String METRIC_NAMESPACE = "scp/workerpullworkservice";
 
   private static final Logger logger = LoggerFactory.getLogger(WorkerPullWorkService.class);
 
   private final JobClient jobClient;
   private final ParameterClient parameterClient;
+  private final MetricClient metricClient;
   private final JobProcessor jobProcessor;
   private final StopwatchRegistry stopwatchRegistry;
   private final StopwatchExporter stopwatchExporter;
@@ -59,6 +64,7 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
   WorkerPullWorkService(
       JobClient jobClient,
       ParameterClient parameterClient,
+      MetricClient metricClient,
       JobProcessor jobProcessor,
       StopwatchRegistry stopwatchRegistry,
       StopwatchExporter stopwatchExporter,
@@ -66,6 +72,7 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
       throws ParameterClientException {
     this.jobClient = jobClient;
     this.parameterClient = parameterClient;
+    this.metricClient = metricClient;
     this.jobProcessor = jobProcessor;
     this.moreNewRequests = true;
     this.stopwatchRegistry = stopwatchRegistry;
@@ -97,6 +104,15 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
                     })
                 .build();
         job = jobClient.getJob(request);
+        CustomMetric metric =
+            CustomMetric.builder()
+                .setNameSpace(METRIC_NAMESPACE)
+                .setName("TryPullJobCount")
+                .setValue(1.0)
+                .setUnit("Count")
+                .setMetricType(MetricType.DOUBLE_COUNTER)
+                .build();
+        metricClient.recordMetric(metric);
 
         if (job.isEmpty()) {
           logger.info("No job pulled.");

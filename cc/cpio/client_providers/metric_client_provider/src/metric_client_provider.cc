@@ -28,12 +28,12 @@
 #include "core/interface/async_context.h"
 #include "core/interface/async_executor_interface.h"
 #include "cpio/client_providers/interface/type_def.h"
+#include "cpio/client_providers/metric_client_provider/src/common/error_codes.h"
 #include "cpio/common/src/common_error_codes.h"
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
-#include "error_codes.h"
 #include "metric_client_utils.h"
 
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;

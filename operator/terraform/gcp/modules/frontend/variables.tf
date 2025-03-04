@@ -98,6 +98,18 @@ variable "frontend_service_cloudfunction_timeout_sec" {
   type        = number
 }
 
+variable "frontend_service_cloudfunction_runtime_sa_email" {
+  description = "Email of the service account to use as the runtime identity of the FE service."
+  type        = string
+  nullable    = true
+}
+
+variable "use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+}
+
 ################################################################################
 # Spanner Variables.
 ################################################################################

@@ -19,6 +19,7 @@
 #include <memory>
 #include <utility>
 
+#include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
 #include "core/utils/src/base64.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "google/cloud/kms/key_management_client.h"
@@ -40,6 +41,7 @@ using google::scp::core::ExecutionResultOr;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::FinishContext;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::common::AutoExpiryConcurrentMap;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::errors::
     SC_GCP_KMS_CLIENT_PROVIDER_BASE64_DECODING_FAILED;
@@ -59,17 +61,16 @@ using std::string;
 static constexpr char kGcpKmsClientProvider[] = "GcpKmsClientProvider";
 
 namespace google::scp::cpio::client_providers {
-
 ExecutionResult GcpKmsClientProvider::Init() noexcept {
-  return SuccessExecutionResult();
+  return gcp_kms_service_client_cache_->Init();
 }
 
 ExecutionResult GcpKmsClientProvider::Run() noexcept {
-  return SuccessExecutionResult();
+  return gcp_kms_service_client_cache_->Run();
 }
 
 ExecutionResult GcpKmsClientProvider::Stop() noexcept {
-  return SuccessExecutionResult();
+  return gcp_kms_service_client_cache_->Stop();
 }
 
 void GcpKmsClientProvider::Decrypt(
@@ -107,6 +108,37 @@ void GcpKmsClientProvider::Decrypt(
   }
 }
 
+shared_ptr<GcpKeyManagementServiceClientInterface>
+GcpKmsClientProvider::GetOrCreateGcpKeyManagementServiceClient(
+    const DecryptRequest& request) noexcept {
+  shared_ptr<GcpKeyManagementServiceClientInterface> client_found;
+  if (kms_client_options_->enable_gcp_kms_client_cache) {
+    if (!request.gcp_wip_provider().empty() &&
+        gcp_kms_service_client_cache_
+            ->Find(request.gcp_wip_provider(), client_found)
+            .Successful()) {
+      return client_found;
+    }
+  }
+
+  // TODO: delete account_identity after migrate release test to use new
+  // attestation approach.
+  auto client = gcp_kms_factory_->CreateGcpKeyManagementServiceClient(
+      request.gcp_wip_provider(), request.account_identity());
+  if (!kms_client_options_->enable_gcp_kms_client_cache ||
+      request.gcp_wip_provider().empty()) {
+    return client;
+  }
+
+  std::pair<string, shared_ptr<GcpKeyManagementServiceClientInterface>>
+      client_pair;
+  client_pair.first = request.gcp_wip_provider();
+  client_pair.second = client;
+  // Ignore insert error
+  gcp_kms_service_client_cache_->Insert(client_pair, client_found);
+  return client_found;
+}
+
 void GcpKmsClientProvider::AeadDecrypt(
     AsyncContext<DecryptRequest, DecryptResponse>& decrypt_context) noexcept {
   auto decoded_ciphertext_or =
@@ -120,9 +152,9 @@ void GcpKmsClientProvider::AeadDecrypt(
     decrypt_context.Finish();
     return;
   }
-  auto gcp_kms = gcp_kms_factory_->CreateGcpKeyManagementServiceClient(
-      decrypt_context.request->gcp_wip_provider(),
-      decrypt_context.request->account_identity());
+
+  auto gcp_kms =
+      GetOrCreateGcpKeyManagementServiceClient(*decrypt_context.request);
 
   string decoded_ciphertext = decoded_ciphertext_or.release();
   cloud::kms::v1::DecryptRequest req;
@@ -164,7 +196,7 @@ shared_ptr<KmsClientProviderInterface> KmsClientProviderFactory::Create(
     const shared_ptr<AsyncExecutorInterface>& io_async_executor,
     const shared_ptr<AsyncExecutorInterface>& cpu_async_executor) noexcept {
   return make_shared<GcpKmsClientProvider>(io_async_executor,
-                                           cpu_async_executor);
+                                           cpu_async_executor, options);
 }
 #endif
 }  // namespace google::scp::cpio::client_providers

@@ -24,7 +24,8 @@ write_files:
     Description=Start a simple OpenTelemetry collector
 
     [Service]
-    ExecStart=/usr/bin/docker run --rm --name otelcol -p ${grpc_receiver_port}:${grpc_receiver_port} -v /tmp/config.yaml:/etc/otelcol-contrib/config.yaml ${otel_collector_image_uri}
+    Restart=on-failure
+    ExecStart=/usr/bin/docker run --rm --name otelcol --log-driver=gcplogs -p ${grpc_receiver_port}:${grpc_receiver_port} -v /tmp/config.yaml:/etc/otelcol-contrib/config.yaml ${otel_collector_image_uri}
     ExecStop=/usr/bin/docker stop otel
     ExecStopPost=/usr/bin/docker rm otel
 

@@ -53,6 +53,8 @@ java_library(
         "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
         "//java/com/google/scp/operator/cpio/jobclient",
         "//java/com/google/scp/operator/cpio/jobclient:model",
+        "//java/com/google/scp/operator/cpio/metricclient",
+        "//java/com/google/scp/operator/cpio/metricclient:model",
         "//java/com/google/scp/operator/shared/model",
         "//java/com/google/scp/operator/worker/logger",
         "//java/com/google/scp/operator/worker/model",

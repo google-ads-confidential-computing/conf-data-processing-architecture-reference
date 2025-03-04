@@ -70,6 +70,29 @@ resource "google_logging_metric" "get_encrypted_private_key_general_error" {
   }
 }
 
+resource "google_logging_metric" "get_encrypted_private_key_id_general_error" {
+  filter = "(resource.type=\"cloud_function\" AND resource.labels.function_name=(\"${local.cloud_function_a_name}\" OR \"${local.cloud_function_b_name}\")) OR (resource.type=\"cloud_run_revision\" AND resource.labels.service_name=(\"${local.cloud_function_a_name}\" OR \"${local.cloud_function_b_name}\")) AND textPayload=~\"metricName\" AND textPayload=~\"get_encrypted_private_key/error\""
+  name   = "${var.environment}/get_encrypted_private_key_id/error"
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    labels {
+      key         = "errorReason"
+      value_type  = "STRING"
+      description = "Error reason"
+    }
+    labels {
+      key         = "keyId"
+      value_type  = "STRING"
+      description = "Id of key requested"
+    }
+  }
+  label_extractors = {
+    "errorReason" = "REGEXP_EXTRACT(textPayload, \"errorReason\\\":([^,}]+)\")"
+    "keyId"       = "REGEXP_EXTRACT(textPayload, \"keyId\\\":\\\"([^\\\"]+)\")"
+  }
+}
+
 resource "google_logging_metric" "get_encrypted_private_key_activation_age_in_days" {
   filter = "(resource.type=\"cloud_function\" AND resource.labels.function_name=(\"${local.cloud_function_a_name}\" OR \"${local.cloud_function_b_name}\")) OR (resource.type=\"cloud_run_revision\" AND resource.labels.service_name=(\"${local.cloud_function_a_name}\" OR \"${local.cloud_function_b_name}\")) AND textPayload=~\"metricName\" AND textPayload=~\"get_encrypted_private_key/age_in_days\""
   name   = "${var.environment}/get_encrypted_private_key/age_in_days"
@@ -80,6 +103,11 @@ resource "google_logging_metric" "get_encrypted_private_key_activation_age_in_da
       key         = "setName"
       value_type  = "STRING"
       description = "SetName associated with key"
+    }
+    labels {
+      key         = "keyId"
+      value_type  = "STRING"
+      description = "Id of retrieved key"
     }
   }
 
@@ -96,6 +124,7 @@ resource "google_logging_metric" "get_encrypted_private_key_activation_age_in_da
   value_extractor = "REGEXP_EXTRACT(textPayload, \"days\\\":(\\\\d+)\")"
   label_extractors = {
     "setName" = "REGEXP_EXTRACT(textPayload, \"setName\\\":\\\"([^\\\"]+)\")"
+    "keyId"   = "REGEXP_EXTRACT(textPayload, \"keyId\\\":\\\"([^\\\"]+)\")"
   }
 }
 

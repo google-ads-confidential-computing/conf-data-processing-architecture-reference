@@ -33,6 +33,7 @@ cc_test(
         "//cc/cpio/client_providers/metric_client_provider/mock/gcp:gcp_metric_client_provider_mock",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/cpio/client_providers/metric_client_provider/src/gcp:gcp_metric_client_provider_lib",
+        "//cc/cpio/client_providers/otel_metric_client_provider/src/gcp:gcp_otel_metric_client_provider_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
         "@com_github_googleapis_google_cloud_cpp//:monitoring",

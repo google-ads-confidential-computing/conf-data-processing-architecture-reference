@@ -37,6 +37,7 @@ cc_test(
         "//cc/public/cpio/proto/crypto_service/v1:crypto_service_cc_proto",
         "//cc/public/cpio/proto/instance_service/v1:instance_service_cc_proto",
         "//cc/public/cpio/proto/parameter_service/v1:parameter_service_cc_proto",
+        "//cc/public/cpio/utils/configuration_fetcher/interface:configuration_fetcher_interface",
         "//cc/public/cpio/utils/configuration_fetcher/src:configuration_fetcher",
         "//cc/public/cpio/utils/job_lifecycle_helper/proto/v1:job_lifecycle_helper_cc_proto",
         "@com_google_absl//absl/strings",

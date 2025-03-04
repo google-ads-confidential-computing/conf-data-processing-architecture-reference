@@ -24,6 +24,7 @@ cc_library(
         "//cc:cc_base_include_dir",
         "//cc/core/interface:async_context_lib",
         "//cc/core/interface:interface_lib",
+        "//cc/cpio/client_providers/common/src/gcp:gcp_utils_lib",
         "//cc/cpio/client_providers/instance_client_provider/src/gcp:gcp_instance_client_provider_lib",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
         "//cc/cpio/client_providers/interface:type_def",

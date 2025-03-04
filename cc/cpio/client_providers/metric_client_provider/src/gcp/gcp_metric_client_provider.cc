@@ -21,6 +21,7 @@
 
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/async_context.h"
+#include "cpio/client_providers/common/src/gcp/gcp_utils.h"
 #include "cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_utils.h"
 #include "cpio/common/src/gcp/gcp_utils.h"
 #include "google/cloud/future.h"
@@ -51,7 +52,6 @@ using google::scp::core::common::kZeroUuid;
 using google::scp::cpio::client_providers::GcpInstanceClientUtils;
 using google::scp::cpio::client_providers::GcpInstanceResourceNameDetails;
 using google::scp::cpio::client_providers::GcpMetricClientUtils;
-using google::scp::cpio::common::GcpUtils;
 using std::bind;
 using std::make_shared;
 using std::pair;
@@ -86,26 +86,12 @@ ExecutionResult GcpMetricClientProvider::Run() noexcept {
     return execution_result;
   }
 
-  string instance_resource_name;
-  execution_result =
-      instance_client_provider_->GetCurrentInstanceResourceNameSync(
-          instance_resource_name);
-  if (!execution_result.Successful()) {
-    SCP_ERROR(kGcpMetricClientProvider, kZeroUuid, execution_result,
-              "Failed to fetch current instance resource name");
-    return execution_result;
-  }
-
-  execution_result = GcpInstanceClientUtils::GetInstanceResourceNameDetails(
-      instance_resource_name, instance_resource_);
-  if (!execution_result.Successful()) {
-    SCP_ERROR(kGcpMetricClientProvider, kZeroUuid, execution_result,
-              "Failed to parse instance resource name %s",
-              instance_resource_name.c_str());
-  }
+  ASSIGN_OR_RETURN(instance_resource_,
+                   GcpUtils::GetInstanceResource(kGcpMetricClientProvider,
+                                                 instance_client_provider_));
 
   project_name_ =
-      GcpMetricClientUtils::ConstructProjectName(instance_resource_.project_id);
+      GcpUtils::GetProjectNameFromInstanceResource(instance_resource_);
 
   metric_service_client_ = metric_service_client_factory_->CreateClient();
 
@@ -202,7 +188,8 @@ void GcpMetricClientProvider::OnAsyncCreateTimeSeriesCallback(
     future<Status> outcome) noexcept {
   active_push_count_--;
   auto outcome_status = outcome.get();
-  auto result = GcpUtils::GcpErrorConverter(outcome_status);
+  auto result =
+      google::scp::cpio::common::GcpUtils::GcpErrorConverter(outcome_status);
 
   if (!result.Successful()) {
     SCP_ERROR_CONTEXT(kGcpMetricClientProvider, metric_requests_vector->back(),

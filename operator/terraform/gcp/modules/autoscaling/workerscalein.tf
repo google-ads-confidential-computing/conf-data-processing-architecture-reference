@@ -39,7 +39,7 @@ resource "google_cloudfunctions2_function" "worker_scale_in_cloudfunction" {
   location = var.region
 
   build_config {
-    runtime     = "java11"
+    runtime     = var.use_java21_runtime ? "java21" : "java11"
     entry_point = "com.google.scp.operator.autoscaling.app.gcp.WorkerScaleInHttpFunction"
     source {
       storage_source {

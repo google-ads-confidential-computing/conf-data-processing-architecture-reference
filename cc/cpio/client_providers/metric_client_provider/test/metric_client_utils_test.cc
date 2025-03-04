@@ -21,7 +21,7 @@
 #include <memory>
 #include <string>
 
-#include "cpio/client_providers/metric_client_provider/src/error_codes.h"
+#include "cpio/client_providers/metric_client_provider/src/common/error_codes.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"

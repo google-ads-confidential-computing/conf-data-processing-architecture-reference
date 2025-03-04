@@ -28,7 +28,7 @@
 #include "core/test/utils/conditional_wait.h"
 #include "core/test/utils/scp_test_base.h"
 #include "cpio/client_providers/metric_client_provider/mock/mock_metric_client_provider_with_overrides.h"
-#include "cpio/client_providers/metric_client_provider/src/error_codes.h"
+#include "cpio/client_providers/metric_client_provider/src/common/error_codes.h"
 #include "cpio/common/src/aws/error_codes.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"

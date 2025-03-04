@@ -142,6 +142,7 @@ def maven_dependencies():
             "com.google.api:gapic-generator-java:" + GAPIC_GENERATOR_JAVA_VERSION,  # To use generated gRpc Java interface
             "io.grpc:grpc-netty:1.65.1",
             "io.opentelemetry:opentelemetry-api:1.31.0",
+            "io.opentelemetry:opentelemetry-exporter-otlp:1.31.0",
             "io.opentelemetry:opentelemetry-sdk:1.31.0",
             "io.opentelemetry:opentelemetry-sdk-common:1.31.0",
             "io.opentelemetry:opentelemetry-sdk-metrics:1.31.0",

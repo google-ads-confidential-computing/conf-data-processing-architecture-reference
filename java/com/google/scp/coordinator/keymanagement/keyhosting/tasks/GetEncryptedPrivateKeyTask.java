@@ -59,7 +59,7 @@ public final class GetEncryptedPrivateKeyTask extends ApiTask {
               "get_encrypted_private_key/error",
               "errorReason",
               e.getErrorReason(),
-              "key_id",
+              "keyId",
               id));
       throw e;
     }
@@ -73,6 +73,7 @@ public final class GetEncryptedPrivateKeyTask extends ApiTask {
     var logMsg = "{"
         + "\"metricName\":\"get_encrypted_private_key/age_in_days\","
         + "\"setName\":\"" + key.getSetName() + "\","
+        + "\"keyId\":\"" + id + "\","
         + "\"days\":" + (activationAgeInMillis / dayInMillis)
         + "}";
     logger.info(logMsg);

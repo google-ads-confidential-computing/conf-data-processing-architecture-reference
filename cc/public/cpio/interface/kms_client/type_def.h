@@ -17,10 +17,16 @@
 #ifndef SCP_CPIO_INTERFACE_KMS_CLIENT_TYPE_DEF_H_
 #define SCP_CPIO_INTERFACE_KMS_CLIENT_TYPE_DEF_H_
 
+#include <chrono>
+
 namespace google::scp::cpio {
 /// Configurations for KmsClient.
 struct KmsClientOptions {
   virtual ~KmsClientOptions() = default;
+
+  bool enable_gcp_kms_client_cache = false;
+  std::chrono::seconds gcp_kms_client_cache_lifetime =
+      std::chrono::seconds(3600 * 24);  // 1 day
 };
 }  // namespace google::scp::cpio
 

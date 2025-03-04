@@ -66,11 +66,12 @@ public class GcpMetricClientTest {
     metricClient =
         new GcpMetricClient(
             metricServiceClient,
-            meter,
+            Optional.of(meter),
             parameterClient,
             PROJECT_ID,
             "testInstance123",
             "testZone123",
+            false,
             false);
   }
 
@@ -99,12 +100,13 @@ public class GcpMetricClientTest {
     metricClient =
         new GcpMetricClient(
             metricServiceClient,
-            meter,
+            Optional.of(meter),
             parameterClient,
             PROJECT_ID,
             "testInstance123",
             "testZone123",
-            true);
+            true,
+            false);
     var argument = ArgumentCaptor.forClass(String.class);
     CustomMetric metric =
         CustomMetric.builder()
@@ -122,12 +124,13 @@ public class GcpMetricClientTest {
     metricClient =
         new GcpMetricClient(
             metricServiceClient,
-            meter,
+            Optional.of(meter),
             parameterClient,
             PROJECT_ID,
             "testInstance123",
             "testZone123",
-            true);
+            true,
+            false);
     var argument = ArgumentCaptor.forClass(String.class);
     CustomMetric metric =
         CustomMetric.builder()
@@ -154,12 +157,13 @@ public class GcpMetricClientTest {
     metricClient =
         new GcpMetricClient(
             metricServiceClient,
-            meter,
+            Optional.of(meter),
             parameterClient,
             PROJECT_ID,
             "testInstance123",
             "testZone123",
-            true);
+            true,
+            false);
     var argument = ArgumentCaptor.forClass(String.class);
     CustomMetric metric =
         CustomMetric.builder()
@@ -186,12 +190,13 @@ public class GcpMetricClientTest {
     metricClient =
         new GcpMetricClient(
             metricServiceClient,
-            meter,
+            Optional.of(meter),
             parameterClient,
             PROJECT_ID,
             "testInstance123",
             "testZone123",
-            true);
+            true,
+            false);
     var argument = ArgumentCaptor.forClass(String.class);
     CustomMetric metric =
         CustomMetric.builder()

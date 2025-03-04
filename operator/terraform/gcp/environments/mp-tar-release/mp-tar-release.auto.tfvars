@@ -27,3 +27,7 @@ job_completion_notifications_cloud_function_memory_mb = "512"
 
 worker_scale_in_jar  = "/tmp/mp-tar-release/jars/WorkerScaleInCloudFunction_deploy.jar"
 frontend_service_jar = "/tmp/mp-tar-release/jars/FrontendServiceHttpCloudFunction_deploy.jar"
+
+frontend_cloudfunction_use_java21_runtime     = true
+notification_cloudfunction_use_java21_runtime = true
+autoscaling_cloudfunction_use_java21_runtime  = true

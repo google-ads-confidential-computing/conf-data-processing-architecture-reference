@@ -29,3 +29,23 @@ cc_library(
         "@com_github_googleapis_google_cloud_cpp//:spanner",
     ],
 )
+
+cc_library(
+    name = "gcp_utils_lib",
+    srcs = [
+        "gcp_utils.cc",
+        "gcp_utils.h",
+    ],
+    copts = [
+        "-std=c++17",
+    ],
+    deps = [
+        "//cc:cc_base_include_dir",
+        "//cc/core/common/global_logger/src:global_logger_lib",
+        "//cc/cpio/client_providers/instance_client_provider/src/gcp:gcp_instance_client_provider_lib",
+        "//cc/public/cpio/interface:cpio_errors",
+        "@com_github_googleapis_google_cloud_cpp//:common",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/strings",
+    ],
+)

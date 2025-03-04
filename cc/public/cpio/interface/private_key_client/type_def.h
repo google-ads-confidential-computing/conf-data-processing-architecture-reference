@@ -17,6 +17,7 @@
 #ifndef SCP_CPIO_INTERFACE_PRIVATE_KEY_CLIENT_TYPE_DEF_H_
 #define SCP_CPIO_INTERFACE_PRIVATE_KEY_CLIENT_TYPE_DEF_H_
 
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,10 @@ namespace google::scp::cpio {
 /// Configuration for PrivateKeyClient.
 struct PrivateKeyClientOptions {
   virtual ~PrivateKeyClientOptions() = default;
+
+  bool enable_gcp_kms_client_cache = false;
+  std::chrono::seconds gcp_kms_client_cache_lifetime =
+      std::chrono::seconds(3600 * 24);  // 1 day
 };
 }  // namespace google::scp::cpio
 

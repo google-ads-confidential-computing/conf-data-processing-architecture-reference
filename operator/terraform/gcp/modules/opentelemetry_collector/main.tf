@@ -16,6 +16,7 @@
 
 locals {
   collector_service_account_email = var.user_provided_collector_sa_email == "" ? google_service_account.collector_service_account[0].email : var.user_provided_collector_sa_email
+  egress_internet_tag             = "egress-internet"
 }
 
 resource "google_service_account" "collector_service_account" {
@@ -38,6 +39,12 @@ resource "google_project_iam_member" "collector_service_account_metric_writer_ia
   member  = "serviceAccount:${local.collector_service_account_email}"
 }
 
+resource "google_project_iam_member" "collector_service_account_log_writer_iam" {
+  project = var.project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${local.collector_service_account_email}"
+}
+
 resource "google_compute_instance" "collector" {
   name = "${var.environment}-otel-collector"
   # provider    = google-beta
@@ -47,6 +54,7 @@ resource "google_compute_instance" "collector" {
     "environment",
     var.environment,
     "otel-collector",
+    local.egress_internet_tag,
   ])
 
   labels = {
@@ -75,7 +83,8 @@ resource "google_compute_instance" "collector" {
     # Use cloud-init to setup the collector
     # with a Cloud config file from the "user-data" metadata field
     # https://cloud.google.com/container-optimized-os/docs/how-to/create-configure-instance#using_cloud-init_with_the_cloud_config_format
-    user-data = var.collector_startup_script
+    user-data              = var.collector_startup_script
+    google-logging-enabled = true
   }
 
   scheduling {

@@ -31,7 +31,8 @@
 #include "core/interface/errors.h"
 #include "core/utils/src/error_utils.h"
 #include "cpio/client_providers/global_cpio/src/global_cpio.h"
-#include "cpio/client_providers/metric_client_provider/src/metric_client_utils.h"
+#include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cpio/client_providers/interface/otel_metric_client_provider_interface.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/adapters/common/adapter_utils.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
@@ -55,7 +56,7 @@ using google::scp::cpio::MetricClientInterface;
 using google::scp::cpio::client_providers::GlobalCpio;
 using google::scp::cpio::client_providers::InstanceClientProviderInterface;
 using google::scp::cpio::client_providers::MetricClientProviderFactory;
-using google::scp::cpio::client_providers::MetricClientUtils;
+using google::scp::cpio::client_providers::OtelMetricClientProviderFactory;
 using std::bind;
 using std::make_shared;
 using std::make_unique;
@@ -69,18 +70,24 @@ static constexpr char kMetricClient[] = "MetricClient";
 
 namespace google::scp::cpio {
 ExecutionResult MetricClient::CreateMetricClientProvider() noexcept {
-  shared_ptr<AsyncExecutorInterface> cpu_async_executor;
-  RETURN_IF_FAILURE(
-      GlobalCpio::GetGlobalCpio()->GetCpuAsyncExecutor(cpu_async_executor));
-  shared_ptr<AsyncExecutorInterface> io_async_executor;
-  RETURN_IF_FAILURE(
-      GlobalCpio::GetGlobalCpio()->GetIoAsyncExecutor(io_async_executor));
   shared_ptr<InstanceClientProviderInterface> instance_client_provider;
   RETURN_IF_FAILURE(GlobalCpio::GetGlobalCpio()->GetInstanceClientProvider(
       instance_client_provider));
-  metric_client_provider_ = MetricClientProviderFactory::Create(
-      options_, instance_client_provider, cpu_async_executor,
-      io_async_executor);
+
+  if (options_->enable_remote_metric_aggregation) {
+    metric_client_provider_ = OtelMetricClientProviderFactory::Create(
+        options_, instance_client_provider);
+  } else {
+    shared_ptr<AsyncExecutorInterface> cpu_async_executor;
+    RETURN_IF_FAILURE(
+        GlobalCpio::GetGlobalCpio()->GetCpuAsyncExecutor(cpu_async_executor));
+    shared_ptr<AsyncExecutorInterface> io_async_executor;
+    RETURN_IF_FAILURE(
+        GlobalCpio::GetGlobalCpio()->GetIoAsyncExecutor(io_async_executor));
+    metric_client_provider_ = MetricClientProviderFactory::Create(
+        options_, instance_client_provider, cpu_async_executor,
+        io_async_executor);
+  }
 
   return SuccessExecutionResult();
 }

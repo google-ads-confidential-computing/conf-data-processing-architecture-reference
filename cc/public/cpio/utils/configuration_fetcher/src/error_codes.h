@@ -24,6 +24,10 @@ DEFINE_ERROR_CODE(SC_CONFIGURATION_FETCHER_ENVIRONMENT_NAME_NOT_FOUND,
                   SC_CONFIGURATION_FETCHER, 0x0001,
                   "Environment name is not found", HttpStatusCode::NOT_FOUND)
 
+DEFINE_ERROR_CODE(SC_CONFIGURATION_FETCHER_INSTANCE_RESOURCE_NAME_NOT_FOUND,
+                  SC_CONFIGURATION_FETCHER, 0x0005,
+                  "Environment name is not found", HttpStatusCode::NOT_FOUND)
+
 DEFINE_ERROR_CODE(SC_CONFIGURATION_FETCHER_CONVERSION_FAILED,
                   SC_CONFIGURATION_FETCHER, 0x0002,
                   "Failed to convert the parameter value to required type",

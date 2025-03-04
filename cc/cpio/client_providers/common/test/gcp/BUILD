@@ -28,3 +28,14 @@ cc_library(
         "//cc/public/cpio/test/common:test_gcp_database_client_options",
     ],
 )
+
+cc_test(
+    name = "test_gcp_utils",
+    size = "small",
+    srcs = ["test_gcp_utils.cc"],
+    deps = [
+        "//cc/cpio/client_providers/common/src/gcp:gcp_utils_lib",
+        "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

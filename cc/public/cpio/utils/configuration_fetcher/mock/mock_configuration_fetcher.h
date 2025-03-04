@@ -47,16 +47,8 @@ class MockConfigurationFetcher
   MOCK_METHOD(core::ExecutionResultOr<std::string>, GetEnvironmentNameSync,
               (GetConfigurationRequest), (noexcept, override));
 
-  MOCK_METHOD(void, GetEnvironmentName,
-              ((core::AsyncContext<GetConfigurationRequest, std::string>)),
-              (noexcept, override));
-
   MOCK_METHOD(core::ExecutionResultOr<std::string>,
               GetCurrentInstanceResourceNameSync, (GetConfigurationRequest),
-              (noexcept, override));
-
-  MOCK_METHOD(void, GetCurrentInstanceResourceName,
-              ((core::AsyncContext<GetConfigurationRequest, std::string>)),
               (noexcept, override));
 
   MOCK_METHOD(core::ExecutionResultOr<std::string>, GetParameterByNameSync,

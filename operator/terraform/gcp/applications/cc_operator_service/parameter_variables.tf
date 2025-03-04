@@ -199,11 +199,21 @@ variable "auto_scaling_client_parameter_values" {
 variable "metric_client_parameter_names" {
   description = "Parameter names for metric client."
   type = object({
+    enable_remote_metric_aggregation    = string
+    enable_native_metric_aggregation    = string
+    remote_metric_collector_address     = string
+    metric_exporter_interval_in_ms      = string
     enable_batch_recording              = string
     namespace_for_batch_recording       = string
     batch_recording_time_duration_in_ms = string
   })
   default = {
+    enable_remote_metric_aggregation = "CMRT_METRIC_CLIENT_ENABLE_REMOTE_METRIC_AGGREGATION"
+    enable_native_metric_aggregation = "CMRT_METRIC_CLIENT_ENABLE_NATIVE_METRIC_AGGREGATION"
+    # Collector address is setup via terraform and depend on enable_remote_metric_aggregation.
+    # We only keep the parameter name here for pushing it to Secret Manager
+    remote_metric_collector_address     = "CMRT_METRIC_CLIENT_REMOTE_METRIC_COLLECTOR_ADDRESS"
+    metric_exporter_interval_in_ms      = "CMRT_METRIC_CLIENT_METRIC_EXPORTER_INTERVAL_IN_MS"
     enable_batch_recording              = "CMRT_METRIC_CLIENT_ENABLE_BATCH_RECORDING"
     namespace_for_batch_recording       = "CMRT_METRIC_CLIENT_NAMESPACE_FOR_BATCH_RECORDING"
     batch_recording_time_duration_in_ms = "CMRT_METRIC_CLIENT_BATCH_RECORDING_TIME_DURATION_IN_MS"
@@ -213,11 +223,17 @@ variable "metric_client_parameter_names" {
 variable "metric_client_parameter_values" {
   description = "Parameter values for metric client."
   type = object({
+    enable_remote_metric_aggregation    = bool
+    enable_native_metric_aggregation    = bool
+    metric_exporter_interval_in_ms      = string
     enable_batch_recording              = bool
     namespace_for_batch_recording       = string
     batch_recording_time_duration_in_ms = string
   })
   default = {
+    enable_remote_metric_aggregation    = null
+    enable_native_metric_aggregation    = null
+    metric_exporter_interval_in_ms      = null
     enable_batch_recording              = null
     namespace_for_batch_recording       = null
     batch_recording_time_duration_in_ms = null

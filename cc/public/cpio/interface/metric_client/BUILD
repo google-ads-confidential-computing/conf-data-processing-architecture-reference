@@ -57,6 +57,7 @@ cc_library(
         "//cc/core/utils/src:core_utils",
         "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_select_lib",
+        "//cc/cpio/client_providers/otel_metric_client_provider/src:otel_metric_client_provider_select_lib",
         "//cc/public/cpio/adapters/common:adapter_utils",
         "//cc/public/cpio/interface:type_def",
         "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",

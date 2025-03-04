@@ -43,13 +43,6 @@ variable "operator_package_bucket_location" {
   type        = string
 }
 
-variable "enable_native_metric_aggreation" {
-  description = "Enable native metric aggregation."
-  type        = bool
-  default     = false
-}
-
-
 ################################################################################
 # Global Alarm Variables.
 ################################################################################
@@ -145,9 +138,34 @@ variable "frontend_service_cloudfunction_timeout_sec" {
   type        = number
 }
 
+variable "frontend_service_cloudfunction_runtime_sa_email" {
+  description = "Email of the service account to use as the runtime identity of the FE service."
+  type        = string
+  nullable    = true
+  default     = null
+}
+
 variable "job_version" {
   description = "The version of frontend service. Version 2 supports new job schema from C++ CMRT library."
   type        = string
+}
+
+variable "frontend_cloudfunction_use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the frontend cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+}
+
+variable "autoscaling_cloudfunction_use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the autoscaling cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+}
+
+variable "notification_cloudfunction_use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the job completion notification cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
 }
 
 ################################################################################
@@ -516,11 +534,24 @@ variable "job_completion_notifications_service_account_email" {
 # OpenTelemetry Collector variables
 ################################################################################
 
+variable "enable_native_metric_aggregation" {
+  description = "Enable native metric aggregation."
+  type        = bool
+  default     = false
+}
+
 variable "enable_remote_metric_aggregation" {
   description = "When true, install the collector module to operator_service"
   type        = bool
   default     = false
 }
+
+variable "metric_exporter_interval_in_millis" {
+  description = "The interval of metric exporter exports metric data points to the cloud"
+  type        = number
+  default     = 5
+}
+
 variable "collector_instance_type" {
   description = "GCE instance type for worker."
   type        = string

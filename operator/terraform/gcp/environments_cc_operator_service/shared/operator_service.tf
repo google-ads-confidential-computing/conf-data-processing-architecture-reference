@@ -62,11 +62,12 @@ module "operator_service" {
   autoscaling_max_vm_instances_ratio_threshold = var.autoscaling_max_vm_instances_ratio_threshold
 
   # Scale-in service
-  autoscaling_cloudfunction_memory_mb = var.autoscaling_cloudfunction_memory_mb
-  worker_scale_in_jar                 = var.worker_scale_in_jar
-  termination_wait_timeout_sec        = var.termination_wait_timeout_sec
-  worker_scale_in_cron                = var.worker_scale_in_cron
-  asg_instances_table_ttl_days        = var.asg_instances_table_ttl_days
+  autoscaling_cloudfunction_memory_mb          = var.autoscaling_cloudfunction_memory_mb
+  autoscaling_cloudfunction_use_java21_runtime = var.autoscaling_cloudfunction_use_java21_runtime
+  worker_scale_in_jar                          = var.worker_scale_in_jar
+  termination_wait_timeout_sec                 = var.termination_wait_timeout_sec
+  worker_scale_in_cron                         = var.worker_scale_in_cron
+  asg_instances_table_ttl_days                 = var.asg_instances_table_ttl_days
 
   # Scale-in service alarm
   autoscaling_cloudfunction_5xx_threshold         = var.autoscaling_cloudfunction_5xx_threshold
@@ -82,7 +83,6 @@ module "operator_service" {
   vpc_connector_machine_type = var.vpc_connector_machine_type
 
   # OpenTelemetry Collector
-  enable_remote_metric_aggregation = var.enable_remote_metric_aggregation
   collector_instance_type          = var.collector_instance_type
   user_provided_collector_sa_email = var.user_provided_collector_sa_email
   collector_service_port           = var.collector_service_port
@@ -98,6 +98,8 @@ module "operator_service" {
   frontend_service_cloudfunction_min_instances                    = var.frontend_service_cloudfunction_min_instances
   frontend_service_cloudfunction_max_instances                    = var.frontend_service_cloudfunction_max_instances
   frontend_service_cloudfunction_max_instance_request_concurrency = var.frontend_service_cloudfunction_max_instance_request_concurrency
+  frontend_service_cloudfunction_runtime_sa_email                 = var.frontend_service_cloudfunction_runtime_sa_email
+  frontend_service_cloudfunction_use_java21_runtime               = var.frontend_service_cloudfunction_use_java21_runtime
 
   frontend_service_cloudfunction_timeout_sec = var.frontend_service_cloudfunction_timeout_sec
   job_table_ttl_days                         = var.job_table_ttl_days

@@ -28,9 +28,16 @@ namespace google::scp::cpio {
 struct PrivateKeyClientOptions {
   virtual ~PrivateKeyClientOptions() = default;
 
+  // Client cache config
   bool enable_gcp_kms_client_cache = false;
   std::chrono::seconds gcp_kms_client_cache_lifetime =
       std::chrono::seconds(3600 * 24);  // 1 day
+
+  // RPC retry config
+  bool enable_gcp_kms_client_retries = false;
+  std::chrono::milliseconds gcp_kms_client_retry_initial_interval =
+      std::chrono::milliseconds(100);
+  std::size_t gcp_kms_client_retry_total_retries = 4;
 };
 }  // namespace google::scp::cpio
 

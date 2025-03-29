@@ -587,3 +587,63 @@ variable "collector_send_batch_timeout" {
   type        = string
   default     = "5s"
 }
+
+variable "collector_export_error_alarm" {
+  description = "Configuration for the collector exporting error alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 50,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}
+
+variable "collector_run_error_alarm" {
+  description = "Configuration for the collector run error alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 50,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}
+
+variable "collector_crash_error_alarm" {
+  description = "Configuration for the collector crash error alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 50,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}

@@ -205,6 +205,10 @@ module "opentelemetry_collector" {
     send_batch_size     = var.collector_send_batch_size
     send_batch_timeout  = var.collector_send_batch_timeout
   })
+
+  collector_export_error_alarm = var.collector_export_error_alarm
+  collector_run_error_alarm    = var.collector_run_error_alarm
+  collector_crash_error_alarm  = var.collector_crash_error_alarm
 }
 
 module "frontend" {

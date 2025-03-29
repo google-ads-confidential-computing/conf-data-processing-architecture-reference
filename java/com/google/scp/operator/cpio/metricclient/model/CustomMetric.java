@@ -24,11 +24,12 @@ import com.google.common.collect.ImmutableMap;
 @AutoValue
 public abstract class CustomMetric {
 
-  /** Returns a new instance of the builder for this class. Metric type default to UNKNOWN if it is
-   ** not set.
+  /**
+   * Returns a new instance of the builder for this class. Metric type default to DOUBLE_GAUGE if it
+   * is not set.
    */
   public static Builder builder() {
-    return new AutoValue_CustomMetric.Builder().setMetricType(MetricType.UNKNOWN);
+    return new AutoValue_CustomMetric.Builder().setMetricType(MetricType.DOUBLE_GAUGE);
   }
 
   /**
@@ -61,8 +62,8 @@ public abstract class CustomMetric {
 
   /**
    * Metric value type. It describes how the metric data is reported. If metric aggregation is not
-   * enabled, metric type can be absent or UNKNOWN. If metric aggregation is enabled, the metric
-   * type needs to be set and cannot be UNKNOWN.
+   * enabled, metric type can be absent. If metric aggregation is enabled, the metric type needs to
+   * be set and cannot be UNKNOWN.
    */
   @JsonProperty("type")
   public abstract MetricType metricType();

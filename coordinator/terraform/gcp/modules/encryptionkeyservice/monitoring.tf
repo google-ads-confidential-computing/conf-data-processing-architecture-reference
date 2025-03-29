@@ -26,6 +26,7 @@ module "encryptionkeyservice_loadbalancer_alarms" {
 
   eval_period_sec            = var.alarm_eval_period_sec
   error_5xx_threshold        = var.lb_5xx_threshold
+  error_5xx_ratio_threshold  = var.lb_5xx_ratio_threshold
   max_latency_ms             = var.lb_max_latency_ms
   duration_sec               = var.alarm_duration_sec
   load_balancer_severity_map = var.encryption_key_service_severity_map

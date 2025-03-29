@@ -36,6 +36,7 @@ import com.google.kms.LocalKmsServerContainer;
 import com.google.protobuf.ByteString;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
+import com.google.scp.coordinator.keymanagement.testutils.FakeKmsClient;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageCloudFunctionContainerWithKms;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.TestLocalKmsServerContainer;
 import com.google.scp.coordinator.testutils.gcp.GcpMultiCoordinatorTestEnvModule;
@@ -86,7 +87,8 @@ public class KeyStorageServiceIntegrationTest {
     String keyId = "12345";
     String localKmsServerUrl = "http://" + localKmsServerContainer.getEmulatorEndpoint();
     LocalGcpKmsClient localGcpKmsClient = new LocalGcpKmsClient(localKmsServerUrl);
-    Aead aead = localGcpKmsClient.withoutCredentials().getAead(DEFAULT_KEY_URI);
+    Aead aead =
+        localGcpKmsClient.withoutCredentials().getAead(DEFAULT_KEY_URI.replace("$setName$", ""));
     ByteString encryptedKeySplit =
         ByteString.copyFrom(
             aead.encrypt(
@@ -103,7 +105,7 @@ public class KeyStorageServiceIntegrationTest {
     HttpResponse<String> response = executeRequestWithRetry(CLIENT, request);
 
     assertThat(response.statusCode()).isEqualTo(200);
-    assertThat(keyDb.getKey(keyId).getJsonEncodedKeyset()).isNotNull();
+    assertThat(keyDb.getKey(keyId).getJsonEncodedKeyset()).isNotEmpty();
   }
 
   @Test

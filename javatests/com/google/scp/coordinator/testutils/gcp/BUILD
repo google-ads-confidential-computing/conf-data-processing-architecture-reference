@@ -25,6 +25,7 @@ java_library(
     deps = [
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/gcp/listener",
+        "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//java/com/google/scp/operator/cpio/blobstorageclient",
@@ -59,6 +60,9 @@ java_library(
         "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
         "//java/external:tink",
+        "//javatests/com/google/kms:LocalGcpKmsClient",
+        "//javatests/com/google/kms:LocalGcpKmsServer",
+        "//javatests/com/google/kms:LocalKmsServerContainer",
         "//javatests/com/google/scp/coordinator/keymanagement/keygeneration/app/gcp/listener:gcp",
         "//javatests/com/google/scp/coordinator/keymanagement/keygeneration/app/gcp/testing",
         "//javatests/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/testing:KeyHostingHttpFunctionModule",

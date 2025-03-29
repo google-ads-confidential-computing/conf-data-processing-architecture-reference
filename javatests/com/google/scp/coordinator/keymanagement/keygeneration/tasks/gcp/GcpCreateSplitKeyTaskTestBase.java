@@ -31,14 +31,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 import com.google.common.collect.Streams;
-import com.google.crypto.tink.Aead;
+import com.google.crypto.tink.KmsClient;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient.KeyStorageServiceException;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.testing.FakeKeyStorageClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KmsKeyAead;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBaseTest;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKmsKeyAead;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.KmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerKmsAeadClient;
+import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -57,30 +60,37 @@ import org.mockito.Mockito;
 
 public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
   @Inject protected InMemoryKeyDb keyDb;
-  @Inject @KmsKeyAead protected Aead keyEncryptionKeyAead;
   @Inject @KeyEncryptionKeyUri protected String keyEncryptionKeyUri;
-  @Inject @PeerCoordinatorKmsKeyAead protected Aead peerCoordinatorKeyEncryptionKeyAead;
   @Inject protected FakeKeyStorageClient keyStorageClient;
+
+  @Inject @PeerCoordinatorKeyEncryptionKeyBaseUri
+  protected String peerCoordinatorKeyEncryptionKeyBaseUri;
+
+  @Inject @KeyEncryptionKeyBaseUri protected String keyEncryptionKeyBaseUri;
+  @Inject @KmsAeadClient KmsClient kmsClient;
+  @Inject @PeerKmsAeadClient KmsClient peerKmsClient;
 
   // TODO: Refactor common test code to shared class
   @Test
   public void createSplitKey_success() throws Exception {
+    String setName = keyDb.DEFAULT_SET_NAME;
     int keysToCreate = 1;
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
     var encryptionKeyCaptor = ArgumentCaptor.forClass(EncryptionKey.class);
     var encryptedKeySplitCaptor = ArgumentCaptor.forClass(String.class);
-
     task.createSplitKey(keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
 
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
     assertThat(keys).hasSize(keysToCreate);
 
     EncryptionKey key = keys.get(0);
+    String keyEncryptionKeyUri = keyEncryptionKeyBaseUri.replace("$setName$", setName);
 
     // Validate that the key split decrypts (currently no associated data)
-    keyEncryptionKeyAead.decrypt(
-        Base64.getDecoder().decode(key.getJsonEncodedKeyset()), new byte[0]);
+    kmsClient
+        .getAead(keyEncryptionKeyUri)
+        .decrypt(Base64.getDecoder().decode(key.getJsonEncodedKeyset()), new byte[0]);
 
     // Misc metadata
     assertThat(key.getStatus()).isEqualTo(EncryptionKeyStatus.ACTIVE);
@@ -130,19 +140,20 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     assertThat(encryptionKeyCaptor.getValue().getKeyId()).isEqualTo(key.getKeyId());
 
     // Validate that the key split decrypts with peer coordinator KEK
-    peerCoordinatorKeyEncryptionKeyAead.decrypt(
-        Base64.getDecoder().decode(encryptedKeySplitCaptor.getValue()),
-        Base64.getDecoder().decode(key.getPublicKeyMaterial()));
+    peerKmsClient
+        .getAead(peerCoordinatorKeyEncryptionKeyBaseUri.replace("$setName$", setName))
+        .decrypt(
+            Base64.getDecoder().decode(encryptedKeySplitCaptor.getValue()),
+            Base64.getDecoder().decode(key.getPublicKeyMaterial()));
   }
 
   @Test
   public void createSplitKey_keyGenerationError()
       throws ServiceException, GeneralSecurityException {
     int keysToCreate = 5;
-
-    Mockito.doThrow(new GeneralSecurityException())
-        .when(keyEncryptionKeyAead)
-        .encrypt(any(), any());
+    String keyEncryptionKeyUri =
+        keyEncryptionKeyBaseUri.replace("$setName$", KeyDb.DEFAULT_SET_NAME);
+    Mockito.doThrow(new GeneralSecurityException()).when(kmsClient).getAead(keyEncryptionKeyUri);
 
     ServiceException ex =
         assertThrows(
@@ -152,7 +163,6 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     assertThat(ex.getErrorCode()).isEqualTo(Code.INTERNAL);
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
     assertThat(keys).isEmpty();
-    verify(keyEncryptionKeyAead, times(1)).encrypt(any(), any());
   }
 
   /** Ensure that even if we fail after two attempted generations, we store two keys */
@@ -228,6 +238,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
 
   @Test
   public void createSplitKey_createKeysWithoutExpirationAndTtl_success() throws Exception {
+    String setName = KeyDb.DEFAULT_SET_NAME;
     int keysToCreate = 1;
     int expectedExpiryInDays = 0;
     int expectedTtlInDays = 0;
@@ -242,8 +253,10 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     EncryptionKey key = keys.get(0);
 
     // Validate that the key split decrypts (currently no associated data)
-    keyEncryptionKeyAead.decrypt(
-        Base64.getDecoder().decode(key.getJsonEncodedKeyset()), new byte[0]);
+    String keyEncryptionKeyUri = keyEncryptionKeyBaseUri.replace("$setName$", setName);
+    kmsClient
+        .getAead(keyEncryptionKeyUri)
+        .decrypt(Base64.getDecoder().decode(key.getJsonEncodedKeyset()), new byte[0]);
 
     // Misc metadata
     assertThat(key.getStatus()).isEqualTo(EncryptionKeyStatus.ACTIVE);
@@ -287,9 +300,11 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     assertThat(encryptionKeyCaptor.getValue().getKeyId()).isEqualTo(key.getKeyId());
 
     // Validate that the key split decrypts with peer coordinator KEK
-    peerCoordinatorKeyEncryptionKeyAead.decrypt(
-        Base64.getDecoder().decode(encryptedKeySplitCaptor.getValue()),
-        Base64.getDecoder().decode(key.getPublicKeyMaterial()));
+    peerKmsClient
+        .getAead(peerCoordinatorKeyEncryptionKeyBaseUri.replace("$setName$", setName))
+        .decrypt(
+            Base64.getDecoder().decode(encryptedKeySplitCaptor.getValue()),
+            Base64.getDecoder().decode(key.getPublicKeyMaterial()));
 
     // Verify that the keys will not expire
     assertThat(keyDb.getActiveKeys(keyDb.DEFAULT_SET_NAME, 1, Instant.now()).size()).isEqualTo(1);
@@ -333,13 +348,24 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
             encryptedKeySplitCaptor.getAllValues().stream(),
             (encryptionKey, encryptedKeySplit) -> {
               try {
-                return peerCoordinatorKeyEncryptionKeyAead.decrypt(
-                    Base64.getDecoder().decode(encryptedKeySplit),
-                    Base64.getDecoder().decode(encryptionKey.getPublicKeyMaterial()));
+                return peerKmsClient
+                    .getAead(
+                        peerCoordinatorKeyEncryptionKeyBaseUri.replace(
+                            "$setName$", encryptionKeyCaptor.getValue().getSetName()))
+                    .decrypt(
+                        Base64.getDecoder().decode(encryptedKeySplit),
+                        Base64.getDecoder().decode(encryptionKey.getPublicKeyMaterial()));
               } catch (GeneralSecurityException e) {
                 throw new RuntimeException(e);
               }
             })
         .collect(toImmutableList());
+  }
+
+  @Test
+  public void create_differentTinkTemplates_successfullyReconstructExpectedPrimitives()
+      throws Exception {
+    super.create_differentTinkTemplates_successfullyReconstructExpectedPrimitives(
+        kmsClient.getAead(keyEncryptionKeyBaseUri.replace("$setName$", "test-set")));
   }
 }

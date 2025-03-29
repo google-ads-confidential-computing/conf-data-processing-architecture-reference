@@ -69,7 +69,7 @@ public final class LocalKmsServerContainer extends GenericContainer<LocalKmsServ
       String serverFileName, String serverJarPath, String serverClassTarget) {
     LocalKmsServerContainer container =
         new LocalKmsServerContainer(
-            DockerImageName.parse("openjdk:jdk-slim"),
+            DockerImageName.parse("openjdk:21-jdk-slim"),
             serverFileName,
             serverJarPath,
             serverClassTarget);

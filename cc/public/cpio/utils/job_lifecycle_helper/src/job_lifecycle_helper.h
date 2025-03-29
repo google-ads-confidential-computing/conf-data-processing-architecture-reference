@@ -27,6 +27,7 @@
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/auto_scaling_client/auto_scaling_client_interface.h"
 #include "public/cpio/interface/job_client/job_client_interface.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/proto/auto_scaling_service/v1/auto_scaling_service.pb.h"
 #include "public/cpio/proto/job_service/v1/job_service.pb.h"
 #include "public/cpio/utils/job_lifecycle_helper/interface/job_lifecycle_helper_interface.h"
@@ -61,6 +62,19 @@ class JobLifecycleHelper : public JobLifecycleHelperInterface {
             options.metric_options().enable_metrics_recording()
                 ? metric_instance_factory
                 : new NoopMetricInstanceFactory()),
+        remote_metric_client_(nullptr),
+        options_(std::move(options)),
+        is_running_(false) {}
+
+  explicit JobLifecycleHelper(
+      JobClientInterface* job_client,
+      AutoScalingClientInterface* auto_scaling_client,
+      MetricClientInterface* remote_metric_client,
+      cmrt::sdk::job_lifecycle_helper::v1::JobLifecycleHelperOptions options)
+      : job_client_(job_client),
+        auto_scaling_client_(auto_scaling_client),
+        metric_instance_factory_(nullptr),
+        remote_metric_client_(remote_metric_client),
         options_(std::move(options)),
         is_running_(false) {}
 
@@ -255,6 +269,26 @@ class JobLifecycleHelper : public JobLifecycleHelperInterface {
       std::shared_ptr<cpio::TimeAggregateMetricInterface> metric,
       const google::scp::core::TimeDuration& time_duration) noexcept;
 
+  bool UseRemoteMetricClient() { return remote_metric_client_ != nullptr; }
+
+  void IncrementRemoteMetric(const std::string& metric_name,
+                             const std::string& method_name,
+                             const std::string& event_name) noexcept;
+
+  void RecordRemoteTimeMetric(
+      const std::string& metric_name, const std::string& method_name,
+      const google::scp::core::TimeDuration& time_duration) noexcept;
+
+  void IncrementMetric(std::shared_ptr<cpio::AggregateMetricInterface> metric,
+                       const std::string& metric_name,
+                       const std::string& method_name,
+                       const std::string& event_name) noexcept;
+
+  void RecordTimeMetric(
+      std::shared_ptr<cpio::TimeAggregateMetricInterface> metric,
+      const std::string& metric_name, const std::string& method_name,
+      const google::scp::core::TimeDuration& time_duration) noexcept;
+
   // The job client.
   JobClientInterface* job_client_;
 
@@ -263,6 +297,9 @@ class JobLifecycleHelper : public JobLifecycleHelperInterface {
 
   // The metric instance factory.
   MetricInstanceFactoryInterface* metric_instance_factory_;
+
+  // The remote metric client.
+  MetricClientInterface* remote_metric_client_;
 
   // The metrics labels for job preparation.
   std::map<std::string, std::string> job_preparation_metric_labels_;

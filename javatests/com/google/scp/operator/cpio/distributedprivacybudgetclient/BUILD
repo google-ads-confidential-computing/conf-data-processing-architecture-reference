@@ -23,6 +23,7 @@ java_test(
         "//java/com/google/scp/coordinator/privacy/budgeting/model",
         "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:mockito",
     ],
 )
@@ -39,6 +40,7 @@ java_test(
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:jackson_databind",
         "//java/external:mockito",
     ],
@@ -65,5 +67,6 @@ java_test(
     deps = [
         "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
         "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )

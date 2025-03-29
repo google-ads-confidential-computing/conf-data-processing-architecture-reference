@@ -35,11 +35,13 @@ using google::cmrt::sdk::kms_service::v1::DecryptRequest;
 using google::cmrt::sdk::kms_service::v1::DecryptResponse;
 using google::scp::core::AsyncContext;
 using google::scp::core::AsyncExecutorInterface;
+using google::scp::core::AsyncOperation;
 using google::scp::core::AsyncPriority;
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::FinishContext;
+using google::scp::core::RetryExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::AutoExpiryConcurrentMap;
 using google::scp::core::common::kZeroUuid;
@@ -47,6 +49,7 @@ using google::scp::core::errors::
     SC_GCP_KMS_CLIENT_PROVIDER_BASE64_DECODING_FAILED;
 using google::scp::core::errors::
     SC_GCP_KMS_CLIENT_PROVIDER_CIPHERTEXT_NOT_FOUND;
+using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_CLOUD_UNAVAILABLE;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_CREATE_AEAD_FAILED;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_KEY_ARN_NOT_FOUND;
@@ -96,8 +99,23 @@ void GcpKmsClientProvider::Decrypt(
     return;
   }
 
+  AsyncOperation decrypt_call =
+      bind(&GcpKmsClientProvider::AeadDecrypt, this, decrypt_context);
+
+  AsyncOperation decrypt_call_with_retries = [this, decrypt_context]() mutable {
+    io_operation_dispatcher_
+        .Dispatch<AsyncContext<DecryptRequest, DecryptResponse>>(
+            decrypt_context,
+            [this](AsyncContext<DecryptRequest, DecryptResponse>& context) {
+              AeadDecrypt(context);
+              return SuccessExecutionResult();
+            });
+  };
+
   if (auto schedule_result = io_async_executor_->Schedule(
-          bind(&GcpKmsClientProvider::AeadDecrypt, this, decrypt_context),
+          kms_client_options_->enable_gcp_kms_client_retries
+              ? decrypt_call_with_retries
+              : decrypt_call,
           AsyncPriority::Normal);
       !schedule_result.Successful()) {
     decrypt_context.result = schedule_result;
@@ -139,6 +157,12 @@ GcpKmsClientProvider::GetOrCreateGcpKeyManagementServiceClient(
   return client_found;
 }
 
+bool GcpKmsClientProvider::ShouldRetryOnStatus(
+    cloud::StatusCode status_code) noexcept {
+  return kms_client_options_->enable_gcp_kms_client_retries &&
+         status_code == cloud::StatusCode::kUnavailable;
+}
+
 void GcpKmsClientProvider::AeadDecrypt(
     AsyncContext<DecryptRequest, DecryptResponse>& decrypt_context) noexcept {
   auto decoded_ciphertext_or =
@@ -163,6 +187,19 @@ void GcpKmsClientProvider::AeadDecrypt(
 
   auto response_or = gcp_kms->Decrypt(req);
   if (!response_or) {
+    if (ShouldRetryOnStatus(response_or.status().code())) {
+      SCP_INFO_CONTEXT(kGcpKmsClientProvider, decrypt_context,
+                       "Decryption failed with RETRYABLE code %s and error "
+                       "message %s. Retry attempt: %d",
+                       StatusCodeToString(response_or.status().code()).c_str(),
+                       response_or.status().message().c_str(),
+                       decrypt_context.retry_count);
+      auto execution_result =
+          RetryExecutionResult(SC_GCP_KMS_CLIENT_PROVIDER_CLOUD_UNAVAILABLE);
+      FinishContext(execution_result, decrypt_context, cpu_async_executor_);
+      return;
+    }
+
     auto execution_result =
         FailureExecutionResult(SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);
     SCP_ERROR_CONTEXT(kGcpKmsClientProvider, decrypt_context, execution_result,

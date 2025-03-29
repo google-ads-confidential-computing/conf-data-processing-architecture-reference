@@ -33,6 +33,7 @@
 #include "cpio/common/src/common_error_codes.h"
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 using google::cmrt::sdk::metric_service::v1::Metric;
@@ -152,7 +153,11 @@ ExecutionResult OtelMetricClientProvider::ValidateRequest(
 
 ExecutionResultOr<PutMetricsResponse> OtelMetricClientProvider::PutMetricsSync(
     PutMetricsRequest request) noexcept {
-  return FailureExecutionResult(SC_COMMON_ERRORS_UNIMPLEMENTED);
+  RETURN_IF_FAILURE(OtelMetricClientProvider::ValidateRequest(request));
+  for (auto metric : request.metrics()) {
+    RecordMetric(metric);
+  }
+  return PutMetricsResponse();
 }
 
 Counter<double>* OtelMetricClientProvider::GetOrCreateCounter(

@@ -36,6 +36,7 @@ cc_library(
         "//cc/public/cpio/interface:type_def",
         "//cc/public/cpio/interface/auto_scaling_client",
         "//cc/public/cpio/interface/job_client",
+        "//cc/public/cpio/interface/metric_client:metric_client_interface",
         "//cc/public/cpio/utils/job_lifecycle_helper/interface:job_lifecycle_helper_interface",
         "//cc/public/cpio/utils/metric_instance/interface:metric_instance_interface",
         "//cc/public/cpio/utils/metric_instance/interface:type_def",

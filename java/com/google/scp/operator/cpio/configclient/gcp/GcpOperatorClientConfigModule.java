@@ -21,6 +21,7 @@ import static com.google.scp.operator.cpio.configclient.common.ConfigClientUtil.
 import static com.google.scp.operator.cpio.configclient.common.ConfigClientUtil.COORDINATOR_HTTPCLIENT_RETRY_MULTIPLIER;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.common.base.Strings;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -65,6 +66,9 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
     if (config.useLocalCredentials()) {
       return GoogleCredentials.getApplicationDefault();
     }
+    if (Strings.isNullOrEmpty(config.coordinatorAServiceAccountToImpersonate())) {
+      return CredentialsHelper.getAttestedCredentials(config.coordinatorAWipProvider());
+    }
     return CredentialsHelper.getAttestedCredentials(
         config.coordinatorAWipProvider(), config.coordinatorAServiceAccountToImpersonate());
   }
@@ -82,6 +86,10 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
     // credentials. These are not used for single party solution.
     if (config.useLocalCredentials() || config.coordinatorBWipProvider().isEmpty()) {
       return GoogleCredentials.getApplicationDefault();
+    }
+    if (config.coordinatorBServiceAccountToImpersonate().isEmpty()
+        || Strings.isNullOrEmpty(config.coordinatorBServiceAccountToImpersonate().get())) {
+      return CredentialsHelper.getAttestedCredentials(config.coordinatorBWipProvider().get());
     }
     return CredentialsHelper.getAttestedCredentials(
         config.coordinatorBWipProvider().get(),

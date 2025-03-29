@@ -175,7 +175,32 @@ variable "lb_5xx_threshold" {
   type        = number
 }
 
+variable "lb_5xx_ratio_threshold" {
+  description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
+  type        = number
+}
+
 variable "key_storage_severity_map" {
   description = "map that defines severity for alerts"
   type        = map(string)
+}
+
+variable "disable_key_set_acl" {
+  description = "Controls whether to generate keys enforcing key set level acl."
+  type        = string
+}
+
+variable "kms_key_base_uri" {
+  description = "Kms encryption key base uri for composing kms encryption keys."
+  type        = string
+}
+
+variable "key_sets" {
+  description = "All key sets that are supported by key service."
+  type        = list(string)
+}
+
+variable "key_encryption_key_ring_id" {
+  description = "Key ring id that holds all the keys"
+  type        = string
 }

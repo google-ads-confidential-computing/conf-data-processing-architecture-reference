@@ -56,12 +56,6 @@ variable "secondary_region_zone" {
   type        = string
 }
 
-variable "add_secondary_region_to_encryption_service" {
-  description = "If true, encryption service will deploy to 2 regions."
-  type        = bool
-  default     = false
-}
-
 variable "mpkhs_secondary_package_bucket_location" {
   description = "Location for multiparty keyhosting packages. Example: 'US'."
   type        = string
@@ -143,6 +137,31 @@ variable "cloudfunction_timeout_seconds" {
   type        = number
 }
 
+### Private Key Service
+
+variable "private_key_service_launch_cloud_run" {
+  description = "Flag to control launching a EKS using Cloud Run."
+  type        = bool
+  nullable    = false
+}
+
+variable "private_key_service_container_image_url" {
+  description = "The full path (registry + tag) to the container image used to deploy EKS."
+  type        = string
+  nullable    = false
+}
+
+variable "private_key_service_cloud_run_cpu_count" {
+  description = "Number of cpus to allocate for private key service cloud run instance."
+  type        = number
+}
+
+variable "private_key_service_cloud_run_concurrency" {
+  description = "Request concurrency for private key service cloud run instance."
+  type        = number
+}
+
+### EKS
 variable "encryption_key_service_cloudfunction_memory_mb" {
   description = "Memory size in MB for encryption key cloud function."
   type        = number
@@ -166,16 +185,23 @@ variable "encryption_key_service_jar" {
   type        = string
 }
 
+variable "encryption_key_service_source_path" {
+  description = "GCS path to Encryption Key Service source archive in the package bucket."
+  type        = string
+}
+
+variable "encryptionkeyservice_use_java21_runtime" {
+  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
+  type        = bool
+  nullable    = false
+}
+
+### Key Storage
 variable "key_storage_service_jar" {
   description = <<-EOT
           Key storage service cloud function path. If not provided defaults to locally built jar file.
         Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
       EOT
-  type        = string
-}
-
-variable "encryption_key_service_source_path" {
-  description = "GCS path to Encryption Key Service source archive in the package bucket."
   type        = string
 }
 
@@ -200,12 +226,6 @@ variable "key_storage_service_cloudfunction_max_instances" {
 }
 
 variable "keystorageservice_use_java21_runtime" {
-  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
-  type        = bool
-  nullable    = false
-}
-
-variable "encryptionkeyservice_use_java21_runtime" {
   description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
   type        = bool
   nullable    = false
@@ -273,6 +293,7 @@ variable "allowed_operators" {
   type = map(object({
     # TODO Leverage optional() when upgrade Terraform to > 1.3.
     service_accounts        = list(string)
+    key_sets                = list(string)
     image_references        = list(string)
     image_digests           = list(string)
     image_signature_key_ids = list(string)
@@ -316,6 +337,11 @@ variable "keystorageservice_lb_max_latency_ms" {
 
 variable "keystorageservice_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "keystorageservice_lb_5xx_ratio_threshold" {
+  description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
   type        = number
 }
 
@@ -363,6 +389,11 @@ variable "encryptionkeyservice_lb_5xx_threshold" {
   type        = number
 }
 
+variable "encryptionkeyservice_lb_5xx_ratio_threshold" {
+  description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
+  type        = number
+}
+
 variable "encryptionkeyservice_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
@@ -376,4 +407,34 @@ variable "get_encrypted_private_key_general_error_threshold" {
 variable "alert_severity_overrides" {
   description = "Alerts severity overrides."
   type        = map(string)
+}
+
+variable "key_sets_config" {
+  description = <<EOT
+  Configuration for key sets managed by Key Generation.
+
+  Note: For backward compatibility, if a config is not defined. A default key set with name = "" is created.
+
+  Attributes:
+    key_sets                    (list) - The list of individual key set configuration, one for each unique key set.
+    key_sets[].name             (string) - The unique set name for the key set, the value should be a valid URL path segment (e.g. ^[a-zA-Z0-9\\-\\._~]+$).
+    key_sets[].tink_template    (optional(string)) - The Tink template to be used for key generation.
+    key_sets[].count            (optional(number)) - The number of keys to be generated.
+    key_sets[].validity_in_days (optional(number)) - Number of days the generated keys will be valid. If set to 0, the keys will never expire.
+    key_sets[].ttl_in_days      (optional(number)) - Number of days the generated keys will be kept in the database. If set to 0, the keys will never be deleted.
+  EOT
+  type = object({
+    key_sets = list(object({
+      name             = string
+      tink_template    = string
+      count            = number
+      validity_in_days = number
+      ttl_in_days      = number
+    }))
+  })
+}
+
+variable "disable_key_set_acl" {
+  description = "Controls whether to generate keys enforcing key set level acl."
+  type        = string
 }

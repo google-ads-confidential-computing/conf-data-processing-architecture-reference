@@ -147,13 +147,18 @@ variable "cloudfunction_alert_on_memory_usage_threshold" {
   type        = number
 }
 
-variable "get_public_key_lb_max_latency_ms" {
+variable "lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
   type        = string
 }
 
-variable "get_public_key_lb_5xx_threshold" {
+variable "lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "lb_5xx_ratio_threshold" {
+  description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
   type        = number
 }
 

@@ -34,6 +34,7 @@ java_test(
         "//java/external:gcp_spanner",
         "//java/external:google_truth",
         "//java/external:google_truth8",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_databind",
         "//java/external:protobuf_java_util",

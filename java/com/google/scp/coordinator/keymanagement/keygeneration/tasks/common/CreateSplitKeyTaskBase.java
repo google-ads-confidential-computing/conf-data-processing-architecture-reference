@@ -63,9 +63,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateSplitKeyTaskBase.class);
   private static final int KEY_ID_CONFLICT_MAX_RETRY = 5;
-
-  protected final Aead keyEncryptionKeyAead;
-  protected final String keyEncryptionKeyUri;
   protected final Optional<PublicKeySign> signatureKey;
   protected final KeyDb keyDb;
   protected final KeyStorageClient keyStorageClient;
@@ -82,15 +79,11 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
   }
 
   public CreateSplitKeyTaskBase(
-      Aead keyEncryptionKeyAead,
-      String keyEncryptionKeyUri,
       Optional<PublicKeySign> signatureKey,
       KeyDb keyDb,
       KeyStorageClient keyStorageClient,
       KeyIdFactory keyIdFactory,
       LogMetricHelper logMetricHelper) {
-    this.keyEncryptionKeyAead = keyEncryptionKeyAead;
-    this.keyEncryptionKeyUri = keyEncryptionKeyUri;
     this.signatureKey = signatureKey;
     this.keyDb = keyDb;
     this.keyStorageClient = keyStorageClient;
@@ -105,7 +98,14 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
    * @throws ServiceException in case of encryption errors.
    */
   protected abstract String encryptPeerCoordinatorSplit(
-      ByteString keySplit, Optional<DataKey> dataKey, String publicKey) throws ServiceException;
+      String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKey)
+      throws ServiceException;
+
+  /** Takes in kmsKeyEncryptionKeyUri and returns an Aead for the key. */
+  protected abstract Aead getAead(String kmsKeyEncryptionKeyUri) throws GeneralSecurityException;
+
+  /** Takes in setName and returns kmsKeyEncryptionKeyUri for the key set. */
+  protected abstract String getKmsKeyEncryptionKeyUri(String setName);
 
   /**
    * Takes in an encrypted KeySplit for Coordinator B and an unsignedKey to send to the KeyStorage
@@ -260,6 +260,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       Optional<KeysetHandle> publicKeysetHandle = getPublicKeysetHandle(privateKeysetHandle);
 
       ImmutableList<ByteString> keySplits = KeySplitUtil.xorSplit(privateKeysetHandle, 2);
+      String keyEncryptionKeyUri = getKmsKeyEncryptionKeyUri(setName);
       EncryptionKey key =
           buildEncryptionKey(
               setName,
@@ -272,11 +273,13 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
               keyEncryptionKeyUri,
               signatureKey);
       unsignedCoordinatorAKey =
-          createCoordinatorAKey(keySplits.get(0), key, keyEncryptionKeyAead, keyEncryptionKeyUri);
+          createCoordinatorAKey(
+              keySplits.get(0), key, getAead(keyEncryptionKeyUri), keyEncryptionKeyUri);
       unsignedCoordinatorBKey = createCoordinatorBKey(key);
 
       encryptedKeySplitB =
-          encryptPeerCoordinatorSplit(keySplits.get(1), dataKey, key.getPublicKeyMaterial());
+          encryptPeerCoordinatorSplit(
+              setName, keySplits.get(1), dataKey, key.getPublicKeyMaterial());
     } catch (GeneralSecurityException | IOException e) {
       LOGGER.error(format(setName, "crypto_error"));
       String msg = "Error generating keys.";

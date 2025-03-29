@@ -30,6 +30,7 @@ java_test(
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
     ],
 )

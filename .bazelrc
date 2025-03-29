@@ -18,6 +18,10 @@ build:clang --cxxopt=-fbracket-depth=512
 build:java --java_language_version=11
 build:java --java_runtime_version=remotejdk_11
 
+# We build aws targets with java11 for now
+build:java11 --java_language_version=11
+build:java11 --java_runtime_version=remotejdk_11
+
 # Address sanitizer
 build:asan --action_env=CONTROL_PLANE_SHARED_ASAN=1
 build:asan --strip=never

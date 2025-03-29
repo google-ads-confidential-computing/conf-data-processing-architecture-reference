@@ -19,18 +19,24 @@ package com.google.scp.coordinator.keymanagement.keystorage.service.gcp.testing;
 import static com.google.kms.LocalKmsConstants.DEFAULT_KEY_URI;
 
 import com.google.crypto.tink.Aead;
+import com.google.crypto.tink.KmsClient;
 import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.kms.LocalGcpKmsClient;
+import com.google.kms.LocalKmsServerContainer;
 import com.google.protobuf.ByteString;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.CacheControlMaximum;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKekUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKeyAead;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DisableKeySetAcl;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyAead;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.SignDataKeyTask;
@@ -38,6 +44,8 @@ import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKe
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpSignDataKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
+import com.google.scp.coordinator.keymanagement.testutils.FakeKmsClient;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.TestLocalKmsServerContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil;
 import com.google.scp.shared.util.KeysetHandleSerializerUtil;
 import java.io.IOException;
@@ -53,6 +61,7 @@ public class KeyStorageHttpFunctionModule extends AbstractModule {
   private final String keysetHandleStringName;
 
   public static final String KMS_ENDPOINT_ENV_VAR_NAME = "KMS_ENDPOINT";
+  @Inject @TestLocalKmsServerContainer private LocalKmsServerContainer localKmsServerContainer;
 
   KeyStorageHttpFunctionModule(String keysetHandleStringName) {
     this.keysetHandleStringName = keysetHandleStringName;
@@ -73,7 +82,12 @@ public class KeyStorageHttpFunctionModule extends AbstractModule {
         .annotatedWith(KmsKeyEncryptionKeyUri.class)
         .toInstance("inline-kms://unused_so_far");
     bind(String.class).annotatedWith(CoordinatorKekUri.class).toInstance("");
-
+    bind(String.class).annotatedWith(DisableKeySetAcl.class).toInstance("false");
+    bind(String.class)
+        .annotatedWith(KmsKeyEncryptionKeyBaseUri.class)
+        .toInstance(
+            "gcp-kms://projects/admcloud-coordinator1/locations/us/keyRings/scp-test/cryptoKeys/$setName$-key-b");
+    bind(KmsClient.class).annotatedWith(KmsAeadClient.class).toInstance(getKmsClient());
     // This is not used for GCP but is needed for binding purposes.
     bind(Aead.class).annotatedWith(CoordinatorKeyAead.class).toInstance(getAead());
     install(new SpannerKeyDbModule());
@@ -111,5 +125,23 @@ public class KeyStorageHttpFunctionModule extends AbstractModule {
     } catch (GeneralSecurityException | IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private KmsClient getKmsClient() {
+    String encodedKeySetHandle = System.getenv(keysetHandleStringName);
+    if (encodedKeySetHandle != null) {
+      return new FakeKmsClient(encodedKeySetHandle);
+    }
+    String kmsEndpoint = System.getenv(KMS_ENDPOINT_ENV_VAR_NAME);
+    if (kmsEndpoint != null) {
+      LocalGcpKmsClient client = new LocalGcpKmsClient(kmsEndpoint);
+      try {
+        client.withoutCredentials();
+        return client;
+      } catch (GeneralSecurityException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return new FakeKmsClient();
   }
 }

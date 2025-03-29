@@ -29,5 +29,7 @@ java_library(
         "//java/external:javax_inject",
         "//java/external:jcommander",
         "//java/external:protobuf_java",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:GcpKeyGenerationTestEnv",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:annotations",
     ],
 )

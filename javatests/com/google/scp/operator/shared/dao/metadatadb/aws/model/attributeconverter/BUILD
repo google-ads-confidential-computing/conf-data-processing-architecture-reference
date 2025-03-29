@@ -23,6 +23,7 @@ java_test(
         "//java/external:aws_dynamodb",
         "//java/external:aws_dynamodb_enhanced",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//operator/protos/shared/backend:java_proto",
     ],
 )

@@ -59,6 +59,8 @@ public final class GcpMetricClient implements MetricClient {
 
   private static final Logger logger = Logger.getLogger(GcpMetricClient.class.getName());
   private static final String DEFAULT_ENV = "dms-default-env";
+  private static final String INSTANCE_ID_METRIC_LABEL = "exported_instance_id";
+  private static final String ZONE_METRIC_LABEL = "exported_zone";
   private final String instanceId;
   private final String zone;
   private final String projectId;
@@ -114,25 +116,35 @@ public final class GcpMetricClient implements MetricClient {
     String metricName = getMetricName(metric);
     AttributesBuilder attributesBuilder = Attributes.builder();
     metric.labels().forEach((key, value) -> attributesBuilder.put(key, value));
+    // Add instance id and zone as metric labels to help with filtering logs for collector metrics.
+    attributesBuilder.put(INSTANCE_ID_METRIC_LABEL, instanceId);
+    attributesBuilder.put(ZONE_METRIC_LABEL, zone);
     switch (metric.metricType()) {
       case DOUBLE_COUNTER:
         DoubleCounter doubleCounter =
-            counterCache.putIfAbsent(
+            counterCache.computeIfAbsent(
                 metricName,
-                meter.get().counterBuilder(metricName).setUnit(metric.unit()).ofDoubles().build());
+                key ->
+                    meter
+                        .get()
+                        .counterBuilder(metricName)
+                        .setUnit(metric.unit())
+                        .ofDoubles()
+                        .build());
         doubleCounter.add(metric.value(), attributesBuilder.build());
         return;
       case DOUBLE_GAUGE:
         DoubleGauge doubleGauge =
-            gaugeCache.putIfAbsent(
-                metricName, meter.get().gaugeBuilder(metricName).setUnit(metric.unit()).build());
+            gaugeCache.computeIfAbsent(
+                metricName,
+                key -> meter.get().gaugeBuilder(metricName).setUnit(metric.unit()).build());
         doubleGauge.set(metric.value(), attributesBuilder.build());
         return;
       case HISTOGRAM:
         DoubleHistogram doubleHistogram =
-            histogramCache.putIfAbsent(
+            histogramCache.computeIfAbsent(
                 metricName,
-                meter.get().histogramBuilder(metricName).setUnit(metric.unit()).build());
+                key -> meter.get().histogramBuilder(metricName).setUnit(metric.unit()).build());
         doubleHistogram.record(metric.value(), attributesBuilder.build());
         return;
       case UNKNOWN:

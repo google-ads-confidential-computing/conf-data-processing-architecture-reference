@@ -47,7 +47,7 @@ message EncryptionKey {
   optional int64 activation_time = 9;
   /**
    * Timestamp, represented in Unix epoch milliseconds, when clients are
-   * expected to no longer use this key for encypting new payloads.
+   * expected to no longer use this key for encrypting new payloads.
    *
    * Depending on use case, clients may still continue to encrypt payloads with
    * an "expired" key if the client does not yet have new keys available yet.

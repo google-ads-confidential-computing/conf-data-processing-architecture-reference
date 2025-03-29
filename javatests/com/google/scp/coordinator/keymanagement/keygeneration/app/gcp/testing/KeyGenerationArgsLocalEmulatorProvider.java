@@ -42,7 +42,7 @@ public class KeyGenerationArgsLocalEmulatorProvider extends AbstractModule {
     String[] args = {
       // Note: This is currently unused.
       "--kms-key-uri",
-      "inline-kms://unused_so_far",
+      "gcp-kms://projects/admcloud-coordinator1/locations/us/keyRings/scp-test/cryptoKeys/$setName$-key",
       "--spanner-instance-id",
       spannerKeyDbConfig.spannerInstanceId(),
       "--spanner-database-id",
@@ -56,7 +56,7 @@ public class KeyGenerationArgsLocalEmulatorProvider extends AbstractModule {
 
       // Note: This is currently unused.
       "--peer-coordinator-kms-key-uri",
-      "inline-kms://unused_so_far",
+      "gcp-kms://projects/admcloud-coordinator2/locations/us/keyRings/scp-test/cryptoKeys/$setName$-key-b",
 
       // The KeyGeneration app needs to coordinate with Coordinator B to create keys.
       "--key_storage_service_base_url",

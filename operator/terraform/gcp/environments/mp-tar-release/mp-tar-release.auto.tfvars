@@ -12,7 +12,7 @@ spanner_processing_units             = 100
 spanner_database_deletion_protection = false
 
 worker_image                     = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:release"
-allowed_operator_service_account = "release-a-opallowedusr@admcloud-coordinator1.iam.gserviceaccount.com,release-b-opallowedusr@admcloud-coordinator2.iam.gserviceaccount.com"
+allowed_operator_service_account = ""
 worker_logging_enabled           = true
 worker_container_log_redirect    = "true"
 worker_instance_force_replace    = true
@@ -31,3 +31,10 @@ frontend_service_jar = "/tmp/mp-tar-release/jars/FrontendServiceHttpCloudFunctio
 frontend_cloudfunction_use_java21_runtime     = true
 notification_cloudfunction_use_java21_runtime = true
 autoscaling_cloudfunction_use_java21_runtime  = true
+
+instance_disk_image_family = {
+  image_project = "confidential-space-images",
+  image_family  = "confidential-space"
+}
+# Needs to be a stable image for proper coordinator attestation
+instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-241000"

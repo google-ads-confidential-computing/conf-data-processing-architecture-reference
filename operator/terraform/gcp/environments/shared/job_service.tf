@@ -116,6 +116,9 @@ module "job_service" {
   collector_send_batch_max_size      = var.collector_send_batch_max_size
   collector_send_batch_size          = var.collector_send_batch_size
   collector_send_batch_timeout       = var.collector_send_batch_timeout
+  collector_export_error_alarm       = var.collector_export_error_alarm
+  collector_run_error_alarm          = var.collector_run_error_alarm
+  collector_crash_error_alarm        = var.collector_crash_error_alarm
 
   # Notifications
   enable_job_completion_notifications = var.enable_job_completion_notifications

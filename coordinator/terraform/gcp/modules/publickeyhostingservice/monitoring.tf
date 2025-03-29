@@ -31,8 +31,9 @@ module "load_balancer_alarms" {
 
   eval_period_sec            = var.alarm_eval_period_sec
   duration_sec               = var.alarm_duration_sec
-  error_5xx_threshold        = var.get_public_key_lb_5xx_threshold
-  max_latency_ms             = var.get_public_key_lb_max_latency_ms
+  error_5xx_threshold        = var.lb_5xx_threshold
+  error_5xx_ratio_threshold  = var.lb_5xx_ratio_threshold
+  max_latency_ms             = var.lb_max_latency_ms
   load_balancer_severity_map = var.public_key_alerts_severity_overrides
 }
 

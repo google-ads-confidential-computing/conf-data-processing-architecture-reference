@@ -104,7 +104,7 @@ locals {
   cloud_function_a_name   = local.cloud_functions[0].name
   cloud_function_a_region = local.cloud_functions[0].location
 
-  b_idx                   = var.add_secondary_region_to_encryption_service ? 1 : 0
+  b_idx                   = 0
   cloud_function_b_name   = local.cloud_functions[local.b_idx].name
   cloud_function_b_region = local.cloud_functions[local.b_idx].location
 

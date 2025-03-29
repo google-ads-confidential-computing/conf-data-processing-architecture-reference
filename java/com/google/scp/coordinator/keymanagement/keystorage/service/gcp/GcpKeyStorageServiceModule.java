@@ -17,12 +17,17 @@
 package com.google.scp.coordinator.keymanagement.keystorage.service.gcp;
 
 import com.google.crypto.tink.Aead;
+import com.google.crypto.tink.KeyTemplates;
+import com.google.crypto.tink.KeysetHandle;
+import com.google.crypto.tink.KmsClient;
+import com.google.crypto.tink.aead.AeadConfig;
 import com.google.crypto.tink.integration.gcpkms.GcpKmsClient;
 import com.google.inject.AbstractModule;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKekUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKeyAead;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyAead;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyUri;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DisableKeySetAcl;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.SignDataKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyTask;
@@ -44,6 +49,8 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
   private static final String SPANNER_DATABASE_ENV_VAR = "SPANNER_DATABASE";
   private static final String SPANNER_ENDPOINT = "SPANNER_ENDPOINT";
   private static final String GCP_KMS_URI_ENV_VAR = "GCP_KMS_URI";
+  private static final String GCP_KMS_BASE_URI_ENV_VAR = "GCP_KMS_BASE_URI";
+  private static final String DISABLE_KEY_SET_ACL_ENV_VAR = "DISABLE_KEY_SET_ACL";
 
   /** Returns ReadStalenessSeconds as Integer from environment variables. Default value of 15 */
   private Integer getReadStalenessSeconds() {
@@ -51,20 +58,19 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
     return Integer.valueOf(env.getOrDefault(READ_STALENESS_SEC_ENV_VAR, "15"));
   }
 
-  /** Returns GcpKmsUri as a String from environment variables. */
-  private String getGcpKmsUri() {
+  private String getGcpKmsBaseUri() {
     Map<String, String> env = System.getenv();
-    return env.getOrDefault(GCP_KMS_URI_ENV_VAR, "unknown_gcp_uri");
+    Boolean disableKeySetAcl =
+        Boolean.valueOf(env.getOrDefault(DISABLE_KEY_SET_ACL_ENV_VAR, "true"));
+    return disableKeySetAcl
+        ? env.getOrDefault(GCP_KMS_URI_ENV_VAR, "unknown_gcp_uri")
+        : env.getOrDefault(GCP_KMS_BASE_URI_ENV_VAR, "unknown_gcp_uri");
   }
 
-  /** Returns Aead for GCP using URI from environment variables. */
-  private Aead getAead() {
-    GcpKmsClient client = new GcpKmsClient();
-    try {
-      return client.withDefaultCredentials().getAead(getGcpKmsUri());
-    } catch (GeneralSecurityException e) {
-      throw new RuntimeException("Error getting Aead.", e);
-    }
+  private KmsClient getKmsAeadClient() throws GeneralSecurityException {
+    GcpKmsClient kmsClient = new GcpKmsClient();
+    kmsClient.withDefaultCredentials();
+    return kmsClient;
   }
 
   @Override
@@ -78,13 +84,27 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
     // Business layer bindings
     bind(CreateKeyTask.class).to(GcpCreateKeyTask.class);
     bind(SignDataKeyTask.class).to(GcpSignDataKeyTask.class);
-    bind(Aead.class).annotatedWith(KmsKeyAead.class).toInstance(getAead());
-    bind(String.class).annotatedWith(KmsKeyEncryptionKeyUri.class).toInstance(getGcpKmsUri());
+
+    bind(String.class)
+        .annotatedWith(KmsKeyEncryptionKeyBaseUri.class)
+        .toInstance(getGcpKmsBaseUri());
+    bind(Boolean.class)
+        .annotatedWith(DisableKeySetAcl.class)
+        .toInstance(Boolean.valueOf(env.getOrDefault(DISABLE_KEY_SET_ACL_ENV_VAR, "true")));
 
     // TODO: refactor so that GCP does not need these. Placeholder values since they are not used
     bind(String.class).annotatedWith(CoordinatorKekUri.class).toInstance("");
-    bind(Aead.class).annotatedWith(CoordinatorKeyAead.class).toInstance(getAead());
-
+    try {
+      bind(KmsClient.class).annotatedWith(KmsAeadClient.class).toInstance(getKmsAeadClient());
+      // Bind a valid Aead to this placeholder value
+      AeadConfig.register();
+      bind(Aead.class)
+          .annotatedWith(CoordinatorKeyAead.class)
+          .toInstance(
+              KeysetHandle.generateNew(KeyTemplates.get("AES128_GCM")).getPrimitive(Aead.class));
+    } catch (GeneralSecurityException e) {
+      throw new RuntimeException(e);
+    }
     // Data layer bindings
     SpannerKeyDbConfig config =
         SpannerKeyDbConfig.builder()

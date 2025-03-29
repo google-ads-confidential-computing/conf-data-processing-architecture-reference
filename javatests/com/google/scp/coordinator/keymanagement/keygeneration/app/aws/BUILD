@@ -78,6 +78,7 @@ java_test(
         "//java/external:aws_kms",
         "//java/external:aws_regions",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:localstack_containers",
         "//java/external:testcontainers",

@@ -26,6 +26,7 @@
 #include "core/interface/type_def.h"
 #include "cpio/client_providers/job_client_provider/src/error_codes.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
 #include "public/cpio/interface/type_def.h"
 #include "public/cpio/proto/auto_scaling_service/v1/auto_scaling_service.pb.h"
 #include "public/cpio/proto/job_service/v1/job_service.pb.h"
@@ -60,7 +61,10 @@ using google::cmrt::sdk::job_service::v1::UpdateJobStatusRequest;
 using google::cmrt::sdk::job_service::v1::UpdateJobStatusResponse;
 using google::cmrt::sdk::job_service::v1::UpdateJobVisibilityTimeoutRequest;
 using google::cmrt::sdk::job_service::v1::UpdateJobVisibilityTimeoutResponse;
+using google::cmrt::sdk::metric_service::v1::MetricType;
 using google::cmrt::sdk::metric_service::v1::MetricUnit;
+using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
+using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
 using google::protobuf::Duration;
 using google::protobuf::util::TimeUtil;
 using google::scp::core::AsyncContext;
@@ -152,7 +156,9 @@ constexpr char kJobWaitingTimeMetricName[] = "JobWaitingTimeCount";
 constexpr char kJobProcessingTimeMethodName[] = "JobProcessingTime";
 constexpr char kJobProcessingTimeMetricName[] = "JobProcessingTimeCount";
 constexpr char kJobExtenderMethodName[] = "JobExtender";
-constexpr char kJobExtenderFailureEventName[] = "JobExtenderFailure";
+constexpr char kJobExtenderFailureMetricName[] = "JobExtenderFailure";
+constexpr char kJobExtenderMissingReceiptInfoFailureEventName[] =
+    "JobExtenderMissingReceiptInfoFailure";
 constexpr char kJobExtenderGetJobByIdFailureEventName[] =
     "JobExtenderGetJobByIdFailure";
 constexpr char kJobExtenderUpdateJobVisibilityTimeoutFailureEventName[] =
@@ -170,6 +176,9 @@ constexpr char kJobMetadataMapInsertJobMetadataFailureEventName[] =
 constexpr char kJobMetadataMapMissingReceiptInfoFailureEventName[] =
     "JobMetadataMapMissingReceiptInfoFailure";
 
+constexpr char kRemoteMetricLabelEventName[] = "EventName";
+constexpr char kRemoteMetricNamePrefix[] = "aggregate/";
+
 constexpr int64_t kDefaultTimestampInSeconds = 0;
 constexpr int64_t kMaximumVisibilityTimeoutInSeconds = 600;
 }  // namespace
@@ -177,12 +186,16 @@ constexpr int64_t kMaximumVisibilityTimeoutInSeconds = 600;
 namespace google::scp::cpio {
 
 ExecutionResult JobLifecycleHelper::Init() noexcept {
-  RETURN_IF_FAILURE(InitAllMetrics());
+  if (!UseRemoteMetricClient()) {
+    RETURN_IF_FAILURE(InitAllMetrics());
+  }
   return SuccessExecutionResult();
 }
 
 ExecutionResult JobLifecycleHelper::Run() noexcept {
-  RETURN_IF_FAILURE(RunAllMetrics());
+  if (!UseRemoteMetricClient()) {
+    RETURN_IF_FAILURE(RunAllMetrics());
+  }
   is_running_ = true;
   job_extender_worker_ = std::make_unique<std::thread>(
       [this]() mutable { StartJobExtenderThread(); });
@@ -194,7 +207,9 @@ ExecutionResult JobLifecycleHelper::Stop() noexcept {
   if (job_extender_worker_->joinable()) {
     job_extender_worker_->join();
   }
-  RETURN_IF_FAILURE(StopAllMetrics());
+  if (!UseRemoteMetricClient()) {
+    RETURN_IF_FAILURE(StopAllMetrics());
+  }
   return SuccessExecutionResult();
 }
 
@@ -228,8 +243,9 @@ void JobLifecycleHelper::TryFinishInstanceTerminationCallback(
         try_finish_instance_termination_context) noexcept {
   auto result = try_finish_instance_termination_context.result;
   if (!result.Successful()) {
-    IncrementAggregateMetric(
-        job_preparation_metric_,
+    IncrementMetric(
+        job_preparation_failure_metric_, kJobPreparationFailureMetricName,
+        kJobPreparationMethodName,
         kJobPreparationTryFinishInstanceTerminationFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, prepare_job_context, result,
                       "Failed to prepare job due to try finish instance "
@@ -242,9 +258,9 @@ void JobLifecycleHelper::TryFinishInstanceTerminationCallback(
   // If the current instance is scheduled for termination, exit.
   if (try_finish_instance_termination_context.response
           ->termination_scheduled()) {
-    IncrementAggregateMetric(
-        job_preparation_failure_metric_,
-        kJobPreparationCurrentInstanceTerminationFailureEventName);
+    IncrementMetric(job_preparation_failure_metric_,
+                    kJobPreparationFailureMetricName, kJobPreparationMethodName,
+                    kJobPreparationCurrentInstanceTerminationFailureEventName);
     result = FailureExecutionResult(
         SC_JOB_LIFECYCLE_HELPER_CURRENT_INSTANCE_IS_TERMINATING);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, prepare_job_context, result,
@@ -272,8 +288,9 @@ void JobLifecycleHelper::GetNextJobCallback(
   auto result = get_next_job_context.result;
   if (!result.Successful()) {
     if (result.status_code != SC_CPIO_ENTITY_NOT_FOUND) {
-      IncrementAggregateMetric(job_preparation_failure_metric_,
-                               kJobPreparationGetNextJobFailureEventName);
+      IncrementMetric(
+          job_preparation_failure_metric_, kJobPreparationFailureMetricName,
+          kJobPreparationMethodName, kJobPreparationGetNextJobFailureEventName);
       SCP_ERROR_CONTEXT(kJobLifecycleHelper, prepare_job_context, result,
                         "Failed to prepare job due to get next job failed");
     } else {
@@ -285,7 +302,8 @@ void JobLifecycleHelper::GetNextJobCallback(
     return;
   }
 
-  IncrementAggregateMetric(job_preparation_metric_, kJobPreparationEventName);
+  IncrementMetric(job_preparation_metric_, kJobPreparationMetricName,
+                  kJobPreparationMethodName, kJobPreparationEventName);
 
   const string& job_id = get_next_job_context.response->job().job_id();
   const JobStatus job_status =
@@ -364,8 +382,8 @@ void JobLifecycleHelper::GetNextJobCallback(
     return;
   }
 
-  IncrementAggregateMetric(job_preparation_metric_,
-                           kJobPreparationSuccessEventName);
+  IncrementMetric(job_preparation_metric_, kJobPreparationMetricName,
+                  kJobPreparationMethodName, kJobPreparationSuccessEventName);
   prepare_job_context.response = make_shared<PrepareNextJobResponse>();
   prepare_job_context.response->set_allocated_job(
       get_next_job_context.response->release_job());
@@ -418,8 +436,9 @@ void JobLifecycleHelper::DeleteOrphanedJobMessageCallback(
   result = DeleteJobMetadataFromMap(job_id);
   if (!result.Successful() &&
       result.status_code != SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST) {
-    IncrementAggregateMetric(job_metadata_map_failure_metric_,
-                             kJobMetadataMapDeleteJobMetadataFailureEventName);
+    IncrementMetric(job_metadata_map_failure_metric_,
+                    kJobMetadataMapFailureMetricName, kJobMetadataMapMethodName,
+                    kJobMetadataMapDeleteJobMetadataFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, prepare_job_context, result,
                       "Failed to remove job message metadata from the "
                       "map. Job id: %s",
@@ -454,9 +473,10 @@ ExecutionResult JobLifecycleHelper::InsertJobMessageMetadataToMap(
     auto result = DeleteJobMetadataFromMap(job_id);
     if (!result.Successful() &&
         result.status_code != SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST) {
-      IncrementAggregateMetric(
-          job_metadata_map_failure_metric_,
-          kJobMetadataMapDeleteJobMetadataFailureEventName);
+      IncrementMetric(job_metadata_map_failure_metric_,
+                      kJobMetadataMapFailureMetricName,
+                      kJobMetadataMapMethodName,
+                      kJobMetadataMapDeleteJobMetadataFailureEventName);
       SCP_ERROR_CONTEXT(kJobLifecycleHelper, prepare_job_context, result,
                         "Failed to remove job message metadata from the "
                         "map. Job id: %s",
@@ -472,8 +492,9 @@ ExecutionResult JobLifecycleHelper::InsertJobMessageMetadataToMap(
   auto result = job_message_metadata_map_.Insert(job_message_metadata_key_pair,
                                                  updated_job_message_metadata);
   if (!result.Successful()) {
-    IncrementAggregateMetric(job_metadata_map_failure_metric_,
-                             kJobMetadataMapInsertJobMetadataFailureEventName);
+    IncrementMetric(job_metadata_map_failure_metric_,
+                    kJobMetadataMapFailureMetricName, kJobMetadataMapMethodName,
+                    kJobMetadataMapInsertJobMetadataFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, prepare_job_context, result,
                       "Failed to prepare job due to inserting job message "
                       "metadata to the map failed. Job id: %s",
@@ -494,8 +515,9 @@ void JobLifecycleHelper::UpdateJobStatusCallbackForPrepareJob(
   const string& job_id = update_job_status_context.request->job_id();
   auto result = update_job_status_context.result;
   if (!result.Successful()) {
-    IncrementAggregateMetric(job_preparation_failure_metric_,
-                             kJobPreparationUpdateJobStatusFailureEventName);
+    IncrementMetric(job_preparation_failure_metric_,
+                    kJobPreparationFailureMetricName, kJobPreparationMethodName,
+                    kJobPreparationUpdateJobStatusFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, prepare_job_context, result,
                       "Failed to prepare job due to update job status "
                       "failure. Job id: %s",
@@ -527,9 +549,9 @@ void JobLifecycleHelper::MarkJobCompleted(
         mark_job_completed_context) noexcept {
   const string& job_id = mark_job_completed_context.request->job_id();
   if (job_id.empty()) {
-    IncrementAggregateMetric(
-        job_completion_failure_metric_,
-        kJobCompletionInvalidMarkJobCompletedFailureEventName);
+    IncrementMetric(job_completion_failure_metric_,
+                    kJobCompletionFailureMetricName, kJobCompletionMethodName,
+                    kJobCompletionInvalidMarkJobCompletedFailureEventName);
     auto execution_result =
         FailureExecutionResult(SC_JOB_LIFECYCLE_HELPER_MISSING_JOB_ID);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, mark_job_completed_context,
@@ -543,9 +565,9 @@ void JobLifecycleHelper::MarkJobCompleted(
   const JobStatus job_status = mark_job_completed_context.request->job_status();
   if (job_status != JobStatus::JOB_STATUS_SUCCESS &&
       job_status != JobStatus::JOB_STATUS_FAILURE) {
-    IncrementAggregateMetric(
-        job_completion_failure_metric_,
-        kJobCompletionInvalidMarkJobCompletedFailureEventName);
+    IncrementMetric(job_completion_failure_metric_,
+                    kJobCompletionFailureMetricName, kJobCompletionMethodName,
+                    kJobCompletionInvalidMarkJobCompletedFailureEventName);
     auto execution_result =
         FailureExecutionResult(SC_JOB_LIFECYCLE_HELPER_INVALID_JOB_STATUS);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, mark_job_completed_context,
@@ -578,8 +600,9 @@ void JobLifecycleHelper::GetJobByIdCallbackForMarkJobCompleted(
 
   auto result = get_job_by_id_context.result;
   if (!result.Successful()) {
-    IncrementAggregateMetric(job_completion_failure_metric_,
-                             kJobCompletionGetJobByIdFailureEventName);
+    IncrementMetric(job_completion_failure_metric_,
+                    kJobCompletionFailureMetricName, kJobCompletionMethodName,
+                    kJobCompletionGetJobByIdFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, mark_job_completed_context, result,
                       "Failed to mark job completed due to get job by id "
                       "failed. Job id: %s",
@@ -591,8 +614,9 @@ void JobLifecycleHelper::GetJobByIdCallbackForMarkJobCompleted(
 
   auto job_message_metadata_or = FindJobMetadataById(job_id);
   if (!job_message_metadata_or.Successful()) {
-    IncrementAggregateMetric(job_metadata_map_failure_metric_,
-                             kJobMetadataMapFindJobMetadataFailureEventName);
+    IncrementMetric(job_metadata_map_failure_metric_,
+                    kJobMetadataMapFailureMetricName, kJobMetadataMapMethodName,
+                    kJobMetadataMapFindJobMetadataFailureEventName);
     result = job_message_metadata_or.result();
     SCP_ERROR_CONTEXT(
         kJobLifecycleHelper, mark_job_completed_context, result,
@@ -638,8 +662,9 @@ void JobLifecycleHelper::UpdateJobStatusCallbackForMarkJobCompleted(
   const string& job_id = update_job_status_context.request->job_id();
   auto result = update_job_status_context.result;
   if (!result.Successful()) {
-    IncrementAggregateMetric(job_completion_failure_metric_,
-                             kJobCompletionUpdateJobStatusFailureEventName);
+    IncrementMetric(job_completion_failure_metric_,
+                    kJobCompletionFailureMetricName, kJobCompletionMethodName,
+                    kJobCompletionUpdateJobStatusFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, mark_job_completed_context, result,
                       "Failed to mark job completed due to update job status "
                       "failure. Job id: %s",
@@ -652,8 +677,9 @@ void JobLifecycleHelper::UpdateJobStatusCallbackForMarkJobCompleted(
   result = DeleteJobMetadataFromMap(job_id);
   if (!result.Successful() &&
       result.status_code != SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST) {
-    IncrementAggregateMetric(job_metadata_map_failure_metric_,
-                             kJobMetadataMapDeleteJobMetadataFailureEventName);
+    IncrementMetric(job_metadata_map_failure_metric_,
+                    kJobMetadataMapFailureMetricName, kJobMetadataMapMethodName,
+                    kJobMetadataMapDeleteJobMetadataFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, mark_job_completed_context, result,
                       "Failed to remove job message metadata from the "
                       "map. Job id: %s",
@@ -676,11 +702,13 @@ void JobLifecycleHelper::UpdateJobStatusCallbackForMarkJobCompleted(
         " Job id: %s",
         completed_time_in_milliseconds, processing_started_time_in_milliseconds,
         job_id.c_str());
-    IncrementAggregateMetric(job_completion_failure_metric_,
-                             kJobProcessingTimeErrorEventName);
+    IncrementMetric(job_completion_failure_metric_,
+                    kJobCompletionFailureMetricName, kJobCompletionMethodName,
+                    kJobProcessingTimeErrorEventName);
   } else {
-    RecordTimeInTimeAggregateMetric(job_processing_time_metric_,
-                                    processing_time_in_milliseconds);
+    RecordTimeMetric(job_processing_time_metric_, kJobProcessingTimeMetricName,
+                     kJobProcessingTimeMethodName,
+                     processing_time_in_milliseconds);
   }
   auto created_time_in_milliseconds =
       TimeUtil::TimestampToMilliseconds(*created_time);
@@ -693,18 +721,20 @@ void JobLifecycleHelper::UpdateJobStatusCallbackForMarkJobCompleted(
         " Job id: %s",
         processing_started_time_in_milliseconds, created_time_in_milliseconds,
         job_id.c_str());
-    IncrementAggregateMetric(job_completion_failure_metric_,
-                             kJobProcessingTimeErrorEventName);
+    IncrementMetric(job_completion_failure_metric_,
+                    kJobCompletionFailureMetricName, kJobCompletionMethodName,
+                    kJobProcessingTimeErrorEventName);
   } else {
-    RecordTimeInTimeAggregateMetric(job_waiting_time_metric_,
-                                    waiting_time_in_milliseconds);
+    RecordTimeMetric(job_waiting_time_metric_, kJobWaitingTimeMetricName,
+                     kJobWaitingTimeMethodName, waiting_time_in_milliseconds);
   }
-  IncrementAggregateMetric(job_completion_metric_,
-                           kJobCompletionSuccessEventName);
+  IncrementMetric(job_completion_metric_, kJobCompletionMetricName,
+                  kJobCompletionMethodName, kJobCompletionSuccessEventName);
   if (mark_job_completed_context.request->job_status() ==
       JobStatus::JOB_STATUS_FAILURE) {
-    IncrementAggregateMetric(job_completion_metric_,
-                             kJobCompletionJobStatusFailureEventName);
+    IncrementMetric(job_completion_metric_, kJobCompletionMetricName,
+                    kJobCompletionMethodName,
+                    kJobCompletionJobStatusFailureEventName);
   }
   mark_job_completed_context.response = make_shared<MarkJobCompletedResponse>();
   mark_job_completed_context.result = SuccessExecutionResult();
@@ -729,9 +759,9 @@ void JobLifecycleHelper::ReleaseJobForRetry(
         release_job_for_retry_context) noexcept {
   const string& job_id = release_job_for_retry_context.request->job_id();
   if (job_id.empty()) {
-    IncrementAggregateMetric(
-        job_release_failure_metric_,
-        kJobReleaseInvalidReleaseJobForRetryFailureEventName);
+    IncrementMetric(job_release_failure_metric_, kJobReleaseFailureMetricName,
+                    kJobReleaseMethodName,
+                    kJobReleaseInvalidReleaseJobForRetryFailureEventName);
     auto result =
         FailureExecutionResult(SC_JOB_LIFECYCLE_HELPER_MISSING_JOB_ID);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, release_job_for_retry_context,
@@ -747,9 +777,9 @@ void JobLifecycleHelper::ReleaseJobForRetry(
           .seconds();
   if (duration_before_release < kDefaultTimestampInSeconds ||
       duration_before_release > kMaximumVisibilityTimeoutInSeconds) {
-    IncrementAggregateMetric(
-        job_release_failure_metric_,
-        kJobReleaseInvalidReleaseJobForRetryFailureEventName);
+    IncrementMetric(job_release_failure_metric_, kJobReleaseFailureMetricName,
+                    kJobReleaseMethodName,
+                    kJobReleaseInvalidReleaseJobForRetryFailureEventName);
     auto result = FailureExecutionResult(
         SC_JOB_LIFECYCLE_HELPER_INVALID_DURATION_BEFORE_RELEASE);
     SCP_ERROR_CONTEXT(
@@ -764,8 +794,9 @@ void JobLifecycleHelper::ReleaseJobForRetry(
 
   auto job_message_metadata_or = FindJobMetadataById(job_id);
   if (!job_message_metadata_or.Successful()) {
-    IncrementAggregateMetric(job_metadata_map_failure_metric_,
-                             kJobMetadataMapFindJobMetadataFailureEventName);
+    IncrementMetric(job_metadata_map_failure_metric_,
+                    kJobMetadataMapFailureMetricName, kJobMetadataMapMethodName,
+                    kJobMetadataMapFindJobMetadataFailureEventName);
     auto result = job_message_metadata_or.result();
     SCP_ERROR(kJobLifecycleHelper, kZeroUuid, result,
               "Failed to release job for retry due to finding corresponding "
@@ -776,7 +807,8 @@ void JobLifecycleHelper::ReleaseJobForRetry(
     return;
   }
 
-  IncrementAggregateMetric(job_release_metric_, kJobReleaseEventName);
+  IncrementMetric(job_release_metric_, kJobReleaseMetricName,
+                  kJobReleaseMethodName, kJobReleaseEventName);
 
   auto get_job_by_id_request = make_shared<GetJobByIdRequest>();
   get_job_by_id_request->set_job_id(job_id);
@@ -800,8 +832,9 @@ void JobLifecycleHelper::GetJobByIdCallbackForReleaseJobForRetry(
 
   auto result = get_job_by_id_context.result;
   if (!result.Successful()) {
-    IncrementAggregateMetric(job_release_failure_metric_,
-                             kJobReleaseGetJobByIdFailureEventName);
+    IncrementMetric(job_release_failure_metric_, kJobReleaseFailureMetricName,
+                    kJobReleaseMethodName,
+                    kJobReleaseGetJobByIdFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, release_job_for_retry_context,
                       result,
                       "Failed to release job for retry due to get job by id "
@@ -816,9 +849,9 @@ void JobLifecycleHelper::GetJobByIdCallbackForReleaseJobForRetry(
   if (job_status != JobStatus::JOB_STATUS_CREATED &&
       job_status != JobStatus::JOB_STATUS_PROCESSING) {
     result = FailureExecutionResult(SC_JOB_LIFECYCLE_HELPER_INVALID_JOB_STATUS);
-    IncrementAggregateMetric(job_release_failure_metric_,
-
-                             kJobReleaseInvalidJobStatusFailureEventName);
+    IncrementMetric(job_release_failure_metric_, kJobReleaseFailureMetricName,
+                    kJobReleaseMethodName,
+                    kJobReleaseInvalidJobStatusFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, release_job_for_retry_context,
                       result,
                       "Failed to release job for retry due to invalid job "
@@ -829,9 +862,10 @@ void JobLifecycleHelper::GetJobByIdCallbackForReleaseJobForRetry(
     auto result = DeleteJobMetadataFromMap(job_id);
     if (!result.Successful() &&
         result.status_code != SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST) {
-      IncrementAggregateMetric(
-          job_metadata_map_failure_metric_,
-          kJobMetadataMapDeleteJobMetadataFailureEventName);
+      IncrementMetric(job_metadata_map_failure_metric_,
+                      kJobMetadataMapFailureMetricName,
+                      kJobMetadataMapMethodName,
+                      kJobMetadataMapDeleteJobMetadataFailureEventName);
       SCP_ERROR_CONTEXT(kJobLifecycleHelper, release_job_for_retry_context,
                         result,
                         "Failed to remove job message metadata from the "
@@ -870,9 +904,9 @@ void JobLifecycleHelper::UpdateJobStatusCallbackForReleaseJobForRetry(
   const string& job_id = update_job_status_context.request->job_id();
   auto result = update_job_status_context.result;
   if (!result.Successful()) {
-    IncrementAggregateMetric(job_release_failure_metric_,
-
-                             kJobReleaseUpdateJobStatusFailureEventName);
+    IncrementMetric(job_release_failure_metric_, kJobReleaseFailureMetricName,
+                    kJobReleaseMethodName,
+                    kJobReleaseUpdateJobStatusFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, release_job_for_retry_context,
                       result,
                       "Failed to release job for retry due to update job "
@@ -913,9 +947,9 @@ void JobLifecycleHelper::
   const string& job_id = release_job_for_retry_context.request->job_id();
   auto result = update_job_visibility_timeout_context.result;
   if (!result.Successful()) {
-    IncrementAggregateMetric(
-        job_release_failure_metric_,
-        kJobReleaseUpdateJobVisibilityTimeoutFailureEventName);
+    IncrementMetric(job_release_failure_metric_, kJobReleaseFailureMetricName,
+                    kJobReleaseMethodName,
+                    kJobReleaseUpdateJobVisibilityTimeoutFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, release_job_for_retry_context,
                       result,
                       "Failed to release job for retry due to update job "
@@ -929,8 +963,9 @@ void JobLifecycleHelper::
   result = DeleteJobMetadataFromMap(job_id);
   if (!result.Successful() &&
       result.status_code != SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST) {
-    IncrementAggregateMetric(job_metadata_map_failure_metric_,
-                             kJobMetadataMapDeleteJobMetadataFailureEventName);
+    IncrementMetric(job_metadata_map_failure_metric_,
+                    kJobMetadataMapFailureMetricName, kJobMetadataMapMethodName,
+                    kJobMetadataMapDeleteJobMetadataFailureEventName);
     SCP_ERROR_CONTEXT(kJobLifecycleHelper, release_job_for_retry_context,
                       result,
                       "Failed to remove job message metadata from the "
@@ -941,7 +976,8 @@ void JobLifecycleHelper::
     return;
   }
 
-  IncrementAggregateMetric(job_release_metric_, kJobReleaseSuccessEventName);
+  IncrementMetric(job_release_metric_, kJobReleaseEventName,
+                  kJobReleaseMethodName, kJobReleaseSuccessEventName);
   release_job_for_retry_context.response =
       make_shared<ReleaseJobForRetryResponse>();
   release_job_for_retry_context.result = SuccessExecutionResult();
@@ -970,9 +1006,10 @@ void JobLifecycleHelper::StartJobExtenderThread() noexcept {
     for (string job_id : job_ids) {
       auto job_message_metadata_or = FindJobMetadataById(job_id);
       if (!job_message_metadata_or.Successful()) {
-        IncrementAggregateMetric(
-            job_metadata_map_failure_metric_,
-            kJobMetadataMapFindJobMetadataFailureEventName);
+        IncrementMetric(job_metadata_map_failure_metric_,
+                        kJobMetadataMapFailureMetricName,
+                        kJobMetadataMapMethodName,
+                        kJobMetadataMapFindJobMetadataFailureEventName);
         SCP_ERROR(kJobLifecycleHelper, kZeroUuid,
                   job_message_metadata_or.result(),
                   "Failed to extend job due to finding corresponding job "
@@ -988,9 +1025,9 @@ void JobLifecycleHelper::StartJobExtenderThread() noexcept {
 
       const string& receipt_info = job_message_metadata.receipt_info();
       if (receipt_info.empty()) {
-        IncrementAggregateMetric(
-            job_extender_failure_metric_,
-            kJobMetadataMapMissingReceiptInfoFailureEventName);
+        IncrementMetric(job_extender_failure_metric_,
+                        kJobExtenderFailureMetricName, kJobExtenderMethodName,
+                        kJobExtenderMissingReceiptInfoFailureEventName);
         SCP_ERROR(
             kJobLifecycleHelper, kZeroUuid,
             FailureExecutionResult(
@@ -999,9 +1036,10 @@ void JobLifecycleHelper::StartJobExtenderThread() noexcept {
             job_id.c_str());
         auto result = job_message_metadata_map_.Erase(job_id);
         if (!result.Successful()) {
-          IncrementAggregateMetric(
-              job_metadata_map_failure_metric_,
-              kJobMetadataMapDeleteJobMetadataFailureEventName);
+          IncrementMetric(job_metadata_map_failure_metric_,
+                          kJobMetadataMapFailureMetricName,
+                          kJobMetadataMapMethodName,
+                          kJobMetadataMapDeleteJobMetadataFailureEventName);
           SCP_WARNING(kJobLifecycleHelper, kZeroUuid,
                       "Failed to remove job message metadata from the map. "
                       "Job id: %s",
@@ -1016,9 +1054,9 @@ void JobLifecycleHelper::StartJobExtenderThread() noexcept {
       auto get_job_by_id_response =
           job_client_->GetJobByIdSync(*get_job_by_id_request);
       if (!get_job_by_id_response.Successful()) {
-        IncrementAggregateMetric(job_extender_failure_metric_,
-
-                                 kJobExtenderGetJobByIdFailureEventName);
+        IncrementMetric(job_extender_failure_metric_,
+                        kJobExtenderFailureMetricName, kJobExtenderMethodName,
+                        kJobExtenderGetJobByIdFailureEventName);
         SCP_ERROR(
             kJobLifecycleHelper, kZeroUuid, get_job_by_id_response.result(),
             "Failed to extend job due to get job by id failed. Job id: %s",
@@ -1034,9 +1072,10 @@ void JobLifecycleHelper::StartJobExtenderThread() noexcept {
         auto result = DeleteJobMetadataFromMap(job_id);
         if (!result.Successful() &&
             result.status_code != SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST) {
-          IncrementAggregateMetric(
-              job_metadata_map_failure_metric_,
-              kJobMetadataMapDeleteJobMetadataFailureEventName);
+          IncrementMetric(job_metadata_map_failure_metric_,
+                          kJobMetadataMapFailureMetricName,
+                          kJobMetadataMapMethodName,
+                          kJobMetadataMapDeleteJobMetadataFailureEventName);
           SCP_ERROR(kJobLifecycleHelper, kZeroUuid, result,
                     "Failed to remove job message metadata from the "
                     "map. Job id: %s",
@@ -1055,9 +1094,9 @@ void JobLifecycleHelper::StartJobExtenderThread() noexcept {
           job_client_->UpdateJobVisibilityTimeoutSync(
               *update_visibility_timeout_request);
       if (!update_visibility_timeout_response.Successful()) {
-        IncrementAggregateMetric(
-            job_extender_failure_metric_,
-            kJobExtenderUpdateJobVisibilityTimeoutFailureEventName);
+        IncrementMetric(job_extender_failure_metric_,
+                        kJobExtenderFailureMetricName, kJobExtenderMethodName,
+                        kJobExtenderUpdateJobVisibilityTimeoutFailureEventName);
         SCP_ERROR(kJobLifecycleHelper, kZeroUuid,
                   update_visibility_timeout_response.result(),
                   "Failed to extend job due to update job visibility timeout "
@@ -1097,8 +1136,9 @@ ExecutionResultOr<JobMessageMetadata> JobLifecycleHelper::FindJobMetadataById(
 
   const string& receipt_info = job_message_metadata.receipt_info();
   if (receipt_info.empty()) {
-    IncrementAggregateMetric(job_metadata_map_failure_metric_,
-                             kJobMetadataMapMissingReceiptInfoFailureEventName);
+    IncrementMetric(job_metadata_map_failure_metric_,
+                    kJobMetadataMapFailureMetricName, kJobMetadataMapMethodName,
+                    kJobMetadataMapMissingReceiptInfoFailureEventName);
     result =
         FailureExecutionResult(SC_JOB_LIFECYCLE_HELPER_MISSING_RECEIPT_INFO);
     SCP_ERROR(
@@ -1108,9 +1148,10 @@ ExecutionResultOr<JobMessageMetadata> JobLifecycleHelper::FindJobMetadataById(
         job_id.c_str());
     auto erase_result = job_message_metadata_map_.Erase(job_id);
     if (!erase_result.Successful()) {
-      IncrementAggregateMetric(
-          job_metadata_map_failure_metric_,
-          kJobMetadataMapDeleteJobMetadataFailureEventName);
+      IncrementMetric(job_metadata_map_failure_metric_,
+                      kJobMetadataMapFailureMetricName,
+                      kJobMetadataMapMethodName,
+                      kJobMetadataMapDeleteJobMetadataFailureEventName);
       SCP_WARNING(kJobLifecycleHelper, kZeroUuid,
                   "Failed to remove job message metadata from the map. "
                   "Job id: %s",
@@ -1264,13 +1305,14 @@ ExecutionResult JobLifecycleHelper::InitJobExtenderMetrics() noexcept {
       MetricUtils::CreateMetricLabelsWithComponentSignature(
           kJobLifecycleHelper, kJobExtenderMethodName);
   auto job_extender_failure_metric_info = MetricDefinition(
-      kJobExtenderFailureEventName, MetricUnit::METRIC_UNIT_COUNT,
+      kJobExtenderFailureMetricName, MetricUnit::METRIC_UNIT_COUNT,
       options_.metric_options().metric_namespace(),
       job_extender_metric_labels_);
   job_extender_failure_metric_ =
       metric_instance_factory_->ConstructAggregateMetricInstance(
           std::move(job_extender_failure_metric_info),
           {kJobExtenderGetJobByIdFailureEventName,
+           kJobExtenderMissingReceiptInfoFailureEventName,
            kJobExtenderUpdateJobVisibilityTimeoutFailureEventName});
   RETURN_IF_FAILURE(job_extender_failure_metric_->Init());
   return SuccessExecutionResult();
@@ -1349,6 +1391,70 @@ void JobLifecycleHelper::RecordTimeInTimeAggregateMetric(
     shared_ptr<TimeAggregateMetricInterface> metric,
     const TimeDuration& time_duration) noexcept {
   metric->RecordDuration(time_duration);
+}
+
+void JobLifecycleHelper::IncrementRemoteMetric(
+    const string& metric_name, const string& method_name,
+    const string& event_name) noexcept {
+  auto labels = MetricUtils::CreateMetricLabelsWithComponentSignature(
+      kJobLifecycleHelper, method_name);
+  labels[kRemoteMetricLabelEventName] = std::move(event_name);
+
+  PutMetricsRequest request;
+  auto counter_metric = request.add_metrics();
+  counter_metric->set_name(kRemoteMetricNamePrefix + metric_name);
+  counter_metric->set_value("1");
+  counter_metric->set_type(MetricType::METRIC_TYPE_COUNTER);
+  *counter_metric->mutable_labels() = {labels.begin(), labels.end()};
+
+  if (remote_metric_client_->PutMetricsSync(request).Successful()) {
+    SCP_ERROR(kJobLifecycleHelper, kZeroUuid,
+              FailureExecutionResult(SC_UNKNOWN),
+              "Failed to increment remote metric");
+  }
+}
+
+void JobLifecycleHelper::RecordRemoteTimeMetric(
+    const string& metric_name, const string& method_name,
+    const TimeDuration& time_duration) noexcept {
+  auto labels = MetricUtils::CreateMetricLabelsWithComponentSignature(
+      kJobLifecycleHelper, method_name);
+
+  PutMetricsRequest request;
+  auto counter_metric = request.add_metrics();
+  counter_metric->set_name(kRemoteMetricNamePrefix + metric_name);
+  counter_metric->set_value(std::to_string(time_duration));
+  counter_metric->set_unit(MetricUnit::METRIC_UNIT_MILLISECONDS);
+  counter_metric->set_type(MetricType::METRIC_TYPE_HISTOGRAM);
+  *counter_metric->mutable_labels() = {labels.begin(), labels.end()};
+
+  if (remote_metric_client_->PutMetricsSync(request).Successful()) {
+    SCP_ERROR(kJobLifecycleHelper, kZeroUuid,
+              FailureExecutionResult(SC_UNKNOWN),
+              "Failed to increment remote time metric");
+  }
+}
+
+void JobLifecycleHelper::IncrementMetric(
+    shared_ptr<cpio::AggregateMetricInterface> metric,
+    const string& metric_name, const string& method_name,
+    const string& event_name) noexcept {
+  if (remote_metric_client_ == nullptr) {
+    IncrementAggregateMetric(metric, event_name);
+  } else {
+    IncrementRemoteMetric(metric_name, method_name, event_name);
+  }
+}
+
+void JobLifecycleHelper::RecordTimeMetric(
+    shared_ptr<TimeAggregateMetricInterface> metric, const string& metric_name,
+    const string& method_name,
+    const google::scp::core::TimeDuration& time_duration) noexcept {
+  if (remote_metric_client_ == nullptr) {
+    RecordTimeInTimeAggregateMetric(metric, time_duration);
+  } else {
+    RecordRemoteTimeMetric(metric_name, method_name, time_duration);
+  }
 }
 
 }  // namespace google::scp::cpio

@@ -32,11 +32,13 @@ java_library(
         "//java/external:guice",
         "//java/external:protobuf_java",
         "//java/external:tink",
+        "//java/external:tink-gcpkms",
         "//javatests/com/google/kms:LocalGcpKmsClient",
         "//javatests/com/google/kms:LocalGcpKmsServer",
         "//javatests/com/google/kms:LocalKmsServerContainer",
         "//javatests/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:annotations",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:spanner_key_db_test_util",
     ],
 )

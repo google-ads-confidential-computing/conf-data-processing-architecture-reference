@@ -17,15 +17,19 @@
 package com.google.scp.shared.clients.configclient.gcp;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
+import javax.annotation.Nullable;
 
 /** Represents credential config required for IAM impersonation. */
 @AutoValue
 @JsonDeserialize(builder = CredentialConfig.Builder.class)
 @JsonSerialize(as = CredentialConfig.class)
+@JsonInclude(Include.NON_NULL) // Only serialize/deserialize non-null fields
 public abstract class CredentialConfig {
 
   /** Returns an instance of the {@code CredentialConfig.Builder} class. */
@@ -61,6 +65,7 @@ public abstract class CredentialConfig {
 
   /** Returns the service account impersonation URL. */
   @JsonProperty("service_account_impersonation_url")
+  @Nullable
   public abstract String serviceAccountImpersonationUrl();
 
   /** Builder class for the {@code CredentialsConfig} class. */

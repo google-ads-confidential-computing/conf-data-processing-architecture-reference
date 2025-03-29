@@ -37,6 +37,7 @@ java_test(
         "//java/external:aws_core",
         "//java/external:aws_kms",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:mockito",
         "//java/external:protobuf_java",

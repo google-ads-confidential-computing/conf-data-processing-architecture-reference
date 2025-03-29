@@ -102,7 +102,6 @@ container_image(
         "--target",
         "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PublicKeyService",
     ],
-    env = {"BUILD_TIME": "$(KS_BUILD_TIME)"},
     files = [],
     tags = ["manual"],
     tars = [
@@ -176,7 +175,6 @@ container_image(
         "--target",
         "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.EncryptionKeyService",
     ],
-    env = {"BUILD_TIME": "$(KS_BUILD_TIME)"},
     files = [],
     tags = ["manual"],
     tars = [

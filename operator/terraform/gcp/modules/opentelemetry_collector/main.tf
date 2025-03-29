@@ -32,7 +32,6 @@ resource "google_project_iam_member" "collector_service_account_monitoring_viewe
   member  = "serviceAccount:${local.collector_service_account_email}"
 }
 
-
 resource "google_project_iam_member" "collector_service_account_metric_writer_iam" {
   project = var.project_id
   role    = "roles/monitoring.metricWriter"

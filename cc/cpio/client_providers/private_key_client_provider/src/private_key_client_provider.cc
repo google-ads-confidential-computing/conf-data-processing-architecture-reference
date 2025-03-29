@@ -491,6 +491,26 @@ void PrivateKeyClientProvider::OnDecryptCallback(
   }
 }
 
+static shared_ptr<KmsClientOptions> CreateKmsClientOptions(
+    shared_ptr<PrivateKeyClientOptions> options) {
+  auto kms_client_options = make_shared<KmsClientOptions>();
+  // Client cache config
+  kms_client_options->enable_gcp_kms_client_cache =
+      options->enable_gcp_kms_client_cache;
+  kms_client_options->gcp_kms_client_cache_lifetime =
+      options->gcp_kms_client_cache_lifetime;
+
+  // RPC retry config
+  kms_client_options->enable_gcp_kms_client_retries =
+      options->enable_gcp_kms_client_retries;
+  kms_client_options->gcp_kms_client_retry_initial_interval =
+      options->gcp_kms_client_retry_initial_interval;
+  kms_client_options->gcp_kms_client_retry_total_retries =
+      options->gcp_kms_client_retry_total_retries;
+
+  return kms_client_options;
+}
+
 shared_ptr<PrivateKeyClientProviderInterface>
 PrivateKeyClientProviderFactory::Create(
     const shared_ptr<PrivateKeyClientOptions>& options,
@@ -500,11 +520,7 @@ PrivateKeyClientProviderFactory::Create(
     const shared_ptr<AuthTokenProviderInterface>& auth_token_provider,
     const shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
     const shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor) {
-  auto kms_client_options = make_shared<KmsClientOptions>();
-  kms_client_options->enable_gcp_kms_client_cache =
-      options->enable_gcp_kms_client_cache;
-  kms_client_options->gcp_kms_client_cache_lifetime =
-      options->gcp_kms_client_cache_lifetime;
+  auto kms_client_options = CreateKmsClientOptions(options);
   auto kms_client_provider = KmsClientProviderFactory::Create(
       std::move(kms_client_options), role_credentials_provider,
       io_async_executor, cpu_async_executor);

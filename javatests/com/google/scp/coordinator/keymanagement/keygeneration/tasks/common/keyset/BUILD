@@ -35,6 +35,7 @@ java_test(
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/shared/util",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
     ],
 )

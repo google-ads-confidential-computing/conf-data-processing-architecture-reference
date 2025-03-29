@@ -50,6 +50,7 @@ java_library(
         "//java/external:protobuf_java",
         "//java/external:testcontainers",
         "//java/external:tink",
+        "//java/external:tink-gcpkms",
         "//javatests/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/testing",
         "//javatests/com/google/scp/shared/testutils/aws",
     ],

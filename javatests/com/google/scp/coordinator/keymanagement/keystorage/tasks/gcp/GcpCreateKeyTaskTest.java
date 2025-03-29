@@ -21,20 +21,19 @@ import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagemen
 import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.KEY_LIMIT;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.acai.Acai;
 import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KeyTemplates;
 import com.google.crypto.tink.KeysetHandle;
+import com.google.crypto.tink.KmsClient;
 import com.google.crypto.tink.aead.AeadConfig;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
+import com.google.scp.coordinator.keymanagement.testutils.FakeKmsClient;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
@@ -48,45 +47,50 @@ import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public class GcpCreateKeyTaskTest {
   private static final String KEK_URI = "gcp-kms://kek-uri";
-  private static final byte[] TEST_PUBLIC_KEY = "test private key split".getBytes();
-  private static final byte[] TEST_PRIVATE_KEY = "test public key".getBytes();
+  private static final String KEK_BASE_URI = "gcp-kms://$setName$-kek-uri";
+  private static final String TEST_PUBLIC_KEY = "test private key split";
+  private static final String TEST_PRIVATE_KEY = "test public key";
   private static Aead TEST_AEAD;
+  private static KmsClient kmsClient;
+  private static String keyEncryptionKeyUri;
 
   @Rule public final Acai acai = new Acai(GcpKeyStorageTestEnv.class);
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Inject private InMemoryKeyDb keyDb;
-  @Mock Aead mockAead;
 
   @BeforeClass
   public static void setUp() throws Exception {
+    keyEncryptionKeyUri = KEK_URI.replace("$setName$", "");
+    kmsClient = new FakeKmsClient();
     AeadConfig.register();
     TEST_AEAD = KeysetHandle.generateNew(KeyTemplates.get("AES128_GCM")).getPrimitive(Aead.class);
   }
 
-  @Test
-  public void createKey_success() throws ServiceException, GeneralSecurityException {
-    when(mockAead.decrypt(any(), any())).thenReturn("decryptSuccessful".getBytes());
-    when(mockAead.encrypt(any(), any())).thenReturn("encryptSuccessful".getBytes());
-    var encryptedPrivateKeySplit = toBase64("12345");
-    CreateKeyTask taskWithMock = new GcpCreateKeyTask(keyDb, mockAead, KEK_URI);
+  public void createKey_success_base(String keyEncryptionKeyUri, String baseUrl)
+      throws ServiceException, GeneralSecurityException {
+    String publicKey = "123456";
+    String privateKeySplit = "privateKeySplit";
+    var encryptedPrivateKeySplit =
+        toBase64AndEncodeWithAead(
+            privateKeySplit, kmsClient.getAead(keyEncryptionKeyUri), publicKey);
+    CreateKeyTask taskWithMock = new GcpCreateKeyTask(keyDb, kmsClient, baseUrl);
     String keyId = "asdf";
     var creationTime = Instant.now().toEpochMilli();
     var expirationTime = Instant.now().plus(1, ChronoUnit.DAYS).toEpochMilli();
     EncryptionKey key =
         FakeEncryptionKey.create().toBuilder()
             .setKeyId(keyId)
-            .setPublicKey("67890")
             .setExpirationTime(expirationTime)
             .setCreationTime(creationTime)
+            .setKeyEncryptionKeyUri(keyEncryptionKeyUri)
+            .setPublicKeyMaterial(toBase64(publicKey))
             .build();
-
     taskWithMock.createKey(key, encryptedPrivateKeySplit);
 
     com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
@@ -98,32 +102,33 @@ public class GcpCreateKeyTaskTest {
     assertThat(resultPublic.getCreationTime()).isEqualTo(creationTime);
     assertThat(resultPublic.getExpirationTime()).isEqualTo(expirationTime);
     assertThat(resultPrivate.getKeyId()).isEqualTo(keyId);
-    assertThat(resultPrivate.getJsonEncodedKeyset()).isEqualTo(toBase64("encryptSuccessful"));
+    byte[] decodedKeys =
+        decodeAndDecryptWithAead(resultPrivate.getJsonEncodedKeyset(), keyEncryptionKeyUri);
+    assertThat(decodedKeys).isEqualTo(privateKeySplit.getBytes());
     assertThat(resultPrivate.getExpirationTime()).isEqualTo(expirationTime);
     assertThat(resultPrivate.getCreationTime()).isEqualTo(creationTime);
-    assertThat(resultPrivate.getKeyEncryptionKeyUri()).isEqualTo(KEK_URI);
+    assertThat(resultPrivate.getKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
     assertThat(resultPrivate.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(key.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri());
     // Test data has 2 keysplitdata items, so the new one would be after
     assertThat(resultPrivate.getKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
-        .isEqualTo(KEK_URI);
+        .isEqualTo(keyEncryptionKeyUri);
   }
 
-  @Test
-  public void createKey_successOverwrite() throws ServiceException, GeneralSecurityException {
-    when(mockAead.decrypt(any(), any())).thenReturn("decryptSuccessful".getBytes());
-    when(mockAead.encrypt(any(), any())).thenReturn("encryptSuccessful".getBytes());
-    CreateKeyTask taskWithMock = new GcpCreateKeyTask(keyDb, mockAead, KEK_URI);
+  public void createKey_successOverwrite_base(String keyEncryptionKeyUri, String baseUrl)
+      throws ServiceException, GeneralSecurityException {
+    CreateKeyTask taskWithMock = new GcpCreateKeyTask(keyDb, kmsClient, baseUrl);
     String keyId = "asdf";
     var creationTime = 500L;
-    var split1 = toBase64("12345");
-    var split2 = toBase64("67890");
+    var split1 = toBase64AndEncodeWithAead("12345", kmsClient.getAead(keyEncryptionKeyUri), "123");
+    var split2 = toBase64AndEncodeWithAead("67890", kmsClient.getAead(keyEncryptionKeyUri), "123");
     EncryptionKey key1 =
         EncryptionKey.newBuilder()
             .setKeyId(keyId)
             .setPublicKey("")
             .setExpirationTime(0L)
             .setCreationTime(creationTime)
+            .setPublicKeyMaterial(toBase64("123"))
             .build();
     EncryptionKey key2 =
         EncryptionKey.newBuilder()
@@ -131,6 +136,7 @@ public class GcpCreateKeyTaskTest {
             .setPublicKey("")
             .setExpirationTime(0L)
             .setCreationTime(creationTime)
+            .setPublicKeyMaterial(toBase64("123"))
             .build();
 
     taskWithMock.createKey(key1, split1);
@@ -140,32 +146,59 @@ public class GcpCreateKeyTaskTest {
         result = keyDb.getKey(keyId);
     assertThat(result.getKeyId()).isEqualTo(keyId);
     assertThat(result.getPublicKey()).isEqualTo(key2.getPublicKey());
-    assertThat(result.getJsonEncodedKeyset()).isEqualTo(toBase64("encryptSuccessful"));
+    assertThat(decodeAndDecryptWithAead(result.getJsonEncodedKeyset(), keyEncryptionKeyUri))
+        .isEqualTo("67890".getBytes());
     assertThat(result.getCreationTime()).isEqualTo(creationTime);
     assertThat(result.getExpirationTime()).isEqualTo(key2.getExpirationTime());
   }
 
   @Test
-  public void createKey_databaseException() throws GeneralSecurityException {
-    when(mockAead.decrypt(any(), any())).thenReturn("decryptSuccessful".getBytes());
-    when(mockAead.encrypt(any(), any())).thenReturn("encryptSuccessful".getBytes());
-    CreateKeyTask taskWithMock = new GcpCreateKeyTask(keyDb, mockAead, KEK_URI);
-    EncryptionKey key =
-        EncryptionKey.newBuilder().setKeyId("asdf").setPublicKey("").setExpirationTime(0L).build();
-    keyDb.setServiceException(new ServiceException(INTERNAL, SERVICE_ERROR.name(), "error"));
+  public void createKey_success() throws ServiceException, GeneralSecurityException {
+    this.createKey_success_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
+  }
 
+  @Test
+  public void createKey_disableKeySetAcl_success()
+      throws ServiceException, GeneralSecurityException {
+    this.createKey_success_base(KEK_URI, KEK_URI);
+  }
+
+  @Test
+  public void createKey_successOverwrite() throws ServiceException, GeneralSecurityException {
+    this.createKey_successOverwrite_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
+  }
+
+  @Test
+  public void createKey_successOverwrite_disableKeySetAcl()
+      throws ServiceException, GeneralSecurityException {
+    this.createKey_successOverwrite_base(KEK_URI, KEK_URI);
+  }
+
+  @Test
+  public void createKey_databaseException() throws GeneralSecurityException {
+    CreateKeyTask taskWithMock = new GcpCreateKeyTask(keyDb, kmsClient, KEK_URI);
+    EncryptionKey key =
+        EncryptionKey.newBuilder()
+            .setKeyId("asdf")
+            .setPublicKey(toBase64(""))
+            .setExpirationTime(0L)
+            .build();
+    keyDb.setServiceException(new ServiceException(INTERNAL, SERVICE_ERROR.name(), "error"));
     ServiceException ex =
-        assertThrows(ServiceException.class, () -> taskWithMock.createKey(key, toBase64("123")));
+        assertThrows(
+            ServiceException.class,
+            () ->
+                taskWithMock.createKey(
+                    key,
+                    toBase64AndEncodeWithAead("123", kmsClient.getAead(keyEncryptionKeyUri), "")));
 
     assertThat(ex.getErrorCode()).isEqualTo(INTERNAL);
-    verify(mockAead).decrypt(any(), any());
   }
 
   @Test
   public void createKey_validationException() throws ServiceException, GeneralSecurityException {
-    when(mockAead.decrypt(any(), any())).thenThrow(new GeneralSecurityException());
     com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask taskWithMock =
-        new GcpCreateKeyTask(keyDb, mockAead, KEK_URI);
+        new GcpCreateKeyTask(keyDb, kmsClient, KEK_URI);
     EncryptionKey key =
         EncryptionKey.newBuilder()
             .setKeyId("myName")
@@ -179,14 +212,12 @@ public class GcpCreateKeyTaskTest {
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
     assertThat(ex.getErrorCode()).isEqualTo(Code.INVALID_ARGUMENT);
     assertThat(keyDb.getActiveKeys(5).size()).isEqualTo(0);
-    verify(mockAead).decrypt(any(), any());
   }
 
   @Test
   public void createKey_missingPrivateKeyException()
       throws ServiceException, GeneralSecurityException {
-    when(mockAead.decrypt(any(), any())).thenReturn("decryptSuccessful".getBytes());
-    CreateKeyTask taskWithMock = new GcpCreateKeyTask(keyDb, mockAead, KEK_URI);
+    CreateKeyTask taskWithMock = new GcpCreateKeyTask(keyDb, kmsClient, KEK_URI);
     EncryptionKey key =
         EncryptionKey.newBuilder()
             .setKeyId("myName")
@@ -199,28 +230,40 @@ public class GcpCreateKeyTaskTest {
 
     assertThat(ex.getErrorCode()).isEqualTo(Code.INVALID_ARGUMENT);
     assertThat(keyDb.getActiveKeys(5).size()).isEqualTo(0);
-    verify(mockAead, never()).decrypt(any(), any());
   }
 
-  @Test
-  public void createKey_happyInput_createsExpected() throws Exception {
+  public void createKey_happyInput_createsExpected_base(String keyEncryptionKeyUri, String baseUrl)
+      throws Exception {
     // Given
     var encryptedPrivateKeyWithAssociatedPublicKey =
-        Base64.getEncoder().encodeToString(TEST_AEAD.encrypt(TEST_PUBLIC_KEY, TEST_PRIVATE_KEY));
+        toBase64AndEncodeWithAead(
+            TEST_PRIVATE_KEY, kmsClient.getAead(keyEncryptionKeyUri), TEST_PUBLIC_KEY);
     var key =
         FakeEncryptionKey.create().toBuilder()
-            .setPublicKeyMaterial(Base64.getEncoder().encodeToString(TEST_PRIVATE_KEY))
+            .setPublicKeyMaterial(toBase64(TEST_PUBLIC_KEY))
             .build();
 
     // When
-    var task = new GcpCreateKeyTask(keyDb, TEST_AEAD, KEK_URI);
+    var task = new GcpCreateKeyTask(keyDb, kmsClient, baseUrl);
     task.createKey(key, encryptedPrivateKeyWithAssociatedPublicKey);
 
     // Then
     var storedKey = keyDb.getKey(key.getKeyId());
     var storedPrivateKey =
-        TEST_AEAD.decrypt(Base64.getDecoder().decode(storedKey.getJsonEncodedKeyset()), null);
-    assertThat(storedPrivateKey).isEqualTo(TEST_PUBLIC_KEY);
+        decodeAndDecryptWithAead(storedKey.getJsonEncodedKeyset(), keyEncryptionKeyUri);
+    assertThat(storedPrivateKey).isEqualTo(TEST_PRIVATE_KEY.getBytes());
+  }
+
+  @Test
+  public void createKey_happyInput_createsExpected()
+      throws ServiceException, GeneralSecurityException {
+    this.createKey_successOverwrite_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
+  }
+
+  @Test
+  public void createKey_happyInput_createsExpected_disableKeySetAcl()
+      throws ServiceException, GeneralSecurityException {
+    this.createKey_successOverwrite_base(KEK_URI, KEK_URI);
   }
 
   @Test
@@ -228,14 +271,14 @@ public class GcpCreateKeyTaskTest {
     // Given
     var encryptedPrivateKeyWithAssociatedPublicKey =
         Base64.getEncoder()
-            .encodeToString(TEST_AEAD.encrypt(TEST_PUBLIC_KEY, "mismatch".getBytes()));
+            .encodeToString(TEST_AEAD.encrypt(TEST_PUBLIC_KEY.getBytes(), "mismatch".getBytes()));
     var key =
         FakeEncryptionKey.create().toBuilder()
-            .setPublicKeyMaterial(Base64.getEncoder().encodeToString(TEST_PRIVATE_KEY))
+            .setPublicKeyMaterial(Base64.getEncoder().encodeToString(TEST_PRIVATE_KEY.getBytes()))
             .build();
 
     // When
-    var task = new GcpCreateKeyTask(keyDb, TEST_AEAD, KEK_URI);
+    var task = new GcpCreateKeyTask(keyDb, kmsClient, KEK_URI);
     ThrowingRunnable when = () -> task.createKey(key, encryptedPrivateKeyWithAssociatedPublicKey);
 
     // Then
@@ -246,5 +289,17 @@ public class GcpCreateKeyTaskTest {
   /** Small helper function for generating valid base64 from a string literal. */
   private static String toBase64(String input) {
     return Base64.getEncoder().encodeToString(input.getBytes());
+  }
+
+  private static String toBase64AndEncodeWithAead(String input, Aead aead, String data)
+      throws GeneralSecurityException {
+    return Base64.getEncoder().encodeToString(aead.encrypt(input.getBytes(), data.getBytes()));
+  }
+
+  private static byte[] decodeAndDecryptWithAead(String input, String keyEncryptionKeyUri)
+      throws GeneralSecurityException {
+    return kmsClient
+        .getAead(keyEncryptionKeyUri)
+        .decrypt(Base64.getDecoder().decode(input), new byte[0]);
   }
 }

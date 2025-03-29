@@ -19,7 +19,6 @@ package com.google.scp.coordinator.keymanagement.keystorage.service.gcp;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import static com.google.scp.shared.api.model.Code.OK;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
@@ -28,12 +27,13 @@ import static org.mockito.Mockito.when;
 import com.google.acai.Acai;
 import com.google.cloud.functions.HttpRequest;
 import com.google.cloud.functions.HttpResponse;
-import com.google.crypto.tink.Aead;
+import com.google.crypto.tink.KmsClient;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keystorage.service.common.KeyStorageService;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.GetDataKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
+import com.google.scp.coordinator.keymanagement.testutils.FakeKmsClient;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -60,17 +60,20 @@ public final class CreateKeyRequestHandlerTest {
 
   @Mock private HttpRequest httpRequest;
   @Mock private HttpResponse httpResponse;
-  @Mock Aead mockAead;
   // Unused in GCP implementation.
   @Mock GetDataKeyTask getDataKeyTask;
 
   private BufferedWriter writer;
   private CreateKeyRequestHandler requestHandler;
+  private KmsClient kmsClient;
 
   @Before
   public void before() throws IOException {
+    kmsClient = new FakeKmsClient();
     KeyStorageService keyStorageService =
-        new KeyStorageService(new GcpCreateKeyTask(keyDb, mockAead, "URI"), getDataKeyTask);
+        new KeyStorageService(
+            new GcpCreateKeyTask(keyDb, kmsClient, "fake-kms://$setName$_fake_key_b"),
+            getDataKeyTask);
     requestHandler = new CreateKeyRequestHandler(keyStorageService);
     writer = new BufferedWriter(new StringWriter());
     when(httpResponse.getWriter()).thenReturn(writer);
@@ -89,11 +92,16 @@ public final class CreateKeyRequestHandlerTest {
     String encryptionKeyType = "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT";
     String publicKeysetHandle = "myPublicKeysetHandle";
     String publicKeyMaterial = Base64.getEncoder().encodeToString("myPublicKeyMaterial".getBytes());
-    String privateKeySplit = Base64.getEncoder().encodeToString("myPrivateKeySplit".getBytes());
+    String privateKeySplit =
+        Base64.getEncoder()
+            .encodeToString(
+                kmsClient
+                    .getAead("fake-kms://_fake_key_b")
+                    .encrypt("myPrivateKeySplit".getBytes(), "myPublicKeyMaterial".getBytes()));
     String creationTime = "0";
     String expirationTime = "0";
     String testKeyData =
-        "{\"publicKeySignature\": \"a\", \"keyEncryptionKeyUri\": \"b\", \"keyMaterial\": \"c\"}";
+        "{\"publicKeySignature\": \"a\", \"keyEncryptionKeyUri\": \"fake-kms://_fake_key_b\", \"keyMaterial\": \"c\"}";
     String keyData = "[" + testKeyData + "," + testKeyData + "]";
     String jsonRequest =
         "{\"keyId\":\""
@@ -117,17 +125,18 @@ public final class CreateKeyRequestHandlerTest {
             + keyData
             + "}}";
     setRequestBody(jsonRequest);
-    when(mockAead.decrypt("myPrivateKeySplit".getBytes(), "myPublicKeyMaterial".getBytes()))
-        .thenReturn("decryptSuccessful".getBytes());
-    when(mockAead.encrypt("decryptSuccessful".getBytes(), new byte[0]))
-        .thenReturn("validatedKeySplit".getBytes());
 
     requestHandler.handleRequest(httpRequest, httpResponse);
 
     writer.flush();
     verify(httpResponse).setStatusCode(eq(OK.getHttpStatusCode()));
-    assertThat(getPrivateKey(keyId).getJsonEncodedKeyset())
-        .isEqualTo(Base64.getEncoder().encodeToString("validatedKeySplit".getBytes()));
+    byte[] decodedKeys =
+        kmsClient
+            .getAead("fake-kms://_fake_key_b")
+            .decrypt(
+                Base64.getDecoder().decode(getPrivateKey(keyId).getJsonEncodedKeyset()),
+                new byte[0]);
+    assertThat(decodedKeys).isEqualTo("myPrivateKeySplit".getBytes());
   }
 
   @Test
@@ -162,7 +171,6 @@ public final class CreateKeyRequestHandlerTest {
             + expirationTime
             + "}}";
     setRequestBody(jsonRequest);
-    lenient().when(mockAead.decrypt(any(), any())).thenReturn("decryptSuccessful".getBytes());
     when(httpRequest.getMethod()).thenReturn("PUT");
 
     requestHandler.handleRequest(httpRequest, httpResponse);

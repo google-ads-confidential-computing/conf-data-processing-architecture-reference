@@ -126,7 +126,11 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
     assertThat(key.getCreationTime()).isIn(Range.closed(now - 1000, now));
 
     // Must have expected expiration time
-    var dayInMilli = Instant.now().plus(expectedExpiryInDays, ChronoUnit.DAYS).plus(KEY_REFRESH_WINDOW).toEpochMilli();
+    var dayInMilli =
+        Instant.now()
+            .plus(expectedExpiryInDays, ChronoUnit.DAYS)
+            .plus(KEY_REFRESH_WINDOW)
+            .toEpochMilli();
     assertThat(key.getExpirationTime()).isIn(Range.closed(dayInMilli - 1000, dayInMilli));
 
     // Must match expected ttl
@@ -309,5 +313,12 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
               dataKey, encryptedKeySplit, encryptionKey.getPublicKeyMaterial()));
     }
     return splits.build();
+  }
+
+  @Test
+  public void create_differentTinkTemplates_successfullyReconstructExpectedPrimitives()
+      throws Exception {
+    super.create_differentTinkTemplates_successfullyReconstructExpectedPrimitives(
+        keyEncryptionKeyAead);
   }
 }

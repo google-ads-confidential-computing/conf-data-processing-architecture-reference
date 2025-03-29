@@ -24,6 +24,7 @@
 #include "cc/cpio/client_providers/job_client_provider/src/error_codes.h"
 #include "core/interface/async_context.h"
 #include "core/test/utils/conditional_wait.h"
+#include "core/test/utils/proto_test_utils.h"
 #include "core/test/utils/scp_test_base.h"
 #include "google/protobuf/util/time_util.h"
 #include "public/core/interface/execution_result.h"
@@ -31,6 +32,7 @@
 #include "public/cpio/interface/type_def.h"
 #include "public/cpio/mock/auto_scaling_client/mock_auto_scaling_client.h"
 #include "public/cpio/mock/job_client/mock_job_client.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 #include "public/cpio/proto/job_service/v1/job_service.pb.h"
 #include "public/cpio/utils/job_lifecycle_helper/interface/job_lifecycle_helper_interface.h"
 #include "public/cpio/utils/job_lifecycle_helper/src/error_codes.h"
@@ -61,6 +63,10 @@ using google::cmrt::sdk::job_service::v1::UpdateJobStatusRequest;
 using google::cmrt::sdk::job_service::v1::UpdateJobStatusResponse;
 using google::cmrt::sdk::job_service::v1::UpdateJobVisibilityTimeoutRequest;
 using google::cmrt::sdk::job_service::v1::UpdateJobVisibilityTimeoutResponse;
+using google::cmrt::sdk::metric_service::v1::Metric;
+using google::cmrt::sdk::metric_service::v1::MetricUnit;
+using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
+using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
 using google::protobuf::Duration;
 using google::protobuf::util::TimeUtil;
 using google::scp::core::AsyncContext;
@@ -87,9 +93,11 @@ using google::scp::core::errors::
     SC_JOB_LIFECYCLE_HELPER_MISSING_METRIC_INSTANCE_FACTORY;
 using google::scp::core::errors::SC_JOB_LIFECYCLE_HELPER_ORPHANED_JOB_FOUND;
 using google::scp::core::errors::SC_JOB_LIFECYCLE_HELPER_RETRY_EXHAUSTED;
+using google::scp::core::test::EqualsProto;
 using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::ScpTestBase;
+using google::scp::core::test::SubstituteAndParseTextToProto;
 using google::scp::core::test::WaitUntil;
 using google::scp::cpio::JobLifecycleHelper;
 using std::atomic;
@@ -100,6 +108,7 @@ using std::optional;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
+using testing::UnorderedElementsAre;
 
 namespace {
 constexpr int kRetryLimit = 3;
@@ -317,9 +326,10 @@ class JobLifecycleHelperTest : public ScpTestBase {
 };
 
 TEST_F(JobLifecycleHelperTest, InitWithNullMetricInstanceFactory) {
-  auto client = make_unique<JobLifecycleHelper>(mock_job_client_.get(),
-                                                mock_auto_scaling_client_.get(),
-                                                nullptr, options_);
+  MetricInstanceFactoryInterface* metric_instance_factory_ptr = nullptr;
+  auto client = make_unique<JobLifecycleHelper>(
+      mock_job_client_.get(), mock_auto_scaling_client_.get(),
+      metric_instance_factory_ptr, options_);
 
   EXPECT_THAT(client->Init(),
               ResultIs(FailureExecutionResult(
@@ -341,9 +351,10 @@ TEST_F(JobLifecycleHelperTest, InitWithDisabledMetricRecording) {
   metric_options.set_enable_metrics_recording(false);
   *metric_options.mutable_metric_namespace() = kMetricNamespace;
   *options.mutable_metric_options() = metric_options;
-  auto client = make_unique<JobLifecycleHelper>(mock_job_client_.get(),
-                                                mock_auto_scaling_client_.get(),
-                                                nullptr, options);
+  MetricInstanceFactoryInterface* metric_instance_factory_ptr = nullptr;
+  auto client = make_unique<JobLifecycleHelper>(
+      mock_job_client_.get(), mock_auto_scaling_client_.get(),
+      metric_instance_factory_ptr, options);
 
   EXPECT_SUCCESS(client->Init());
 
@@ -1216,6 +1227,91 @@ TEST_F(JobLifecycleHelperTest, JobExtendWithUpdateVisibilityTimeoutFailed) {
         return FailureExecutionResult(SC_UNKNOWN);
       });
   sleep(kTestWaitTime.seconds());
+}
+
+TEST_F(JobLifecycleHelperTest, PrepareNextJobSuccessWithRemoteMetricIncrement) {
+  auto mock_metric_client = make_shared<MockMetricClient>();
+  auto job_lifecycle_helper_with_remote_metric_client =
+      make_unique<JobLifecycleHelper>(mock_job_client_.get(),
+                                      mock_auto_scaling_client_.get(),
+                                      mock_metric_client.get(), options_);
+
+  Job job;
+  job.set_job_id(kJobId);
+  job.set_server_job_id(kServerJobId);
+  job.set_job_status(JobStatus::JOB_STATUS_CREATED);
+  job.set_job_body(kJobBody);
+  *job.mutable_created_time() = TimeUtil::GetCurrentTime();
+  string resource_name = "";
+  ExpectTryFinishInstanceTermination(SuccessExecutionResult(),
+                                     kCurrentInstanceResourceName,
+                                     kScaleInHookName, false);
+  ExpectGetNextJob(SuccessExecutionResult(), job, kQueueMessageReceiptInfo);
+
+  std::vector<Metric> metrics;
+  EXPECT_CALL(*mock_metric_client, PutMetricsSync)
+      .WillRepeatedly([this, &metrics](auto request) {
+        metrics.push_back(request.metrics(0));
+        return PutMetricsResponse();
+      });
+
+  prepare_next_job_context_.callback =
+      [this](AsyncContext<PrepareNextJobRequest, PrepareNextJobResponse>&
+                 prepare_next_job_context) {
+        EXPECT_SUCCESS(prepare_next_job_context.result);
+        EXPECT_TRUE(prepare_next_job_context.response != nullptr);
+        EXPECT_EQ(prepare_next_job_context.response->job().job_id(), kJobId);
+        EXPECT_EQ(prepare_next_job_context.response->job().server_job_id(),
+                  kServerJobId);
+        EXPECT_EQ(prepare_next_job_context.response->job().job_status(),
+                  JobStatus::JOB_STATUS_CREATED);
+        EXPECT_EQ(prepare_next_job_context.response->job().job_body(),
+                  kJobBody);
+        finish_called_ = true;
+      };
+  job_lifecycle_helper_with_remote_metric_client->PrepareNextJob(
+      prepare_next_job_context_);
+  WaitUntil([&]() { return finish_called_.load(); });
+
+  auto expected_count_metric = SubstituteAndParseTextToProto<Metric>(R"-(
+    name: "aggregate/JobPreparationCount"
+    value: "1"
+    labels {
+      key: "ComponentName"
+      value: "JobLifecycleHelper"
+    }
+    labels {
+      key: "EventName"
+      value: "JobPreparation"
+    }
+    labels {
+      key: "MethodName"
+      value: "JobPreparation"
+    }
+    type: METRIC_TYPE_COUNTER
+  )-");
+
+  auto expected_success_metric = SubstituteAndParseTextToProto<Metric>(R"-(
+    name: "aggregate/JobPreparationCount"
+    value: "1"
+    labels {
+      key: "ComponentName"
+      value: "JobLifecycleHelper"
+    }
+    labels {
+      key: "EventName"
+      value: "JobPreparationSuccess"
+    }
+    labels {
+      key: "MethodName"
+      value: "JobPreparation"
+    }
+    type: METRIC_TYPE_COUNTER
+  )-");
+
+  EXPECT_THAT(metrics,
+              UnorderedElementsAre(EqualsProto(expected_count_metric),
+                                   EqualsProto(expected_success_metric)));
 }
 
 }  // namespace google::scp::cpio

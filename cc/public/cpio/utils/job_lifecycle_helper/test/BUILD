@@ -31,6 +31,7 @@ cc_test(
         "//cc/public/cpio/interface:type_def",
         "//cc/public/cpio/mock/auto_scaling_client:auto_scaling_client_mock",
         "//cc/public/cpio/mock/job_client:job_client_mock",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "//cc/public/cpio/proto/auto_scaling_service/v1:auto_scaling_service_cc_proto",
         "//cc/public/cpio/proto/job_service/v1:job_service_cc_proto",
         "//cc/public/cpio/utils/job_lifecycle_helper/src:job_lifecycle_helper",

@@ -56,7 +56,7 @@ public final class CloudFunctionEmulatorContainer
       String functionFilename, String functionJarPath, String functionClassTarget) {
     var container =
         new CloudFunctionEmulatorContainer(
-            DockerImageName.parse("openjdk:jdk-slim"),
+            DockerImageName.parse("openjdk:21-jdk-slim"),
             functionFilename,
             functionJarPath,
             functionClassTarget);
@@ -89,7 +89,7 @@ public final class CloudFunctionEmulatorContainer
       String functionClassTarget) {
     CloudFunctionEmulatorContainer container =
         new CloudFunctionEmulatorContainer(
-                DockerImageName.parse("openjdk:jdk-slim"),
+                DockerImageName.parse("openjdk:21-jdk-slim"),
                 functionFilename,
                 functionJarPath,
                 functionClassTarget)
@@ -125,7 +125,7 @@ public final class CloudFunctionEmulatorContainer
       String functionClassTarget) {
     var container =
         new CloudFunctionEmulatorContainer(
-                DockerImageName.parse("openjdk:jdk-slim"),
+                DockerImageName.parse("openjdk:21-jdk-slim"),
                 functionFilename,
                 functionJarPath,
                 functionClassTarget)
@@ -175,7 +175,7 @@ public final class CloudFunctionEmulatorContainer
       String functionClassTarget) {
     var container =
         new CloudFunctionEmulatorContainer(
-                DockerImageName.parse("openjdk:jdk-slim"),
+                DockerImageName.parse("openjdk:21-jdk-slim"),
                 functionFilename,
                 functionJarPath,
                 functionClassTarget)

@@ -13,7 +13,7 @@ spanner_database_deletion_protection = false
 
 worker_image = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:postsubmit"
 # Temporarily use the demo coordinator service until we are ready to integrate dev environments
-allowed_operator_service_account = "postsubmit-a-opallowedusr@admcloud-coordinator1.iam.gserviceaccount.com,postsubmit-b-opallowedusr@admcloud-coordinator2.iam.gserviceaccount.com"
+allowed_operator_service_account = ""
 user_provided_worker_sa_email    = "postsubmit-mp-worker-sa@admcloud-adtech1.iam.gserviceaccount.com"
 worker_logging_enabled           = true
 worker_container_log_redirect    = "true"
@@ -40,3 +40,13 @@ metric_exporter_interval_in_millis = 5000
 frontend_cloudfunction_use_java21_runtime     = true
 notification_cloudfunction_use_java21_runtime = true
 autoscaling_cloudfunction_use_java21_runtime  = true
+
+# Keeping around in case it's needed. See commit message in: tg/2445824
+# frontend_service_cloudfunction_runtime_sa_email = "java-postsubmit-fe@admcloud-adtech1.iam.gserviceaccount.com"
+
+instance_disk_image_family = {
+  image_project = "confidential-space-images",
+  image_family  = "confidential-space"
+}
+# Needs to be a stable image for proper coordinator attestation
+instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-241000"

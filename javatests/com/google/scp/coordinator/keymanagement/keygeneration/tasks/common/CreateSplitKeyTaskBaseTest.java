@@ -43,8 +43,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
   @Inject protected InMemoryKeyDb keyDb;
   @Inject @KmsKeyAead protected Aead keyEncryptionKeyAead;
 
-  @Test
-  public void create_differentTinkTemplates_successfullyReconstructExpectedPrimitives()
+  public void create_differentTinkTemplates_successfullyReconstructExpectedPrimitives(Aead aead)
       throws Exception {
     // Given
     ImmutableList<Entry<String, Class<?>>> expectedPrimitives =
@@ -69,8 +68,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
       Class<?> expectedPrimitive = expectedPrimitives.get(i).getValue();
 
       byte[] localSplit =
-          keyEncryptionKeyAead.decrypt(
-              Base64.getDecoder().decode(keys.get(i).getJsonEncodedKeyset()), new byte[0]);
+          aead.decrypt(Base64.getDecoder().decode(keys.get(i).getJsonEncodedKeyset()), new byte[0]);
       byte[] peerSplit = peerSplits.get(i);
 
       KeysetHandle reconstructed =

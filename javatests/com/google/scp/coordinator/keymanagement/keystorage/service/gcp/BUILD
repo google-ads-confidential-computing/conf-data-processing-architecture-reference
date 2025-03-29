@@ -72,6 +72,7 @@ java_test(
         "KeyStorageServiceIntegrationTest.java",
     ],
     deps = [
+        "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//java/com/google/scp/shared/api/exception",
@@ -80,6 +81,7 @@ java_test(
         "//java/external:gcp_spanner",
         "//java/external:google_truth",
         "//java/external:gson",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:protobuf_java",
         "//java/external:tink",

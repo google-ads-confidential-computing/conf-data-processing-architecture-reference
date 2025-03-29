@@ -135,4 +135,22 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface EncryptionKeySignatureKey {}
+
+  /** Binds the disable key set acl environment variable. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface DisableKeySetAcl {}
+
+  /** Binds the kms key base uri environment variable. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface KmsKeyEncryptionKeyBaseUri {}
+
+  /** Binds the kms client for creating aeads. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface KmsAeadClient {}
 }

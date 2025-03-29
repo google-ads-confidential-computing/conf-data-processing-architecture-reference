@@ -14,11 +14,7 @@
 
 load("@rules_java//java:defs.bzl", "java_binary", "java_test")
 
-coordinator_keymanagement_test = [
-    "//javatests/com/google/scp/coordinator/keymanagement:__subpackages__",
-]
-
-package(default_visibility = coordinator_keymanagement_test)
+package(default_visibility = ["//visibility:public"])
 
 java_binary(
     name = "LocalGcpKmsServer",

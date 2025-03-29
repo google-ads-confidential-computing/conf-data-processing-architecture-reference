@@ -69,10 +69,12 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
     service_account_email = google_service_account.key_storage_service_account.email
     ingress_settings      = "ALLOW_INTERNAL_AND_GCLB"
     environment_variables = {
-      PROJECT_ID       = var.project_id
-      GCP_KMS_URI      = "gcp-kms://${var.key_encryption_key_id}"
-      SPANNER_INSTANCE = var.spanner_instance_name
-      SPANNER_DATABASE = var.spanner_database_name
+      PROJECT_ID          = var.project_id
+      GCP_KMS_URI         = "gcp-kms://${var.key_encryption_key_id}"
+      SPANNER_INSTANCE    = var.spanner_instance_name
+      SPANNER_DATABASE    = var.spanner_database_name
+      GCP_KMS_BASE_URI    = var.kms_key_base_uri
+      DISABLE_KEY_SET_ACL = var.disable_key_set_acl
     }
   }
 
@@ -122,6 +124,13 @@ resource "google_cloud_run_service_iam_member" "cloud_function_iam_invokers" {
 }
 
 # IAM entry to allow function to encrypt and decrypt using KMS
+resource "google_kms_crypto_key_iam_member" "kms_key_set_level_iam_policy" {
+  for_each      = toset(var.key_sets)
+  crypto_key_id = "${var.key_encryption_key_ring_id}/cryptoKeys/${var.environment}_${each.value}_key_encryption_key"
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:${google_service_account.key_storage_service_account.email}"
+}
+
 resource "google_kms_crypto_key_iam_member" "kms_iam_policy" {
   crypto_key_id = var.key_encryption_key_id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"

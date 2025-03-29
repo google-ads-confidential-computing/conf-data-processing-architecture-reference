@@ -23,20 +23,22 @@ import static org.mockito.Mockito.when;
 
 import com.google.acai.Acai;
 import com.google.acai.TestScoped;
-import com.google.crypto.tink.Aead;
-import com.google.crypto.tink.KeysetHandle;
-import com.google.crypto.tink.aead.AesCtrHmacAeadKeyManager;
+import com.google.crypto.tink.KmsClient;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.DisableKeySetAcl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient.KeyStorageServiceException;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBase;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.SplitKeyGenerationTestEnv;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.SequenceKeyIdFactory;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKeyEncryptionKeyUri;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKmsKeyAead;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.KmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
+import com.google.scp.coordinator.keymanagement.testutils.FakeKmsClient;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import java.security.GeneralSecurityException;
@@ -209,14 +211,18 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
   }
 
   private static class TestEnv extends AbstractModule {
+    @Provides
+    @TestScoped
+    @KmsAeadClient
+    public KmsClient provideKmsAeadClient() {
+      return spy(new FakeKmsClient());
+    }
 
     @Provides
     @TestScoped
-    @PeerCoordinatorKmsKeyAead
-    public Aead providePeerCoordinatorAead() throws GeneralSecurityException {
-      return spy(
-          KeysetHandle.generateNew(AesCtrHmacAeadKeyManager.aes256CtrHmacSha256Template())
-              .getPrimitive(Aead.class));
+    @PeerKmsAeadClient
+    public KmsClient providePeerKmsAeadClient() {
+      return spy(new FakeKmsClient());
     }
 
     @Override
@@ -224,8 +230,12 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
       install(new SplitKeyGenerationTestEnv());
       bind(CreateSplitKeyTaskBase.class).to(GcpCreateSplitKeyTask.class);
       bind(String.class)
-          .annotatedWith(PeerCoordinatorKeyEncryptionKeyUri.class)
-          .toInstance("fake-kms://fake-id-b");
+          .annotatedWith(PeerCoordinatorKeyEncryptionKeyBaseUri.class)
+          .toInstance("fake-kms://$setName$-fake-id-b");
+      bind(Boolean.class).annotatedWith(DisableKeySetAcl.class).toInstance(false);
+      bind(String.class)
+          .annotatedWith(KeyEncryptionKeyBaseUri.class)
+          .toInstance("fake-kms://$setName$-fake-id-a");
       bind(KeyIdFactory.class).toInstance(new SequenceKeyIdFactory());
     }
   }

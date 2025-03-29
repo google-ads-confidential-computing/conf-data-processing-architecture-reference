@@ -28,6 +28,8 @@ java_library(
         "//java/com/google/scp/shared/api/model",
         "//java/external:guava",
         "//java/external:guice",
+        "//java/external:slf4j",
         "//java/external:tink",
+        "//java/external:tink-gcpkms",
     ],
 )

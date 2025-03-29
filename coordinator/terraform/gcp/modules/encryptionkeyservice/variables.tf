@@ -27,12 +27,6 @@ variable "regions" {
   type        = list(string)
 }
 
-variable "add_secondary_region_to_encryption_service" {
-  description = "If true, encryption service will deploy to 2 regions."
-  type        = bool
-  default     = false
-}
-
 variable "package_bucket_name" {
   description = "Name of bucket containing cloudfunction jar."
   type        = string
@@ -151,6 +145,11 @@ variable "lb_max_latency_ms" {
 
 variable "lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "lb_5xx_ratio_threshold" {
+  description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
   type        = number
 }
 

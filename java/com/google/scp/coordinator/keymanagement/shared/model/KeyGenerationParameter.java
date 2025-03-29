@@ -19,7 +19,9 @@ package com.google.scp.coordinator.keymanagement.shared.model;
 /** Parameters needed for the key generation configuration */
 public final class KeyGenerationParameter {
   // COMMON
+  public static final String DISABLE_KEY_SET_ACL = "DISABLE_KEY_SET_ACL";
   public static final String KMS_KEY_URI = "KMS_KEY_URI";
+  public static final String KMS_KEY_BASE_URI = "KMS_KEY_BASE_URI";
   public static final String KEY_DB_NAME = "KEY_DB_NAME";
 
   // AWS
@@ -40,6 +42,8 @@ public final class KeyGenerationParameter {
 
   public static final String PEER_COORDINATOR_KMS_KEY_URI = "PEER_COORDINATOR_KMS_KEY_URI";
 
+  public static final String PEER_COORDINATOR_KMS_KEY_BASE_URI =
+      "PEER_COORDINATOR_KMS_KEY_BASE_URI";
   public static final String KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL =
       "KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL";
 

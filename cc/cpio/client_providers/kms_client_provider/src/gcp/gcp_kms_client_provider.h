@@ -20,6 +20,7 @@
 #include <string>
 
 #include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
+#include "core/common/operation_dispatcher/src/operation_dispatcher.h"
 #include "core/interface/async_context.h"
 #include "cpio/client_providers/interface/kms_client_provider_interface.h"
 #include "cpio/client_providers/kms_client_provider/interface/gcp/gcp_key_management_service_client_interface.h"
@@ -57,7 +58,14 @@ class GcpKmsClientProvider : public KmsClientProviderInterface {
                 [](auto&, auto&, auto should_delete_entry) {
                   should_delete_entry(true);
                 },
-                cpu_async_executor)) {}
+                cpu_async_executor)),
+        io_operation_dispatcher_(
+            io_async_executor,
+            core::common::RetryStrategy(
+                core::common::RetryStrategyType::Exponential,
+                kms_client_options->gcp_kms_client_retry_initial_interval
+                    .count(),
+                kms_client_options->gcp_kms_client_retry_total_retries)) {}
 
   core::ExecutionResult Init() noexcept override;
 
@@ -74,6 +82,8 @@ class GcpKmsClientProvider : public KmsClientProviderInterface {
   GetOrCreateGcpKeyManagementServiceClient(
       const cmrt::sdk::kms_service::v1::DecryptRequest& request) noexcept;
 
+  bool ShouldRetryOnStatus(google::cloud::StatusCode status_code) noexcept;
+
   void AeadDecrypt(
       core::AsyncContext<cmrt::sdk::kms_service::v1::DecryptRequest,
                          cmrt::sdk::kms_service::v1::DecryptResponse>&
@@ -88,6 +98,8 @@ class GcpKmsClientProvider : public KmsClientProviderInterface {
   std::unique_ptr<core::common::AutoExpiryConcurrentMap<
       std::string, std::shared_ptr<GcpKeyManagementServiceClientInterface>>>
       gcp_kms_service_client_cache_;
+
+  core::common::OperationDispatcher io_operation_dispatcher_;
 };
 
 /// Provides GcpKms.
@@ -112,7 +124,7 @@ class GcpKmsFactory {
    * @brief Creates KeyManagementServiceClient.
    *
    * @param wip_provider WIP provider.
-   * @param service_account_to_impersonate servic account to impersonate.
+   * @param service_account_to_impersonate service account to impersonate.
    * @return
    * std::shared_ptr<cloud::kms::KeyManagementServiceClient> the
    * creation result.

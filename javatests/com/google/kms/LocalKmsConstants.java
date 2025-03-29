@@ -18,6 +18,6 @@ package com.google.kms;
 
 public class LocalKmsConstants {
   public static final String DEFAULT_KEY_URI =
-      "projects/adm-cloud-scp/locations/global/keyRings/scp-test/cryptoKeys/aead-key";
+      "projects/admcloud-coordinator1/locations/us/keyRings/scp-test/cryptoKeys/$setName$-key";
   public static final String DEFAULT_ENDPOINT = "/v1/" + DEFAULT_KEY_URI + ":";
 }

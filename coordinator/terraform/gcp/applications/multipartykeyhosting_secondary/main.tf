@@ -42,6 +42,10 @@ locals {
   encryption_key_domain      = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${var.parent_domain_name}"
   package_bucket_prefix      = "${var.project_id}_${var.environment}"
   package_bucket_name        = length("${local.package_bucket_prefix}_mpkhs_secondary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_secondary_package_jars" : "${local.package_bucket_prefix}_mpkhs_b_pkg"
+  key_sets = flatten([
+    for key_set in var.key_sets_config.key_sets : key_set.name
+  ])
+  kms_key_base_uri = "gcp-kms://${google_kms_key_ring.key_encryption_ring.id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
 }
 
 module "bazel" {
@@ -79,6 +83,16 @@ resource "google_kms_crypto_key" "key_encryption_key" {
   }
 }
 
+resource "google_kms_crypto_key" "key_set_key_encryption_key" {
+  for_each = toset(local.key_sets)
+  name     = "${var.environment}_${each.value}_key_encryption_key"
+  key_ring = google_kms_key_ring.key_encryption_ring.id
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 module "keydb" {
   source                   = "../../modules/keydb"
   project_id               = var.project_id
@@ -95,9 +109,13 @@ module "keystorageservice" {
   region                       = var.primary_region
   allowed_wip_user_group       = var.allowed_wip_user_group
   allowed_wip_service_accounts = var.allowed_wip_service_accounts
+  key_sets                     = local.key_sets
+  key_encryption_key_ring_id   = google_kms_key_ring.key_encryption_ring.id
 
   # Function vars
   key_encryption_key_id                           = google_kms_crypto_key.key_encryption_key.id
+  disable_key_set_acl                             = var.disable_key_set_acl
+  kms_key_base_uri                                = local.kms_key_base_uri
   package_bucket_name                             = var.use_tf_created_bucket_for_binary ? google_storage_bucket.mpkhs_secondary_package_bucket.name : var.mpkhs_secondary_package_bucket
   load_balancer_name                              = "keystoragelb"
   spanner_database_name                           = module.keydb.keydb_name
@@ -123,20 +141,70 @@ module "keystorageservice" {
   cloudfunction_error_ratio_threshold           = var.keystorageservice_cloudfunction_error_ratio_threshold
   cloudfunction_max_execution_time_max          = var.keystorageservice_cloudfunction_max_execution_time_max
   cloudfunction_alert_on_memory_usage_threshold = var.keystorageservice_cloudfunction_alert_on_memory_usage_threshold
-  lb_5xx_threshold                              = var.keystorageservice_lb_5xx_threshold
-  lb_max_latency_ms                             = var.keystorageservice_lb_max_latency_ms
-  key_storage_severity_map                      = var.alert_severity_overrides
+
+  lb_5xx_threshold       = var.keystorageservice_lb_5xx_threshold
+  lb_5xx_ratio_threshold = var.keystorageservice_lb_5xx_ratio_threshold
+  lb_max_latency_ms      = var.keystorageservice_lb_max_latency_ms
+
+  key_storage_severity_map = var.alert_severity_overrides
+  depends_on = [
+    google_kms_crypto_key.key_set_key_encryption_key,
+    google_kms_crypto_key.key_encryption_key,
+    google_kms_key_ring.key_encryption_ring
+  ]
+}
+
+
+module "private_key_service" {
+  count  = var.private_key_service_launch_cloud_run ? 1 : 0
+  source = "../private_key_service"
+
+  environment      = var.environment
+  project_id       = var.project_id
+  primary_region   = var.primary_region
+  secondary_region = var.secondary_region
+
+  allowed_invoker_service_account_emails = module.allowed_operators.all_service_accounts
+  allowed_operator_user_group            = var.allowed_operator_user_group
+  source_container_image_url             = var.private_key_service_container_image_url
+
+  # Cloud Run settings
+  cpu_count          = var.private_key_service_cloud_run_cpu_count
+  memory_mb          = var.encryption_key_service_cloudfunction_memory_mb
+  concurrency        = var.private_key_service_cloud_run_concurrency
+  max_instance_count = var.encryption_key_service_cloudfunction_max_instances
+  min_instance_count = var.encryption_key_service_cloudfunction_min_instances
+
+  # Spanner
+  spanner_database_name = module.keydb.keydb_name
+  spanner_instance_name = module.keydb.keydb_instance_name
+
+  # Alert settings
+  alarms_enabled           = var.alarms_enabled
+  alarm_eval_period_sec    = var.encryptionkeyservice_alarm_eval_period_sec
+  alarm_duration_sec       = var.encryptionkeyservice_alarm_duration_sec
+  alert_severity_overrides = var.alert_severity_overrides
+
+  get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
+
+  cloud_run_5xx_threshold                   = var.encryptionkeyservice_cloudfunction_5xx_threshold
+  cloud_run_alert_on_memory_usage_threshold = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold
+  cloud_run_error_ratio_threshold           = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
+  cloud_run_max_execution_time_max          = var.encryptionkeyservice_cloudfunction_max_execution_time_max
+
+  lb_5xx_threshold       = var.encryptionkeyservice_lb_5xx_threshold
+  lb_5xx_ratio_threshold = var.encryptionkeyservice_lb_5xx_ratio_threshold
+  lb_max_latency_ms      = var.encryptionkeyservice_lb_max_latency_ms
 }
 
 module "encryptionkeyservice" {
   source = "../../modules/encryptionkeyservice"
 
-  project_id                                 = var.project_id
-  environment                                = var.environment
-  regions                                    = var.add_secondary_region_to_encryption_service ? [var.primary_region, var.secondary_region] : [var.primary_region]
-  add_secondary_region_to_encryption_service = var.add_secondary_region_to_encryption_service
-  allowed_operator_user_group                = var.allowed_operator_user_group
-  allowed_operator_service_accounts          = module.allowed_operators.all_service_accounts
+  project_id                        = var.project_id
+  environment                       = var.environment
+  regions                           = [var.primary_region]
+  allowed_operator_user_group       = var.allowed_operator_user_group
+  allowed_operator_service_accounts = module.allowed_operators.all_service_accounts
 
   # Function vars
   package_bucket_name                                = var.use_tf_created_bucket_for_binary ? google_storage_bucket.mpkhs_secondary_package_bucket.name : var.mpkhs_secondary_package_bucket
@@ -155,15 +223,18 @@ module "encryptionkeyservice" {
   encryption_key_domain    = local.encryption_key_domain
 
   # Alarms
-  alarms_enabled                                    = var.alarms_enabled
-  alarm_eval_period_sec                             = var.encryptionkeyservice_alarm_eval_period_sec
-  alarm_duration_sec                                = var.encryptionkeyservice_alarm_duration_sec
-  cloudfunction_5xx_threshold                       = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  cloudfunction_error_ratio_threshold               = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
-  cloudfunction_max_execution_time_max              = var.encryptionkeyservice_cloudfunction_max_execution_time_max
-  cloudfunction_alert_on_memory_usage_threshold     = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold
-  lb_5xx_threshold                                  = var.encryptionkeyservice_lb_5xx_threshold
-  lb_max_latency_ms                                 = var.encryptionkeyservice_lb_max_latency_ms
+  alarms_enabled                                = var.alarms_enabled
+  alarm_eval_period_sec                         = var.encryptionkeyservice_alarm_eval_period_sec
+  alarm_duration_sec                            = var.encryptionkeyservice_alarm_duration_sec
+  cloudfunction_5xx_threshold                   = var.encryptionkeyservice_cloudfunction_5xx_threshold
+  cloudfunction_error_ratio_threshold           = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
+  cloudfunction_max_execution_time_max          = var.encryptionkeyservice_cloudfunction_max_execution_time_max
+  cloudfunction_alert_on_memory_usage_threshold = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold
+
+  lb_5xx_threshold       = var.encryptionkeyservice_lb_5xx_threshold
+  lb_5xx_ratio_threshold = var.encryptionkeyservice_lb_5xx_ratio_threshold
+  lb_max_latency_ms      = var.encryptionkeyservice_lb_max_latency_ms
+
   get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
   encryption_key_service_severity_map               = var.alert_severity_overrides
 }
@@ -227,10 +298,22 @@ resource "google_kms_crypto_key_iam_member" "workload_identity_member" {
   depends_on    = [module.workload_identity_pool]
 }
 
+resource "google_kms_crypto_key_iam_member" "key_set_level_workload_identity_member" {
+  for_each      = google_kms_crypto_key.key_set_key_encryption_key
+  crypto_key_id = each.value.id
+  member        = "serviceAccount:${module.workload_identity_pool.wip_verified_service_account}"
+  role          = "roles/cloudkms.cryptoKeyEncrypter"
+  depends_on = [
+    module.workload_identity_pool,
+    google_kms_crypto_key.key_set_key_encryption_key
+  ]
+}
+
 module "allowed_operators" {
   source = "../../modules/allowed_operators"
 
   environment           = var.environment
   key_encryption_key_id = google_kms_crypto_key.key_encryption_key.id
   allowed_operators     = var.allowed_operators
+  key_ring_id           = google_kms_key_ring.key_encryption_ring.id
 }

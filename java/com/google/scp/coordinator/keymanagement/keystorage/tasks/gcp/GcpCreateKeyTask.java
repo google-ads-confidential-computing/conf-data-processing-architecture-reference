@@ -21,9 +21,10 @@ import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 
 import com.google.common.collect.ImmutableList;
 import com.google.crypto.tink.Aead;
+import com.google.crypto.tink.KmsClient;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyAead;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyUri;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
@@ -33,22 +34,25 @@ import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 import java.security.GeneralSecurityException;
 import java.util.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Creates a key in the database */
 public final class GcpCreateKeyTask implements CreateKeyTask {
+  private static final Logger logger = LoggerFactory.getLogger(CreateKeyTask.class);
 
   private final KeyDb keyDb;
-  private final Aead kmsKeyAead;
-  private final String kmsKeyEncryptionKeyUri;
+  private final String kmsKeyEncryptionKeyBaseUri;
+  private final KmsClient kmsClient;
 
   @Inject
   public GcpCreateKeyTask(
       KeyDb keyDb,
-      @KmsKeyAead Aead kmsKeyAead,
-      @KmsKeyEncryptionKeyUri String kmsKeyEncryptionKeyUri) {
+      @KmsAeadClient KmsClient kmsClient,
+      @KmsKeyEncryptionKeyBaseUri String kmsKeyEncryptionKeyBaseUri) {
     this.keyDb = keyDb;
-    this.kmsKeyAead = kmsKeyAead;
-    this.kmsKeyEncryptionKeyUri = kmsKeyEncryptionKeyUri;
+    this.kmsClient = kmsClient;
+    this.kmsKeyEncryptionKeyBaseUri = kmsKeyEncryptionKeyBaseUri;
   }
 
   /** Creates the key in the database */
@@ -59,21 +63,19 @@ public final class GcpCreateKeyTask implements CreateKeyTask {
       throw new ServiceException(
           Code.INVALID_ARGUMENT, SERVICE_ERROR.name(), "Key payload is empty.");
     }
-
+    String kmsKeyUri = getKmsKeyEncryptionKeyUri(encryptionKey.getSetName());
     String validatedKeySplit =
-        validatedPrivateKeySplit(encryptedKeySplit, encryptionKey.getPublicKeyMaterial());
+        validatedPrivateKeySplit(
+            kmsKeyUri, encryptedKeySplit, encryptionKey.getPublicKeyMaterial());
 
     var newKeySplitData =
         ImmutableList.<KeySplitData>builder()
             .addAll(encryptionKey.getKeySplitDataList())
-            .add(
-                KeySplitData.newBuilder()
-                    .setKeySplitKeyEncryptionKeyUri(kmsKeyEncryptionKeyUri)
-                    .build());
+            .add(KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(kmsKeyUri).build());
     var newEncryptionKey =
         encryptionKey.toBuilder()
             .setJsonEncodedKeyset(validatedKeySplit)
-            .setKeyEncryptionKeyUri(kmsKeyEncryptionKeyUri)
+            .setKeyEncryptionKeyUri(kmsKeyUri)
             // Need to clear before adding, otherwise there will be duplicate KeySplitData elements.
             .clearKeySplitData()
             .addAllKeySplitData(newKeySplitData.build())
@@ -99,16 +101,21 @@ public final class GcpCreateKeyTask implements CreateKeyTask {
    * @return Validated and re-encrypted private key split without associated data.
    * @throw ServiceException if the private key split is invalid.
    */
-  private String validatedPrivateKeySplit(String privateKeySplit, String publicKeyMaterial)
-      throws ServiceException {
+  private String validatedPrivateKeySplit(
+      String kmsKeyUri, String privateKeySplit, String publicKeyMaterial) throws ServiceException {
     try {
+      Aead kmsAead = kmsClient.getAead(kmsKeyUri);
       byte[] cipherText = Base64.getDecoder().decode(privateKeySplit);
       byte[] associatedData = Base64.getDecoder().decode(publicKeyMaterial);
-      byte[] plainText = kmsKeyAead.decrypt(cipherText, associatedData);
-      return Base64.getEncoder().encodeToString(kmsKeyAead.encrypt(plainText, new byte[0]));
+      byte[] plainText = kmsAead.decrypt(cipherText, associatedData);
+      return Base64.getEncoder().encodeToString(kmsAead.encrypt(plainText, new byte[0]));
     } catch (NullPointerException | GeneralSecurityException ex) {
       throw new ServiceException(
           INVALID_ARGUMENT, SERVICE_ERROR.name(), "Key-split validation failed.", ex);
     }
+  }
+
+  private String getKmsKeyEncryptionKeyUri(String setName) {
+    return this.kmsKeyEncryptionKeyBaseUri.replace("$setName$", setName);
   }
 }

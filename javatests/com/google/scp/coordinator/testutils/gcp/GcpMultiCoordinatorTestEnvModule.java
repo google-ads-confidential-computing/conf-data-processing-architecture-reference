@@ -57,7 +57,6 @@ import javax.inject.Named;
 
 /** Provides environment bindings for the MultiCoordinator integration tests. */
 public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
-
   private static final ImmutableList<String> ALL_CREATE_TABLE_QUERIES =
       ImmutableList.<String>builder()
           .addAll(SpannerKeyDbTestModule.CREATE_TABLE_STATEMENTS)

@@ -29,6 +29,7 @@ java_test(
         "//java/external:apache_httpclient",
         "//java/external:apache_httpcore",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_databind",
         "//java/external:mockito",

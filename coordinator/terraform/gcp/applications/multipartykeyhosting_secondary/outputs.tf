@@ -55,3 +55,7 @@ output "wip_verified_service_account" {
 output "allowed_operators_wipp_names" {
   value = module.allowed_operators.workload_identity_pool_provider_names
 }
+
+output "kms_key_base_uri" {
+  value = local.kms_key_base_uri
+}

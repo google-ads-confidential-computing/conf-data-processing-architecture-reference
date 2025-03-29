@@ -50,6 +50,9 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
 
   private final CloudAeadSelector aeadSelector;
 
+  private final Aead keyEncryptionKeyAead;
+  private final String keyEncryptionKeyUri;
+
   @Inject
   public AwsCreateSplitKeyTask(
       @KmsKeyAead Aead keyEncryptionKeyAead,
@@ -60,15 +63,10 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       KeyIdFactory keyIdFactory,
       CloudAeadSelector aeadSelector,
       LogMetricHelper logMetricHelper) {
-    super(
-        keyEncryptionKeyAead,
-        keyEncryptionKeyUri,
-        signatureKey,
-        keyDb,
-        keyStorageClient,
-        keyIdFactory,
-        logMetricHelper);
+    super(signatureKey, keyDb, keyStorageClient, keyIdFactory, logMetricHelper);
     this.aeadSelector = aeadSelector;
+    this.keyEncryptionKeyAead = keyEncryptionKeyAead;
+    this.keyEncryptionKeyUri = keyEncryptionKeyUri;
   }
 
   /**
@@ -98,13 +96,25 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
 
   @Override
   protected String encryptPeerCoordinatorSplit(
-      ByteString keySplit, Optional<DataKey> dataKey, String publicKey) throws ServiceException {
+      String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKey)
+      throws ServiceException {
     try {
       return Base64Util.toBase64String(
           encryptWithDataKey(aeadSelector, dataKey.get(), keySplit, publicKey));
     } catch (GeneralSecurityException e) {
       throw new ServiceException(Code.INVALID_ARGUMENT, "Failed to encrypt key split.", e);
     }
+  }
+
+  @Override
+  protected Aead getAead(String kmsKeyEncryptionKeyUri) {
+    return this.keyEncryptionKeyAead;
+  }
+
+  /** Takes in setName and returns kmsKeyEncryptionKeyUri for the key set. */
+  @Override
+  protected String getKmsKeyEncryptionKeyUri(String setName) {
+    return this.keyEncryptionKeyUri;
   }
 
   @Override

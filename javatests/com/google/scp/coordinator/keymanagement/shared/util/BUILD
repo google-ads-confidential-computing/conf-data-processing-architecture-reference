@@ -25,6 +25,7 @@ java_test(
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:protobuf_java",
         "//java/external:tink",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",

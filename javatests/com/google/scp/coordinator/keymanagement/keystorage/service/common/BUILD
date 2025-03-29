@@ -33,6 +33,7 @@ java_test(
         "//java/com/google/scp/shared/api/model",
         "//java/external:acai",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:mockito",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",

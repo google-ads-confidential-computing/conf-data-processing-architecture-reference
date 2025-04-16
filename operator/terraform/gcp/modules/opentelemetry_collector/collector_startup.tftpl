@@ -14,8 +14,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+packages:
+  - docker.io
+
+runcmd:
+- curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh
+- sudo bash add-google-cloud-ops-agent-repo.sh --also-install
 
 write_files:
+- path: /etc/user/local/install-ops-agent.sh
+  permissions: "0755"
+  content: |
+    #!/bin/bash
+
+    # Install the Ops Agent.
+    set -e
+    cd /tmp
+
+    echo "Downloading Ops Agent install script"
+    curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh
+
+    echo "Installing Ops Agent"
+    sudo bash add-google-cloud-ops-agent-repo.sh --also-install
+
+    echo "Installed Ops Agent"
+
 - path: /etc/systemd/system/otelcol-contrib.service
   permissions: "0644"
   owner: root
@@ -68,5 +91,6 @@ write_files:
           exporters: [googlecloud]
 
 runcmd:
+- sudo /etc/user/local/install-ops-agent.sh
 - systemctl daemon-reload
 - systemctl start otelcol-contrib.service

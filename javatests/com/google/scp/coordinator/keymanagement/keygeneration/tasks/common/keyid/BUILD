@@ -32,7 +32,6 @@ java_test(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:mockito",
-        "//java/external:mockito_inline",
         "//java/external:protobuf_java",
         "//java/external:slf4j",
         "//java/external:test_parameter_injector",

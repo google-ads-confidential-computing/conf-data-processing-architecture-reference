@@ -23,6 +23,13 @@ max_worker_instances             = 2
 alarms_enabled                   = true
 alarms_notification_email        = "fakeemail@google.com"
 
+auto_create_subnetworks = false
+network_name            = "network-with-custom-subnet"
+
+worker_subnet_cidr    = "10.16.0.0/20"
+collector_subnet_cidr = "10.20.0.0/20"
+proxy_subnet_cidr     = "10.32.0.0/20"
+
 enable_job_completion_notifications = true
 
 enable_job_completion_notifications_per_job           = true
@@ -36,6 +43,8 @@ frontend_service_jar = "/tmp/postsubmit_mp/jars/FrontendServiceHttpCloudFunction
 enable_native_metric_aggregation   = false
 enable_remote_metric_aggregation   = true
 metric_exporter_interval_in_millis = 5000
+collector_domain_name              = "collector.metrics"
+collector_dns_name                 = "scp.testings.postsubmit"
 
 frontend_cloudfunction_use_java21_runtime     = true
 notification_cloudfunction_use_java21_runtime = true

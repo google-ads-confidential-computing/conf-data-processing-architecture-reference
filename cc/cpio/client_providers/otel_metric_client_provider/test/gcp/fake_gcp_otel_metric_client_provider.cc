@@ -26,6 +26,7 @@
 #include "cpio/client_providers/otel_metric_client_provider/src/opentelemetry_utils.h"
 
 using google::scp::core::AsyncExecutorInterface;
+using opentelemetry::sdk::resource::Resource;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;

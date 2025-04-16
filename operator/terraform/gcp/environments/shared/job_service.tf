@@ -15,11 +15,16 @@
  */
 
 module "job_service" {
-  source      = "../../applications/jobservice"
-  environment = var.environment
-  project_id  = var.project_id
-  region      = var.region
-  region_zone = var.region_zone
+  source                  = "../../applications/jobservice"
+  environment             = var.environment
+  project_id              = var.project_id
+  region                  = var.region
+  region_zone             = var.region_zone
+  network_name            = var.network_name
+  auto_create_subnetworks = var.auto_create_subnetworks
+  worker_subnet_cidr      = var.worker_subnet_cidr
+  collector_subnet_cidr   = var.collector_subnet_cidr
+  proxy_subnet_cidr       = var.proxy_subnet_cidr
 
   # Global Alarms
   alarms_enabled            = var.alarms_enabled
@@ -107,18 +112,24 @@ module "job_service" {
   vpc_connector_machine_type = var.vpc_connector_machine_type
 
   # OpenTelemetry Collector
-  enable_native_metric_aggregation   = var.enable_native_metric_aggregation
-  enable_remote_metric_aggregation   = var.enable_remote_metric_aggregation
-  metric_exporter_interval_in_millis = var.metric_exporter_interval_in_millis
-  collector_instance_type            = var.collector_instance_type
-  user_provided_collector_sa_email   = var.user_provided_collector_sa_email
-  collector_service_port             = var.collector_service_port
-  collector_send_batch_max_size      = var.collector_send_batch_max_size
-  collector_send_batch_size          = var.collector_send_batch_size
-  collector_send_batch_timeout       = var.collector_send_batch_timeout
-  collector_export_error_alarm       = var.collector_export_error_alarm
-  collector_run_error_alarm          = var.collector_run_error_alarm
-  collector_crash_error_alarm        = var.collector_crash_error_alarm
+  enable_native_metric_aggregation     = var.enable_native_metric_aggregation
+  enable_remote_metric_aggregation     = var.enable_remote_metric_aggregation
+  metric_exporter_interval_in_millis   = var.metric_exporter_interval_in_millis
+  collector_instance_type              = var.collector_instance_type
+  collector_instance_target_size       = var.collector_instance_target_size
+  user_provided_collector_sa_email     = var.user_provided_collector_sa_email
+  collector_service_port_name          = var.collector_service_port_name
+  collector_service_port               = var.collector_service_port
+  collector_domain_name                = var.collector_domain_name
+  collector_dns_name                   = var.collector_dns_name
+  collector_min_instance_ready_sec     = var.collector_min_instance_ready_sec
+  collector_send_batch_max_size        = var.collector_send_batch_max_size
+  collector_send_batch_size            = var.collector_send_batch_size
+  collector_send_batch_timeout         = var.collector_send_batch_timeout
+  collector_export_error_alarm         = var.collector_export_error_alarm
+  collector_run_error_alarm            = var.collector_run_error_alarm
+  collector_crash_error_alarm          = var.collector_crash_error_alarm
+  worker_exporting_metrics_error_alarm = var.worker_exporting_metrics_error_alarm
 
   # Notifications
   enable_job_completion_notifications = var.enable_job_completion_notifications

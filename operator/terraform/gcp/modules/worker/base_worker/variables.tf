@@ -37,7 +37,10 @@ variable "network" {
   description = "VPC Network name or self-link to use for worker."
   type        = string
 }
-
+variable "subnet_id" {
+  description = "Service subnet id."
+  type        = string
+}
 variable "egress_internet_tag" {
   description = "Instance tag that grants internet access."
   type        = string

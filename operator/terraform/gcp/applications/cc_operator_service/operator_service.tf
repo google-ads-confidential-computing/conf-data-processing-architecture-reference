@@ -40,6 +40,15 @@ module "vpc" {
   project_id  = var.project_id
   regions     = toset([var.region])
 
+  auto_create_subnetworks = var.auto_create_subnetworks
+  # These variables are only be used if auto_create_subnetworks is set to false.
+  network_name       = var.network_name
+  worker_subnet_cidr = var.worker_subnet_cidr
+
+  enable_remote_metric_aggregation = var.metric_client_parameter_values.enable_remote_metric_aggregation
+  collector_subnet_cidr            = var.collector_subnet_cidr
+  proxy_subnet_cidr                = var.proxy_subnet_cidr
+
   create_connectors      = var.vpcsc_compatible
   connector_machine_type = var.vpc_connector_machine_type
 }
@@ -129,6 +138,7 @@ module "worker" {
   environment                   = var.environment
   project_id                    = var.project_id
   network                       = module.vpc.network
+  subnet_id                     = module.vpc.worker_subnet_id
   egress_internet_tag           = module.vpc.egress_internet_tag
   worker_instance_force_replace = var.worker_instance_force_replace
 
@@ -175,6 +185,9 @@ module "worker" {
 
   # Variables not valid for cc_operator_service but required in the child module
   autoscaler_cloudfunction_name = ""
+
+  # Make sure the otel collector is running before creating the server instances.
+  depends_on = [module.opentelemetry_collector]
 }
 
 module "autoscaling" {
@@ -231,10 +244,15 @@ module "opentelemetry_collector" {
   environment = var.environment
   project_id  = var.project_id
   network     = module.vpc.network
+  region      = var.region
+  subnet_id   = module.vpc.collector_subnet_id
 
   user_provided_collector_sa_email = var.user_provided_collector_sa_email
   collector_instance_type          = var.collector_instance_type
+  collector_instance_target_size   = var.collector_instance_target_size
+  collector_service_port_name      = var.collector_service_port_name
   collector_service_port           = var.collector_service_port
+  collector_min_instance_ready_sec = var.collector_min_instance_ready_sec
   collector_startup_script = templatefile("../../modules/opentelemetry_collector/collector_startup.tftpl", {
     otel_collector_image_uri = "otel/opentelemetry-collector-contrib:0.117.0"
 
@@ -245,9 +263,28 @@ module "opentelemetry_collector" {
     send_batch_timeout  = var.collector_send_batch_timeout
   })
 
-  collector_export_error_alarm = var.collector_export_error_alarm
-  collector_run_error_alarm    = var.collector_run_error_alarm
-  collector_crash_error_alarm  = var.collector_crash_error_alarm
+  collector_export_error_alarm         = var.collector_export_error_alarm
+  collector_run_error_alarm            = var.collector_run_error_alarm
+  collector_crash_error_alarm          = var.collector_crash_error_alarm
+  worker_exporting_metrics_error_alarm = var.worker_exporting_metrics_error_alarm
+}
+
+module "opentelemetry_collector_load_balancer" {
+  count = coalesce(var.metric_client_parameter_values.enable_remote_metric_aggregation, false) ? 1 : 0
+
+  source            = "../../modules/loadbalancer"
+  environment       = var.environment
+  project_id        = var.project_id
+  network           = module.vpc.network
+  region            = var.region
+  subnet_id         = module.vpc.collector_subnet_id
+  proxy_subnet      = module.vpc.proxy_subnet_id
+  instance_group    = module.opentelemetry_collector[0].collector_instance_group
+  service_name      = "collector"
+  service_port_name = var.collector_service_port_name
+  service_port      = var.collector_service_port
+  dns_name          = var.collector_dns_name
+  domain_name       = var.collector_domain_name
 }
 
 module "frontend" {

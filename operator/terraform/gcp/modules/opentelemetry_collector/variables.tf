@@ -37,6 +37,16 @@ variable "network" {
   type        = string
 }
 
+variable "subnet_id" {
+  description = "Service subnet id."
+  type        = string
+}
+
+variable "region" {
+  description = "Region where resources will be created."
+  type        = string
+}
+
 ################################################################################
 # Collector Variables.
 ################################################################################
@@ -55,11 +65,25 @@ variable "collector_startup_script" {
   type        = string
 }
 
+variable "collector_service_port_name" {
+  description = "The name of the gRPC port that receives traffic destined for the OpenTelemetry collector."
+  type        = string
+}
+
 variable "collector_service_port" {
-  description = "The gRPC port that receives traffic destined for the OpenTelemetry collector."
+  description = "The value of the gRpc port that receives traffic destined for the OpenTelemetry collector."
   type        = number
 }
 
+variable "collector_instance_target_size" {
+  description = "The target number of running instances for the managed instance group of collector."
+  type        = number
+}
+
+variable "collector_min_instance_ready_sec" {
+  description = "Waiting time for the new instance to be ready."
+  type        = number
+}
 ################################################################################
 # Alarm Variables.
 ################################################################################
@@ -89,6 +113,18 @@ variable "collector_run_error_alarm" {
 
 variable "collector_crash_error_alarm" {
   description = "Configuration for the collector crash error alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+}
+
+variable "worker_exporting_metrics_error_alarm" {
+  description = "Configuration for the worker exporting metrics error alarm."
   type = object({
     enable_alarm : bool,
     duration_sec : number,

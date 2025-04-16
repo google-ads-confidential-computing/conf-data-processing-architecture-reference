@@ -34,7 +34,6 @@ java_test(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:mockito",
-        "//java/external:mockito_inline",
         "//java/external:protobuf_java",
         "//java/external:testcontainers",
         "//java/external:tink",

@@ -22,6 +22,9 @@
 
 namespace google::scp::cpio::client_providers {
 
+static constexpr char kResourceInstanceIdLabel[] = "exported_instance_id";
+static constexpr char kResourceZoneLabel[] = "exported_zone";
+
 class OpenTelemetryUtils {
  public:
   static std::shared_ptr<opentelemetry::metrics::Meter>

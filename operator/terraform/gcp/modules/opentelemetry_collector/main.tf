@@ -17,6 +17,29 @@
 locals {
   collector_service_account_email = var.user_provided_collector_sa_email == "" ? google_service_account.collector_service_account[0].email : var.user_provided_collector_sa_email
   egress_internet_tag             = "egress-internet"
+  startup_script_hash             = sha256(var.collector_startup_script)
+}
+
+resource "null_resource" "server_instance_replace_trigger" {
+  triggers = {
+    replace = local.startup_script_hash
+  }
+}
+
+
+resource "null_resource" "collector_template_mig_replace_trigger" {
+  triggers = {
+    # To work around the google_compute_region_instance_group_manager update
+    # error "Networks specified in new and old network interfaces must be the
+    # same." when network is changed in the template. This creates a resource
+    # trigger for replacement.
+    #
+    # Using an express that considers the complete network_interface list does
+    # not seem to work and always forces replacement, perhaps due to some non-
+    # determinism of the list. Direct indexing into the first element works as
+    # desired.
+    network = length(google_compute_instance_template.collector.network_interface) > 0 ? google_compute_instance_template.collector.network_interface[0].network : ""
+  }
 }
 
 resource "google_service_account" "collector_service_account" {
@@ -44,15 +67,58 @@ resource "google_project_iam_member" "collector_service_account_log_writer_iam" 
   member  = "serviceAccount:${local.collector_service_account_email}"
 }
 
-resource "google_compute_instance" "collector" {
-  name = "${var.environment}-otel-collector"
-  # provider    = google-beta
+resource "google_compute_region_instance_group_manager" "collector_instance" {
+  provider           = google-beta
+  region             = var.region
+  project            = var.project_id
+  name               = "${var.environment}-${var.region}-collector-mig"
+  description        = "The managed instance group for SCP worker instances."
+  base_instance_name = "${var.environment}-${var.region}-collector"
+  target_size        = var.collector_instance_target_size
+
+  named_port {
+    name = var.collector_service_port_name
+    port = var.collector_service_port
+  }
+
+  auto_healing_policies {
+    health_check      = google_compute_health_check.collector.id
+    initial_delay_sec = var.collector_min_instance_ready_sec
+  }
+
+  version {
+    instance_template = google_compute_instance_template.collector.id
+  }
+
+  # TODO: Update with dynamic rolling update policy
+  update_policy {
+    minimal_action        = "REPLACE"
+    type                  = "PROACTIVE"
+    max_unavailable_fixed = 10
+    max_surge_fixed       = 10
+    # Waiting time for the new instance to be ready.
+    min_ready_sec = var.collector_min_instance_ready_sec + 3000
+  }
+
+  lifecycle {
+    create_before_destroy = true
+    replace_triggered_by = [
+      null_resource.collector_template_mig_replace_trigger
+    ]
+  }
+}
+
+resource "google_compute_instance_template" "collector" {
+  region      = var.region
+  project     = var.project_id
+  name_prefix = "${var.environment}-${var.region}-collector"
+  provider    = google-beta
   description = "This is used to create an OpenTelemetry collector for the region."
 
   tags = compact([
     "environment",
     var.environment,
-    "otel-collector",
+    "allow-otlp",
     local.egress_internet_tag,
   ])
 
@@ -60,15 +126,15 @@ resource "google_compute_instance" "collector" {
     environment = var.environment
   }
 
-  boot_disk {
-    device_name = "${var.environment}-otel-collector"
-    initialize_params {
-      image = "projects/cos-cloud/global/images/family/cos-stable"
-    }
+  disk {
+    device_name  = "${var.environment}-otel-collector"
+    source_image = "projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-amd64"
   }
 
   network_interface {
-    network = var.network
+    network            = var.network
+    subnetwork         = var.subnet_id
+    subnetwork_project = var.project_id
   }
 
   machine_type = var.collector_instance_type
@@ -92,8 +158,23 @@ resource "google_compute_instance" "collector" {
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes        = [name]
+    replace_triggered_by  = [null_resource.server_instance_replace_trigger]
   }
+
+}
+
+resource "google_compute_health_check" "collector" {
+  name = "${var.environment}-otel-collector-auto-heal-hc"
+
+  tcp_health_check {
+    port_name = var.collector_service_port_name
+    port      = var.collector_service_port
+  }
+
+  timeout_sec         = 3
+  check_interval_sec  = 3
+  healthy_threshold   = 2
+  unhealthy_threshold = 4
 }
 
 resource "google_compute_firewall" "allow_grpc_otel_collector" {
@@ -105,5 +186,6 @@ resource "google_compute_firewall" "allow_grpc_otel_collector" {
     ports    = [tostring(var.collector_service_port)]
   }
 
-  source_tags = [var.environment]
+  target_tags   = ["allow-otlp"]
+  source_ranges = ["0.0.0.0/0"]
 }

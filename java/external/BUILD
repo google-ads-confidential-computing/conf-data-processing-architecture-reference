@@ -547,12 +547,6 @@ alias(
 )
 
 alias(
-    name = "mockito_inline",
-    actual = "@maven//:org_mockito_mockito_inline",
-    visibility = ["//javatests:__subpackages__"],
-)
-
-alias(
     name = "gcp_spanner",
     actual = "@maven//:com_google_cloud_google_cloud_spanner",
 )

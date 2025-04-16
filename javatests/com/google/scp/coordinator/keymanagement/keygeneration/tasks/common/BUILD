@@ -58,6 +58,5 @@ java_test(
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common/keyset",
         "//java/external:guava",
         "//java/external:mockito",
-        "//java/external:mockito_inline",
     ],
 )

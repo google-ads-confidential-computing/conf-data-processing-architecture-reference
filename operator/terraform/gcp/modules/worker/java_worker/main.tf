@@ -19,6 +19,7 @@ module "base_worker" {
   environment                   = var.environment
   project_id                    = var.project_id
   network                       = var.network
+  subnet_id                     = var.subnet_id
   egress_internet_tag           = var.egress_internet_tag
   worker_instance_force_replace = var.worker_instance_force_replace
 

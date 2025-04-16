@@ -56,7 +56,8 @@ resource "google_compute_instance_template" "worker_instance_template" {
 
   # TODO: Add custom VPC configurations
   network_interface {
-    network = var.network
+    network    = var.network
+    subnetwork = var.subnet_id
   }
 
   metadata = {

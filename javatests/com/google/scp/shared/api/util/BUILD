@@ -63,7 +63,6 @@ java_test(
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:mockito",
-        "//java/external:mockito_inline",
         "//java/external:resilience4j_core",
         "//java/external:resilience4j_retry",
     ],

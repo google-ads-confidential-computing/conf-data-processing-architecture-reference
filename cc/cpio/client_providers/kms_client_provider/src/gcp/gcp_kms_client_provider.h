@@ -84,6 +84,8 @@ class GcpKmsClientProvider : public KmsClientProviderInterface {
 
   bool ShouldRetryOnStatus(google::cloud::StatusCode status_code) noexcept;
 
+  bool IsStatusCodeRetriable(google::cloud::StatusCode status_code) noexcept;
+
   void AeadDecrypt(
       core::AsyncContext<cmrt::sdk::kms_service::v1::DecryptRequest,
                          cmrt::sdk::kms_service::v1::DecryptResponse>&

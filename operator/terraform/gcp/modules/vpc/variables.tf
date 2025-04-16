@@ -27,12 +27,44 @@ variable "regions" {
   description = "Regions with Cloud NAT support."
   type        = set(string)
   validation {
-    # This limit is based on the size of the IP range being dedicated to the
-    # the subnets for the connectors. Not relevant if VPC connectors are not
-    # being created.
-    condition     = length(var.regions) <= 16
-    error_message = "Only 16 or less number of regions is supported."
+    # We currently only support single region for deploying operator workers.
+    # We can't change the variable to single string as it'll force terraform to
+    # recreate Cloud NAT and its router and will fail during deployment.
+    # Set the validation to 1 region until we figure out how to solve this
+    # without destory exisiting resources.
+    condition     = length(var.regions) == 1
+    error_message = "Only single region is supported."
   }
+}
+
+variable "network_name" {
+  description = "Name of the VPC network of this module. It's also the name of the worker subnet. This is required if auto_create_subnetworks is disabled."
+  type        = string
+}
+
+variable "auto_create_subnetworks" {
+  description = "When enabled, the network will create a subnet for each region automatically across the 10.128.0.0/9 address range."
+  type        = bool
+}
+
+variable "worker_subnet_cidr" {
+  description = "The range of internal addresses that are owned by worker subnet."
+  type        = string
+}
+
+variable "collector_subnet_cidr" {
+  description = "The range of internal addresses that are owned by collector subnet."
+  type        = string
+}
+
+variable "proxy_subnet_cidr" {
+  description = "The range of internal addresses that are owned by proxy subnet."
+  type        = string
+}
+
+variable "enable_remote_metric_aggregation" {
+  description = "When true, create the collector subnet"
+  type        = bool
 }
 
 variable "create_connectors" {

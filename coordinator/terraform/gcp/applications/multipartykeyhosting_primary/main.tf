@@ -40,11 +40,21 @@ locals {
   service_subdomain_suffix   = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
   public_key_domain          = var.environment != "prod" ? "${var.public_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.public_key_service_subdomain}.${var.parent_domain_name}"
   encryption_key_domain      = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${var.parent_domain_name}"
+  private_key_domain         = "${var.private_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
   package_bucket_prefix      = "${var.project_id}_${var.environment}"
   package_bucket_name        = length("${local.package_bucket_prefix}_mpkhs_primary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_primary_package_jars" : "${local.package_bucket_prefix}_mpkhs_a_pkg"
   key_sets = flatten([
     for key_set in var.key_sets_config.key_sets : key_set.name
   ])
+
+  service_domain_to_address_map = var.private_key_service_launch_cloud_run ? {
+    (local.public_key_domain) : module.publickeyhostingservice.get_public_key_loadbalancer_ip,
+    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
+    (local.private_key_domain) : module.private_key_service[0].loadbalancer_ip
+    } : {
+    (local.public_key_domain) : module.publickeyhostingservice.get_public_key_loadbalancer_ip,
+    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
+  }
 }
 
 module "bazel" {
@@ -175,10 +185,10 @@ module "private_key_service" {
   count  = var.private_key_service_launch_cloud_run ? 1 : 0
   source = "../private_key_service"
 
-  environment      = var.environment
-  project_id       = var.project_id
-  primary_region   = var.primary_region
-  secondary_region = var.secondary_region
+  environment    = var.environment
+  project_id     = var.project_id
+  regions        = [var.primary_region, var.secondary_region]
+  service_domain = local.private_key_domain
 
   allowed_invoker_service_account_emails = module.allowed_operators.all_service_accounts
   allowed_operator_user_group            = var.allowed_operator_user_group
@@ -267,10 +277,7 @@ module "domain_a_records" {
   parent_domain_name         = var.parent_domain_name
   parent_domain_name_project = var.parent_domain_name_project
 
-  service_domain_to_address_map = var.enable_domain_management ? {
-    (local.public_key_domain) : module.publickeyhostingservice.get_public_key_loadbalancer_ip,
-    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
-  } : {}
+  service_domain_to_address_map = var.enable_domain_management ? local.service_domain_to_address_map : {}
 }
 
 # parameters

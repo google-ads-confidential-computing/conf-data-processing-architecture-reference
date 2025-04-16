@@ -72,6 +72,5 @@ java_test(
         "//java/external:google_truth",
         "//java/external:junit",
         "//java/external:mockito",
-        "//java/external:mockito_inline",
     ],
 )

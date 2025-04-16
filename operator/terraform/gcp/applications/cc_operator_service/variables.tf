@@ -43,6 +43,36 @@ variable "operator_package_bucket_location" {
   type        = string
 }
 
+variable "auto_create_subnetworks" {
+  description = "When enabled, the network will create a subnet for each region automatically across the 10.128.0.0/9 address range."
+  type        = bool
+  default     = true
+}
+
+variable "network_name" {
+  description = "Name of the VPC network of this module. It's also the name of the worker subnet. This is required if auto_create_subnetworks is disabled."
+  type        = string
+  default     = "network-with-custom-subnet"
+}
+
+variable "worker_subnet_cidr" {
+  description = "The range of internal addresses that are owned by worker subnet."
+  type        = string
+  default     = "10.16.0.0/20"
+}
+
+variable "collector_subnet_cidr" {
+  description = "The range of internal addresses that are owned by collector subnet."
+  type        = string
+  default     = "10.20.0.0/20"
+}
+
+variable "proxy_subnet_cidr" {
+  description = "The range of internal addresses that are owned by proxy subnet."
+  type        = string
+  default     = "10.32.0.0/20"
+}
+
 ################################################################################
 # Global Alarm Variables.
 ################################################################################
@@ -571,10 +601,28 @@ variable "user_provided_collector_sa_email" {
   default     = ""
 }
 
+variable "collector_service_port_name" {
+  description = "The name of the gRPC port that receives traffic destined for the OpenTelemetry collector."
+  type        = string
+  default     = "otlp"
+}
+
 variable "collector_service_port" {
-  description = "The gRPC port that receives traffic destined for the OpenTelemetry collector."
+  description = "The value of the gRpc port that receives traffic destined for the OpenTelemetry collector."
   type        = number
   default     = 4317
+}
+
+variable "collector_domain_name" {
+  description = "The dns domain name for OpenTelemetry collector."
+  type        = string
+  default     = "collector.metrics"
+}
+
+variable "collector_dns_name" {
+  description = "The dns name for OpenTelemetry collector."
+  type        = string
+  default     = "scptestings.dev"
 }
 
 variable "collector_send_batch_max_size" {
@@ -593,6 +641,18 @@ variable "collector_send_batch_timeout" {
   description = "Time duration after which a batch will be sent regardless of size."
   type        = string
   default     = "5s"
+}
+
+variable "collector_instance_target_size" {
+  description = "The target number of running instances for the managed instance group of collector."
+  type        = number
+  default     = 1
+}
+
+variable "collector_min_instance_ready_sec" {
+  description = "Waiting time for the new instance to be ready."
+  type        = number
+  default     = 120
 }
 
 variable "collector_export_error_alarm" {
@@ -637,6 +697,26 @@ variable "collector_run_error_alarm" {
 
 variable "collector_crash_error_alarm" {
   description = "Configuration for the collector crash error alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 50,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}
+
+variable "worker_exporting_metrics_error_alarm" {
+  description = "Configuration for the worker exporting metrics error alarm."
   type = object({
     enable_alarm : bool,
     duration_sec : number,

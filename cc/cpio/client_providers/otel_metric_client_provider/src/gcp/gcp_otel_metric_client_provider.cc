@@ -26,6 +26,7 @@
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
+using google::cmrt::sdk::instance_service::v1::InstanceDetails;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
@@ -56,6 +57,9 @@ ExecutionResult GcpOtelMetricClientProvider::Run() noexcept {
 
   project_name_ =
       GcpUtils::GetProjectNameFromInstanceResource(instance_resource_);
+
+  fixed_labels_[kResourceInstanceIdLabel] = instance_resource_.instance_id;
+  fixed_labels_[kResourceZoneLabel] = instance_resource_.zone_id;
 
   return SuccessExecutionResult();
 }

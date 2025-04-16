@@ -86,6 +86,10 @@ class OtelMetricClientProvider : public MetricClientInterface {
   // OpenTelemetry Meter object
   std::shared_ptr<opentelemetry::metrics::Meter> otel_meter_;
 
+  // Fixed labels that will be merged and sent to the
+  // collector/GCM for every request
+  std::map<std::string, std::string> fixed_labels_;
+
   // OpenTelemetry instrument object caches. Guarded by mutexes.
   std::mutex counter_cache_mutex_;
   std::map<std::string,

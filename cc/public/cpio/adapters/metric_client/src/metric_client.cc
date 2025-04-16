@@ -133,6 +133,9 @@ void MetricClient::PutMetrics(
 
 ExecutionResultOr<PutMetricsResponse> MetricClient::PutMetricsSync(
     PutMetricsRequest request) noexcept {
+  if (options_->enable_remote_metric_aggregation) {
+    return metric_client_provider_->PutMetricsSync(request);
+  }
   PutMetricsResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<PutMetricsRequest, PutMetricsResponse>(

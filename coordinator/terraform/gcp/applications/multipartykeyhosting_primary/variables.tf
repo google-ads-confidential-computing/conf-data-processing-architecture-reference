@@ -341,6 +341,11 @@ variable "private_key_service_launch_cloud_run" {
   nullable    = false
 }
 
+variable "private_key_service_subdomain" {
+  description = "Subdomain to use with parent_domain_name to designate the private key service."
+  type        = string
+}
+
 variable "private_key_service_container_image_url" {
   description = "The full path (registry + tag) to the container image used to deploy EKS."
   type        = string

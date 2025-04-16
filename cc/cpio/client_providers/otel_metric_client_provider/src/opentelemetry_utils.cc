@@ -28,6 +28,7 @@
 #include "opentelemetry/sdk/metrics/meter_context_factory.h"
 #include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "opentelemetry/sdk/metrics/meter_provider_factory.h"
+#include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
 #include "public/cpio/interface/metric_client/type_def.h"
 
 using google::scp::cpio::MetricClientOptions;

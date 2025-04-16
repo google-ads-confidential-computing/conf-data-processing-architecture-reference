@@ -55,25 +55,12 @@ using testing::Matcher;
 using testing::Return;
 
 namespace {
-constexpr char kName[] = "test_name";
-constexpr char kValue[] = "12346.89";
-constexpr char kNamespace[] = "gcp_namespace";
-constexpr char kDifferentNamespace[] = "different_namespace";
-constexpr char kProjectIdValue[] = "123456789";
-constexpr char kInstanceIdValue[] = "987654321";
-constexpr char kInstanceZoneValue[] = "us-central1-c";
-
 constexpr char kInstanceResourceName[] =
     R"(//compute.googleapis.com/projects/123456789/zones/us-central1-c/instances/987654321)";
 
-constexpr char kResourceType[] = "gce_instance";
-constexpr char kProjectIdKey[] = "project_id";
-constexpr char kInstanceIdKey[] = "instance_id";
-constexpr char kInstanceZoneKey[] = "zone";
-
 }  // namespace
 
-MATCHER_P(ContainsOtelLabels, kv, "") {
+MATCHER_P(ContainsOtelLabels, kv, "Invalid labels") {
   std::map<std::string, std::string> result;
   arg.ForEachKeyValue(
       [&result](std::string_view key,
@@ -114,5 +101,35 @@ TEST_F(GcpOtelMetricClientProviderTest, RunTest) {
   metric_client_provider_ = CreateClientProvider();
   EXPECT_SUCCESS(metric_client_provider_->Init());
   EXPECT_SUCCESS(metric_client_provider_->Run());
+}
+
+TEST_F(GcpOtelMetricClientProviderTest,
+       RecordMetricsCorrectlyWithMergedLabels) {
+  metric_client_provider_ = CreateClientProvider();
+  metric_client_provider_->Init();
+  metric_client_provider_->Run();
+
+  auto mock_counter = make_unique<MockCounter<double>>();
+  auto mock_counter_ptr = mock_counter.get();
+
+  std::map<std::string, std::string> labels = {{"test_label", "unit_test"}};
+  auto request = std::make_shared<PutMetricsRequest>();
+  auto counter_metric = request->add_metrics();
+  counter_metric->set_name("counter");
+  counter_metric->set_value("1");
+  counter_metric->set_type(MetricType::METRIC_TYPE_COUNTER);
+  *counter_metric->mutable_labels() = {labels.begin(), labels.end()};
+
+  std::map<std::string, std::string> expected_labels = {
+      {"test_label", "unit_test"},
+      {"exported_instance_id", "987654321"},
+      {"exported_zone", "us-central1-c"}};
+
+  EXPECT_CALL(*mock_meter_, CreateDoubleCounter)
+      .WillOnce(Return(ByMove(std::move(mock_counter))));
+  EXPECT_CALL(*mock_counter_ptr,
+              Add(1, Matcher<const opentelemetry::common::KeyValueIterable&>(
+                         ContainsOtelLabels(expected_labels))));
+  EXPECT_TRUE(metric_client_provider_->PutMetricsSync(*request).Successful());
 }
 }  // namespace google::scp::cpio::client_providers::gcp_metric_client::test

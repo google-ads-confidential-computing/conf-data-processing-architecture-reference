@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-output "collector_instance_group" {
-  value       = google_compute_region_instance_group_manager.collector_instance.instance_group
-  description = "The instance group of the OpenTelemetry Collector created by Region Instance Group Manager."
+output "forwarding_rule" {
+  value = google_compute_global_forwarding_rule.forwarding_rule
+}
+
+output "tcp_proxy" {
+  value = google_compute_target_tcp_proxy.proxy
 }

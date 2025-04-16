@@ -90,7 +90,9 @@ class MockGcpKmsFactory : public GcpKmsFactory {
               (const string&, const string&), (noexcept, override));
 };
 
-class GcpKmsClientProviderTest : public ScpTestBase {
+class GcpKmsClientProviderTest
+    : public ScpTestBase,
+      public ::testing::WithParamInterface<StatusCode> {
  protected:
   static constexpr auto kGcpKmsDecryptTotalRetries = 4;
 
@@ -426,7 +428,12 @@ void ExpectCallDecryptWithFailuresAndEventualSuccess(
       .WillOnce(Return(success_decrypt_response));
 }
 
-TEST_F(GcpKmsClientProviderTest, ShouldRetryKmsDecryptIfUnavailable) {
+INSTANTIATE_TEST_SUITE_P(RetryErrorCodes, GcpKmsClientProviderTest,
+                         testing::Values(StatusCode::kUnavailable,
+                                         StatusCode::kUnknown,
+                                         StatusCode::kInternal));
+
+TEST_P(GcpKmsClientProviderTest, ShouldRetryKmsDecryptForRetriableStatusCode) {
   auto failure_times = 2;
   EXPECT_CALL(*mock_gcp_kms_factory_, CreateGcpKeyManagementServiceClient(
                                           kWipProvider, kServiceAccount))
@@ -434,8 +441,7 @@ TEST_F(GcpKmsClientProviderTest, ShouldRetryKmsDecryptIfUnavailable) {
                      1))  // Two failures plus the one that succeeds
       .WillRepeatedly(Return(mock_gcp_key_management_service_client_));
   ExpectCallDecryptWithFailuresAndEventualSuccess(
-      mock_gcp_key_management_service_client_, failure_times,
-      StatusCode::kUnavailable);
+      mock_gcp_key_management_service_client_, failure_times, GetParam());
 
   DecryptSuccessfully(client_.get(), kWipProvider);
 }
@@ -482,9 +488,10 @@ TEST_F(GcpKmsClientProviderTest, ShouldNotRetryKmsDecryptUponFailure) {
                                           kWipProvider, kServiceAccount))
       .Times(Exactly(1))
       .WillOnce(Return(mock_gcp_key_management_service_client_));
-  ExpectCallDecryptWithFailures(mock_gcp_key_management_service_client_,
-                                /* failure_return_times */ 1,
-                                StatusCode::kUnknown);  // Non-retryable code
+  ExpectCallDecryptWithFailures(
+      mock_gcp_key_management_service_client_,
+      /* failure_return_times */ 1,
+      StatusCode::kPermissionDenied);  // Non-retryable code
 
   DecryptFailure(client_.get(), kWipProvider,
                  SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);

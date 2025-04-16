@@ -24,6 +24,18 @@ output "encryption_key_base_url" {
   value = var.enable_domain_management ? "https://${local.encryption_key_domain}" : "http://${module.encryptionkeyservice.encryption_key_service_loadbalancer_ip}"
 }
 
+output "private_key_base_cloudrun_urls" {
+  value = var.private_key_service_launch_cloud_run ? module.private_key_service[0].urls : []
+}
+
+output "private_key_service_loadbalancer_ip" {
+  value = var.private_key_service_launch_cloud_run ? module.private_key_service[0].loadbalancer_ip : ""
+}
+
+output "private_key_base_url" {
+  value = "https://${local.private_key_domain}"
+}
+
 output "key_storage_cloudfunction_url" {
   value = module.keystorageservice.key_storage_cloudfunction_url
 }

@@ -15,11 +15,16 @@
  */
 
 module "operator_service" {
-  source      = "../../applications/cc_operator_service"
-  environment = var.environment
-  project_id  = var.project_id
-  region      = var.region
-  region_zone = var.region_zone
+  source                  = "../../applications/cc_operator_service"
+  environment             = var.environment
+  project_id              = var.project_id
+  region                  = var.region
+  region_zone             = var.region_zone
+  network_name            = var.network_name
+  auto_create_subnetworks = var.auto_create_subnetworks
+  worker_subnet_cidr      = var.worker_subnet_cidr
+  collector_subnet_cidr   = var.collector_subnet_cidr
+  proxy_subnet_cidr       = var.proxy_subnet_cidr
 
   # Global Alarms
   alarms_enabled            = var.alarms_enabled
@@ -84,8 +89,13 @@ module "operator_service" {
 
   # OpenTelemetry Collector
   collector_instance_type          = var.collector_instance_type
+  collector_instance_target_size   = var.collector_instance_target_size
   user_provided_collector_sa_email = var.user_provided_collector_sa_email
+  collector_service_port_name      = var.collector_service_port_name
   collector_service_port           = var.collector_service_port
+  collector_domain_name            = var.collector_domain_name
+  collector_dns_name               = var.collector_dns_name
+  collector_min_instance_ready_sec = var.collector_min_instance_ready_sec
   collector_send_batch_max_size    = var.collector_send_batch_max_size
   collector_send_batch_size        = var.collector_send_batch_size
   collector_send_batch_timeout     = var.collector_send_batch_timeout

@@ -36,6 +36,7 @@ using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::errors::SC_COMMON_ERRORS_UNIMPLEMENTED;
+using opentelemetry::sdk::resource::Resource;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;

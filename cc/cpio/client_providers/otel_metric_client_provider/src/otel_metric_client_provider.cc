@@ -114,6 +114,12 @@ void OtelMetricClientProvider::RecordMetric(const Metric& metric) noexcept {
   const std::string metric_name = metric.name();
   std::map<std::string, std::string> labels(metric.labels().begin(),
                                             metric.labels().end());
+  // Merge fixed_labels_ (usually containing resource labels) with
+  // the original label set.
+  for (const auto& [key, value] : fixed_labels_) {
+    labels[key] = value;
+  }
+
   auto labelkv =
       opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
   if (metric.type() == MetricType::METRIC_TYPE_GAUGE) {

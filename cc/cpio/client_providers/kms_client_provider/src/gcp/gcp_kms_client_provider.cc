@@ -17,6 +17,7 @@
 #include "gcp_kms_client_provider.h"
 
 #include <memory>
+#include <set>
 #include <utility>
 
 #include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
@@ -57,11 +58,24 @@ using google::scp::core::utils::Base64Decode;
 using std::bind;
 using std::make_shared;
 using std::move;
+using std::set;
 using std::shared_ptr;
 using std::string;
 
 /// Filename for logging errors
 static constexpr char kGcpKmsClientProvider[] = "GcpKmsClientProvider";
+
+const set<google::cloud::StatusCode> kRetryStatusCodes = {
+    google::cloud::StatusCode::kUnavailable,
+    /* The reason to retry on following status codes is because gRpc server
+       sometimes returns UNKNOWN or INTERNAL when using OAuth2 credentials.
+       The root cause appears to be a 503 error during token fetching and should
+       be retriable. The gRpc server also returns UNKNOWN status code for real
+       authentication error, so this client will also retries on it.
+    */
+    google::cloud::StatusCode::kUnknown,
+    google::cloud::StatusCode::kInternal,
+};
 
 namespace google::scp::cpio::client_providers {
 ExecutionResult GcpKmsClientProvider::Init() noexcept {
@@ -160,7 +174,12 @@ GcpKmsClientProvider::GetOrCreateGcpKeyManagementServiceClient(
 bool GcpKmsClientProvider::ShouldRetryOnStatus(
     cloud::StatusCode status_code) noexcept {
   return kms_client_options_->enable_gcp_kms_client_retries &&
-         status_code == cloud::StatusCode::kUnavailable;
+         IsStatusCodeRetriable(status_code);
+}
+
+bool GcpKmsClientProvider::IsStatusCodeRetriable(
+    cloud::StatusCode status_code) noexcept {
+  return kRetryStatusCodes.find(status_code) != kRetryStatusCodes.end();
 }
 
 void GcpKmsClientProvider::AeadDecrypt(

@@ -39,6 +39,12 @@ variable "vpc_connector_id" {
   default     = null
 }
 
+variable "subnet_id" {
+  description = "Worker subnet id."
+  type        = string
+}
+
+
 ################################################################################
 # Autoscaling Variables.
 ################################################################################
@@ -180,4 +186,14 @@ variable "cloudfunction_5xx_threshold" {
 variable "max_vm_instances_ratio_threshold" {
   description = "A decimal ratio of current to maximum allowed VMs, exceeding which sends an alarm. Example: 0.9."
   type        = number
+}
+
+variable "cloudfunction_alarm_eval_period_sec" {
+  description = "Time period (in seconds) for cloudfunction alarm evaluation."
+  type        = string
+}
+
+variable "cloudfunction_alarm_duration_sec" {
+  description = "Amount of time (in seconds) to wait before sending a cloudfunction alarm. Must be in minute intervals. Example: '60','120'."
+  type        = string
 }

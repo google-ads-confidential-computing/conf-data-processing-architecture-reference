@@ -17,6 +17,7 @@
 package com.google.scp.operator.cpio.cryptoclient;
 
 import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_BAD_GATEWAY;
+import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_SERVER_ERROR;
 import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
@@ -68,7 +69,10 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
       LoggerFactory.getLogger(MultiPartyHybridEncryptionKeyServiceImpl.class);
 
   private static final ImmutableSet<Integer> RETRYABLE_HTTP_STATUS_CODES =
-      ImmutableSet.of(STATUS_CODE_SERVICE_UNAVAILABLE /* 503 */, STATUS_CODE_BAD_GATEWAY /* 504 */);
+      ImmutableSet.of(
+          STATUS_CODE_SERVER_ERROR /* 500 */,
+          STATUS_CODE_SERVICE_UNAVAILABLE /* 503 */,
+          STATUS_CODE_BAD_GATEWAY /* 504 */);
 
   private static final int MAX_CACHE_SIZE = 100;
   private static final long CACHE_ENTRY_TTL_SEC = 3600;

@@ -22,14 +22,19 @@ variable "environment" {
   type        = string
 }
 
+variable "service_id" {
+  description = "Name of service fronted by the load balancer."
+  type        = string
+}
+
+variable "ssl_cert_id" {
+  description = "Name of service fronted by the load balancer."
+  type        = string
+}
+
 variable "regions" {
   description = "Regions for the created resources."
   type        = set(string)
-}
-
-variable "enable_domain_management" {
-  description = "Manage domain SSL cert creation and routing for this service."
-  type        = bool
 }
 
 variable "public_key_domain" {

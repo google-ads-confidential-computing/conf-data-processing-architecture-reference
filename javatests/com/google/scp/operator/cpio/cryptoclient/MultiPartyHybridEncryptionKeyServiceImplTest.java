@@ -17,6 +17,7 @@
 package com.google.scp.operator.cpio.cryptoclient;
 
 import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_BAD_GATEWAY;
+import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_SERVER_ERROR;
 import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -222,6 +223,26 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
 
     assertEquals(ErrorReason.KEY_DECRYPTION_ERROR, exception.getReason());
+  }
+
+  @Test
+  public void getDecrypter_getAead_JsonException_serverError() throws Exception {
+    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
+    GoogleJsonError jsonError = new GoogleJsonError();
+    var jsonException =
+        new GoogleJsonResponseException(
+            new HttpResponseException.Builder(
+                STATUS_CODE_SERVER_ERROR, "Internal Server Error", new HttpHeaders()),
+            jsonError);
+    when(aeadServicePrimary.getAead(anyString()))
+        .thenThrow(new GeneralSecurityException(jsonException));
+
+    KeyFetchException exception =
+        assertThrows(
+            KeyFetchException.class,
+            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
+
+    assertEquals(ErrorReason.KEY_SERVICE_UNAVAILABLE, exception.getReason());
   }
 
   @Test

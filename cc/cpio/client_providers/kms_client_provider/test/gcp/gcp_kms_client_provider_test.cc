@@ -431,7 +431,8 @@ void ExpectCallDecryptWithFailuresAndEventualSuccess(
 INSTANTIATE_TEST_SUITE_P(RetryErrorCodes, GcpKmsClientProviderTest,
                          testing::Values(StatusCode::kUnavailable,
                                          StatusCode::kUnknown,
-                                         StatusCode::kInternal));
+                                         StatusCode::kInternal,
+                                         StatusCode::kCancelled));
 
 TEST_P(GcpKmsClientProviderTest, ShouldRetryKmsDecryptForRetriableStatusCode) {
   auto failure_times = 2;

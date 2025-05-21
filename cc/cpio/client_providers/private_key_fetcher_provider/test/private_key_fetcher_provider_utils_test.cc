@@ -45,6 +45,8 @@ using google::scp::core::errors::
 using google::scp::core::errors::
     SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_RESOURCE_NAME;
 using google::scp::core::errors::
+    SC_PRIVATE_KEY_FETCHER_PROVIDER_ACTIVATION_TIME_NOT_FOUND;
+using google::scp::core::errors::
     SC_PRIVATE_KEY_FETCHER_PROVIDER_CREATION_TIME_NOT_FOUND;
 using google::scp::core::errors::
     SC_PRIVATE_KEY_FETCHER_PROVIDER_ENCRYPTION_KEY_TYPE_NOT_FOUND;
@@ -93,6 +95,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, ParsePrivateKeySuccess) {
         "publicKeyMaterial": "testtest",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -131,6 +134,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, ParsePrivateKeySuccess) {
   EXPECT_EQ(*encryption_key->public_key_material, "testtest");
   EXPECT_EQ(encryption_key->expiration_time_in_ms, 1669943990485);
   EXPECT_EQ(encryption_key->creation_time_in_ms, 1669252790485);
+  EXPECT_EQ(encryption_key->activation_time_in_ms, 1669252790486);
   EXPECT_EQ(*encryption_key->key_data[0]->key_encryption_key_uri,
             "aws-kms://arn:aws:kms:us-east-1:1234567:key");
   EXPECT_EQ(*encryption_key->key_data[0]->public_key_signature, "");
@@ -149,6 +153,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, CreateKeysetReaderFailure) {
         "publicKeyMaterial": "testtest",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -181,6 +186,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, CreateKeysetHandleFailure) {
         "publicKeyMaterial": "testtest",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -213,6 +219,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithInvalidKeyData) {
         "publicKeyMaterial": "testtest",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -246,6 +253,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithInvalidKeyDataNoKeyUri) {
         "publicKeyMaterial": "testtest",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -279,6 +287,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithInvalidKeyType) {
         "publicKeyMaterial": "testtest",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -311,6 +320,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithNameNotFound) {
         "publicKeyMaterial": "testtest",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -343,6 +353,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithExpirationTimeNotFound) {
         "publicKeysetHandle": "%s",
         "publicKeyMaterial": "testtest",
         "creationTime": "1669252790485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -368,6 +379,39 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithExpirationTimeNotFound) {
                   SC_PRIVATE_KEY_FETCHER_PROVIDER_EXPIRATION_TIME_NOT_FOUND)));
 }
 
+TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithActivationTimeNotFound) {
+  string bytes_str = absl::StrFormat(R"({
+          "name": "encryptionKeys/123456",
+          "encryptionKeyType": "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT",
+          "publicKeysetHandle": "%s",
+          "publicKeyMaterial": "testtest",
+          "creationTime": "1669252790485",
+          "expirationTime": "1669943990485",
+          "ttlTime": 0,
+          "keyData": [
+              {
+                  "publicKeySignature": "",
+                  "keyEncryptionKeyUri": "aws-kms://arn:aws:kms:us-east-1:1234567:key",
+                  "keyMaterial": ""
+              },
+              {
+                  "publicKeySignature": "",
+                  "keyEncryptionKeyUri": "aws-kms://arn:aws:kms:us-east-1:12345:key",
+                  "keyMaterial": ""
+              }
+          ]
+      })",
+                                     kPublicKeyJson);
+
+  PrivateKeyFetchingResponse response;
+  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+      BytesBuffer(bytes_str), response);
+
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(
+                  SC_PRIVATE_KEY_FETCHER_PROVIDER_ACTIVATION_TIME_NOT_FOUND)));
+}
+
 TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithCreationTimeNotFound) {
   string bytes_str = absl::StrFormat(R"({
         "name": "encryptionKeys/123456",
@@ -375,6 +419,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithCreationTimeNotFound) {
         "publicKeysetHandle": "%s",
         "publicKeyMaterial": "testtest",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -407,6 +452,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, ParseMultiplePrivateKeysSuccess) {
         "publicKeyMaterial": "testtest",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -446,6 +492,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest,
         "publicKeyMaterial": "",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "keyData": [
             {
@@ -475,6 +522,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest,
   EXPECT_EQ(*encryption_key->public_key_material, "");
   EXPECT_EQ(encryption_key->expiration_time_in_ms, 1669943990485);
   EXPECT_EQ(encryption_key->creation_time_in_ms, 1669252790485);
+  EXPECT_EQ(encryption_key->activation_time_in_ms, 1669252790486);
   EXPECT_EQ(*encryption_key->key_data[0]->key_encryption_key_uri,
             "aws-kms://arn:aws:kms:us-east-1:1234567:key");
   EXPECT_EQ(*encryption_key->key_data[0]->public_key_signature, "");
@@ -494,6 +542,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest,
         "publicKeyMaterial": "",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0,
         "setName": "testSetName",
         "keyData": [
@@ -524,6 +573,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest,
   EXPECT_EQ(*encryption_key->public_key_material, "");
   EXPECT_EQ(encryption_key->expiration_time_in_ms, 1669943990485);
   EXPECT_EQ(encryption_key->creation_time_in_ms, 1669252790485);
+  EXPECT_EQ(encryption_key->activation_time_in_ms, 1669252790486);
   EXPECT_EQ(*encryption_key->key_data[0]->key_encryption_key_uri,
             "aws-kms://arn:aws:kms:us-east-1:1234567:key");
   EXPECT_EQ(*encryption_key->key_data[0]->public_key_signature, "");

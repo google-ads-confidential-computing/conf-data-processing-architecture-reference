@@ -24,11 +24,10 @@ alarms_enabled                   = true
 alarms_notification_email        = "fakeemail@google.com"
 
 auto_create_subnetworks = false
-network_name            = "network-with-custom-subnet"
-
-worker_subnet_cidr    = "10.16.0.0/20"
-collector_subnet_cidr = "10.20.0.0/20"
-proxy_subnet_cidr     = "10.32.0.0/20"
+network_name_suffix     = "network-with-custom-subnet"
+worker_subnet_cidr      = "14.16.0.0/20"
+# collector_subnet_cidr   = "14.20.0.0/20"
+# proxy_subnet_cidr       = "14.32.0.0/20"
 
 enable_job_completion_notifications = true
 
@@ -41,10 +40,59 @@ worker_scale_in_jar  = "/tmp/postsubmit_mp/jars/WorkerScaleInCloudFunction_deplo
 frontend_service_jar = "/tmp/postsubmit_mp/jars/FrontendServiceHttpCloudFunction_deploy.jar"
 
 enable_native_metric_aggregation   = false
-enable_remote_metric_aggregation   = true
+enable_remote_metric_aggregation   = false
 metric_exporter_interval_in_millis = 5000
-collector_domain_name              = "collector.metrics"
-collector_dns_name                 = "scp.testings.postsubmit"
+# collector_domain_name              = "collector.metrics"
+# collector_dns_name                 = "scp.testings.postsubmit"
+
+collector_exceed_cpu_usage_alarm = {
+  enable_alarm : true,
+  duration_sec : 300,
+  alignment_period_sec : 600,
+  threshold : 0.9,
+  severity : "moderate",
+  auto_close_sec : 1800
+}
+collector_exceed_memory_usage_alarm = {
+  enable_alarm : true,
+  duration_sec : 300,
+  alignment_period_sec : 600,
+  threshold : 6442450944, # 6 GB
+  severity : "moderate",
+  auto_close_sec : 1800
+}
+collector_export_error_alarm = {
+  enable_alarm : true,
+  duration_sec : 300,
+  alignment_period_sec : 600,
+  threshold : 50,
+  severity : "moderate",
+  auto_close_sec : 1800
+}
+collector_crash_error_alarm = {
+  enable_alarm : true,
+  duration_sec : 300,
+  alignment_period_sec : 600,
+  threshold : 50,
+  severity : "moderate",
+  auto_close_sec : 1800
+}
+collector_run_error_alarm = {
+  enable_alarm : true,
+  duration_sec : 300,
+  alignment_period_sec : 600,
+  threshold : 50,
+  severity : "moderate",
+  auto_close_sec : 1800
+}
+worker_exporting_metrics_error_alarm = {
+  enable_alarm : true,
+  duration_sec : 300,
+  alignment_period_sec : 600,
+  threshold : 50,
+  severity : "moderate",
+  auto_close_sec : 1800
+}
 
 frontend_cloudfunction_use_java21_runtime     = true
 notification_cloudfunction_use_java21_runtime = true

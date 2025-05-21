@@ -75,6 +75,8 @@ public final class EncryptionKeyServiceTest {
   public void setUp() throws Exception {
     keyDb.createKey(DEFAULT_SET_KEY);
     keyDb.createKey(TEST_SET_KEY);
+    // Sleeping for 2s due to the read staleness configured below.
+    Thread.sleep(2000);
   }
 
   @Test
@@ -173,6 +175,22 @@ public final class EncryptionKeyServiceTest {
 
     // Then
     assertThat(keys.getKeysList()).isNotEmpty();
+  }
+
+
+  @Test
+  public void v1betaListRecentEncryptionKeys_staleness_returnsNothing() throws Exception {
+    EncryptionKey key = FakeEncryptionKey.create().toBuilder().setSetName("test-set-2").build();
+    keyDb.createKey(key);
+
+    // Given
+    String endpoint = "/v1beta/sets/test-set-2/encryptionKeys:recent?maxAgeSeconds=999";
+
+    // When
+    ListRecentEncryptionKeysResponse keys = listRecentEncryptionKeys(endpoint);
+
+    // Then
+    assertThat(keys.getKeysList()).isEmpty();
   }
 
   @Test
@@ -291,7 +309,8 @@ public final class EncryptionKeyServiceTest {
                   ImmutableMap.of(
                       "SPANNER_INSTANCE", keyDbConfig.spannerInstanceId(),
                       "SPANNER_DATABASE", keyDbConfig.spannerDbName(),
-                      "PROJECT_ID", keyDbConfig.gcpProjectId())),
+                      "PROJECT_ID", keyDbConfig.gcpProjectId(),
+                      "READ_STALENESS_SEC", "2")),
               "EncryptionKeyService_deploy.jar",
               "java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/",
               "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.EncryptionKeyService");

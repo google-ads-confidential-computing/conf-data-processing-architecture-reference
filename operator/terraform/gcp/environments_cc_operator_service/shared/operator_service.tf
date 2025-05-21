@@ -20,7 +20,7 @@ module "operator_service" {
   project_id              = var.project_id
   region                  = var.region
   region_zone             = var.region_zone
-  network_name            = var.network_name
+  network_name_suffix     = var.network_name_suffix
   auto_create_subnetworks = var.auto_create_subnetworks
   worker_subnet_cidr      = var.worker_subnet_cidr
   collector_subnet_cidr   = var.collector_subnet_cidr
@@ -78,6 +78,8 @@ module "operator_service" {
   autoscaling_cloudfunction_5xx_threshold         = var.autoscaling_cloudfunction_5xx_threshold
   autoscaling_cloudfunction_error_threshold       = var.autoscaling_cloudfunction_error_threshold
   autoscaling_cloudfunction_max_execution_time_ms = var.autoscaling_cloudfunction_max_execution_time_ms
+  autoscaling_cloudfunction_alarm_duration_sec    = var.autoscaling_cloudfunction_alarm_duration_sec
+  autoscaling_cloudfunction_alarm_eval_period_sec = var.autoscaling_cloudfunction_alarm_eval_period_sec
 
   # Job Queue Alarms
   jobqueue_alarm_eval_period_sec           = var.jobqueue_alarm_eval_period_sec
@@ -89,7 +91,8 @@ module "operator_service" {
 
   # OpenTelemetry Collector
   collector_instance_type          = var.collector_instance_type
-  collector_instance_target_size   = var.collector_instance_target_size
+  max_collector_instances          = var.max_collector_instances
+  min_collector_instances          = var.min_collector_instances
   user_provided_collector_sa_email = var.user_provided_collector_sa_email
   collector_service_port_name      = var.collector_service_port_name
   collector_service_port           = var.collector_service_port
@@ -99,6 +102,14 @@ module "operator_service" {
   collector_send_batch_max_size    = var.collector_send_batch_max_size
   collector_send_batch_size        = var.collector_send_batch_size
   collector_send_batch_timeout     = var.collector_send_batch_timeout
+  collector_queue_size             = var.collector_queue_size
+
+  collector_exceed_cpu_usage_alarm     = var.collector_exceed_cpu_usage_alarm
+  collector_exceed_memory_usage_alarm  = var.collector_exceed_memory_usage_alarm
+  collector_export_error_alarm         = var.collector_export_error_alarm
+  collector_run_error_alarm            = var.collector_run_error_alarm
+  collector_crash_error_alarm          = var.collector_crash_error_alarm
+  worker_exporting_metrics_error_alarm = var.worker_exporting_metrics_error_alarm
 
   # Frontend Service
   operator_package_bucket_location                                = var.operator_package_bucket_location

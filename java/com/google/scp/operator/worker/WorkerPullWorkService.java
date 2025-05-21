@@ -28,8 +28,6 @@ import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
-import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
-import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.operator.worker.Annotations.BenchmarkMode;
 import com.google.scp.operator.worker.perf.StopwatchExporter;
 import com.google.scp.operator.worker.perf.StopwatchRegistry;
@@ -104,15 +102,16 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
                     })
                 .build();
         job = jobClient.getJob(request);
-        CustomMetric metric =
-            CustomMetric.builder()
-                .setNameSpace(METRIC_NAMESPACE)
-                .setName("TryPullJobCount")
-                .setValue(1.0)
-                .setUnit("Count")
-                .setMetricType(MetricType.DOUBLE_COUNTER)
-                .build();
-        metricClient.recordMetric(metric);
+        // TODO: Enable it when remote aggregration is enabled.
+        // CustomMetric metric =
+        //     CustomMetric.builder()
+        //         .setNameSpace(METRIC_NAMESPACE)
+        //         .setName("TryPullJobCount")
+        //         .setValue(1.0)
+        //         .setUnit("Count")
+        //         .setMetricType(MetricType.DOUBLE_COUNTER)
+        //         .build();
+        // metricClient.recordMetric(metric);
 
         if (job.isEmpty()) {
           logger.info("No job pulled.");

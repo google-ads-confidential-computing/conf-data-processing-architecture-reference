@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
-load("@rules_pkg//:pkg.bzl", "pkg_zip")
+load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_zip")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -82,5 +82,33 @@ pkg_zip(
     name = "KeyStorageServiceHttpCloudFunctionDeploy_zip",
     srcs = [
         ":KeyStorageServiceHttpCloudFunction_deploy.jar",
+    ],
+)
+
+pkg_tar(
+    name = "function_invoker_tar",
+    srcs = ["//java/external:gcp_function_invoker"],
+)
+
+pkg_tar(
+    name = "key_storage_service_cloud_function_tar",
+    srcs = [":KeyStorageServiceHttpCloudFunctionDeploy"],
+)
+
+container_image(
+    name = "KeyStorageServiceRuntimeContainer",
+    base = "@java_base_21//image",
+    cmd = [
+        "./java-function-invoker-1.3.1.jar",
+        "--classpath",
+        "./KeyStorageServiceHttpCloudFunction_deploy.jar",
+        "--target",
+        "com.google.scp.coordinator.keymanagement.keystorage.service.gcp.KeyStorageServiceHttpFunction",
+    ],
+    files = [],
+    tags = ["manual"],
+    tars = [
+        ":function_invoker_tar",
+        ":key_storage_service_cloud_function_tar",
     ],
 )

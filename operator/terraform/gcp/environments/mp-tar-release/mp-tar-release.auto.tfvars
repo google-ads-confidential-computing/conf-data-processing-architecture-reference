@@ -18,6 +18,10 @@ worker_container_log_redirect    = "true"
 worker_instance_force_replace    = true
 worker_memory_monitoring_enabled = true
 
+auto_create_subnetworks = false
+network_name_suffix     = "network-with-custom-subnet"
+worker_subnet_cidr      = "8.16.0.0/20"
+
 enable_job_completion_notifications = true
 
 enable_job_completion_notifications_per_job           = true

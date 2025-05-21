@@ -75,6 +75,7 @@ const set<google::cloud::StatusCode> kRetryStatusCodes = {
     */
     google::cloud::StatusCode::kUnknown,
     google::cloud::StatusCode::kInternal,
+    google::cloud::StatusCode::kCancelled,
 };
 
 namespace google::scp::cpio::client_providers {

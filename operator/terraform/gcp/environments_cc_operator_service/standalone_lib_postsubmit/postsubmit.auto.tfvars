@@ -62,6 +62,10 @@ metric_client_parameter_values = {
   batch_recording_time_duration_in_ms = "5000",
 }
 
+auto_create_subnetworks = false
+network_name_suffix     = "network-with-custom-subnet"
+worker_subnet_cidr      = "12.16.0.0/20"
+
 worker_scale_in_jar  = "/tmp/standalone_lib_postsubmit/jars/WorkerScaleInCloudFunction_deploy.jar"
 frontend_service_jar = "/tmp/standalone_lib_postsubmit/jars/FrontendServiceHttpCloudFunction_deploy.jar"
 

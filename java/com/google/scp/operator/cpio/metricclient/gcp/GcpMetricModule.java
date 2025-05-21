@@ -40,7 +40,10 @@ import com.google.scp.operator.cpio.metricclient.gcp.Annotations.OtlpCollectorEx
 import com.google.scp.operator.cpio.metricclient.gcp.Annotations.OtlpGoogleCloudMetricExporter;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
+import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpInstanceId;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectId;
+import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpZone;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
@@ -132,6 +135,8 @@ public class GcpMetricModule extends MetricModule {
       @EnableNativeMetricAggregation Boolean enableNativeMetricAggregation,
       @EnableRemoteMetricAggregation Boolean enableRemoteMetricAggregation,
       @MetricExporterIntervalInMillis Integer metricExportInterval,
+      @GcpInstanceId String instanceId,
+      @GcpZone String zone,
       @OtlpGoogleCloudMetricExporter MetricExporter gcpMetricExporter,
       @OtlpCollectorExporter Optional<MetricExporter> collectorExporter)
       throws Exception {
@@ -152,11 +157,21 @@ public class GcpMetricModule extends MetricModule {
         PeriodicMetricReader.builder(metricExporter.get())
             .setInterval(java.time.Duration.ofMillis(metricExportInterval))
             .build();
-    Resource gcpResource = Resource.create(new GCPResource().getAttributes());
+
+    Resource customResource =
+        Resource.create(
+            Attributes.builder()
+                .put("gcp.resource_type", "gce_instance")
+                .put("gcp.gce_instance.zone", zone)
+                .put("gcp.gce_instance.instance_id", instanceId)
+                .build());
+
+    Resource gcpResource = Resource.create(new GCPResource().getAttributes()).merge(customResource);
+
     SdkMeterProvider sdkMeterProvider =
         SdkMeterProvider.builder()
             .registerMetricReader(metricReader)
-            .setResource(Resource.create(gcpResource.getAttributes()))
+            .setResource(gcpResource)
             .build();
     return Optional.of(
         sdkMeterProvider

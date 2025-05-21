@@ -70,6 +70,7 @@ constexpr char kTestPublicKeysetHandle[] = "publicKeysetHandle";
 constexpr char kTestPublicKeyMaterial[] = "publicKeysetHandle";
 constexpr char kTestKeysetName[] = "keysetName";
 constexpr int kTestExpirationTime = 123456;
+constexpr int kTestActivationTime = 111123;
 constexpr int kTestCreationTime = 111111;
 constexpr char kTestPublicKeySignature[] = "publicKeySignature";
 constexpr char kTestKeyEncryptionKeyUriWithPrefix[] =
@@ -101,6 +102,7 @@ shared_ptr<EncryptionKey> CreateEncryptionKeyBase(
   encryption_key->resource_name = make_shared<string>(kTestResourceName);
   encryption_key->expiration_time_in_ms = kTestExpirationTime;
   encryption_key->creation_time_in_ms = kTestCreationTime;
+  encryption_key->activation_time_in_ms = kTestActivationTime;
   encryption_key->public_key_material =
       make_shared<string>(kTestPublicKeyMaterial);
   encryption_key->public_keyset_handle =
@@ -254,6 +256,8 @@ TEST(PrivateKeyClientUtilsTest, ConsturctPrivateKeySuccess) {
                         TimeUtil::MillisecondsToTimestamp(kTestExpirationTime));
   ExpectTimestampEquals(private_key.creation_time(),
                         TimeUtil::MillisecondsToTimestamp(kTestCreationTime));
+  ExpectTimestampEquals(private_key.activation_time(),
+                        TimeUtil::MillisecondsToTimestamp(kTestActivationTime));
   string encoded_key = *Base64Encode("Test message");
   EXPECT_EQ(private_key.private_key(), encoded_key);
 }
@@ -280,6 +284,8 @@ TEST(PrivateKeyClientUtilsTest, ConsturctPrivateKeySuccessWithoutKeysetName) {
                         TimeUtil::MillisecondsToTimestamp(kTestExpirationTime));
   ExpectTimestampEquals(private_key.creation_time(),
                         TimeUtil::MillisecondsToTimestamp(kTestCreationTime));
+  ExpectTimestampEquals(private_key.activation_time(),
+                        TimeUtil::MillisecondsToTimestamp(kTestActivationTime));
   string encoded_key = *Base64Encode("Test message");
   EXPECT_EQ(private_key.private_key(), encoded_key);
 }

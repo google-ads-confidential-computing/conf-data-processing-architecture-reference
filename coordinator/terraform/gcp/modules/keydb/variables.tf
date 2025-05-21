@@ -31,3 +31,25 @@ variable "spanner_processing_units" {
   description = "Spanner's compute capacity. 1000 processing units = 1 node and must be set as a multiple of 100."
   type        = number
 }
+
+variable "custom_configuration_name" {
+  description = "Name for the custom spanner configuration to be created."
+  type        = string
+  nullable    = true
+}
+
+variable "custom_configuration_display_name" {
+  description = "Display name for the custom spanner configuration to be created."
+  type        = string
+}
+
+variable "custom_configuration_base_config" {
+  description = "Base spanner configuration used as starting basis for custom configuraiton."
+  type        = string
+}
+
+variable "custom_configuration_read_replica_location" {
+  description = "Region used in custom configuration as an additional read replica."
+  type        = string
+}
+

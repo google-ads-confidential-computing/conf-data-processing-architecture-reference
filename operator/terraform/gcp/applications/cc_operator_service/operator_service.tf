@@ -42,8 +42,8 @@ module "vpc" {
 
   auto_create_subnetworks = var.auto_create_subnetworks
   # These variables are only be used if auto_create_subnetworks is set to false.
-  network_name       = var.network_name
-  worker_subnet_cidr = var.worker_subnet_cidr
+  network_name_suffix = var.network_name_suffix
+  worker_subnet_cidr  = var.worker_subnet_cidr
 
   enable_remote_metric_aggregation = var.metric_client_parameter_values.enable_remote_metric_aggregation
   collector_subnet_cidr            = var.collector_subnet_cidr
@@ -195,6 +195,7 @@ module "autoscaling" {
   environment      = var.environment
   project_id       = var.project_id
   region           = var.region
+  subnet_id        = module.vpc.worker_subnet_id
   vpc_connector_id = var.vpcsc_compatible ? module.vpc.connectors[var.region] : null
 
   worker_template               = module.worker.worker_template
@@ -224,7 +225,10 @@ module "autoscaling" {
   cloudfunction_5xx_threshold         = var.autoscaling_cloudfunction_5xx_threshold
   cloudfunction_error_threshold       = var.autoscaling_cloudfunction_error_threshold
   cloudfunction_max_execution_time_ms = var.autoscaling_cloudfunction_max_execution_time_ms
-  use_java21_runtime                  = var.autoscaling_cloudfunction_use_java21_runtime
+  cloudfunction_alarm_eval_period_sec = var.autoscaling_cloudfunction_alarm_eval_period_sec
+  cloudfunction_alarm_duration_sec    = var.autoscaling_cloudfunction_alarm_duration_sec
+
+  use_java21_runtime = var.autoscaling_cloudfunction_use_java21_runtime
 }
 
 # Storage bucket containing cloudfunction JARs
@@ -249,20 +253,25 @@ module "opentelemetry_collector" {
 
   user_provided_collector_sa_email = var.user_provided_collector_sa_email
   collector_instance_type          = var.collector_instance_type
-  collector_instance_target_size   = var.collector_instance_target_size
+  max_collector_instances          = var.max_collector_instances
+  min_collector_instances          = var.min_collector_instances
   collector_service_port_name      = var.collector_service_port_name
   collector_service_port           = var.collector_service_port
   collector_min_instance_ready_sec = var.collector_min_instance_ready_sec
+  collector_cpu_utilization_target = var.collector_cpu_utilization_target
   collector_startup_script = templatefile("../../modules/opentelemetry_collector/collector_startup.tftpl", {
-    otel_collector_image_uri = "otel/opentelemetry-collector-contrib:0.117.0"
+    otel_collector_image_uri = "otel/opentelemetry-collector-contrib:0.122.1"
 
-    grpc_receiver_port  = var.collector_service_port
-    metric_prefix       = "custom.googleapis.com"
-    send_batch_max_size = var.collector_send_batch_max_size
-    send_batch_size     = var.collector_send_batch_size
-    send_batch_timeout  = var.collector_send_batch_timeout
+    grpc_receiver_port   = var.collector_service_port
+    metric_prefix        = "custom.googleapis.com"
+    send_batch_max_size  = var.collector_send_batch_max_size
+    send_batch_size      = var.collector_send_batch_size
+    send_batch_timeout   = var.collector_send_batch_timeout
+    collector_queue_size = var.collector_queue_size
   })
 
+  collector_exceed_cpu_usage_alarm     = var.collector_exceed_cpu_usage_alarm
+  collector_exceed_memory_usage_alarm  = var.collector_exceed_memory_usage_alarm
   collector_export_error_alarm         = var.collector_export_error_alarm
   collector_run_error_alarm            = var.collector_run_error_alarm
   collector_crash_error_alarm          = var.collector_crash_error_alarm

@@ -66,6 +66,19 @@ resource "google_spanner_database" "keydb" {
   deletion_protection = true
 }
 
+resource "google_spanner_instance_config" "example" {
+  count = var.custom_configuration_name == null ? 0 : 1
+
+  name         = var.custom_configuration_name
+  display_name = var.custom_configuration_display_name
+  base_config  = var.custom_configuration_base_config
+  replicas {
+    location                = var.custom_configuration_read_replica_location
+    type                    = "READ_ONLY"
+    default_leader_location = false
+  }
+}
+
 resource "google_spanner_backup_schedule" "keydb_backup_schedule_full_backup" {
   instance = google_spanner_instance.keydb_instance.name
 

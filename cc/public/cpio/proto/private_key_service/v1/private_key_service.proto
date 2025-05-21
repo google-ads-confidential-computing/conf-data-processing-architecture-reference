@@ -48,7 +48,8 @@ message PrivateKey {
   google.protobuf.Timestamp expiration_time = 4;
   // The creation time of the private key.
   google.protobuf.Timestamp creation_time = 5;
-
+  // The activation time of the private key.
+  google.protobuf.Timestamp activation_time = 7;
   // Optional key set name for the private key, as this is a newly added field,
   // old keys don't have this field.
   string key_set_name = 6;

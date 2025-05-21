@@ -134,6 +134,7 @@ TEST_F(PrivateKeyFetcherProviderTest, FetchPrivateKey) {
     "publicKeyMaterial": "testtest",
     "creationTime": "1669252790485",
     "expirationTime": "1669943990485",
+    "activationTime": "1669252790486",
     "ttlTime": 0,
     "keyData": [
         {
@@ -207,6 +208,7 @@ TEST_F(PrivateKeyFetcherProviderTest, PrivateKeyNotFound) {
         "publicKeyMaterial": "testtest",
         "creationTime": "1669252790485",
         "expirationTime": "1669943990485",
+        "activationTime": "1669252790486",
         "ttlTime": 0
     })",
       kPublicKeyJson));

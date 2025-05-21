@@ -46,10 +46,10 @@ public final class GcpKeyServiceModule extends AbstractModule {
     return Integer.valueOf(env.getOrDefault(KEY_LIMIT_ENV_VAR, "5"));
   }
 
-  /** Returns ReadStalenessSeconds as Integer from environment variables. Default value of 15 */
+  /** Returns ReadStalenessSeconds as Integer from environment variables. Default value of 0 */
   private Integer getReadStalenessSeconds() {
     Map<String, String> env = System.getenv();
-    return Integer.valueOf(env.getOrDefault(READ_STALENESS_SEC_ENV_VAR, "15"));
+    return Integer.valueOf(env.getOrDefault(READ_STALENESS_SEC_ENV_VAR, "0"));
   }
 
   /**

@@ -69,9 +69,35 @@ shared_ptr<MetricClientInterface> OtelMetricClientProviderFactory::Create(
     const shared_ptr<MetricClientOptions>& options,
     const shared_ptr<InstanceClientProviderInterface>&
         instance_client_provider) {
+  std::string resource_name;
+  if (auto result =
+          instance_client_provider->GetCurrentInstanceResourceNameSync(
+              resource_name);
+      !result.Successful()) {
+    SCP_ERROR(kGcpOtelMetricClientProvider, kZeroUuid, result,
+              "Failed to get current instance resource name.");
+    return nullptr;
+  }
+  auto instance_id_or =
+      GcpInstanceClientUtils::ParseInstanceIdFromInstanceResourceName(
+          resource_name);
+  auto zone_or = GcpInstanceClientUtils::ParseZoneIdFromInstanceResourceName(
+      resource_name);
+  if (!instance_id_or.Successful()) {
+    SCP_ERROR(kGcpOtelMetricClientProvider, kZeroUuid, instance_id_or.result(),
+              "Failed to get current instance ID.");
+    return nullptr;
+  }
+  if (!zone_or.Successful()) {
+    SCP_ERROR(kGcpOtelMetricClientProvider, kZeroUuid, zone_or.result(),
+              "Failed to get current instance zone.");
+    return nullptr;
+  }
+
   return make_shared<GcpOtelMetricClientProvider>(
       options, instance_client_provider,
-      OpenTelemetryUtils::CreateOpenTelemetryMeter(options));
+      OpenTelemetryUtils::CreateOpenTelemetryMeter(
+          options, std::move(*instance_id_or), std::move(*zone_or)));
 }
 #endif
 }  // namespace google::scp::cpio::client_providers

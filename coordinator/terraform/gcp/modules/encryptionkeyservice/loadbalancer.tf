@@ -13,10 +13,6 @@
 # limitations under the License.
 
 # Network Endpoint Group to route to cloud function
-moved {
-  from = google_compute_region_network_endpoint_group.encryption_key_service_network_endpoint_group
-  to   = google_compute_region_network_endpoint_group.encryption_key_service_network_endpoint_group["0"]
-}
 
 resource "google_compute_region_network_endpoint_group" "encryption_key_service_network_endpoint_group" {
   for_each              = local.cfs

@@ -47,11 +47,6 @@ resource "google_storage_bucket_object" "encryption_key_service_package_bucket_o
   source = local.cloudfunction_package_zip
 }
 
-moved {
-  from = google_cloudfunctions2_function.encryption_key_service_cloudfunction
-  to   = google_cloudfunctions2_function.encryption_key_service_cloudfunction["0"]
-}
-
 resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction" {
   for_each = { for idx, region in var.regions : idx => region }
   name     = "${var.environment}-${each.value}-${local.cloudfunction_name_suffix}"
@@ -127,11 +122,6 @@ resource "google_spanner_database_iam_member" "encryption_key_service_spannerdb_
   database = var.spanner_database_name
   role     = "roles/spanner.databaseReader"
   member   = "serviceAccount:${local.encryption_key_service_account_email}"
-}
-
-moved {
-  from = google_cloud_run_service_iam_member.encryption_key_service_iam_policy[0]
-  to   = google_cloud_run_service_iam_member.encryption_key_service_iam_policy["0"]
 }
 
 # IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.

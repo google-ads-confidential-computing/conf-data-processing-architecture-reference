@@ -15,6 +15,7 @@
  */
 locals {
   egress_internet_tag = "egress-internet"
+  vpc_network_name    = var.auto_create_subnetworks ? "${var.environment}-network" : "${var.environment}-${var.network_name_suffix}"
 }
 
 # Dedicated VPC network.
@@ -26,7 +27,7 @@ module "vpc_network" {
   # If auto_create_subnetworks set to false, the network name has to be renamed
   # so terraform can destroy existing one and recreate a new one with customized
   # subnets.
-  network_name = var.auto_create_subnetworks ? "${var.environment}-network" : "${var.environment}-${var.network_name}"
+  network_name = local.vpc_network_name
 
   # The subnetworks of the workers are created automatically based on
   # auto_create_subnetworks flag. If it set to true, subnets will be created
@@ -70,7 +71,7 @@ module "vpc_nat" {
 resource "google_compute_subnetwork" "worker_subnet" {
   count = var.auto_create_subnetworks ? 0 : 1
 
-  name          = var.network_name
+  name          = "${var.environment}-worker-subnet"
   network       = module.vpc_network.network_self_link
   purpose       = "PRIVATE"
   region        = one(var.regions[*])
@@ -85,6 +86,9 @@ resource "google_compute_subnetwork" "collector_subnet" {
   purpose       = "PRIVATE"
   region        = one(var.regions[*])
   ip_cidr_range = var.collector_subnet_cidr
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "google_compute_subnetwork" "proxy_subnet" {
@@ -97,6 +101,7 @@ resource "google_compute_subnetwork" "proxy_subnet" {
   ip_cidr_range = var.proxy_subnet_cidr
   role          = "ACTIVE"
   lifecycle {
-    ignore_changes = [ipv6_access_type]
+    ignore_changes        = [ipv6_access_type]
+    create_before_destroy = true
   }
 }

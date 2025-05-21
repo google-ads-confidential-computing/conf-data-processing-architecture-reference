@@ -37,8 +37,8 @@ variable "regions" {
   }
 }
 
-variable "network_name" {
-  description = "Name of the VPC network of this module. It's also the name of the worker subnet. This is required if auto_create_subnetworks is disabled."
+variable "network_name_suffix" {
+  description = "The suffix of the name of the VPC network of this module. The network name is a combination of environment name and this suffix. This is required if auto_create_subnetworks is disabled."
   type        = string
 }
 

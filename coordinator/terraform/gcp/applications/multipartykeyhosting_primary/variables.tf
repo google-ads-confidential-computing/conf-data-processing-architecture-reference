@@ -96,6 +96,32 @@ variable "spanner_processing_units" {
   type        = number
 }
 
+variable "spanner_staleness_read_sec" {
+  description = "Acceptable read staleness in seconds."
+  type        = string
+}
+
+variable "spanner_custom_configuration_name" {
+  description = "Name for the custom spanner configuration to be created."
+  type        = string
+  nullable    = true
+}
+
+variable "spanner_custom_configuration_display_name" {
+  description = "Display name for the custom spanner configuration to be created."
+  type        = string
+}
+
+variable "spanner_custom_configuration_base_config" {
+  description = "Base spanner configuration used as starting basis for custom configuraiton."
+  type        = string
+}
+
+variable "spanner_custom_configuration_read_replica_location" {
+  description = "Region used in custom configuration as an additional read replica."
+  type        = string
+}
+
 ################################################################################
 # Key Generation Variables.
 ################################################################################
@@ -255,14 +281,15 @@ variable "allowed_operators" {
   default = {}
 }
 
+variable "location_new_key_ring" {
+  description = "Location for the global key ring."
+  type        = string
+  nullable    = true
+}
+
 ################################################################################
 # Routing Variables.
 ################################################################################
-
-variable "enable_domain_management" {
-  description = "Manage domain SSL cert creation and routing for public and encryption key services."
-  type        = bool
-}
 
 variable "parent_domain_name" {
   description = "Custom domain name to use with key hosting APIs."
@@ -280,7 +307,7 @@ variable "service_subdomain_suffix" {
 }
 
 variable "public_key_service_subdomain" {
-  description = "Subdomain to use with parent_domain_name to designate the public key service."
+  description = "Subdomain to use with parent_domain_name to designate the Public Key Service."
   type        = string
 }
 
@@ -298,7 +325,20 @@ variable "cloudfunction_timeout_seconds" {
   type        = number
 }
 
-### PKS
+### Public Key Service
+
+variable "public_key_service_launch_cloud_run" {
+  description = "Flag to control launching Cloud Run Public Key Service."
+  type        = bool
+  nullable    = false
+}
+
+variable "public_key_service_container_image_url" {
+  description = "The full path (registry + tag) to the container image used to deploy Public Key Service."
+  type        = string
+  nullable    = false
+}
+
 variable "get_public_key_service_jar" {
   description = <<-EOT
           Get Public key service cloud function path. If not provided defaults to locally built jar file.
@@ -310,6 +350,16 @@ variable "get_public_key_service_jar" {
 variable "get_public_key_service_source_path" {
   description = "GCS path to public Key Service source archive in the package bucket."
   type        = string
+}
+
+variable "public_key_service_cloud_run_cpu_count" {
+  description = "Number of cpus to allocate for Public Key Service cloud run instance."
+  type        = number
+}
+
+variable "public_key_service_max_cloud_run_concurrency" {
+  description = "Maximum request concurrency for Public Key Service cloud run instance."
+  type        = number
 }
 
 variable "get_public_key_cloudfunction_memory_mb" {
@@ -335,9 +385,9 @@ variable "publickeyservice_use_java21_runtime" {
 
 ### Private Key Service
 
-variable "private_key_service_launch_cloud_run" {
-  description = "Flag to control launching a EKS using Cloud Run."
-  type        = bool
+variable "private_key_service_additional_regions" {
+  description = "Additional regions beyond primary and secondary that Private KS will run in."
+  type        = list(string)
   nullable    = false
 }
 
@@ -347,7 +397,7 @@ variable "private_key_service_subdomain" {
 }
 
 variable "private_key_service_container_image_url" {
-  description = "The full path (registry + tag) to the container image used to deploy EKS."
+  description = "The full path (registry + tag) to the container image used to deploy Private Key Service."
   type        = string
   nullable    = false
 }
@@ -363,6 +413,11 @@ variable "private_key_service_cloud_run_concurrency" {
 }
 
 ### EKS
+variable "delete_encryption_key_service" {
+  description = "Flag to control removal of the EKS."
+  type        = bool
+}
+
 variable "encryption_key_service_jar" {
   description = <<-EOT
           Encryption key service cloud function path. If not provided defaults to locally built jar file.

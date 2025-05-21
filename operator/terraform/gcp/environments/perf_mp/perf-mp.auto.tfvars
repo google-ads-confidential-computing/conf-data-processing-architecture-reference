@@ -36,6 +36,10 @@ instance_disk_image_family = {
   image_family  = "confidential-space"
 }
 
+auto_create_subnetworks = false
+network_name_suffix     = "network-with-custom-subnet"
+worker_subnet_cidr      = "9.16.0.0/20"
+
 user_provided_worker_sa_email = "perf-mp-worker-account@admcloud-adtech1.iam.gserviceaccount.com"
 
 frontend_cloudfunction_use_java21_runtime     = true

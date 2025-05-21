@@ -68,6 +68,10 @@ DEFINE_ERROR_CODE(SC_CPIO_COMPONENT_ALREADY_RUNNING, SC_CPIO, 0x00012,
                   "The component is already running in CPIO",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
 
+DEFINE_ERROR_CODE(SC_CPIO_EXHAUSTED_RETRIES, SC_CPIO, 0x0013,
+                  "Retry count exhausted",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+
 // Map CPIO unknown error
 MAP_TO_PUBLIC_ERROR_CODE(SC_UNKNOWN, SC_CPIO_UNKNOWN_ERROR)
 }  // namespace google::scp::core::errors

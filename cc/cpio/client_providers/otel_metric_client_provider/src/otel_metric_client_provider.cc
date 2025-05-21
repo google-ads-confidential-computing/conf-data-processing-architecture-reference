@@ -68,7 +68,14 @@ using std::vector;
 using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 
-static constexpr char kOtelMetricClientProvider[] = "OtelMetricClientProvider";
+namespace {
+constexpr char kOtelMetricClientProvider[] = "OtelMetricClientProvider";
+
+string ConstructMetricName(const string& metric_namespace,
+                           const string& metric_name_in_request) {
+  return absl::StrCat(metric_namespace, "/", metric_name_in_request);
+}
+}  // namespace
 
 namespace google::scp::cpio::client_providers {
 
@@ -95,23 +102,25 @@ ExecutionResult OtelMetricClientProvider::Stop() noexcept {
 void OtelMetricClientProvider::PutMetrics(
     AsyncContext<PutMetricsRequest, PutMetricsResponse>&
         record_metric_context) noexcept {
-  auto execution_result =
-      OtelMetricClientProvider::ValidateRequest(*record_metric_context.request);
-  if (!execution_result.Successful()) {
-    SCP_ERROR_CONTEXT(kOtelMetricClientProvider, record_metric_context,
-                      execution_result, "Invalid metric.");
-    record_metric_context.result = execution_result;
-    record_metric_context.Finish();
-    return;
+  auto response_or = PutMetricsSync(*record_metric_context.request);
+  record_metric_context.result = response_or.result();
+  if (response_or.Successful()) {
+    record_metric_context.response =
+        make_shared<PutMetricsResponse>(std::move(*response_or));
   }
-
-  for (auto metric : record_metric_context.request->metrics()) {
-    RecordMetric(metric);
-  }
+  record_metric_context.Finish();
 }
 
-void OtelMetricClientProvider::RecordMetric(const Metric& metric) noexcept {
-  const std::string metric_name = metric.name();
+string OtelMetricClientProvider::GetMetricNamespace(
+    const PutMetricsRequest& request) {
+  return request.metric_namespace().empty()
+             ? metric_client_options_->namespace_for_batch_recording
+             : request.metric_namespace();
+}
+
+void OtelMetricClientProvider::RecordMetric(
+    const Metric& metric, const string& metric_namespace) noexcept {
+  auto metric_name = ConstructMetricName(metric_namespace, metric.name());
   std::map<std::string, std::string> labels(metric.labels().begin(),
                                             metric.labels().end());
   // Merge fixed_labels_ (usually containing resource labels) with
@@ -123,20 +132,26 @@ void OtelMetricClientProvider::RecordMetric(const Metric& metric) noexcept {
   auto labelkv =
       opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
   if (metric.type() == MetricType::METRIC_TYPE_GAUGE) {
-    GetOrCreateGauge(metric)->Record(stod(metric.value()), labelkv);
+    GetOrCreateGauge(metric_name, metric)
+        ->Record(stod(metric.value()), labelkv);
     return;
   }
 
   if (metric.type() == MetricType::METRIC_TYPE_HISTOGRAM) {
-    GetOrCreateHistogram(metric)->Record(stod(metric.value()), labelkv);
+    GetOrCreateHistogram(metric_name, metric)
+        ->Record(stod(metric.value()), labelkv);
     return;
   }
 
-  GetOrCreateCounter(metric)->Add(stod(metric.value()), labelkv);
+  GetOrCreateCounter(metric_name, metric)->Add(stod(metric.value()), labelkv);
 }
 
 ExecutionResult OtelMetricClientProvider::ValidateRequest(
     const PutMetricsRequest& request) noexcept {
+  if (request.metric_namespace().empty() &&
+      metric_client_options_->namespace_for_batch_recording.empty()) {
+    return FailureExecutionResult(SC_METRIC_CLIENT_PROVIDER_NAMESPACE_NOT_SET);
+  }
   if (request.metrics().empty()) {
     return FailureExecutionResult(SC_METRIC_CLIENT_PROVIDER_METRIC_NOT_SET);
   }
@@ -160,53 +175,54 @@ ExecutionResult OtelMetricClientProvider::ValidateRequest(
 ExecutionResultOr<PutMetricsResponse> OtelMetricClientProvider::PutMetricsSync(
     PutMetricsRequest request) noexcept {
   RETURN_IF_FAILURE(OtelMetricClientProvider::ValidateRequest(request));
+  auto metric_namespace = GetMetricNamespace(request);
   for (auto metric : request.metrics()) {
-    RecordMetric(metric);
+    RecordMetric(metric, metric_namespace);
   }
   return PutMetricsResponse();
 }
 
 Counter<double>* OtelMetricClientProvider::GetOrCreateCounter(
-    const Metric& metric) noexcept {
+    const string& metric_name, const Metric& metric) noexcept {
   std::lock_guard lock(counter_cache_mutex_);
-  auto it = counter_cache_.find(metric.name());
+  auto it = counter_cache_.find(metric_name);
   if (it != counter_cache_.end()) {
     return it->second.get();
   } else {
     auto new_counter = otel_meter_->CreateDoubleCounter(
-        metric.name(), /*description*/ "", MetricUnit_Name(metric.unit()));
+        metric_name, /*description*/ "", MetricUnit_Name(metric.unit()));
     auto* counter_ptr = new_counter.get();
-    counter_cache_[metric.name()] = std::move(new_counter);
+    counter_cache_[metric_name] = std::move(new_counter);
     return counter_ptr;
   }
 }
 
 Gauge<double>* OtelMetricClientProvider::GetOrCreateGauge(
-    const Metric& metric) noexcept {
+    const string& metric_name, const Metric& metric) noexcept {
   std::lock_guard lock(gauge_cache_mutex_);
-  auto it = gauge_cache_.find(metric.name());
+  auto it = gauge_cache_.find(metric_name);
   if (it != gauge_cache_.end()) {
     return it->second.get();
   } else {
     auto new_gauge = otel_meter_->CreateDoubleGauge(
-        metric.name(), /*description*/ "", MetricUnit_Name(metric.unit()));
+        metric_name, /*description*/ "", MetricUnit_Name(metric.unit()));
     auto* gauge_ptr = new_gauge.get();
-    gauge_cache_[metric.name()] = std::move(new_gauge);
+    gauge_cache_[metric_name] = std::move(new_gauge);
     return gauge_ptr;
   }
 }
 
 Histogram<double>* OtelMetricClientProvider::GetOrCreateHistogram(
-    const Metric& metric) noexcept {
+    const string& metric_name, const Metric& metric) noexcept {
   std::lock_guard lock(histogram_cache_mutex_);
-  auto it = histogram_cache_.find(metric.name());
+  auto it = histogram_cache_.find(metric_name);
   if (it != histogram_cache_.end()) {
     return it->second.get();
   } else {
     auto new_histogram = otel_meter_->CreateDoubleHistogram(
-        metric.name(), /*description*/ "", MetricUnit_Name(metric.unit()));
+        metric_name, /*description*/ "", MetricUnit_Name(metric.unit()));
     auto* histogram_ptr = new_histogram.get();
-    histogram_cache_[metric.name()] = std::move(new_histogram);
+    histogram_cache_[metric_name] = std::move(new_histogram);
     return histogram_ptr;
   }
 }

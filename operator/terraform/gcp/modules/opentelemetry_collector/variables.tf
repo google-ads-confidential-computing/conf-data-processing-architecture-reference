@@ -75,8 +75,13 @@ variable "collector_service_port" {
   type        = number
 }
 
-variable "collector_instance_target_size" {
-  description = "The target number of running instances for the managed instance group of collector."
+variable "max_collector_instances" {
+  description = "The maximum number of running instances for the managed instance group of collector."
+  type        = number
+}
+
+variable "min_collector_instances" {
+  description = "The minimum number of running instances for the managed instance group of collector."
   type        = number
 }
 
@@ -84,9 +89,39 @@ variable "collector_min_instance_ready_sec" {
   description = "Waiting time for the new instance to be ready."
   type        = number
 }
+
+variable "collector_cpu_utilization_target" {
+  description = "Cpu utilization target for the collector."
+  type        = number
+}
 ################################################################################
 # Alarm Variables.
 ################################################################################
+
+variable "collector_exceed_cpu_usage_alarm" {
+  description = "Configuration for the exceed CPU usage alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+}
+
+variable "collector_exceed_memory_usage_alarm" {
+  description = "Configuration for the exceed memory usage alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+}
+
 variable "collector_export_error_alarm" {
   description = "Configuration for the collector exporting error alarm."
   type = object({

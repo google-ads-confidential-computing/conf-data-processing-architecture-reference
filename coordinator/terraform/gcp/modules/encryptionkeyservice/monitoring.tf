@@ -32,11 +32,6 @@ module "encryptionkeyservice_loadbalancer_alarms" {
   load_balancer_severity_map = var.encryption_key_service_severity_map
 }
 
-moved {
-  from = module.encryptionkeyservice_cloudfunction_alarms[0]
-  to   = module.encryptionkeyservice_cloudfunction_alarms["0"]
-}
-
 module "encryptionkeyservice_cloudfunction_alarms" {
   source   = "../shared/cloudfunction_alarms"
   for_each = var.alarms_enabled ? local.cfs : {}
@@ -188,11 +183,6 @@ resource "google_monitoring_alert_policy" "get_encrypted_private_key_general_err
     # 30 minutes.
     auto_close = "1800s"
   }
-}
-
-moved {
-  from = module.encryptionkeyservice_monitoring_dashboard
-  to   = module.encryptionkeyservice_monitoring_dashboard["0"]
 }
 
 module "encryptionkeyservice_monitoring_dashboard" {

@@ -35,6 +35,7 @@
 #include "cpio/client_providers/interface/otel_metric_client_provider_interface.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/adapters/common/adapter_utils.h"
+#include "public/cpio/interface/error_codes.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 #include "public/cpio/utils/sync_utils/src/sync_utils.h"
 
@@ -51,6 +52,7 @@ using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::errors::GetPublicErrorCode;
+using google::scp::core::errors::SC_CPIO_RESOURCE_NOT_FOUND;
 using google::scp::core::utils::ConvertToPublicExecutionResult;
 using google::scp::cpio::MetricClientInterface;
 using google::scp::cpio::client_providers::GlobalCpio;
@@ -87,6 +89,9 @@ ExecutionResult MetricClient::CreateMetricClientProvider() noexcept {
     metric_client_provider_ = MetricClientProviderFactory::Create(
         options_, instance_client_provider, cpu_async_executor,
         io_async_executor);
+  }
+  if (!metric_client_provider_) {
+    return FailureExecutionResult(SC_CPIO_RESOURCE_NOT_FOUND);
   }
 
   return SuccessExecutionResult();

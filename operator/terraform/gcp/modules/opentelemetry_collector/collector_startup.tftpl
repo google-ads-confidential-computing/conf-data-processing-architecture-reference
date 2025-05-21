@@ -1,19 +1,5 @@
 #cloud-config
 
-
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 packages:
   - docker.io
 
@@ -48,7 +34,7 @@ write_files:
 
     [Service]
     Restart=on-failure
-    ExecStart=/usr/bin/docker run --rm --name otelcol --log-driver=gcplogs -p ${grpc_receiver_port}:${grpc_receiver_port} -v /tmp/config.yaml:/etc/otelcol-contrib/config.yaml ${otel_collector_image_uri}
+    ExecStart=/usr/bin/docker run --rm --name otelcol --log-driver=gcplogs -p ${grpc_receiver_port}:${grpc_receiver_port} -v /tmp/config.yaml:/etc/otelcol-contrib/config.yaml ${otel_collector_image_uri} "--config=/etc/otelcol-contrib/config.yaml" "--feature-gates=exporter.googlecloud.CustomMonitoredResources"
     ExecStop=/usr/bin/docker stop otel
     ExecStopPost=/usr/bin/docker rm otel
 
@@ -61,6 +47,10 @@ write_files:
         protocols:
           grpc:
             endpoint: :${grpc_receiver_port}
+      otlp/internal:
+        protocols:
+          http:
+            endpoint: :8888
 
     exporters:
       debug:
@@ -68,11 +58,15 @@ write_files:
       googlecloud:
         metric:
           prefix: ${metric_prefix}
+        timeout: 30s
+        sending_queue:
+          enabled: true
+          queue_size: ${collector_queue_size}
 
     processors:
       memory_limiter:
         check_interval: 1s
-        limit_percentage: 65
+        limit_percentage: 80
         spike_limit_percentage: 20
       batch:
         # batch metrics before sending to reduce API usage
@@ -86,9 +80,17 @@ write_files:
     service:
       pipelines:
         metrics:
-          receivers: [otlp]
+          receivers: [otlp, otlp/internal]
           processors: [batch, memory_limiter, resourcedetection]
           exporters: [googlecloud]
+      telemetry:
+        metrics:
+          readers:
+            - periodic:
+                exporter:
+                  otlp:
+                    protocol: http/protobuf
+                    endpoint: localhost:8888
 
 runcmd:
 - sudo /etc/user/local/install-ops-agent.sh

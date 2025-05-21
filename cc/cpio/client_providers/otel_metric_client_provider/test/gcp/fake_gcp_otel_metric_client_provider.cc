@@ -38,6 +38,6 @@ shared_ptr<MetricClientInterface> OtelMetricClientProviderFactory::Create(
         instance_client_provider) {
   return make_shared<GcpOtelMetricClientProvider>(
       options, instance_client_provider,
-      OpenTelemetryUtils::CreateOpenTelemetryMeter(options));
+      OpenTelemetryUtils::CreateOpenTelemetryMeter(options, "", ""));
 }
 }  // namespace google::scp::cpio::client_providers

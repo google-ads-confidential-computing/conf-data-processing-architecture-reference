@@ -48,6 +48,8 @@ using google::scp::core::common::kZeroUuid;
 using google::scp::core::errors::
     SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_RESOURCE_NAME;
 using google::scp::core::errors::
+    SC_PRIVATE_KEY_FETCHER_PROVIDER_ACTIVATION_TIME_NOT_FOUND;
+using google::scp::core::errors::
     SC_PRIVATE_KEY_FETCHER_PROVIDER_CREATION_TIME_NOT_FOUND;
 using google::scp::core::errors::
     SC_PRIVATE_KEY_FETCHER_PROVIDER_ENCRYPTION_KEY_TYPE_NOT_FOUND;
@@ -85,6 +87,7 @@ constexpr char kPublicKeysetHandle[] = "publicKeysetHandle";
 constexpr char kPublicKeyMaterial[] = "publicKeyMaterial";
 constexpr char kKeysetName[] = "setName";
 constexpr char kExpirationTime[] = "expirationTime";
+constexpr char kActivationTime[] = "activationTime";
 constexpr char kCreationTime[] = "creationTime";
 constexpr char kKeyData[] = "keyData";
 constexpr char kPublicKeySignature[] = "publicKeySignature";
@@ -233,6 +236,14 @@ ExecutionResult PrivateKeyFetchingClientUtils::ParseEncryptionKey(
         SC_PRIVATE_KEY_FETCHER_PROVIDER_EXPIRATION_TIME_NOT_FOUND);
   }
   encryption_key->expiration_time_in_ms = std::stol(expiration_time);
+
+  string activation_time;
+  result = ParseJsonValue(json_key, kActivationTime, activation_time);
+  if (!result.Successful()) {
+    return FailureExecutionResult(
+        SC_PRIVATE_KEY_FETCHER_PROVIDER_ACTIVATION_TIME_NOT_FOUND);
+  }
+  encryption_key->activation_time_in_ms = std::stol(activation_time);
 
   string creation_time;
   result = ParseJsonValue(json_key, kCreationTime, creation_time);

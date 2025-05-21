@@ -23,10 +23,10 @@ module "lb-http_serverless_negs" {
   # succeeds. As long as the hosted zone exists, it can take up to 20 mins for the cert to be provisioned.
   # See console for status: https://console.cloud.google.com/loadbalancing/advanced/sslCertificates/list
   # Note: even if status of cert becomes 'Active', it can still take around 10 mins for requests to the domain to work.
-  ssl                             = var.enable_domain_management
+  ssl                             = true
   managed_ssl_certificate_domains = [var.key_storage_domain]
 
-  http_forward   = !var.enable_domain_management
+  http_forward   = false
   https_redirect = false
 
   backends = {

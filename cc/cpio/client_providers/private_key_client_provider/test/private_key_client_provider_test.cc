@@ -110,6 +110,7 @@ constexpr char kTestResourceName[] = "encryptionKeys/key_id";
 constexpr char kTestPublicKeysetHandle[] = "publicKeysetHandle";
 constexpr char kTestPublicKeyMaterial[] = "publicKeysetHandle";
 constexpr int kTestExpirationTime = 123456;
+constexpr int kTestActivationTime = 111123;
 constexpr int kTestCreationTime = 111111;
 constexpr char kTestPublicKeySignature[] = "publicKeySignature";
 constexpr char kTestKeyEncryptionKeyUri[] = "keyEncryptionKeyUri";
@@ -170,6 +171,7 @@ static void GetPrivateKeyFetchingResponse(PrivateKeyFetchingResponse& response,
   encryption_key->resource_name = make_shared<string>(kTestResourceName);
   encryption_key->expiration_time_in_ms = kTestExpirationTime;
   encryption_key->creation_time_in_ms = kTestCreationTime;
+  encryption_key->activation_time_in_ms = kTestActivationTime;
   encryption_key->encryption_key_type =
       EncryptionKeyType::kMultiPartyHybridEvenKeysplit;
   encryption_key->public_key_material =
@@ -353,6 +355,8 @@ class PrivateKeyClientProviderTest : public ScpTestBase {
           TimeUtil::MillisecondsToTimestamp(kTestExpirationTime);
       *expected_keys[key_index].mutable_creation_time() =
           TimeUtil::MillisecondsToTimestamp(kTestCreationTime);
+      *expected_keys[key_index].mutable_activation_time() =
+          TimeUtil::MillisecondsToTimestamp(kTestActivationTime);
     }
     return expected_keys;
   }
@@ -899,6 +903,7 @@ class PrivateKeyClientProviderSinglePartyKeyTest : public ScpTestBase {
           encryption_key->resource_name =
               make_shared<string>(kTestResourceName);
           encryption_key->expiration_time_in_ms = kTestExpirationTime;
+          encryption_key->activation_time_in_ms = kTestActivationTime;
           encryption_key->creation_time_in_ms = kTestCreationTime;
           if (context.request->key_id &&
               *context.request->key_id == kTestKeyIds[1]) {
@@ -955,6 +960,8 @@ class PrivateKeyClientProviderSinglePartyKeyTest : public ScpTestBase {
     expected_keys[0].set_private_key(encoded_private_key);
     *expected_keys[0].mutable_expiration_time() =
         TimeUtil::MillisecondsToTimestamp(kTestExpirationTime);
+    *expected_keys[0].mutable_activation_time() =
+        TimeUtil::MillisecondsToTimestamp(kTestActivationTime);
     *expected_keys[0].mutable_creation_time() =
         TimeUtil::MillisecondsToTimestamp(kTestCreationTime);
     return expected_keys;
@@ -1037,6 +1044,8 @@ TEST_F(PrivateKeyClientProviderSinglePartyKeyTest,
         expected_keys[1].set_private_key(encoded_multi_party_private_key);
         *expected_keys[1].mutable_expiration_time() =
             TimeUtil::MillisecondsToTimestamp(kTestExpirationTime);
+        *expected_keys[1].mutable_activation_time() =
+            TimeUtil::MillisecondsToTimestamp(kTestActivationTime);
         *expected_keys[1].mutable_creation_time() =
             TimeUtil::MillisecondsToTimestamp(kTestCreationTime);
 

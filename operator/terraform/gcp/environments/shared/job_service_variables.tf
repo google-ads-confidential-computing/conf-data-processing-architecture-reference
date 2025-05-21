@@ -62,11 +62,11 @@ variable "alarms_notification_email" {
 variable "auto_create_subnetworks" {
   description = "When enabled, the network will create a subnet for each region automatically across the 10.128.0.0/9 address range."
   type        = bool
-  default     = true
+  default     = false
 }
 
-variable "network_name" {
-  description = "Name of the VPC network of this module. It's also the name of the worker subnet. This is required if auto_create_subnetworks is disabled."
+variable "network_name_suffix" {
+  description = "The suffix of the name of the VPC network of this module. The network name is a combination of environment name and this suffix. This is required if auto_create_subnetworks is disabled."
   type        = string
   default     = "network-with-custom-subnet"
 }
@@ -502,6 +502,18 @@ variable "autoscaling_cloudfunction_max_execution_time_ms" {
   default     = 1000 * 60
 }
 
+variable "autoscaling_cloudfunction_alarm_eval_period_sec" {
+  description = "Time period (in seconds) for cloudfunction alarm evaluation."
+  type        = string
+  default     = "60"
+}
+
+variable "autoscaling_cloudfunction_alarm_duration_sec" {
+  description = "Amount of time (in seconds) to wait before sending a cloudfunction alarm. Must be in minute intervals. Example: '60','120'."
+  type        = string
+  default     = "60"
+}
+
 ################################################################################
 # Job Queue Alarm Variables.
 ################################################################################
@@ -663,8 +675,14 @@ variable "collector_send_batch_timeout" {
   default     = "5s"
 }
 
-variable "collector_instance_target_size" {
-  description = "The target number of running instances for the managed instance group of collector."
+variable "max_collector_instances" {
+  description = "The maximum number of running instances for the managed instance group of collector."
+  type        = number
+  default     = 2
+}
+
+variable "min_collector_instances" {
+  description = "The minimum number of running instances for the managed instance group of collector."
   type        = number
   default     = 1
 }
@@ -673,6 +691,58 @@ variable "collector_min_instance_ready_sec" {
   description = "Waiting time for the new instance to be ready."
   type        = number
   default     = 120
+}
+
+variable "collector_queue_size" {
+  description = "The queue size of the sending queue."
+  type        = number
+  default     = 5000
+}
+
+variable "collector_cpu_utilization_target" {
+  description = "Cpu utilization target for the collector."
+  type        = number
+  default     = 0.8
+}
+
+variable "collector_exceed_cpu_usage_alarm" {
+  description = "Configuration for the exceed CPU usage alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 0.9,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}
+
+variable "collector_exceed_memory_usage_alarm" {
+  description = "Configuration for the exceed memory usage alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 6442450944, # 6 GB
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
 }
 
 variable "collector_export_error_alarm" {

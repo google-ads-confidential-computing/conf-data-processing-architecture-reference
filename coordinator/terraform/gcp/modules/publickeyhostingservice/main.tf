@@ -41,7 +41,7 @@ resource "google_storage_bucket_object" "get_public_key_package_bucket_object" {
   source = local.cloudfunction_package_zip
 }
 
-# One service account for multiple public key service locations
+# One service account for multiple Public Key Service locations
 resource "google_service_account" "public_key_service_account" {
   # Service account id has a 30 character limit
   account_id   = "${var.environment}-pubkeyuser"

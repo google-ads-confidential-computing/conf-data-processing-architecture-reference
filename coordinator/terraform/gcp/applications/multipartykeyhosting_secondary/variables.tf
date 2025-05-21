@@ -94,14 +94,35 @@ variable "spanner_processing_units" {
   type        = number
 }
 
+variable "spanner_staleness_read_sec" {
+  description = "Acceptable read staleness in seconds."
+  type        = string
+}
+
+variable "spanner_custom_configuration_name" {
+  description = "Name for the custom spanner configuration to be created."
+  type        = string
+  nullable    = true
+}
+
+variable "spanner_custom_configuration_display_name" {
+  description = "Display name for the custom spanner configuration to be created."
+  type        = string
+}
+
+variable "spanner_custom_configuration_base_config" {
+  description = "Base spanner configuration used as starting basis for custom configuraiton."
+  type        = string
+}
+
+variable "spanner_custom_configuration_read_replica_location" {
+  description = "Region used in custom configuration as an additional read replica."
+  type        = string
+}
+
 ################################################################################
 # Routing Variables.
 ################################################################################
-
-variable "enable_domain_management" {
-  description = "Manage domain SSL cert creation and routing for encryption key and key storage services."
-  type        = bool
-}
 
 variable "parent_domain_name" {
   description = "Custom domain name to use with key hosting APIs."
@@ -139,9 +160,9 @@ variable "cloudfunction_timeout_seconds" {
 
 ### Private Key Service
 
-variable "private_key_service_launch_cloud_run" {
-  description = "Flag to control launching a EKS using Cloud Run."
-  type        = bool
+variable "private_key_service_additional_regions" {
+  description = "Additional regions beyond primary and secondary that Private KS will run in."
+  type        = list(string)
   nullable    = false
 }
 
@@ -167,6 +188,11 @@ variable "private_key_service_cloud_run_concurrency" {
 }
 
 ### EKS
+variable "delete_encryption_key_service" {
+  description = "Flag to control removal of the EKS."
+  type        = bool
+}
+
 variable "encryption_key_service_cloudfunction_memory_mb" {
   description = "Memory size in MB for encryption key cloud function."
   type        = number
@@ -234,6 +260,12 @@ variable "keystorageservice_use_java21_runtime" {
   description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
   type        = bool
   nullable    = false
+}
+
+variable "location_new_key_ring" {
+  description = "Location for the global key ring."
+  type        = string
+  nullable    = true
 }
 
 ################################################################################

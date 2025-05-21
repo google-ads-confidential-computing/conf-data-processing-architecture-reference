@@ -29,8 +29,8 @@ class OpenTelemetryUtils {
  public:
   static std::shared_ptr<opentelemetry::metrics::Meter>
   CreateOpenTelemetryMeter(
-      const std::shared_ptr<google::scp::cpio::MetricClientOptions>&
-          options) noexcept;
+      const std::shared_ptr<google::scp::cpio::MetricClientOptions>& options,
+      const std::string& instance_id, const std::string& zone) noexcept;
 };
 
 }  // namespace google::scp::cpio::client_providers

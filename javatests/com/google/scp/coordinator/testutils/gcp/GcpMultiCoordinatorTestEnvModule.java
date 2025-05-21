@@ -174,7 +174,7 @@ public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
         .setSpannerInstanceId(SpannerKeyDbTestModule.TEST_DB_CONFIG.spannerInstanceId())
         .setSpannerDbName(SpannerKeyDbTestModule.TEST_DB_CONFIG.spannerDbName())
         .setEndpointUrl(Optional.of(endpoint))
-        .setReadStalenessSeconds(1)
+        .setReadStalenessSeconds(0)
         .build();
   }
 

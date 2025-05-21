@@ -47,13 +47,14 @@ locals {
     for key_set in var.key_sets_config.key_sets : key_set.name
   ])
   kms_key_base_uri = "gcp-kms://${google_kms_key_ring.key_encryption_ring.id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
-  service_domain_to_address_map = var.private_key_service_launch_cloud_run ? {
+
+  service_domain_to_address_map = var.delete_encryption_key_service ? {
     (local.key_storage_domain) : module.keystorageservice.load_balancer_ip,
-    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
-    (local.private_key_domain) : module.private_key_service[0].loadbalancer_ip
+    (local.private_key_domain) : module.private_key_service.loadbalancer_ip
     } : {
     (local.key_storage_domain) : module.keystorageservice.load_balancer_ip,
-    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
+    (local.encryption_key_domain) : module.encryptionkeyservice[0].encryption_key_service_loadbalancer_ip,
+    (local.private_key_domain) : module.private_key_service.loadbalancer_ip
   }
 }
 
@@ -102,12 +103,26 @@ resource "google_kms_crypto_key" "key_set_key_encryption_key" {
   }
 }
 
+module "key_management_service" {
+  count  = var.location_new_key_ring == null ? 0 : 1
+  source = "../../modules/key_management_service"
+
+  environment           = var.environment
+  project_id            = var.project_id
+  location_new_key_ring = var.location_new_key_ring
+  key_sets              = local.key_sets
+}
+
 module "keydb" {
-  source                   = "../../modules/keydb"
-  project_id               = var.project_id
-  environment              = var.environment
-  spanner_instance_config  = var.spanner_instance_config
-  spanner_processing_units = var.spanner_processing_units
+  source                                     = "../../modules/keydb"
+  project_id                                 = var.project_id
+  environment                                = var.environment
+  spanner_instance_config                    = var.spanner_instance_config
+  spanner_processing_units                   = var.spanner_processing_units
+  custom_configuration_name                  = var.spanner_custom_configuration_name
+  custom_configuration_display_name          = var.spanner_custom_configuration_display_name
+  custom_configuration_base_config           = var.spanner_custom_configuration_base_config
+  custom_configuration_read_replica_location = var.spanner_custom_configuration_read_replica_location
 }
 
 module "keystorageservice" {
@@ -139,8 +154,7 @@ module "keystorageservice" {
   use_java21_runtime                              = var.keystorageservice_use_java21_runtime
 
   # Domain Management
-  enable_domain_management = var.enable_domain_management
-  key_storage_domain       = local.key_storage_domain
+  key_storage_domain = local.key_storage_domain
 
   # Alarms
   alarms_enabled                                = var.alarms_enabled
@@ -163,14 +177,20 @@ module "keystorageservice" {
   ]
 }
 
+moved {
+  from = module.private_key_service[0]
+  to   = module.private_key_service
+}
 
 module "private_key_service" {
-  count  = var.private_key_service_launch_cloud_run ? 1 : 0
   source = "../private_key_service"
 
-  environment    = var.environment
-  project_id     = var.project_id
-  regions        = [var.primary_region, var.secondary_region]
+  environment = var.environment
+  project_id  = var.project_id
+  regions = concat(
+    [var.primary_region, var.secondary_region],
+    var.private_key_service_additional_regions
+  )
   service_domain = local.private_key_domain
 
   allowed_invoker_service_account_emails = module.allowed_operators.all_service_accounts
@@ -185,8 +205,9 @@ module "private_key_service" {
   min_instance_count = var.encryption_key_service_cloudfunction_min_instances
 
   # Spanner
-  spanner_database_name = module.keydb.keydb_name
-  spanner_instance_name = module.keydb.keydb_instance_name
+  spanner_database_name      = module.keydb.keydb_name
+  spanner_instance_name      = module.keydb.keydb_instance_name
+  spanner_staleness_read_sec = var.spanner_staleness_read_sec
 
   # Alert settings
   alarms_enabled           = var.alarms_enabled
@@ -208,6 +229,7 @@ module "private_key_service" {
 
 module "encryptionkeyservice" {
   source = "../../modules/encryptionkeyservice"
+  count  = var.delete_encryption_key_service ? 0 : 1
 
   project_id                        = var.project_id
   environment                       = var.environment
@@ -228,7 +250,7 @@ module "encryptionkeyservice" {
   use_java21_runtime                                 = var.encryptionkeyservice_use_java21_runtime
 
   # Domain Management
-  enable_domain_management = var.enable_domain_management
+  enable_domain_management = true
   encryption_key_domain    = local.encryption_key_domain
 
   # Alarms
@@ -251,16 +273,13 @@ module "encryptionkeyservice" {
 module "domain_a_records" {
   source = "../../modules/domain_a_records"
 
-  # Cannot use count arg because this module has a provider defined. This is a terraform limitation.
-  enable_domain_management = var.enable_domain_management
-
   primary_region      = var.primary_region
   primary_region_zone = var.primary_region_zone
 
   parent_domain_name         = var.parent_domain_name
   parent_domain_name_project = var.parent_domain_name_project
 
-  service_domain_to_address_map = var.enable_domain_management ? local.service_domain_to_address_map : {}
+  service_domain_to_address_map = local.service_domain_to_address_map
 }
 
 # Coordinator WIP Provider

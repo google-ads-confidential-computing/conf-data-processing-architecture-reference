@@ -74,7 +74,6 @@ resource "google_compute_region_instance_group_manager" "collector_instance" {
   name               = "${var.environment}-${var.region}-collector-mig"
   description        = "The managed instance group for SCP worker instances."
   base_instance_name = "${var.environment}-${var.region}-collector"
-  target_size        = var.collector_instance_target_size
 
   named_port {
     name = var.collector_service_port_name
@@ -90,14 +89,18 @@ resource "google_compute_region_instance_group_manager" "collector_instance" {
     instance_template = google_compute_instance_template.collector.id
   }
 
-  # TODO: Update with dynamic rolling update policy
   update_policy {
-    minimal_action        = "REPLACE"
-    type                  = "PROACTIVE"
-    max_unavailable_fixed = 10
-    max_surge_fixed       = 10
+    minimal_action = "REPLACE"
+    type           = "PROACTIVE"
+    # Avoid collector downtime during update by setting max_unavailable_fixed
+    # to 0. The default value of this field is the number of the zone in the
+    # region.
+    max_unavailable_fixed = 0
+    # max_surge_fixed needs to be >= the number of zones in the region, so we
+    # set it to a relative large number.
+    max_surge_fixed = 10
     # Waiting time for the new instance to be ready.
-    min_ready_sec = var.collector_min_instance_ready_sec + 3000
+    min_ready_sec = var.collector_min_instance_ready_sec
   }
 
   lifecycle {
@@ -161,6 +164,31 @@ resource "google_compute_instance_template" "collector" {
     replace_triggered_by  = [null_resource.server_instance_replace_trigger]
   }
 
+}
+
+resource "google_compute_region_autoscaler" "collector_autoscaler" {
+  provider = google-beta
+
+  name    = "${var.environment}-collector-autoscaler"
+  project = var.project_id
+  region  = var.region
+  target  = google_compute_region_instance_group_manager.collector_instance.id
+
+  autoscaling_policy {
+    max_replicas    = var.max_collector_instances
+    min_replicas    = var.min_collector_instances
+    cooldown_period = var.collector_min_instance_ready_sec
+    # Only scale up to avoid collector flush metric data too often
+    mode = "ONLY_UP"
+
+    cpu_utilization {
+      target = var.collector_cpu_utilization_target
+    }
+  }
+
+  lifecycle {
+    replace_triggered_by = [google_compute_region_instance_group_manager.collector_instance.id]
+  }
 }
 
 resource "google_compute_health_check" "collector" {

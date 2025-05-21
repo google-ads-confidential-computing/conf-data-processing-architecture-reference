@@ -57,6 +57,7 @@ using testing::Return;
 namespace {
 constexpr char kInstanceResourceName[] =
     R"(//compute.googleapis.com/projects/123456789/zones/us-central1-c/instances/987654321)";
+constexpr char kNamespaceInRequest[] = "request_namespace";
 
 }  // namespace
 
@@ -114,6 +115,7 @@ TEST_F(GcpOtelMetricClientProviderTest,
 
   std::map<std::string, std::string> labels = {{"test_label", "unit_test"}};
   auto request = std::make_shared<PutMetricsRequest>();
+  request->set_metric_namespace(kNamespaceInRequest);
   auto counter_metric = request->add_metrics();
   counter_metric->set_name("counter");
   counter_metric->set_value("1");

@@ -31,11 +31,6 @@ variable "region" {
   description = "Region for load balancer and cloud function."
 }
 
-variable "enable_domain_management" {
-  description = "Manage domain SSL cert creation and routing for this service."
-  type        = bool
-}
-
 variable "key_storage_domain" {
   description = "Domain to use to create a managed SSL cert for this service."
   type        = string

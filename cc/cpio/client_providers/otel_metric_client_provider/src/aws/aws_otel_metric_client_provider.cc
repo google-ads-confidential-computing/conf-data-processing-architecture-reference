@@ -61,9 +61,7 @@ std::shared_ptr<MetricClientInterface> OtelMetricClientProviderFactory::Create(
     const shared_ptr<MetricClientOptions>& options,
     const shared_ptr<InstanceClientProviderInterface>&
         instance_client_provider) {
-  return make_shared<AwsOtelMetricClientProvider>(
-      options, instance_client_provider,
-      OpenTelemetryUtils::CreateOpenTelemetryMeter(options));
+  return nullptr;
 }
 #endif
 }  // namespace google::scp::cpio::client_providers

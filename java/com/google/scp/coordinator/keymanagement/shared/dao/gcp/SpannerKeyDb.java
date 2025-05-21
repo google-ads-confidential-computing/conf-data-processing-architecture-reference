@@ -31,6 +31,7 @@ import com.google.cloud.spanner.Mutation;
 import com.google.cloud.spanner.ResultSet;
 import com.google.cloud.spanner.SpannerException;
 import com.google.cloud.spanner.Statement;
+import com.google.cloud.spanner.TimestampBound;
 import com.google.cloud.spanner.Value;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
@@ -74,10 +75,14 @@ public final class SpannerKeyDb implements KeyDb {
   private static final Logger LOGGER = LoggerFactory.getLogger(SpannerKeyDb.class);
 
   private final DatabaseClient dbClient;
+  private final TimestampBound stalenessBound;
 
   @Inject
-  public SpannerKeyDb(@KeyDbClient DatabaseClient dbClient) {
+  public SpannerKeyDb(@KeyDbClient DatabaseClient dbClient, SpannerKeyDbConfig dbConfig) {
     this.dbClient = dbClient;
+    this.stalenessBound = dbConfig.readStalenessSeconds() > 0
+        ? TimestampBound.ofExactStaleness(dbConfig.readStalenessSeconds(), TimeUnit.SECONDS)
+        : TimestampBound.strong();
   }
 
   @Override
@@ -114,7 +119,7 @@ public final class SpannerKeyDb implements KeyDb {
             .to(setName)
             .build();
     ImmutableList.Builder<EncryptionKey> keysBuilder = ImmutableList.builder();
-    try (var readContext = dbClient.singleUse()) {
+    try (var readContext = dbClient.singleUse(stalenessBound)) {
       var resultSet = readContext.executeQuery(statement);
       while (resultSet.next()) {
         keysBuilder.add(buildEncryptionKey(resultSet));
@@ -162,7 +167,7 @@ public final class SpannerKeyDb implements KeyDb {
             .to(setName)
             .build();
     Stream.Builder<EncryptionKey> keysBuilder = Stream.builder();
-    try (var readContext = dbClient.singleUse()) {
+    try (var readContext = dbClient.singleUse(stalenessBound)) {
       var resultSet = readContext.executeQuery(statement);
       while (resultSet.next()) {
         keysBuilder.add(buildEncryptionKey(resultSet));
@@ -179,7 +184,7 @@ public final class SpannerKeyDb implements KeyDb {
             .to(keyId)
             .build();
     ImmutableList.Builder<EncryptionKey> keysBuilder = ImmutableList.builder();
-    try (var readContext = dbClient.singleUse()) {
+    try (var readContext = dbClient.singleUse(stalenessBound)) {
       var resultSet = readContext.executeQuery(statement);
       while (resultSet.next()) {
         keysBuilder.add(buildEncryptionKey(resultSet));

@@ -12,24 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "encryption_key_service_cloudfunction_url" {
-  value = module.encryptionkeyservice.encryption_key_service_cloudfunction_url
-}
-
-output "encryption_key_service_loadbalancer_ip" {
-  value = module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
-}
-
-output "encryption_key_base_url" {
-  value = var.enable_domain_management ? "https://${local.encryption_key_domain}" : "http://${module.encryptionkeyservice.encryption_key_service_loadbalancer_ip}"
-}
-
-output "private_key_base_cloudrun_urls" {
-  value = var.private_key_service_launch_cloud_run ? module.private_key_service[0].urls : []
-}
-
 output "private_key_service_loadbalancer_ip" {
-  value = var.private_key_service_launch_cloud_run ? module.private_key_service[0].loadbalancer_ip : ""
+  value = module.private_key_service.loadbalancer_ip
 }
 
 output "private_key_base_url" {
@@ -45,7 +29,7 @@ output "key_storage_service_loadbalancer_ip" {
 }
 
 output "key_storage_base_url" {
-  value = var.enable_domain_management ? "https://${local.key_storage_domain}" : "http://${module.keystorageservice.load_balancer_ip}"
+  value = "https://${local.key_storage_domain}"
 }
 
 output "key_encryption_key_id" {

@@ -116,6 +116,9 @@ struct EncryptionKey {
   /// Key creation time in Unix Epoch milliseconds.
   core::Timestamp creation_time_in_ms;
 
+  /// Key activation time in Unix Epoch milliseconds.
+  core::Timestamp activation_time_in_ms;
+
   /// List of key data. The size of key_data is matched with split parts of
   /// the private key.
   std::vector<std::shared_ptr<KeyData>> key_data;

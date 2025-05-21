@@ -64,6 +64,24 @@ class MetricUtils {
   CreateMetricLabelsWithComponentSignature(
       std::string component_name,
       std::string method_name = std::string()) noexcept;
+
+  // Converts a MetricDefinition object into a Metric object with the given
+  // MetricType.
+  static cmrt::sdk::metric_service::v1::Metric ConvertMetricDefinitionToMetric(
+      const MetricDefinition& metric_definition,
+      cmrt::sdk::metric_service::v1::MetricType type);
+
+  static constexpr char kEventCodeLabelKey[] = "EventCode";
+
+  // Creates a map from the event codes in event_code_labels_list to instances
+  // of Metrics. The returned Metric's are copies of metric_definition with the
+  // label properly applied.
+  static absl::flat_hash_map<std::string, cmrt::sdk::metric_service::v1::Metric>
+  MakeMetricsForEventCodes(
+      const MetricDefinition& metric_definition,
+      cmrt::sdk::metric_service::v1::MetricType metric_type,
+      const std::vector<std::string> event_code_labels_list,
+      const std::string& event_code_name = kEventCodeLabelKey);
 };
 
 }  // namespace google::scp::cpio

@@ -172,6 +172,8 @@ ExecutionResultOr<PrivateKey> PrivateKeyClientUtils::ConstructPrivateKey(
       TimeUtil::MillisecondsToTimestamp(encryption_key.expiration_time_in_ms);
   *private_key.mutable_creation_time() =
       TimeUtil::MillisecondsToTimestamp(encryption_key.creation_time_in_ms);
+  *private_key.mutable_activation_time() =
+      TimeUtil::MillisecondsToTimestamp(encryption_key.activation_time_in_ms);
   if (encryption_key.keyset_name) {
     private_key.set_key_set_name(*encryption_key.keyset_name);
   }

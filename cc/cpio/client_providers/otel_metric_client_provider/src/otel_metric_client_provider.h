@@ -61,20 +61,26 @@ class OtelMetricClientProvider : public MetricClientInterface {
                      request) noexcept override;
 
  protected:
+  std::string GetMetricNamespace(
+      const google::cmrt::sdk::metric_service::v1::PutMetricsRequest& request);
+
   core::ExecutionResult ValidateRequest(
       const google::cmrt::sdk::metric_service::v1::PutMetricsRequest&
           request) noexcept;
 
-  void RecordMetric(
-      const google::cmrt::sdk::metric_service::v1::Metric& metric) noexcept;
+  void RecordMetric(const google::cmrt::sdk::metric_service::v1::Metric& metric,
+                    const std::string& metric_namespace) noexcept;
 
   opentelemetry::metrics::Counter<double>* GetOrCreateCounter(
+      const std::string& metric_name,
       const google::cmrt::sdk::metric_service::v1::Metric& metric) noexcept;
 
   opentelemetry::metrics::Gauge<double>* GetOrCreateGauge(
+      const std::string& metric_name,
       const google::cmrt::sdk::metric_service::v1::Metric& metric) noexcept;
 
   opentelemetry::metrics::Histogram<double>* GetOrCreateHistogram(
+      const std::string& metric_name,
       const google::cmrt::sdk::metric_service::v1::Metric& metric) noexcept;
 
   // The configuration for metric client.

@@ -44,7 +44,6 @@ import java.util.Optional;
  */
 public class GcpKeyStorageServiceModule extends AbstractModule {
   private static final String PROJECT_ID_ENV_VAR = "PROJECT_ID";
-  private static final String READ_STALENESS_SEC_ENV_VAR = "READ_STALENESS_SEC";
   private static final String SPANNER_INSTANCE_ENV_VAR = "SPANNER_INSTANCE";
   private static final String SPANNER_DATABASE_ENV_VAR = "SPANNER_DATABASE";
   private static final String SPANNER_ENDPOINT = "SPANNER_ENDPOINT";
@@ -52,25 +51,17 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
   private static final String GCP_KMS_BASE_URI_ENV_VAR = "GCP_KMS_BASE_URI";
   private static final String DISABLE_KEY_SET_ACL_ENV_VAR = "DISABLE_KEY_SET_ACL";
 
-  /** Returns ReadStalenessSeconds as Integer from environment variables. Default value of 15 */
-  private Integer getReadStalenessSeconds() {
-    Map<String, String> env = System.getenv();
-    return Integer.valueOf(env.getOrDefault(READ_STALENESS_SEC_ENV_VAR, "15"));
-  }
-
   private String getGcpKmsBaseUri() {
     Map<String, String> env = System.getenv();
-    Boolean disableKeySetAcl =
-        Boolean.valueOf(env.getOrDefault(DISABLE_KEY_SET_ACL_ENV_VAR, "true"));
+    boolean disableKeySetAcl =
+        Boolean.parseBoolean(env.getOrDefault(DISABLE_KEY_SET_ACL_ENV_VAR, "true"));
     return disableKeySetAcl
         ? env.getOrDefault(GCP_KMS_URI_ENV_VAR, "unknown_gcp_uri")
         : env.getOrDefault(GCP_KMS_BASE_URI_ENV_VAR, "unknown_gcp_uri");
   }
 
   private KmsClient getKmsAeadClient() throws GeneralSecurityException {
-    GcpKmsClient kmsClient = new GcpKmsClient();
-    kmsClient.withDefaultCredentials();
-    return kmsClient;
+    return new GcpKmsClient().withDefaultCredentials();
   }
 
   @Override
@@ -111,7 +102,7 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
             .setGcpProjectId(projectId)
             .setSpannerInstanceId(spannerInstanceId)
             .setSpannerDbName(spannerDatabaseId)
-            .setReadStalenessSeconds(getReadStalenessSeconds())
+            .setReadStalenessSeconds(0)
             .setEndpointUrl(Optional.ofNullable(spannerEndpoint))
             .build();
     bind(SpannerKeyDbConfig.class).toInstance(config);

@@ -47,13 +47,13 @@ locals {
     for key_set in var.key_sets_config.key_sets : key_set.name
   ])
 
-  service_domain_to_address_map = var.private_key_service_launch_cloud_run ? {
-    (local.public_key_domain) : module.publickeyhostingservice.get_public_key_loadbalancer_ip,
-    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
-    (local.private_key_domain) : module.private_key_service[0].loadbalancer_ip
+  service_domain_to_address_map = var.delete_encryption_key_service ? {
+    (local.public_key_domain) : module.public_key_service_load_balancer.loadbalancer_ip,
+    (local.private_key_domain) : module.private_key_service.loadbalancer_ip
     } : {
-    (local.public_key_domain) : module.publickeyhostingservice.get_public_key_loadbalancer_ip,
-    (local.encryption_key_domain) : module.encryptionkeyservice.encryption_key_service_loadbalancer_ip
+    (local.public_key_domain) : module.public_key_service_load_balancer.loadbalancer_ip,
+    (local.encryption_key_domain) : module.encryptionkeyservice[0].encryption_key_service_loadbalancer_ip,
+    (local.private_key_domain) : module.private_key_service.loadbalancer_ip
   }
 }
 
@@ -78,11 +78,25 @@ resource "google_storage_bucket" "mpkhs_primary_package_bucket" {
 }
 
 module "keydb" {
-  source                   = "../../modules/keydb"
-  project_id               = var.project_id
-  environment              = var.environment
-  spanner_instance_config  = var.spanner_instance_config
-  spanner_processing_units = var.spanner_processing_units
+  source                                     = "../../modules/keydb"
+  project_id                                 = var.project_id
+  environment                                = var.environment
+  spanner_instance_config                    = var.spanner_instance_config
+  spanner_processing_units                   = var.spanner_processing_units
+  custom_configuration_name                  = var.spanner_custom_configuration_name
+  custom_configuration_display_name          = var.spanner_custom_configuration_display_name
+  custom_configuration_base_config           = var.spanner_custom_configuration_base_config
+  custom_configuration_read_replica_location = var.spanner_custom_configuration_read_replica_location
+}
+
+module "key_management_service" {
+  count  = var.location_new_key_ring == null ? 0 : 1
+  source = "../../modules/key_management_service"
+
+  environment           = var.environment
+  project_id            = var.project_id
+  location_new_key_ring = var.location_new_key_ring
+  key_sets              = local.key_sets
 }
 
 module "keygenerationservice" {
@@ -140,6 +154,8 @@ module "publickeyhostingservice" {
   project_id  = var.project_id
   environment = var.environment
   regions     = [var.primary_region, var.secondary_region]
+  service_id  = "get-public-key"
+  ssl_cert_id = "public-key"
 
   # Function vars
   package_bucket_name                        = var.use_tf_created_bucket_for_binary ? google_storage_bucket.mpkhs_primary_package_bucket.name : var.mpkhs_primary_package_bucket
@@ -160,8 +176,7 @@ module "publickeyhostingservice" {
   get_public_key_cloud_cdn_serve_while_stale_seconds = var.get_public_key_cloud_cdn_serve_while_stale_seconds
 
   # Domain Management
-  enable_domain_management = var.enable_domain_management
-  public_key_domain        = local.public_key_domain
+  public_key_domain = local.public_key_domain
 
   # Alarms
   alarms_enabled                                      = var.alarms_enabled
@@ -181,13 +196,146 @@ module "publickeyhostingservice" {
   public_key_alerts_severity_overrides         = var.alert_severity_overrides
 }
 
-module "private_key_service" {
-  count  = var.private_key_service_launch_cloud_run ? 1 : 0
-  source = "../private_key_service"
+moved {
+  from = module.publickeyhostingservice.google_monitoring_dashboard.dashboard[0]
+  to   = module.public_key_service_dashboard.google_monitoring_dashboard.dashboard[0]
+}
+
+module "public_key_service_dashboard" {
+  source = "../../modules/public_key_service"
+
+  environment = var.environment
+  project_id  = var.project_id
+
+  cloud_function_ids = module.publickeyhostingservice.cloud_function_ids
+  load_balancer_name = module.public_key_service_load_balancer.loadbalancer_name
+  alarms_enabled     = var.alarms_enabled
+}
+
+moved {
+  from = module.publickeyhostingservice.google_compute_backend_service.get_public_key_loadbalancer_backend
+  to   = module.public_key_service_load_balancer.google_compute_backend_service.service_loadbalancer_backend
+}
+
+moved {
+  from = module.publickeyhostingservice.google_compute_global_address.get_public_key_ip_address
+  to   = module.public_key_service_load_balancer.google_compute_global_address.service_ip_address
+}
+
+moved {
+  from = module.publickeyhostingservice.google_compute_managed_ssl_certificate.get_public_key_loadbalancer
+  to   = module.public_key_service_load_balancer.google_compute_managed_ssl_certificate.service_loadbalancer
+}
+
+moved {
+  from = module.publickeyhostingservice.google_compute_ssl_policy.get_public_key_loadbalancer_ssl_policy
+  to   = module.public_key_service_load_balancer.google_compute_ssl_policy.service_loadbalancer_ssl_policy
+}
+
+moved {
+  from = module.publickeyhostingservice.google_compute_target_https_proxy.get_public_key_loadbalancer_proxy
+  to   = module.public_key_service_load_balancer.google_compute_target_https_proxy.service_loadbalancer_proxy
+}
+
+moved {
+  from = module.publickeyhostingservice.google_compute_url_map.get_public_key_loadbalancer
+  to   = module.public_key_service_load_balancer.google_compute_url_map.service_loadbalancer
+}
+
+moved {
+  from = module.publickeyhostingservice.google_compute_region_network_endpoint_group.get_public_key_network_endpoint_group["us-central1"]
+  to   = module.public_key_service_load_balancer.google_compute_region_network_endpoint_group.service_network_endpoint_group["0"]
+}
+
+moved {
+  from = module.publickeyhostingservice.google_compute_region_network_endpoint_group.get_public_key_network_endpoint_group["us-west3"]
+  to   = module.public_key_service_load_balancer.google_compute_region_network_endpoint_group.service_network_endpoint_group["1"]
+}
+
+moved {
+  from = module.publickeyhostingservice.google_compute_global_forwarding_rule.get_public_key_loadbalancer_config
+  to   = module.public_key_service_load_balancer.google_compute_global_forwarding_rule.service_loadbalancer_config
+}
+
+moved {
+  from = module.publickeyhostingservice.module.load_balancer_alarms[0].google_monitoring_alert_policy.error_5xx_ratio
+  to   = module.public_key_service_load_balancer.module.loadbalancer_alarms[0].google_monitoring_alert_policy.error_5xx_ratio
+}
+moved {
+  from = module.publickeyhostingservice.module.load_balancer_alarms[0].google_monitoring_alert_policy.error_count_5xx
+  to   = module.public_key_service_load_balancer.module.loadbalancer_alarms[0].google_monitoring_alert_policy.error_count_5xx
+}
+moved {
+  from = module.publickeyhostingservice.module.load_balancer_alarms[0].google_monitoring_alert_policy.total_latency
+  to   = module.public_key_service_load_balancer.module.loadbalancer_alarms[0].google_monitoring_alert_policy.total_latency
+}
+
+module "public_key_service_load_balancer" {
+  source = "../../modules/load_balancer"
+
+  environment     = var.environment
+  project_id      = var.project_id
+  service_id      = "get-public-key"
+  ssl_cert_id     = "public-key"
+  monitoring_name = "Public Key Service"
+
+  cloud_run_ids = module.publickeyhostingservice.cloud_function_ids
+
+  enable_cdn                    = var.enable_get_public_key_cdn
+  cdn_default_ttl_seconds       = var.get_public_key_cloud_cdn_default_ttl_seconds
+  cdn_max_ttl_seconds           = var.get_public_key_cloud_cdn_max_ttl_seconds
+  cdn_serve_while_stale_seconds = var.get_public_key_cloud_cdn_serve_while_stale_seconds
+
+  # Custom url/domain
+  managed_domain = local.public_key_domain
+
+  # Alert settings
+  alarms_enabled           = var.alarms_enabled
+  alarm_eval_period_sec    = var.get_public_key_alarm_eval_period_sec
+  alarm_duration_sec       = var.get_public_key_alarm_duration_sec
+  alert_severity_overrides = var.alert_severity_overrides
+  lb_5xx_threshold         = var.get_public_key_lb_5xx_threshold
+  lb_5xx_ratio_threshold   = var.get_public_key_lb_5xx_ratio_threshold
+  lb_max_latency_ms        = var.get_public_key_lb_max_latency_ms
+}
+
+module "public_key_service" {
+  count  = var.public_key_service_launch_cloud_run ? 1 : 0
+  source = "../public_key_service"
 
   environment    = var.environment
   project_id     = var.project_id
   regions        = [var.primary_region, var.secondary_region]
+  service_domain = local.public_key_domain
+
+  source_container_image_url = var.public_key_service_container_image_url
+
+  # Cloud Run settings
+  cpu_count          = var.public_key_service_cloud_run_cpu_count
+  concurrency        = var.public_key_service_max_cloud_run_concurrency
+  memory_mb          = var.get_public_key_cloudfunction_memory_mb
+  min_instance_count = var.get_public_key_cloudfunction_min_instances
+  max_instance_count = var.get_public_key_cloudfunction_max_instances
+
+  # Spanner
+  spanner_database_name = module.keydb.keydb_name
+  spanner_instance_name = module.keydb.keydb_instance_name
+}
+
+moved {
+  from = module.private_key_service[0]
+  to   = module.private_key_service
+}
+
+module "private_key_service" {
+  source = "../private_key_service"
+
+  environment = var.environment
+  project_id  = var.project_id
+  regions = concat(
+    [var.primary_region, var.secondary_region],
+    var.private_key_service_additional_regions
+  )
   service_domain = local.private_key_domain
 
   allowed_invoker_service_account_emails = module.allowed_operators.all_service_accounts
@@ -202,8 +350,9 @@ module "private_key_service" {
   min_instance_count = var.encryption_key_service_cloudfunction_min_instances
 
   # Spanner
-  spanner_database_name = module.keydb.keydb_name
-  spanner_instance_name = module.keydb.keydb_instance_name
+  spanner_database_name      = module.keydb.keydb_name
+  spanner_instance_name      = module.keydb.keydb_instance_name
+  spanner_staleness_read_sec = var.spanner_staleness_read_sec
 
   # Alert settings
   alarms_enabled           = var.alarms_enabled
@@ -225,6 +374,7 @@ module "private_key_service" {
 
 module "encryptionkeyservice" {
   source = "../../modules/encryptionkeyservice"
+  count  = var.delete_encryption_key_service ? 0 : 1
 
   project_id                        = var.project_id
   environment                       = var.environment
@@ -245,7 +395,7 @@ module "encryptionkeyservice" {
   use_java21_runtime                                 = var.encryptionkeyservice_use_java21_runtime
 
   # Domain Management
-  enable_domain_management = var.enable_domain_management
+  enable_domain_management = true
   encryption_key_domain    = local.encryption_key_domain
 
   # Alarms
@@ -268,16 +418,13 @@ module "encryptionkeyservice" {
 module "domain_a_records" {
   source = "../../modules/domain_a_records"
 
-  # Cannot use count arg because this module has a provider defined. This is a terraform limitation.
-  enable_domain_management = var.enable_domain_management
-
   primary_region      = var.primary_region
   primary_region_zone = var.primary_region_zone
 
   parent_domain_name         = var.parent_domain_name
   parent_domain_name_project = var.parent_domain_name_project
 
-  service_domain_to_address_map = var.enable_domain_management ? local.service_domain_to_address_map : {}
+  service_domain_to_address_map = local.service_domain_to_address_map
 }
 
 # parameters

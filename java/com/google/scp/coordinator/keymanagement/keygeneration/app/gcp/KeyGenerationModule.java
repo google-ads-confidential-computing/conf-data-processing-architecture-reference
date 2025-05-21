@@ -133,7 +133,7 @@ public final class KeyGenerationModule extends AbstractModule {
         .setGcpProjectId(projectId)
         .setSpannerInstanceId(spannerInstanceIdParam)
         .setSpannerDbName(spannerDbNameParam)
-        .setReadStalenessSeconds(15)
+        .setReadStalenessSeconds(0)
         .setEndpointUrl(args.getSpannerEndpoint())
         .build();
   }

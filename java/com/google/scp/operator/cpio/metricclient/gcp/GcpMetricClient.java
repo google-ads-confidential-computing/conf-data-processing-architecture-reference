@@ -116,9 +116,6 @@ public final class GcpMetricClient implements MetricClient {
     String metricName = getMetricName(metric);
     AttributesBuilder attributesBuilder = Attributes.builder();
     metric.labels().forEach((key, value) -> attributesBuilder.put(key, value));
-    // Add instance id and zone as metric labels to help with filtering logs for collector metrics.
-    attributesBuilder.put(INSTANCE_ID_METRIC_LABEL, instanceId);
-    attributesBuilder.put(ZONE_METRIC_LABEL, zone);
     switch (metric.metricType()) {
       case DOUBLE_COUNTER:
         DoubleCounter doubleCounter =

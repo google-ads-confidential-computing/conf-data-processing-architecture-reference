@@ -24,6 +24,7 @@ def opentelemetry_cpp():
         http_archive,
         name = "io_opentelemetry_cpp",
         strip_prefix = "opentelemetry-cpp-1.18.0",
+        repo_mapping = {"@curl": "@com_github_curl_curl"},
         urls = [
             "https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.18.0.tar.gz",
         ],

@@ -19,3 +19,7 @@ output "load_balancer_ip" {
 output "key_storage_cloudfunction_url" {
   value = google_cloudfunctions2_function.key_storage_cloudfunction.service_config[0].uri
 }
+
+output "key_storage_service_account_email" {
+  value = google_service_account.key_storage_service_account.email
+}

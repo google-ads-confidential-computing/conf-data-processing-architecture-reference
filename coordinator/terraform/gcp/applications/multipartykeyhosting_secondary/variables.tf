@@ -268,6 +268,12 @@ variable "location_new_key_ring" {
   nullable    = true
 }
 
+variable "key_storage_service_container_image_url" {
+  description = "The full path (registry + tag) to the container image used to deploy Key Storage Service."
+  type        = string
+  nullable    = true
+}
+
 ################################################################################
 # Key Management Variables.
 ################################################################################

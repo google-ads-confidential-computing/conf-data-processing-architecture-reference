@@ -25,6 +25,7 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActiveEncryptionKeysResponseProto.GetActiveEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -35,8 +36,12 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
   private final KeyDb keyDb;
 
   @Inject
-  GetActiveEncryptionKeysTask(KeyDb keyDb) {
-    super("GET", Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/activeKeys"));
+  GetActiveEncryptionKeysTask(KeyDb keyDb, LogMetricHelper logMetricHelper) {
+    super("GET",
+        Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/activeKeys"),
+        "GetActiveEncryptionKeys",
+        "v1Beta",
+        logMetricHelper);
     this.keyDb = keyDb;
   }
 

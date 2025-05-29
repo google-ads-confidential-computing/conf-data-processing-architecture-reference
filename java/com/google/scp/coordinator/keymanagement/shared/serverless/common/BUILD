@@ -20,6 +20,7 @@ java_library(
     name = "common",
     srcs = glob(["*.java"]),
     deps = [
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
         "//java/com/google/scp/shared/api/util",
@@ -27,5 +28,6 @@ java_library(
         "//java/external:guice",
         "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
+        "//java/external:slf4j",
     ],
 )

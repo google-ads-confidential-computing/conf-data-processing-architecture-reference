@@ -112,6 +112,7 @@ resource "google_cloud_run_service_iam_member" "cloud_function_iam_policy" {
   role   = "roles/run.invoker"
   member = "group:${var.allowed_wip_user_group}"
 }
+
 resource "google_cloud_run_service_iam_member" "cloud_function_iam_invokers" {
   for_each = toset(var.allowed_wip_service_accounts)
 

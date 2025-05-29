@@ -26,8 +26,6 @@ alarms_notification_email        = "fakeemail@google.com"
 auto_create_subnetworks = false
 network_name_suffix     = "network-with-custom-subnet"
 worker_subnet_cidr      = "14.16.0.0/20"
-# collector_subnet_cidr   = "14.20.0.0/20"
-# proxy_subnet_cidr       = "14.32.0.0/20"
 
 enable_job_completion_notifications = true
 
@@ -40,10 +38,12 @@ worker_scale_in_jar  = "/tmp/postsubmit_mp/jars/WorkerScaleInCloudFunction_deplo
 frontend_service_jar = "/tmp/postsubmit_mp/jars/FrontendServiceHttpCloudFunction_deploy.jar"
 
 enable_native_metric_aggregation   = false
-enable_remote_metric_aggregation   = false
+enable_remote_metric_aggregation   = true
 metric_exporter_interval_in_millis = 5000
-# collector_domain_name              = "collector.metrics"
-# collector_dns_name                 = "scp.testings.postsubmit"
+collector_domain_name              = "collector.metrics"
+collector_dns_name                 = "scp.testings.postsubmit"
+collector_subnet_cidr              = "14.20.0.0/20"
+proxy_subnet_cidr                  = "14.32.0.0/20"
 
 collector_exceed_cpu_usage_alarm = {
   enable_alarm : true,

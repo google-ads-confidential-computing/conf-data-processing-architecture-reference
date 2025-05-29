@@ -197,3 +197,8 @@ variable "cloudfunction_alarm_duration_sec" {
   description = "Amount of time (in seconds) to wait before sending a cloudfunction alarm. Must be in minute intervals. Example: '60','120'."
   type        = string
 }
+
+variable "auto_create_subnetworks" {
+  description = "When enabled, the network used by the worker will create subnet automatically."
+  type        = bool
+}

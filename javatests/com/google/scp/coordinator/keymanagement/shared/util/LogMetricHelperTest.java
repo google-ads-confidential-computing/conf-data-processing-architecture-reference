@@ -19,6 +19,7 @@ package com.google.scp.coordinator.keymanagement.shared.util;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.common.collect.ImmutableMap;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -29,7 +30,8 @@ public final class LogMetricHelperTest {
   @Test
   public void verifyLogIsCorrect() {
     LogMetricHelper logMetricHelper = new LogMetricHelper("test-namespace");
-    String test1 = logMetricHelper.format("test/metric1", "testField1", "testValue1");
+    String test1 =
+        logMetricHelper.format("test/metric1", ImmutableMap.of("testField1", "testValue1"));
     String result1 =
         "{\"metricName\":\"test-namespace/test/metric1\",\"testField1\":\"testValue1\"}";
     assertThat(test1).isEqualTo(result1);
@@ -39,19 +41,21 @@ public final class LogMetricHelperTest {
   public void verify2LabelLogIsCorrect() {
     LogMetricHelper logMetricHelper = new LogMetricHelper("test-namespace");
     String test =
-        logMetricHelper.format("test/metric1", "testField1", "testValue1", "field2", "value2");
+        logMetricHelper.format(
+            "test/metric1", ImmutableMap.of("testField1", "testValue1", "field2", "value2"));
     String expected =
-        "{\"metricName\":\"test-namespace/test/metric1\",\"testField1\":\"testValue1\"" +
-            ",\"field2\":\"value2\"}";
+        "{\"metricName\":\"test-namespace/test/metric1\",\"testField1\":\"testValue1\""
+            + ",\"field2\":\"value2\"}";
     assertThat(test).isEqualTo(expected);
   }
 
   @Test
   public void verifyLogIsCorrectWithEmptyNameSpace() {
     LogMetricHelper logMetricHelper = new LogMetricHelper("");
-    String test1 = logMetricHelper.format("test/metric1", "testField1", "testValue1");
+    String test1 =
+        logMetricHelper.format("test/metric1", ImmutableMap.of("testField1", "testValue1"));
     String result1 = "{\"metricName\":\"test/metric1\",\"testField1\":\"testValue1\"}";
-    assertThat(test1.equals(result1));
+    assertThat(test1).isEqualTo(result1);
     IllegalArgumentException ex =
         assertThrows(IllegalArgumentException.class, () -> new LogMetricHelper(null));
 

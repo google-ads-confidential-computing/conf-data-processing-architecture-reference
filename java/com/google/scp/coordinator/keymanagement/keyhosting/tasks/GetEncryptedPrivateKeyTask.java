@@ -18,6 +18,7 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
 import static com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncryptionKeyConverter.toApiEncryptionKey;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
@@ -42,7 +43,11 @@ public final class GetEncryptedPrivateKeyTask extends ApiTask {
 
   @Inject
   public GetEncryptedPrivateKeyTask(KeyDb keyDb, LogMetricHelper logMetricHelper) {
-    super("GET", Pattern.compile("/encryptionKeys/(?<id>[a-zA-Z0-9\\-]+)"));
+    super("GET",
+        Pattern.compile("/encryptionKeys/(?<id>[a-zA-Z0-9\\-]+)"),
+        "GetEncryptedPrivateKey",
+        "both",
+        logMetricHelper);
     this.keyDb = keyDb;
     this.logMetricHelper = logMetricHelper;
   }
@@ -57,10 +62,7 @@ public final class GetEncryptedPrivateKeyTask extends ApiTask {
       logger.error(
           logMetricHelper.format(
               "get_encrypted_private_key/error",
-              "errorReason",
-              e.getErrorReason(),
-              "keyId",
-              id));
+              ImmutableMap.of("errorReason", e.getErrorReason(), "keyId", id)));
       throw e;
     }
   }
@@ -70,13 +72,12 @@ public final class GetEncryptedPrivateKeyTask extends ApiTask {
     var nowMilli = Instant.now().toEpochMilli();
     var activationAgeInMillis = nowMilli - key.getActivationTime();
     var dayInMillis = TimeUnit.DAYS.toMillis(1);
-    var logMsg = "{"
-        + "\"metricName\":\"get_encrypted_private_key/age_in_days\","
-        + "\"setName\":\"" + key.getSetName() + "\","
-        + "\"keyId\":\"" + id + "\","
-        + "\"days\":" + (activationAgeInMillis / dayInMillis)
-        + "}";
-    logger.info(logMsg);
+    var days = activationAgeInMillis / dayInMillis;
+    logger.info(
+        logMetricHelper.format(
+            "get_encrypted_private_key/age_in_days",
+            ImmutableMap.of(
+                "setName", key.getSetName(), "keyId", id, "days", Long.toString(days))));
     return key;
   }
 }

@@ -362,17 +362,17 @@ variable "public_key_service_max_cloud_run_concurrency" {
   type        = number
 }
 
-variable "get_public_key_cloudfunction_memory_mb" {
-  description = "Memory size in MB for public key cloud function."
+variable "public_key_service_memory_mb" {
+  description = "Memory size in MB for public key service."
   type        = number
 }
 
-variable "get_public_key_cloudfunction_min_instances" {
-  description = "The minimum number of function instances that may coexist at a given time."
+variable "public_key_service_min_instances" {
+  description = "The minimum number of instances that may coexist at a given time."
   type        = number
 }
 
-variable "get_public_key_cloudfunction_max_instances" {
+variable "public_key_service_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
 }
@@ -456,22 +456,22 @@ variable "encryptionkeyservice_use_java21_runtime" {
 # Key Management Variables.
 ################################################################################
 
-variable "enable_get_public_key_cdn" {
+variable "enable_public_key_service_cdn" {
   description = "Enable Get Public Key API CDN."
   type        = bool
 }
 
-variable "get_public_key_cloud_cdn_default_ttl_seconds" {
+variable "public_key_service_cdn_default_ttl_seconds" {
   description = "Default CDN TTL seconds to use when no cache headers are present."
   type        = number
 }
 
-variable "get_public_key_cloud_cdn_max_ttl_seconds" {
+variable "public_key_service_cdn_max_ttl_seconds" {
   description = "Maximum CDN TTL seconds that cache header directive cannot surpass."
   type        = number
 }
 
-variable "get_public_key_cloud_cdn_serve_while_stale_seconds" {
+variable "public_key_service_cdn_serve_while_stale_seconds" {
   description = "Maximum CDN TTL seconds that cache header directive cannot surpass."
   type        = number
 }

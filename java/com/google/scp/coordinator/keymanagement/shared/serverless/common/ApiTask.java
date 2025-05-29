@@ -16,22 +16,35 @@
 
 package com.google.scp.coordinator.keymanagement.shared.serverless.common;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.shared.api.exception.ServiceException;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** An API task to handle requests to a specific endpoint. */
 public abstract class ApiTask {
+  private static final Logger logger = LoggerFactory.getLogger(ApiTask.class);
+
   private final String method;
   private final Pattern path;
+  private final String methodId;
+  private final String apiVersion;
+  private final LogMetricHelper logMetricHelper;
 
-  protected ApiTask(String method, Pattern path) {
+  protected ApiTask(
+      String method, Pattern path, String methodId, String apiVersion, LogMetricHelper logHelper) {
     this.method = method;
     this.path = path;
+    this.methodId = methodId;
+    this.apiVersion = apiVersion;
+    this.logMetricHelper = logHelper;
   }
 
-  /** Executes teh task for the matched request. */
+  /** Executes the task for the matched request. */
   protected abstract void execute(Matcher matcher, RequestContext request, ResponseContext response)
       throws ServiceException;
 
@@ -50,6 +63,11 @@ public abstract class ApiTask {
     if (!matcher.matches()) {
       return false;
     }
+
+    logger.info(
+        logMetricHelper.format(
+            "count", ImmutableMap.of("apiVersion", apiVersion, "methodId", methodId)));
+    // TODO(b/417703825): Add logging for latency of call
     execute(matcher, request, response);
     return true;
   }

@@ -23,6 +23,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.Rule;
@@ -120,7 +121,7 @@ public final class ApiTaskTest {
 
   private static class TestApiTask extends ApiTask {
     public TestApiTask(String method, Pattern pattern) {
-      super(method, pattern);
+      super(method, pattern, "test", "v1Beta", new LogMetricHelper("test"));
     }
 
     @Override

@@ -17,11 +17,12 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncodedPublicKeyListConverter;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncodedPublicKeyListConverter.Mode;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
@@ -55,7 +56,11 @@ public class GetActivePublicKeysTask extends ApiTask {
       @KeyLimit Integer keyLimit,
       @CacheControlMaximum Long cacheControlMaximum,
       LogMetricHelper logMetricHelper) {
-    super("GET", Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/publicKeys(?<raw>:raw)?"));
+    super("GET",
+        Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/publicKeys(?<raw>:raw)?"),
+        "getActivePublicKeys",
+        "v1Beta",
+        logMetricHelper);
     this.keyDb = keyDb;
     this.keyLimit = keyLimit;
     this.cacheControlMaximum = cacheControlMaximum;
@@ -73,7 +78,8 @@ public class GetActivePublicKeysTask extends ApiTask {
     ImmutableList<EncryptionKey> keys = keyDb.getActiveKeysWithPublicKey(setName, keyLimit);
     if (keys.isEmpty()) {
       logger.error(
-          logMetricHelper.format("get_active_public_keys/empty_key_set", "setName", setName));
+          logMetricHelper.format(
+              "get_active_public_keys/empty_key_set", ImmutableMap.of("setName", setName)));
     }
 
     getSecondsUntilSoonestExpiration(keys)
@@ -104,7 +110,7 @@ public class GetActivePublicKeysTask extends ApiTask {
     } catch (ServiceException e) {
       logger.error(
           logMetricHelper.format(
-              "get_active_public_keys/error", "errorReason", e.getErrorReason()));
+              "get_active_public_keys/error", ImmutableMap.of("errorReason", e.getErrorReason())));
       throw e;
     }
   }

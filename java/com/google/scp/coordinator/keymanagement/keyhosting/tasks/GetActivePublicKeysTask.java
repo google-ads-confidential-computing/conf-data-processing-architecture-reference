@@ -28,6 +28,7 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActivePublicKeysResponseProto.GetActivePublicKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -54,8 +55,16 @@ public final class GetActivePublicKeysTask extends ApiTask {
 
   @Inject
   public GetActivePublicKeysTask(
-      KeyDb keyDb, @KeyLimit Integer keyLimit, @CacheControlMaximum Long cacheControlMaximum) {
-    super("GET", Pattern.compile("/publicKeys((?<raw>:raw)|(?<tink>:tink))?"));
+      KeyDb keyDb,
+      @KeyLimit Integer keyLimit,
+      @CacheControlMaximum Long cacheControlMaximum,
+      LogMetricHelper logMetricHelper) {
+    super(
+        "GET",
+        Pattern.compile("/publicKeys((?<raw>:raw)|(?<tink>:tink))?"),
+        "getActivePublicKeys",
+        "v1Alpha",
+        logMetricHelper);
     this.keyDb = keyDb;
     this.keyLimit = keyLimit;
     this.cacheControlMaximum = cacheControlMaximum;

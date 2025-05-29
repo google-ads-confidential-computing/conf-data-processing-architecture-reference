@@ -16,6 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KmsClient;
 import com.google.inject.Inject;
@@ -154,7 +155,9 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
     try {
       return keyStorageClient.createKey(unsignedCoordinatorBKey, encryptedKeySplitB);
     } catch (KeyStorageServiceException e) {
-      logger.error(logMetricHelper.format("key_generation/error", "errorReason", e.getMessage()));
+      logger.error(
+          logMetricHelper.format(
+              "key_generation/error", ImmutableMap.of("errorReason", e.getMessage())));
       throw new ServiceException(
           Code.INVALID_ARGUMENT, "Key Storage Service failed to validate, sign, and store key", e);
     }

@@ -22,6 +22,7 @@ import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.commo
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleartext;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KeyTemplate;
 import com.google.crypto.tink.KeyTemplates;
@@ -346,7 +347,8 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
   }
 
   private String format(String setName, String errorReason) {
-    return logMetricHelper.format("key_generation/error", setName, "errorReason", errorReason);
+    return logMetricHelper.format(
+        "key_generation/error", ImmutableMap.of("setName", setName, "errorReason", errorReason));
   }
 
   /**

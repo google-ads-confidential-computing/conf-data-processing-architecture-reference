@@ -38,7 +38,8 @@ resource "null_resource" "collector_template_mig_replace_trigger" {
     # not seem to work and always forces replacement, perhaps due to some non-
     # determinism of the list. Direct indexing into the first element works as
     # desired.
-    network = length(google_compute_instance_template.collector.network_interface) > 0 ? google_compute_instance_template.collector.network_interface[0].network : ""
+    network   = length(google_compute_instance_template.collector.network_interface) > 0 ? google_compute_instance_template.collector.network_interface[0].network : ""
+    subnet_id = length(var.subnet_id) > 0 ? var.subnet_id : ""
   }
 }
 

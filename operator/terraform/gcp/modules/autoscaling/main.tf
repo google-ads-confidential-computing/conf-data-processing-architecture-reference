@@ -35,8 +35,11 @@ resource "null_resource" "worker_template_mig_replace_trigger" {
     # not seem to work and always forces replacement, perhaps due to some non-
     # determinism of the list. Direct indexing into the first element works as
     # desired.
-    network    = length(var.worker_template.network_interface) > 0 ? var.worker_template.network_interface[0].network : ""
-    subnetwork = length(var.subnet_id) > 0 ? var.subnet_id : ""
+    network = (length(var.worker_template.network_interface) > 0
+      ? (!var.auto_create_subnetworks && length(var.subnet_id) > 0
+        ? "${var.worker_template.network_interface[0].network}-${var.subnet_id}"
+      : var.worker_template.network_interface[0].network)
+    : "")
   }
 }
 

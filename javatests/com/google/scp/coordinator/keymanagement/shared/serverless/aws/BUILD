@@ -22,6 +22,7 @@ java_test(
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/aws",
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/model",
         "//java/external:aws_lambda_java_events",
         "//java/external:google_truth",

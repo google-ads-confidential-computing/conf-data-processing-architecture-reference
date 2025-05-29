@@ -64,10 +64,10 @@ struct MetricClientOptions {
    * @brief The interval of how frequent the OpenTelemetry API exporters
    * send aggregated metrics to the remote OpenTelemetry Collector.
    *
-   * Default value is 5,000 ms.
+   * Default value is 60,000 ms.
    */
   std::chrono::milliseconds metric_exporter_interval =
-      std::chrono::milliseconds(5000);
+      std::chrono::milliseconds(60000);
   /**
    * @brief Pushes metrics in batches if true. In most times, when the
    * batch_recording_time_duration is met, the push is triggered. Cloud has

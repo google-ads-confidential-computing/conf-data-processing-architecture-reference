@@ -22,6 +22,7 @@ java_test(
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/gcp",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/model",
         "//java/external:apache_httpclient",
         "//java/external:apache_httpcore",

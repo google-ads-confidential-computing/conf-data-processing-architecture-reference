@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+TF_BIN="${TF_BIN:-terraform_1_9_0}"
+
 set -eu
 
 ACTION="apply"
@@ -39,8 +41,8 @@ deploy-operator-terraform() {
     AUTO_APPROVE_OPTION=" -auto-approve "
   fi
 
-  bazel run @terraform//:terraform -- -chdir="$ENV_DIR" init || { echo 'Failed to init operator terraform.' ; exit 1; }
-  bazel run @terraform//:terraform -- -chdir="$ENV_DIR" $ACTION $AUTO_APPROVE_OPTION $WORKER_IMAGE_OPTION || { echo "Failed to $ACTION operator terraform." ; exit 1; }
+  $TF_BIN -chdir="$ENV_DIR" init -upgrade || { echo 'Failed to init operator terraform.' ; exit 1; }
+  $TF_BIN -chdir="$ENV_DIR" $ACTION $AUTO_APPROVE_OPTION $WORKER_IMAGE_OPTION || { echo "Failed to $ACTION operator terraform." ; exit 1; }
 }
 
 FUNCTION=$1

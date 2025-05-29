@@ -47,6 +47,11 @@ resource "google_storage_bucket_object" "encryption_key_service_package_bucket_o
   source = local.cloudfunction_package_zip
 }
 
+moved {
+  from = google_cloudfunctions2_function.encryption_key_service_cloudfunction
+  to   = google_cloudfunctions2_function.encryption_key_service_cloudfunction["0"]
+}
+
 resource "google_cloudfunctions2_function" "encryption_key_service_cloudfunction" {
   for_each = { for idx, region in var.regions : idx => region }
   name     = "${var.environment}-${each.value}-${local.cloudfunction_name_suffix}"

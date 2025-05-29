@@ -37,6 +37,7 @@ java_test(
     ],
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/external:google_truth",
         "//java/external:guice",
         "//java/external:mockito",

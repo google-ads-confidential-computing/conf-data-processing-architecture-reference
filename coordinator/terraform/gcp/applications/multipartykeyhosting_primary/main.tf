@@ -89,16 +89,6 @@ module "keydb" {
   custom_configuration_read_replica_location = var.spanner_custom_configuration_read_replica_location
 }
 
-module "key_management_service" {
-  count  = var.location_new_key_ring == null ? 0 : 1
-  source = "../../modules/key_management_service"
-
-  environment           = var.environment
-  project_id            = var.project_id
-  location_new_key_ring = var.location_new_key_ring
-  key_sets              = local.key_sets
-}
-
 module "keygenerationservice" {
   source = "../../modules/keygenerationservice"
 
@@ -139,6 +129,9 @@ module "keygenerationservice" {
   key_sets = local.key_sets
 }
 
+### KMS
+## Current Key Ring
+# Legacy kek pool
 module "allowed_operators" {
   source = "../../modules/allowed_operators"
 
@@ -146,6 +139,37 @@ module "allowed_operators" {
   key_encryption_key_id = module.keygenerationservice.key_encryption_key_id
   allowed_operators     = var.allowed_operators
   key_ring_id           = module.keygenerationservice.key_ring_id
+}
+
+# Key set acl kek pool
+moved {
+  from = module.allowed_operators.module.kek_pool
+  to   = module.key_set_acl_kek_pool
+}
+
+module "key_set_acl_kek_pool" {
+  for_each = var.allowed_operators
+  source   = "../../modules/allowed_operator_pool"
+
+  environment                = var.environment
+  key_encryption_key_ring_id = module.keygenerationservice.key_ring_id
+  key_encryption_key_id      = module.keygenerationservice.key_encryption_key_id
+
+  key_sets         = toset(each.value.key_sets)
+  allowed_operator = each.value
+  pool_name        = each.key
+}
+
+## New Key Ring
+module "key_management_service" {
+  count  = var.location_new_key_ring == null ? 0 : 1
+  source = "../../modules/key_management_service"
+
+  environment           = var.environment
+  project_id            = var.project_id
+  service_account_email = module.keygenerationservice.key_generation_service_account
+  location_new_key_ring = var.location_new_key_ring
+  key_sets              = local.key_sets
 }
 
 module "publickeyhostingservice" {
@@ -164,16 +188,10 @@ module "publickeyhostingservice" {
   cloudfunction_timeout_seconds              = var.cloudfunction_timeout_seconds
   get_public_key_service_jar                 = local.get_public_key_service_jar
   get_public_key_service_source_path         = var.get_public_key_service_source_path
-  get_public_key_cloudfunction_memory_mb     = var.get_public_key_cloudfunction_memory_mb
-  get_public_key_cloudfunction_min_instances = var.get_public_key_cloudfunction_min_instances
-  get_public_key_cloudfunction_max_instances = var.get_public_key_cloudfunction_max_instances
+  get_public_key_cloudfunction_memory_mb     = var.public_key_service_memory_mb
+  get_public_key_cloudfunction_min_instances = var.public_key_service_min_instances
+  get_public_key_cloudfunction_max_instances = var.public_key_service_max_instances
   use_java21_runtime                         = var.publickeyservice_use_java21_runtime
-
-  # Load balance vars
-  enable_get_public_key_cdn                          = var.enable_get_public_key_cdn
-  get_public_key_cloud_cdn_default_ttl_seconds       = var.get_public_key_cloud_cdn_default_ttl_seconds
-  get_public_key_cloud_cdn_max_ttl_seconds           = var.get_public_key_cloud_cdn_max_ttl_seconds
-  get_public_key_cloud_cdn_serve_while_stale_seconds = var.get_public_key_cloud_cdn_serve_while_stale_seconds
 
   # Domain Management
   public_key_domain = local.public_key_domain
@@ -281,10 +299,10 @@ module "public_key_service_load_balancer" {
 
   cloud_run_ids = module.publickeyhostingservice.cloud_function_ids
 
-  enable_cdn                    = var.enable_get_public_key_cdn
-  cdn_default_ttl_seconds       = var.get_public_key_cloud_cdn_default_ttl_seconds
-  cdn_max_ttl_seconds           = var.get_public_key_cloud_cdn_max_ttl_seconds
-  cdn_serve_while_stale_seconds = var.get_public_key_cloud_cdn_serve_while_stale_seconds
+  enable_cdn                    = var.enable_public_key_service_cdn
+  cdn_default_ttl_seconds       = var.public_key_service_cdn_default_ttl_seconds
+  cdn_max_ttl_seconds           = var.public_key_service_cdn_max_ttl_seconds
+  cdn_serve_while_stale_seconds = var.public_key_service_cdn_serve_while_stale_seconds
 
   # Custom url/domain
   managed_domain = local.public_key_domain
@@ -313,9 +331,9 @@ module "public_key_service" {
   # Cloud Run settings
   cpu_count          = var.public_key_service_cloud_run_cpu_count
   concurrency        = var.public_key_service_max_cloud_run_concurrency
-  memory_mb          = var.get_public_key_cloudfunction_memory_mb
-  min_instance_count = var.get_public_key_cloudfunction_min_instances
-  max_instance_count = var.get_public_key_cloudfunction_max_instances
+  memory_mb          = var.public_key_service_memory_mb
+  min_instance_count = var.public_key_service_min_instances
+  max_instance_count = var.public_key_service_max_instances
 
   # Spanner
   spanner_database_name = module.keydb.keydb_name

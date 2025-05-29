@@ -78,41 +78,6 @@ resource "google_storage_bucket" "mpkhs_secondary_package_bucket" {
   uniform_bucket_level_access = true
 }
 
-# Cloud KMS encryption ring and key encryption key (KEK)
-resource "google_kms_key_ring" "key_encryption_ring" {
-  name     = "${var.environment}_key_encryption_ring"
-  location = "us"
-}
-
-resource "google_kms_crypto_key" "key_encryption_key" {
-  name     = "${var.environment}_key_encryption_key"
-  key_ring = google_kms_key_ring.key_encryption_ring.id
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-resource "google_kms_crypto_key" "key_set_key_encryption_key" {
-  for_each = toset(local.key_sets)
-  name     = "${var.environment}_${each.value}_key_encryption_key"
-  key_ring = google_kms_key_ring.key_encryption_ring.id
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-module "key_management_service" {
-  count  = var.location_new_key_ring == null ? 0 : 1
-  source = "../../modules/key_management_service"
-
-  environment           = var.environment
-  project_id            = var.project_id
-  location_new_key_ring = var.location_new_key_ring
-  key_sets              = local.key_sets
-}
-
 module "keydb" {
   source                                     = "../../modules/keydb"
   project_id                                 = var.project_id
@@ -152,6 +117,7 @@ module "keystorageservice" {
   key_storage_service_cloudfunction_min_instances = var.key_storage_service_cloudfunction_min_instances
   key_storage_service_cloudfunction_max_instances = var.key_storage_service_cloudfunction_max_instances
   use_java21_runtime                              = var.keystorageservice_use_java21_runtime
+  source_container_image_url                      = var.key_storage_service_container_image_url
 
   # Domain Management
   key_storage_domain = local.key_storage_domain
@@ -315,6 +281,33 @@ module "workload_identity_pool" {
   assertion_tee_container_image_hash_list      = var.assertion_tee_container_image_hash_list
 }
 
+### KMS
+## Current Key Ring
+# Cloud KMS encryption ring and key encryption key (KEK)
+resource "google_kms_key_ring" "key_encryption_ring" {
+  name     = "${var.environment}_key_encryption_ring"
+  location = "us"
+}
+
+resource "google_kms_crypto_key" "key_encryption_key" {
+  name     = "${var.environment}_key_encryption_key"
+  key_ring = google_kms_key_ring.key_encryption_ring.id
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "google_kms_crypto_key" "key_set_key_encryption_key" {
+  for_each = toset(local.key_sets)
+  name     = "${var.environment}_${each.value}_key_encryption_key"
+  key_ring = google_kms_key_ring.key_encryption_ring.id
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 # Allow Verified Service Account to encrypt with given KEK
 resource "google_kms_crypto_key_iam_member" "workload_identity_member" {
   crypto_key_id = google_kms_crypto_key.key_encryption_key.id
@@ -341,4 +334,35 @@ module "allowed_operators" {
   key_encryption_key_id = google_kms_crypto_key.key_encryption_key.id
   allowed_operators     = var.allowed_operators
   key_ring_id           = google_kms_key_ring.key_encryption_ring.id
+}
+
+# Key set acl kek pool
+moved {
+  from = module.allowed_operators.module.kek_pool
+  to   = module.key_set_acl_kek_pool
+}
+
+module "key_set_acl_kek_pool" {
+  for_each = var.allowed_operators
+  source   = "../../modules/allowed_operator_pool"
+
+  environment                = var.environment
+  key_encryption_key_ring_id = google_kms_key_ring.key_encryption_ring.id
+  key_encryption_key_id      = google_kms_crypto_key.key_encryption_key.id
+
+  key_sets         = toset(each.value.key_sets)
+  allowed_operator = each.value
+  pool_name        = each.key
+}
+
+## New Key Ring
+module "key_management_service" {
+  count  = var.location_new_key_ring == null ? 0 : 1
+  source = "../../modules/key_management_service"
+
+  environment           = var.environment
+  project_id            = var.project_id
+  service_account_email = module.keystorageservice.key_storage_service_account_email
+  location_new_key_ring = var.location_new_key_ring
+  key_sets              = local.key_sets
 }

@@ -24,6 +24,7 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -44,8 +45,12 @@ public final class ListRecentEncryptionKeysTask extends ApiTask {
   private final KeyDb keyDb;
 
   @Inject
-  public ListRecentEncryptionKeysTask(KeyDb keyDb) {
-    super("GET", Pattern.compile("/encryptionKeys:recent"));
+  public ListRecentEncryptionKeysTask(KeyDb keyDb, LogMetricHelper logMetricHelper) {
+    super("GET",
+        Pattern.compile("/encryptionKeys:recent"),
+        "ListRecentEncryptionKeys",
+        "v1Alpha",
+        logMetricHelper);
     this.keyDb = keyDb;
   }
 

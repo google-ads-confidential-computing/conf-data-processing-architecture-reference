@@ -42,8 +42,8 @@ cc_library(
         "//cc/public/cpio/interface/metric_client:type_def",
         "@com_google_protobuf//:protobuf",
         "@io_opentelemetry_cpp//api",
-        "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_exporter",
-        "@io_opentelemetry_cpp//exporters/otlp:otlp_grpc_metric_exporter",
+        "@io_opentelemetry_cpp//exporters/otlp:otlp_http_exporter",
+        "@io_opentelemetry_cpp//exporters/otlp:otlp_http_metric_exporter",
         "@io_opentelemetry_cpp//sdk/src/metrics",
     ],
 )

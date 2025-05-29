@@ -75,6 +75,12 @@ variable "key_storage_service_source_path" {
   type        = string
 }
 
+variable "source_container_image_url" {
+  description = "The URL for the container image to run on this service."
+  type        = string
+  nullable    = true
+}
+
 variable "key_storage_cloudfunction_memory" {
   type        = number
   description = "Memory size in MB for cloud function."

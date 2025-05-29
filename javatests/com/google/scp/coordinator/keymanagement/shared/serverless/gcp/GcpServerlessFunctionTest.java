@@ -25,6 +25,7 @@ import com.google.inject.multibindings.StringMapKey;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import java.net.ServerSocket;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -107,7 +108,8 @@ public class GcpServerlessFunctionTest {
     @StringMapKey("/test-base")
     List<ApiTask> provideApiTasks() {
       return ImmutableList.of(
-          new ApiTask("GET", Pattern.compile("/path")) {
+          new ApiTask(
+              "GET", Pattern.compile("/path"), "test", "v1Test", new LogMetricHelper("test")) {
             @Override
             protected void execute(
                 Matcher matcher, RequestContext request, ResponseContext response) {

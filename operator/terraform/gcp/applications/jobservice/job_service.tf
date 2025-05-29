@@ -336,12 +336,13 @@ module "worker" {
 }
 
 module "autoscaling" {
-  source           = "../../modules/autoscaling"
-  environment      = var.environment
-  project_id       = var.project_id
-  region           = var.region
-  subnet_id        = module.vpc.worker_subnet_id
-  vpc_connector_id = var.vpcsc_compatible ? module.vpc.connectors[var.region] : null
+  source                  = "../../modules/autoscaling"
+  environment             = var.environment
+  project_id              = var.project_id
+  region                  = var.region
+  subnet_id               = module.vpc.worker_subnet_id
+  vpc_connector_id        = var.vpcsc_compatible ? module.vpc.connectors[var.region] : null
+  auto_create_subnetworks = var.auto_create_subnetworks
 
   worker_template                     = module.worker.worker_template
   min_worker_instances                = var.min_worker_instances

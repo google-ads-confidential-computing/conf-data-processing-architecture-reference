@@ -18,19 +18,20 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.exception.SharedErrorReason;
 import com.google.scp.shared.api.model.Code;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -43,11 +44,17 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
   static final String MAX_AGE_SECONDS_PARAM_NAME = "maxAgeSeconds";
 
   private final KeyDb keyDb;
+  private final LogMetricHelper logMetricHelper;
 
   @Inject
-  ListRecentEncryptionKeysTask(KeyDb keyDb) {
-    super("GET", Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/encryptionKeys:recent"));
+  ListRecentEncryptionKeysTask(KeyDb keyDb, LogMetricHelper logMetricHelper) {
+    super("GET",
+        Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/encryptionKeys:recent"),
+        "ListRecentEncryptionKeys",
+        "v1Beta",
+        logMetricHelper);
     this.keyDb = keyDb;
+    this.logMetricHelper = logMetricHelper;
   }
 
   @Override
@@ -55,12 +62,10 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
       throws ServiceException {
     var setName = matcher.group("name");
     var maxAge = getMaxAage(request);
-    var logMsg = "{"
-        + "\"metricName\":\"list_recent_encrypted_keys/age_in_days\","
-        + "\"setName\":\"" + setName + "\","
-        + "\"days\":" + maxAge.toDays()
-        + "}";
-    logger.info(logMsg);
+    logger.info(
+        logMetricHelper.format(
+            "list_recent_encrypted_keys/age_in_days",
+            ImmutableMap.of("setName", setName, "days", Long.toString(maxAge.toDays()))));
     Stream<EncryptionKey> keys = keyDb.listRecentKeys(setName, maxAge);
     response.setBody(
         ListRecentEncryptionKeysResponse.newBuilder()

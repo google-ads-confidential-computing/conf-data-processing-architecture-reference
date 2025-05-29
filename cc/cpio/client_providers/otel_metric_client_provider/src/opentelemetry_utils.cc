@@ -20,8 +20,9 @@
 #include <memory>
 #include <utility>
 
-#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_factory.h"
-#include "opentelemetry/exporters/otlp/otlp_grpc_metric_exporter_options.h"
+#include "absl/strings/str_cat.h"
+#include "opentelemetry/exporters/otlp/otlp_http_metric_exporter_factory.h"
+#include "opentelemetry/exporters/otlp/otlp_http_metric_exporter_options.h"
 #include "opentelemetry/metrics/provider.h"
 #include "opentelemetry/sdk/metrics/aggregation/default_aggregation.h"
 #include "opentelemetry/sdk/metrics/export/periodic_exporting_metric_reader.h"
@@ -34,7 +35,7 @@
 #include "public/cpio/interface/metric_client/type_def.h"
 
 using google::scp::cpio::MetricClientOptions;
-using opentelemetry::exporter::otlp::OtlpGrpcMetricExporterFactory;
+using opentelemetry::exporter::otlp::OtlpHttpMetricExporterFactory;
 using opentelemetry::metrics::Meter;
 using opentelemetry::metrics::MeterProvider;
 using opentelemetry::metrics::Provider;
@@ -55,10 +56,10 @@ constexpr auto kExportTimeout = std::chrono::milliseconds(1000);
 shared_ptr<Meter> OpenTelemetryUtils::CreateOpenTelemetryMeter(
     const shared_ptr<MetricClientOptions>& options, const string& instance_id,
     const string& zone) noexcept {
-  opentelemetry::exporter::otlp::OtlpGrpcMetricExporterOptions opts;
-  opts.endpoint = options->remote_metric_collector_address;
-  opts.use_ssl_credentials = false;
-  auto exporter = OtlpGrpcMetricExporterFactory::Create(opts);
+  opentelemetry::exporter::otlp::OtlpHttpMetricExporterOptions opts;
+  opts.url = absl::StrCat("http://", options->remote_metric_collector_address,
+                          "/v1/metrics");
+  auto exporter = OtlpHttpMetricExporterFactory::Create(opts);
 
   PeriodicExportingMetricReaderOptions reader_options;
   reader_options.export_interval_millis = options->metric_exporter_interval;

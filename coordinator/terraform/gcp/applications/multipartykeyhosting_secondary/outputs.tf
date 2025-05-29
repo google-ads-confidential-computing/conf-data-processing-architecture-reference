@@ -49,7 +49,11 @@ output "wip_verified_service_account" {
 }
 
 output "allowed_operators_wipp_names" {
-  value = module.allowed_operators.workload_identity_pool_provider_names
+  description = "The workload identity pool provider names for each operator group."
+  value = [
+    for provider in module.key_set_acl_kek_pool :
+    provider.workload_identity_pool_provider_name
+  ]
 }
 
 output "kms_key_base_uri" {

@@ -26,6 +26,7 @@ import com.google.inject.multibindings.StringMapKey;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,7 +40,7 @@ public class AwsServerlessFunctionTest {
   private static final String TEST_RESPONSE = "test-response";
 
   @Test
-  public void testService_happyPath_returnsExpected() throws Exception {
+  public void testService_happyPath_returnsExpected() {
     // Given
     APIGatewayProxyRequestEvent request =
         new APIGatewayProxyRequestEvent().withHttpMethod("GET").withPath("/test-base/path");
@@ -52,7 +53,7 @@ public class AwsServerlessFunctionTest {
   }
 
   @Test
-  public void testService_nonExistingEndpoint_returnsNotFound() throws Exception {
+  public void testService_nonExistingEndpoint_returnsNotFound() {
     // Given
     APIGatewayProxyRequestEvent request =
         new APIGatewayProxyRequestEvent().withHttpMethod("GET").withPath("/test-base/no-such");
@@ -69,7 +70,8 @@ public class AwsServerlessFunctionTest {
     @StringMapKey("/test-base")
     List<ApiTask> provideApiTasks() {
       return ImmutableList.of(
-          new ApiTask("GET", Pattern.compile("/path")) {
+          new ApiTask(
+              "GET", Pattern.compile("/path"), "test", "v1Beta", new LogMetricHelper("test")) {
             @Override
             protected void execute(
                 Matcher matcher, RequestContext request, ResponseContext response) {

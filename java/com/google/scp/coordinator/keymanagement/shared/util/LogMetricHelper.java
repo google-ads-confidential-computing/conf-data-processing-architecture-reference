@@ -16,12 +16,17 @@
 
 package com.google.scp.coordinator.keymanagement.shared.util;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class LogMetricHelper {
 
-  public final String metricNameSpace;
+  private final String metricNameSpace;
 
+  // TODO(b/420995280): Remove @Inject annotation as the metricNamespace is not being provided
+  // anywhere.
   @Inject
   public LogMetricHelper(String metricNameSpace) throws IllegalArgumentException {
     if (metricNameSpace == null) {
@@ -31,39 +36,18 @@ public final class LogMetricHelper {
     }
   }
 
-  /** Get a log line denoting a counter metric */
-  public String format(String metricName, String label, String value) {
-    String metricLabel = String.format("\"%s\":\"%s\"", label, value);
-    var log = createSb(metricName, metricLabel);
-    log.append("}");
-    return log.toString();
+  public String format(String metricName, ImmutableMap<String, String> labels) {
+    var metricNameLabel = ImmutableMap.of("metricName", getFullMetricName(metricName));
+    return "{"
+        + Stream.concat(metricNameLabel.entrySet().stream(), labels.entrySet().stream())
+            .map(entry -> String.format("\"%s\":\"%s\"", entry.getKey(), entry.getValue()))
+            .collect(Collectors.joining(","))
+        + "}";
   }
 
-  /** Get a log line denoting a counter metric that includes two labels */
-  public String format(
-      String metricName, String label1, String value1, String label2, String value2) {
-    String metricLabel = String.format("\"%s\":\"%s\"", label1, value1);
-    String otherLabel = String.format("\"%s\":\"%s\"", label2, value2);
-    var log = createSb(metricName, metricLabel);
-    log.append(String.format(",%s", otherLabel));
-    log.append("}");
-    return log.toString();
-  }
-
-  /** Get a log line denoting a counter metric that includes setName */
-  public String format(String metricName, String setName, String label, String value) {
-    return format(metricName, label, value, "setName", setName);
-  }
-
-  private StringBuilder createSb(String metricName, String metricLabel) {
-    StringBuilder log = new StringBuilder();
-    log.append("{");
-    String metricFullName =
-        metricNameSpace.isEmpty()
-            ? metricName
-            : String.format("%s/%s", metricNameSpace, metricName);
-    log.append(String.format("\"metricName\":\"%s\"", metricFullName));
-    log.append(String.format(",%s", metricLabel));
-    return log;
+  private String getFullMetricName(String metricName) {
+    return metricNameSpace.isEmpty()
+        ? metricName
+        : String.format("%s/%s", metricNameSpace, metricName);
   }
 }

@@ -77,26 +77,6 @@ variable "cloudfunction_timeout_seconds" {
   type        = number
 }
 
-variable "enable_get_public_key_cdn" {
-  description = "Enable Get Public Key API CDN"
-  type        = bool
-}
-
-variable "get_public_key_cloud_cdn_default_ttl_seconds" {
-  description = "Default CDN TTL seconds to use when no cache headers are present."
-  type        = number
-}
-
-variable "get_public_key_cloud_cdn_max_ttl_seconds" {
-  description = "Maximum CDN TTL seconds that cache header directive cannot surpass."
-  type        = number
-}
-
-variable "get_public_key_cloud_cdn_serve_while_stale_seconds" {
-  description = "Maximum CDN TTL seconds that cache header directive cannot surpass."
-  type        = number
-}
-
 variable "spanner_database_name" {
   description = "Name of the KeyDb Spanner database."
   type        = string

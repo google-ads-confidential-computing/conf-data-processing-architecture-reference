@@ -18,6 +18,10 @@ output "forwarding_rule" {
   value = google_compute_global_forwarding_rule.forwarding_rule
 }
 
-output "tcp_proxy" {
-  value = google_compute_target_tcp_proxy.proxy
+output "http_proxy" {
+  value = google_compute_target_http_proxy.proxy
+}
+
+output "loadbalancer_dns_address" {
+  value = format("%s.%s.%s:%s", var.environment, var.domain_name, trimsuffix(google_dns_managed_zone.collector_dns_zone.dns_name, "."), var.service_port)
 }

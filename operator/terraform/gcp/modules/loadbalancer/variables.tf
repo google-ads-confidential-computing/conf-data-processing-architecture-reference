@@ -55,12 +55,12 @@ variable "service_name" {
 }
 
 variable "service_port_name" {
-  description = "The name of the gRPC port that receives traffic destined for the service."
+  description = "The name of the http port that receives traffic destined for the service."
   type        = string
 }
 
 variable "service_port" {
-  description = "The value of the gRpc port that receives traffic destined for the service."
+  description = "The value of the http port that receives traffic destined for the service."
   type        = number
 }
 

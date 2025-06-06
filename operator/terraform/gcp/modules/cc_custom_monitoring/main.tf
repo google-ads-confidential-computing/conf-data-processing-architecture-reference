@@ -607,9 +607,8 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
   dashboard_json = jsonencode(
     {
       "displayName" : "${var.environment} Lib Worker Custom Metrics Dashboard",
-      "dashboardFilters" : [],
       "gridLayout" : {
-        "columns" : 2,
+        "columns" : "2",
         "widgets" : [
           {
             "title" : "Job Pulling and Completion Rate (per minute)",
@@ -619,10 +618,7 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
               },
               "dataSets" : [
                 {
-                  "breakdowns" : [],
-                  "dimensions" : [],
                   "legendTemplate" : "Job Pulling Rate",
-                  "measures" : [],
                   "minAlignmentPeriod" : "60s",
                   "plotType" : "LINE",
                   "targetAxis" : "Y2",
@@ -631,7 +627,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                       "aggregation" : {
                         "alignmentPeriod" : "60s",
                         "crossSeriesReducer" : "REDUCE_SUM",
-                        "groupByFields" : [],
                         "perSeriesAligner" : "ALIGN_SUM"
                       },
                       "filter" : "metric.type=\"${google_monitoring_metric_descriptor.joblifecyclehelper_job_pulling_metric.type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\" metric.label.\"EventCode\"=\"JobPreparationSuccess\""
@@ -658,7 +653,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                   }
                 }
               ],
-              "thresholds" : [],
               "timeshiftDuration" : "0s",
               "y2Axis" : {
                 "label" : "y2Axis",
@@ -674,10 +668,7 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
               },
               "dataSets" : [
                 {
-                  "breakdowns" : [],
-                  "dimensions" : [],
                   "legendTemplate" : "Job Pulling Failures $${metric.labels.EventCode}",
-                  "measures" : [],
                   "minAlignmentPeriod" : "60s",
                   "plotType" : "LINE",
                   "targetAxis" : "Y2",
@@ -696,10 +687,7 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                   }
                 },
                 {
-                  "breakdowns" : [],
-                  "dimensions" : [],
                   "legendTemplate" : "Job Pulling Failures $${metric.labels.EventCode}",
-                  "measures" : [],
                   "minAlignmentPeriod" : "60s",
                   "plotType" : "LINE",
                   "targetAxis" : "Y2",
@@ -737,10 +725,7 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                   }
                 },
                 {
-                  "breakdowns" : [],
-                  "dimensions" : [],
                   "legendTemplate" : "Job Extender Failures",
-                  "measures" : [],
                   "minAlignmentPeriod" : "60s",
                   "plotType" : "LINE",
                   "targetAxis" : "Y2",
@@ -759,10 +744,7 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                   }
                 },
                 {
-                  "breakdowns" : [],
-                  "dimensions" : [],
                   "legendTemplate" : "Job MetaData Map Failures $${metric.labels.EventCode}",
-                  "measures" : [],
                   "minAlignmentPeriod" : "60s",
                   "plotType" : "LINE",
                   "targetAxis" : "Y2",
@@ -781,7 +763,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                   }
                 }
               ],
-              "thresholds" : [],
               "timeshiftDuration" : "0s",
               "y2Axis" : {
                 "label" : "y2Axis",
@@ -815,7 +796,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                       "secondaryAggregation" : {
                         "alignmentPeriod" : "60s",
                         "crossSeriesReducer" : "REDUCE_MEAN",
-                        "groupByFields" : [],
                         "perSeriesAligner" : "ALIGN_MEAN"
                       }
                     }
@@ -872,7 +852,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
               ],
               "thresholds" : [
                 {
-                  "label" : "",
                   "targetAxis" : "Y2",
                   "value" : 500
                 }
@@ -910,7 +889,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                       "secondaryAggregation" : {
                         "alignmentPeriod" : "60s",
                         "crossSeriesReducer" : "REDUCE_MEAN",
-                        "groupByFields" : [],
                         "perSeriesAligner" : "ALIGN_MEAN"
                       }
                     }
@@ -965,7 +943,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                   }
                 }
               ],
-              "thresholds" : [],
               "timeshiftDuration" : "0s",
               "y2Axis" : {
                 "label" : "y2Axis",
@@ -989,7 +966,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                       "denominator" : {
                         "aggregation" : {
                           "crossSeriesReducer" : "REDUCE_SUM",
-                          "groupByFields" : [],
                           "perSeriesAligner" : "ALIGN_MEAN"
                         },
                         "filter" : "metric.type=\"${google_monitoring_metric_descriptor.joblifecyclehelper_job_completion_metric.type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\" metric.label.\"EventCode\"=\"JobCompletionSuccess\""
@@ -998,7 +974,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                         "aggregation" : {
                           "alignmentPeriod" : "60s",
                           "crossSeriesReducer" : "REDUCE_SUM",
-                          "groupByFields" : [],
                           "perSeriesAligner" : "ALIGN_MEAN"
                         },
                         "filter" : "metric.type=\"${google_monitoring_metric_descriptor.joblifecyclehelper_job_completion_metric.type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\" metric.label.\"EventCode\"=\"JobCompletionJobStatusFailure\""
@@ -1007,10 +982,8 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                   }
                 }
               ],
-              "thresholds" : [],
               "timeshiftDuration" : "0s",
               "yAxis" : {
-                "label" : "",
                 "scale" : "LINEAR"
               }
             }
@@ -1031,7 +1004,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                       "denominator" : {
                         "aggregation" : {
                           "crossSeriesReducer" : "REDUCE_SUM",
-                          "groupByFields" : [],
                           "perSeriesAligner" : "ALIGN_MEAN"
                         },
                         "filter" : "metric.type=\"${google_monitoring_metric_descriptor.joblifecyclehelper_job_release_metric.type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\" metric.label.\"EventCode\"=\"JobReleaseSuccess\""
@@ -1040,7 +1012,6 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                         "aggregation" : {
                           "alignmentPeriod" : "60s",
                           "crossSeriesReducer" : "REDUCE_SUM",
-                          "groupByFields" : [],
                           "perSeriesAligner" : "ALIGN_MEAN"
                         },
                         "filter" : "metric.type=\"${google_monitoring_metric_descriptor.joblifecyclehelper_job_pulling_metric.type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\" metric.label.\"EventCode\"=\"JobPreparationSuccess\""
@@ -1049,10 +1020,8 @@ resource "google_monitoring_dashboard" "lib_worker_custom_metrics_dashboard" {
                   }
                 }
               ],
-              "thresholds" : [],
               "timeshiftDuration" : "0s",
               "yAxis" : {
-                "label" : "",
                 "scale" : "LINEAR"
               }
             }

@@ -65,4 +65,6 @@ module "java_custom_monitoring" {
   alarm_eval_period_sec         = var.alarm_eval_period_sec
   notification_channel_id       = var.notification_channel_id
   java_job_validations_to_alert = var.java_job_validations_to_alert
+  enable_new_metrics            = var.enable_new_metrics
+  enable_legacy_metrics         = var.enable_legacy_metrics
 }

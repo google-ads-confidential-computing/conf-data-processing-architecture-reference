@@ -88,7 +88,7 @@ class GcpOtelMetricClientProviderTest : public ScpTestBase {
     auto metric_client_options = make_shared<MetricClientOptions>();
     metric_client_options->enable_remote_metric_aggregation = true;
     metric_client_options->remote_metric_collector_address =
-        "collector.gcp.host:4317";
+        "collector.gcp.host:4318";
     return make_unique<GcpOtelMetricClientProvider>(
         metric_client_options, instance_client_provider_mock_, mock_meter_);
   }

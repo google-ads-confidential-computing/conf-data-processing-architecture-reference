@@ -20,21 +20,30 @@ resource "google_compute_backend_service" "load_balancer" {
   project  = var.project_id
 
   port_name             = var.service_port_name
-  protocol              = "TCP"
+  protocol              = "HTTP"
   load_balancing_scheme = "INTERNAL_MANAGED"
   timeout_sec           = 10
   health_checks         = [google_compute_health_check.health_check.id]
 
   backend {
-    group           = var.instance_group
-    balancing_mode  = "UTILIZATION"
-    max_utilization = 0.85
+    group          = var.instance_group
+    balancing_mode = "RATE"
+
+    # This is the ceiling rate of requests per instance.
+    # This is set to 20k to allow for high traffic and prevent potentially
+    # cross-region traffic.
+    max_rate_per_instance = 20000
   }
 }
 
-resource "google_compute_target_tcp_proxy" "proxy" {
-  name            = "${var.environment}-${var.service_name}-proxy"
-  backend_service = google_compute_backend_service.load_balancer.id
+resource "google_compute_url_map" "default_url_map" {
+  name            = "${var.environment}-http-lb-url-map"
+  default_service = google_compute_backend_service.load_balancer.id
+}
+
+resource "google_compute_target_http_proxy" "proxy" {
+  name    = "${var.environment}-http-lb-proxy"
+  url_map = google_compute_url_map.default_url_map.id
 }
 
 resource "google_compute_global_forwarding_rule" "forwarding_rule" {
@@ -43,7 +52,7 @@ resource "google_compute_global_forwarding_rule" "forwarding_rule" {
   ip_protocol           = "TCP"
   port_range            = var.service_port
   load_balancing_scheme = "INTERNAL_MANAGED"
-  target                = google_compute_target_tcp_proxy.proxy.id
+  target                = google_compute_target_http_proxy.proxy.id
   subnetwork            = var.subnet_id
 
   labels = {
@@ -85,7 +94,7 @@ resource "google_dns_managed_zone" "collector_dns_zone" {
 resource "google_compute_health_check" "health_check" {
   name = "${var.environment}-${var.service_name}-healthcheck"
 
-  grpc_health_check {
+  tcp_health_check {
     port = var.service_port
   }
 

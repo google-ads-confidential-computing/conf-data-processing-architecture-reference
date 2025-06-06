@@ -55,9 +55,9 @@ struct MetricClientOptions {
   bool enable_native_metric_aggregation = false;
   /**
    * @brief The hostname or IP address of the remote OpenTelemetry Collector
-   * instance specified with a gRPC port.
+   * instance specified with a http port.
    *
-   * Example: "10.2.0.1:4317"
+   * Example: "10.2.0.1:4318"
    */
   std::string remote_metric_collector_address;
   /**

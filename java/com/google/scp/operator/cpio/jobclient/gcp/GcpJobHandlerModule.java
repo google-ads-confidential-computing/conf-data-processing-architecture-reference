@@ -25,6 +25,7 @@ import com.google.scp.operator.cpio.jobclient.JobHandlerModule;
 import com.google.scp.operator.cpio.jobclient.JobPullBackoff;
 import com.google.scp.operator.cpio.jobclient.JobPullBackoffImpl;
 import com.google.scp.operator.cpio.jobclient.JobValidatorModule;
+import com.google.scp.operator.cpio.metricclient.gcp.GcpLegacyMetricModule;
 import com.google.scp.operator.cpio.notificationclient.NotificationClient;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueueConfig;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueueModule;
@@ -53,6 +54,7 @@ public final class GcpJobHandlerModule extends JobHandlerModule {
     bind(JobPullBackoff.class).to(JobPullBackoffImpl.class);
     install(new JobValidatorModule());
     OptionalBinder.newOptionalBinder(binder(), Key.get(NotificationClient.class));
+    install(new GcpLegacyMetricModule());
   }
 
   /** Provider for the GCP job queue configuration. */

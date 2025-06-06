@@ -101,7 +101,7 @@ class OtelMetricClientProviderTest
     metric_client_options_->namespace_for_batch_recording = metric_namespace;
     metric_client_options_->enable_remote_metric_aggregation = true;
     metric_client_options_->remote_metric_collector_address =
-        "collector.gcp.host:4317";
+        "collector.gcp.host:4318";
     return make_unique<OtelMetricClientProvider>(
         metric_client_options_, instance_client_provider_mock_, mock_meter_);
   }

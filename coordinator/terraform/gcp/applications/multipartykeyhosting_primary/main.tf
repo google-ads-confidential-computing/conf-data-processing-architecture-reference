@@ -39,7 +39,6 @@ locals {
   encryption_key_service_jar = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/EncryptionKeyServiceHttpCloudFunction_deploy.jar"
   service_subdomain_suffix   = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
   public_key_domain          = var.environment != "prod" ? "${var.public_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.public_key_service_subdomain}.${var.parent_domain_name}"
-  encryption_key_domain      = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${var.parent_domain_name}"
   private_key_domain         = "${var.private_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
   package_bucket_prefix      = "${var.project_id}_${var.environment}"
   package_bucket_name        = length("${local.package_bucket_prefix}_mpkhs_primary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_primary_package_jars" : "${local.package_bucket_prefix}_mpkhs_a_pkg"
@@ -47,12 +46,8 @@ locals {
     for key_set in var.key_sets_config.key_sets : key_set.name
   ])
 
-  service_domain_to_address_map = var.delete_encryption_key_service ? {
+  service_domain_to_address_map = {
     (local.public_key_domain) : module.public_key_service_load_balancer.loadbalancer_ip,
-    (local.private_key_domain) : module.private_key_service.loadbalancer_ip
-    } : {
-    (local.public_key_domain) : module.public_key_service_load_balancer.loadbalancer_ip,
-    (local.encryption_key_domain) : module.encryptionkeyservice[0].encryption_key_service_loadbalancer_ip,
     (local.private_key_domain) : module.private_key_service.loadbalancer_ip
   }
 }
@@ -142,11 +137,6 @@ module "allowed_operators" {
 }
 
 # Key set acl kek pool
-moved {
-  from = module.allowed_operators.module.kek_pool
-  to   = module.key_set_acl_kek_pool
-}
-
 module "key_set_acl_kek_pool" {
   for_each = var.allowed_operators
   source   = "../../modules/allowed_operator_pool"
@@ -198,25 +188,20 @@ module "publickeyhostingservice" {
 
   # Alarms
   alarms_enabled                                      = var.alarms_enabled
-  alarm_eval_period_sec                               = var.get_public_key_alarm_eval_period_sec
-  alarm_duration_sec                                  = var.get_public_key_alarm_duration_sec
-  get_public_key_cloudfunction_5xx_threshold          = var.get_public_key_cloudfunction_5xx_threshold
-  get_public_key_cloudfunction_error_ratio_threshold  = var.get_public_key_cloudfunction_error_ratio_threshold
-  get_public_key_cloudfunction_max_execution_time_max = var.get_public_key_cloudfunction_max_execution_time_max
+  alarm_eval_period_sec                               = var.public_key_service_alarm_eval_period_sec
+  alarm_duration_sec                                  = var.public_key_service_alarm_duration_sec
+  get_public_key_cloudfunction_5xx_threshold          = var.public_key_service_5xx_threshold
+  get_public_key_cloudfunction_error_ratio_threshold  = var.public_key_service_error_ratio_threshold
+  get_public_key_cloudfunction_max_execution_time_max = var.public_key_service_max_execution_time_max
   cloudfunction_alert_on_memory_usage_threshold       = var.publickeyservice_cloudfunction_alert_on_memory_usage_threshold
 
-  lb_5xx_threshold       = var.get_public_key_lb_5xx_threshold
-  lb_5xx_ratio_threshold = var.get_public_key_lb_5xx_ratio_threshold
-  lb_max_latency_ms      = var.get_public_key_lb_max_latency_ms
+  lb_max_latency_ms      = var.public_key_service_lb_max_latency_ms
+  lb_5xx_threshold       = var.public_key_service_lb_5xx_threshold
+  lb_5xx_ratio_threshold = var.public_key_service_lb_5xx_ratio_threshold
 
-  get_public_key_empty_key_set_error_threshold = var.get_public_key_empty_key_set_error_threshold
-  get_public_key_general_error_threshold       = var.get_public_key_general_error_threshold
+  get_public_key_empty_key_set_error_threshold = var.public_key_service_empty_key_set_error_threshold
+  get_public_key_general_error_threshold       = var.public_key_service_general_error_threshold
   public_key_alerts_severity_overrides         = var.alert_severity_overrides
-}
-
-moved {
-  from = module.publickeyhostingservice.google_monitoring_dashboard.dashboard[0]
-  to   = module.public_key_service_dashboard.google_monitoring_dashboard.dashboard[0]
 }
 
 module "public_key_service_dashboard" {
@@ -230,64 +215,6 @@ module "public_key_service_dashboard" {
   alarms_enabled     = var.alarms_enabled
 }
 
-moved {
-  from = module.publickeyhostingservice.google_compute_backend_service.get_public_key_loadbalancer_backend
-  to   = module.public_key_service_load_balancer.google_compute_backend_service.service_loadbalancer_backend
-}
-
-moved {
-  from = module.publickeyhostingservice.google_compute_global_address.get_public_key_ip_address
-  to   = module.public_key_service_load_balancer.google_compute_global_address.service_ip_address
-}
-
-moved {
-  from = module.publickeyhostingservice.google_compute_managed_ssl_certificate.get_public_key_loadbalancer
-  to   = module.public_key_service_load_balancer.google_compute_managed_ssl_certificate.service_loadbalancer
-}
-
-moved {
-  from = module.publickeyhostingservice.google_compute_ssl_policy.get_public_key_loadbalancer_ssl_policy
-  to   = module.public_key_service_load_balancer.google_compute_ssl_policy.service_loadbalancer_ssl_policy
-}
-
-moved {
-  from = module.publickeyhostingservice.google_compute_target_https_proxy.get_public_key_loadbalancer_proxy
-  to   = module.public_key_service_load_balancer.google_compute_target_https_proxy.service_loadbalancer_proxy
-}
-
-moved {
-  from = module.publickeyhostingservice.google_compute_url_map.get_public_key_loadbalancer
-  to   = module.public_key_service_load_balancer.google_compute_url_map.service_loadbalancer
-}
-
-moved {
-  from = module.publickeyhostingservice.google_compute_region_network_endpoint_group.get_public_key_network_endpoint_group["us-central1"]
-  to   = module.public_key_service_load_balancer.google_compute_region_network_endpoint_group.service_network_endpoint_group["0"]
-}
-
-moved {
-  from = module.publickeyhostingservice.google_compute_region_network_endpoint_group.get_public_key_network_endpoint_group["us-west3"]
-  to   = module.public_key_service_load_balancer.google_compute_region_network_endpoint_group.service_network_endpoint_group["1"]
-}
-
-moved {
-  from = module.publickeyhostingservice.google_compute_global_forwarding_rule.get_public_key_loadbalancer_config
-  to   = module.public_key_service_load_balancer.google_compute_global_forwarding_rule.service_loadbalancer_config
-}
-
-moved {
-  from = module.publickeyhostingservice.module.load_balancer_alarms[0].google_monitoring_alert_policy.error_5xx_ratio
-  to   = module.public_key_service_load_balancer.module.loadbalancer_alarms[0].google_monitoring_alert_policy.error_5xx_ratio
-}
-moved {
-  from = module.publickeyhostingservice.module.load_balancer_alarms[0].google_monitoring_alert_policy.error_count_5xx
-  to   = module.public_key_service_load_balancer.module.loadbalancer_alarms[0].google_monitoring_alert_policy.error_count_5xx
-}
-moved {
-  from = module.publickeyhostingservice.module.load_balancer_alarms[0].google_monitoring_alert_policy.total_latency
-  to   = module.public_key_service_load_balancer.module.loadbalancer_alarms[0].google_monitoring_alert_policy.total_latency
-}
-
 module "public_key_service_load_balancer" {
   source = "../../modules/load_balancer"
 
@@ -297,7 +224,10 @@ module "public_key_service_load_balancer" {
   ssl_cert_id     = "public-key"
   monitoring_name = "Public Key Service"
 
-  cloud_run_ids = module.publickeyhostingservice.cloud_function_ids
+  cloud_run_ids = var.public_key_service_add_cr_lb ? concat(
+    module.publickeyhostingservice.cloud_function_ids,
+    module.public_key_service.cloud_run_ids
+  ) : module.publickeyhostingservice.cloud_function_ids
 
   enable_cdn                    = var.enable_public_key_service_cdn
   cdn_default_ttl_seconds       = var.public_key_service_cdn_default_ttl_seconds
@@ -309,16 +239,20 @@ module "public_key_service_load_balancer" {
 
   # Alert settings
   alarms_enabled           = var.alarms_enabled
-  alarm_eval_period_sec    = var.get_public_key_alarm_eval_period_sec
-  alarm_duration_sec       = var.get_public_key_alarm_duration_sec
+  alarm_eval_period_sec    = var.public_key_service_alarm_eval_period_sec
+  alarm_duration_sec       = var.public_key_service_alarm_duration_sec
   alert_severity_overrides = var.alert_severity_overrides
-  lb_5xx_threshold         = var.get_public_key_lb_5xx_threshold
-  lb_5xx_ratio_threshold   = var.get_public_key_lb_5xx_ratio_threshold
-  lb_max_latency_ms        = var.get_public_key_lb_max_latency_ms
+  lb_max_latency_ms        = var.public_key_service_lb_max_latency_ms
+  lb_5xx_threshold         = var.public_key_service_lb_5xx_threshold
+  lb_5xx_ratio_threshold   = var.public_key_service_lb_5xx_ratio_threshold
+}
+
+moved {
+  from = module.public_key_service[0]
+  to   = module.public_key_service
 }
 
 module "public_key_service" {
-  count  = var.public_key_service_launch_cloud_run ? 1 : 0
   source = "../public_key_service"
 
   environment    = var.environment
@@ -338,11 +272,17 @@ module "public_key_service" {
   # Spanner
   spanner_database_name = module.keydb.keydb_name
   spanner_instance_name = module.keydb.keydb_instance_name
-}
 
-moved {
-  from = module.private_key_service[0]
-  to   = module.private_key_service
+  # Alert
+  alarms_enabled           = var.alarms_enabled
+  alarm_eval_period_sec    = var.public_key_service_alarm_eval_period_sec
+  alarm_duration_sec       = var.public_key_service_alarm_duration_sec
+  alert_severity_overrides = var.alert_severity_overrides
+
+  cloud_run_5xx_threshold                   = var.public_key_service_5xx_threshold
+  cloud_run_error_ratio_threshold           = var.public_key_service_error_ratio_threshold
+  cloud_run_max_execution_time_max          = var.public_key_service_max_execution_time_max
+  cloud_run_alert_on_memory_usage_threshold = var.publickeyservice_cloudfunction_alert_on_memory_usage_threshold
 }
 
 module "private_key_service" {
@@ -388,49 +328,6 @@ module "private_key_service" {
   lb_5xx_threshold       = var.encryptionkeyservice_lb_5xx_threshold
   lb_5xx_ratio_threshold = var.encryptionkeyservice_lb_5xx_ratio_threshold
   lb_max_latency_ms      = var.encryptionkeyservice_lb_max_latency_ms
-}
-
-module "encryptionkeyservice" {
-  source = "../../modules/encryptionkeyservice"
-  count  = var.delete_encryption_key_service ? 0 : 1
-
-  project_id                        = var.project_id
-  environment                       = var.environment
-  regions                           = [var.primary_region]
-  allowed_operator_user_group       = var.allowed_operator_user_group
-  allowed_operator_service_accounts = module.allowed_operators.all_service_accounts
-
-  # Function vars
-  package_bucket_name                                = var.use_tf_created_bucket_for_binary ? google_storage_bucket.mpkhs_primary_package_bucket.name : var.mpkhs_primary_package_bucket
-  spanner_database_name                              = module.keydb.keydb_name
-  spanner_instance_name                              = module.keydb.keydb_instance_name
-  cloudfunction_timeout_seconds                      = var.cloudfunction_timeout_seconds
-  encryption_key_service_jar                         = local.encryption_key_service_jar
-  encryption_key_service_source_path                 = var.encryption_key_service_source_path
-  encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
-  encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
-  encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
-  use_java21_runtime                                 = var.encryptionkeyservice_use_java21_runtime
-
-  # Domain Management
-  enable_domain_management = true
-  encryption_key_domain    = local.encryption_key_domain
-
-  # Alarms
-  alarms_enabled                                = var.alarms_enabled
-  alarm_eval_period_sec                         = var.encryptionkeyservice_alarm_eval_period_sec
-  alarm_duration_sec                            = var.encryptionkeyservice_alarm_duration_sec
-  cloudfunction_5xx_threshold                   = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  cloudfunction_error_ratio_threshold           = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
-  cloudfunction_max_execution_time_max          = var.encryptionkeyservice_cloudfunction_max_execution_time_max
-  cloudfunction_alert_on_memory_usage_threshold = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold
-
-  lb_5xx_threshold       = var.encryptionkeyservice_lb_5xx_threshold
-  lb_5xx_ratio_threshold = var.encryptionkeyservice_lb_5xx_ratio_threshold
-  lb_max_latency_ms      = var.encryptionkeyservice_lb_max_latency_ms
-
-  get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
-  encryption_key_service_severity_map               = var.alert_severity_overrides
 }
 
 module "domain_a_records" {

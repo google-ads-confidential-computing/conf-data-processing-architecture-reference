@@ -20,6 +20,10 @@ output "private_key_base_url" {
   value = "https://${local.private_key_domain}"
 }
 
+output "key_storage_cloud_run_url" {
+  value = module.keystorageservice.key_storage_cloud_run_url
+}
+
 output "key_storage_cloudfunction_url" {
   value = module.keystorageservice.key_storage_cloudfunction_url
 }

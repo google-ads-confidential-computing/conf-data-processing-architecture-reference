@@ -55,6 +55,8 @@ import com.google.scp.shared.crypto.tink.CloudAeadSelector;
 import com.google.scp.shared.testutils.crypto.MockTinkUtils;
 import com.google.scp.shared.util.KeySplitUtil;
 import java.net.ConnectException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.security.GeneralSecurityException;
 import java.util.Base64;
 import org.junit.Before;
@@ -85,12 +87,18 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
   @Before
   public void setup() throws Exception {
     mockTinkUtils = new MockTinkUtils();
+
+    MultiPartyHybridEncryptionKeyServiceParams params =
+        MultiPartyHybridEncryptionKeyServiceParams.builder()
+            .setCoordAKeyFetchingService(coordinatorAKeyFetchingService)
+            .setCoordBKeyFetchingService(coordinatorBKeyFetchingService)
+            .setCoordAAeadService(aeadServicePrimary)
+            .setCoordBAeadService(aeadServiceSecondary)
+            .setEnablePrivateKeyDecryptionRetries(true)
+            .build();
+
     multiPartyHybridEncryptionKeyServiceImpl =
-        new MultiPartyHybridEncryptionKeyServiceImpl(
-            coordinatorAKeyFetchingService,
-            coordinatorBKeyFetchingService,
-            aeadServicePrimary,
-            aeadServiceSecondary);
+        MultiPartyHybridEncryptionKeyServiceImpl.newInstance(params);
 
     keyData =
         KeyData.newBuilder()
@@ -485,6 +493,153 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
   }
 
   @Test
+  public void getDecrypter_getAead_decrypt_ShouldRetryUntilExhaustingMaxRetries() throws Exception {
+    setUpDummyKeySplits();
+    // Always fail
+    when(aeadPrimary.decrypt(any(byte[].class), any(byte[].class)))
+        .thenThrow(
+            new GeneralSecurityException(new SocketTimeoutException("Connection timed out")));
+
+    KeyFetchException exception =
+        assertThrows(
+            KeyFetchException.class,
+            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
+
+    assertEquals(ErrorReason.KEY_DECRYPTION_ERROR, exception.getReason());
+    // We should have called decrypt multiple times due to retry, and eventually failed
+    verify(aeadPrimary, times(4)).decrypt(any(), any());
+  }
+
+  @Test
+  public void getDecrypter_getAead_decrypt_ShouldRetryAndThenSucceed() throws Exception {
+    setUpDummyKeySplits();
+    KeysetHandle keysetHandle =
+        CleartextKeysetHandle.read(BinaryKeysetReader.withBytes(mockTinkUtils.getDecryptedKey()));
+    ImmutableList<ByteString> keySplits = KeySplitUtil.xorSplit(keysetHandle, 2);
+    // Fail one time and then succeed
+    when(aeadPrimary.decrypt(any(byte[].class), any(byte[].class)))
+        .thenThrow(new GeneralSecurityException(new SocketException("Network is unreachable")))
+        .thenReturn(keySplits.get(0).toByteArray());
+    when(aeadSecondary.decrypt(any(byte[].class), any(byte[].class)))
+        .thenReturn(keySplits.get(1).toByteArray());
+
+    multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123");
+
+    // We should have called decrypt two times: the one that failed and the one that succeeded
+    verify(aeadPrimary, times(2)).decrypt(any(), any());
+  }
+
+  @Test
+  public void getDecrypter_getAead_decrypt_ShouldNotRetry_UNAUTHENTICATED() throws Exception {
+    setUpDummyKeySplits();
+    // Always fail with a non-retryable exception
+    when(aeadPrimary.decrypt(any(byte[].class), any(byte[].class)))
+        .thenThrow(
+            new GeneralSecurityException(
+                new ApiException(
+                    new RuntimeException("Unauthenticated."),
+                    GrpcStatusCode.of(io.grpc.Status.Code.UNAUTHENTICATED),
+                    false)));
+
+    KeyFetchException exception =
+        assertThrows(
+            KeyFetchException.class,
+            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
+
+    assertEquals(ErrorReason.UNAUTHENTICATED, exception.getReason());
+    // We should have called it once and failed, since this is a non-retryable error
+    verify(aeadPrimary, times(1)).decrypt(any(), any());
+  }
+
+  @Test
+  public void getDecrypter_getAead_decrypt_ShouldNotRetry_PERMISSION_DENIED() throws Exception {
+    setUpDummyKeySplits();
+    // Always fail with a non-retryable exception
+    when(aeadPrimary.decrypt(any(byte[].class), any(byte[].class)))
+        .thenThrow(
+            new GeneralSecurityException(
+                new ApiException(
+                    new RuntimeException("Permission denied."),
+                    GrpcStatusCode.of(io.grpc.Status.Code.PERMISSION_DENIED),
+                    false)));
+
+    KeyFetchException exception =
+        assertThrows(
+            KeyFetchException.class,
+            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
+
+    assertEquals(ErrorReason.PERMISSION_DENIED, exception.getReason());
+    // We should have called it once and failed, since this is a non-retryable error
+    verify(aeadPrimary, times(1)).decrypt(any(), any());
+  }
+
+  @Test
+  public void getDecrypter_getAead_decrypt_ShouldNotRetry_NOT_FOUND() throws Exception {
+    setUpDummyKeySplits();
+    // Always fail with a non-retryable exception
+    when(aeadPrimary.decrypt(any(byte[].class), any(byte[].class)))
+        .thenThrow(
+            new GeneralSecurityException(
+                new ApiException(
+                    new RuntimeException("Key not found."),
+                    GrpcStatusCode.of(io.grpc.Status.Code.NOT_FOUND),
+                    false)));
+
+    KeyFetchException exception =
+        assertThrows(
+            KeyFetchException.class,
+            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
+
+    assertEquals(ErrorReason.KEY_NOT_FOUND, exception.getReason());
+    // We should have called it once and failed, since this is a non-retryable error
+    verify(aeadPrimary, times(1)).decrypt(any(), any());
+  }
+
+  @Test
+  public void getDecrypter_getAead_decrypt_ShouldNotRetry_INVALID_ARGUMENT() throws Exception {
+    setUpDummyKeySplits();
+    // Always fail with a non-retryable exception
+    when(aeadPrimary.decrypt(any(byte[].class), any(byte[].class)))
+        .thenThrow(
+            new GeneralSecurityException(
+                new ApiException(
+                    new RuntimeException("Invalid argument."),
+                    GrpcStatusCode.of(io.grpc.Status.Code.INVALID_ARGUMENT),
+                    false)));
+
+    KeyFetchException exception =
+        assertThrows(
+            KeyFetchException.class,
+            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
+
+    assertEquals(ErrorReason.INVALID_ARGUMENT, exception.getReason());
+    // We should have called it once and failed, since this is a non-retryable error
+    verify(aeadPrimary, times(1)).decrypt(any(), any());
+  }
+
+  @Test
+  public void getDecrypter_getAead_decrypt_ShouldRetryBasicGrpcError() throws Exception {
+    setUpDummyKeySplits();
+    // Always fail with a retryable exception
+    when(aeadPrimary.decrypt(any(byte[].class), any(byte[].class)))
+        .thenThrow(
+            new GeneralSecurityException(
+                new ApiException(
+                    new RuntimeException("Unavailable."),
+                    GrpcStatusCode.of(io.grpc.Status.Code.UNAVAILABLE),
+                    false)));
+
+    KeyFetchException exception =
+        assertThrows(
+            KeyFetchException.class,
+            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
+
+    assertEquals(ErrorReason.KEY_SERVICE_UNAVAILABLE, exception.getReason());
+    // We should have exhausted retries
+    verify(aeadPrimary, times(4)).decrypt(any(), any());
+  }
+
+  @Test
   public void getDecrypter_getsDecrypterSingleKey() throws Exception {
     when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
     when(aeadServicePrimary.getAead("abc")).thenReturn(aeadPrimary);
@@ -531,11 +686,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
     assertEquals(exception.getReason(), ErrorReason.UNKNOWN_ERROR);
   }
 
-  @Test
-  public void getDecrypter_getsDecrypterAndEncrypterSplitKey() throws Exception {
-    KeysetHandle keysetHandle =
-        CleartextKeysetHandle.read(BinaryKeysetReader.withBytes(mockTinkUtils.getDecryptedKey()));
-    ImmutableList<ByteString> keySplits = KeySplitUtil.xorSplit(keysetHandle, 2);
+  private void setUpDummyKeySplits() throws Exception {
     EncryptionKey encryptionKey =
         EncryptionKey.newBuilder()
             .setName("encryptionKeys/123")
@@ -571,6 +722,14 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
     when(coordinatorBKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(partyBKey);
     when(aeadServicePrimary.getAead("abc1")).thenReturn(aeadPrimary);
     when(aeadServiceSecondary.getAead("abc2")).thenReturn(aeadSecondary);
+  }
+
+  @Test
+  public void getDecrypter_getsDecrypterAndEncrypterSplitKey() throws Exception {
+    setUpDummyKeySplits();
+    KeysetHandle keysetHandle =
+        CleartextKeysetHandle.read(BinaryKeysetReader.withBytes(mockTinkUtils.getDecryptedKey()));
+    ImmutableList<ByteString> keySplits = KeySplitUtil.xorSplit(keysetHandle, 2);
     when(aeadPrimary.decrypt(any(byte[].class), any(byte[].class)))
         .thenReturn(keySplits.get(0).toByteArray());
     when(aeadSecondary.decrypt(any(byte[].class), any(byte[].class)))
@@ -678,5 +837,15 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
     // Verify both key splits were fetched only once.
     verify(coordinatorAKeyFetchingService, times(1)).fetchEncryptionKey(any());
     verify(coordinatorBKeyFetchingService, times(1)).fetchEncryptionKey(any());
+  }
+
+  @Test
+  public void params_BuildWithoutSettingOptionalFields() {
+    MultiPartyHybridEncryptionKeyServiceParams.builder()
+        .setCoordAKeyFetchingService(coordinatorAKeyFetchingService)
+        .setCoordBKeyFetchingService(coordinatorBKeyFetchingService)
+        .setCoordAAeadService(aeadServicePrimary)
+        .setCoordBAeadService(aeadServiceSecondary)
+        .build();
   }
 }

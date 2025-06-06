@@ -188,11 +188,6 @@ variable "private_key_service_cloud_run_concurrency" {
 }
 
 ### EKS
-variable "delete_encryption_key_service" {
-  description = "Flag to control removal of the EKS."
-  type        = bool
-}
-
 variable "encryption_key_service_cloudfunction_memory_mb" {
   description = "Memory size in MB for encryption key cloud function."
   type        = number

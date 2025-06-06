@@ -25,7 +25,7 @@ module "cloud_run" {
   service_domain      = var.key_storage_domain
 
   # Access variables
-  runtime_service_account_email          = google_service_account.key_storage_service_account
+  runtime_service_account_email          = google_service_account.key_storage_service_account.email
   allowed_all_users                      = false
   allowed_invoker_service_account_emails = var.allowed_wip_service_accounts
   allowed_user_group                     = var.allowed_wip_user_group
@@ -47,4 +47,15 @@ module "cloud_run" {
     GCP_KMS_BASE_URI    = var.kms_key_base_uri
     DISABLE_KEY_SET_ACL = var.disable_key_set_acl
   }
+
+  # Alert settings
+  alarms_enabled           = var.alarms_enabled
+  alarm_eval_period_sec    = var.alarm_eval_period_sec
+  alarm_duration_sec       = var.alarm_duration_sec
+  alert_severity_overrides = var.key_storage_severity_map
+
+  cloud_run_5xx_threshold                   = var.cloudfunction_5xx_threshold
+  cloud_run_alert_on_memory_usage_threshold = var.cloudfunction_alert_on_memory_usage_threshold
+  cloud_run_error_ratio_threshold           = var.cloudfunction_error_ratio_threshold
+  cloud_run_max_execution_time_max          = var.cloudfunction_max_execution_time_max
 }

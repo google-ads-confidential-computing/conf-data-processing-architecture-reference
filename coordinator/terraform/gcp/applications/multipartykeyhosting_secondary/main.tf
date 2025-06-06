@@ -39,7 +39,6 @@ locals {
   encryption_key_service_jar = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/EncryptionKeyServiceHttpCloudFunction_deploy.jar"
   key_storage_service_jar    = var.key_storage_service_jar != "" ? var.key_storage_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keystorage/service/gcp/KeyStorageServiceHttpCloudFunction_deploy.jar"
   key_storage_domain         = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.key_storage_service_subdomain}.${var.parent_domain_name}"
-  encryption_key_domain      = var.environment != "prod" ? "${var.encryption_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.encryption_key_service_subdomain}.${var.parent_domain_name}"
   private_key_domain         = "${var.private_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
   package_bucket_prefix      = "${var.project_id}_${var.environment}"
   package_bucket_name        = length("${local.package_bucket_prefix}_mpkhs_secondary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_secondary_package_jars" : "${local.package_bucket_prefix}_mpkhs_b_pkg"
@@ -48,12 +47,8 @@ locals {
   ])
   kms_key_base_uri = "gcp-kms://${google_kms_key_ring.key_encryption_ring.id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
 
-  service_domain_to_address_map = var.delete_encryption_key_service ? {
+  service_domain_to_address_map = {
     (local.key_storage_domain) : module.keystorageservice.load_balancer_ip,
-    (local.private_key_domain) : module.private_key_service.loadbalancer_ip
-    } : {
-    (local.key_storage_domain) : module.keystorageservice.load_balancer_ip,
-    (local.encryption_key_domain) : module.encryptionkeyservice[0].encryption_key_service_loadbalancer_ip,
     (local.private_key_domain) : module.private_key_service.loadbalancer_ip
   }
 }
@@ -143,11 +138,6 @@ module "keystorageservice" {
   ]
 }
 
-moved {
-  from = module.private_key_service[0]
-  to   = module.private_key_service
-}
-
 module "private_key_service" {
   source = "../private_key_service"
 
@@ -191,49 +181,6 @@ module "private_key_service" {
   lb_5xx_threshold       = var.encryptionkeyservice_lb_5xx_threshold
   lb_5xx_ratio_threshold = var.encryptionkeyservice_lb_5xx_ratio_threshold
   lb_max_latency_ms      = var.encryptionkeyservice_lb_max_latency_ms
-}
-
-module "encryptionkeyservice" {
-  source = "../../modules/encryptionkeyservice"
-  count  = var.delete_encryption_key_service ? 0 : 1
-
-  project_id                        = var.project_id
-  environment                       = var.environment
-  regions                           = [var.primary_region]
-  allowed_operator_user_group       = var.allowed_operator_user_group
-  allowed_operator_service_accounts = module.allowed_operators.all_service_accounts
-
-  # Function vars
-  package_bucket_name                                = var.use_tf_created_bucket_for_binary ? google_storage_bucket.mpkhs_secondary_package_bucket.name : var.mpkhs_secondary_package_bucket
-  spanner_database_name                              = module.keydb.keydb_name
-  spanner_instance_name                              = module.keydb.keydb_instance_name
-  cloudfunction_timeout_seconds                      = var.cloudfunction_timeout_seconds
-  encryption_key_service_jar                         = local.encryption_key_service_jar
-  encryption_key_service_source_path                 = var.encryption_key_service_source_path
-  encryption_key_service_cloudfunction_memory_mb     = var.encryption_key_service_cloudfunction_memory_mb
-  encryption_key_service_cloudfunction_min_instances = var.encryption_key_service_cloudfunction_min_instances
-  encryption_key_service_cloudfunction_max_instances = var.encryption_key_service_cloudfunction_max_instances
-  use_java21_runtime                                 = var.encryptionkeyservice_use_java21_runtime
-
-  # Domain Management
-  enable_domain_management = true
-  encryption_key_domain    = local.encryption_key_domain
-
-  # Alarms
-  alarms_enabled                                = var.alarms_enabled
-  alarm_eval_period_sec                         = var.encryptionkeyservice_alarm_eval_period_sec
-  alarm_duration_sec                            = var.encryptionkeyservice_alarm_duration_sec
-  cloudfunction_5xx_threshold                   = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  cloudfunction_error_ratio_threshold           = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
-  cloudfunction_max_execution_time_max          = var.encryptionkeyservice_cloudfunction_max_execution_time_max
-  cloudfunction_alert_on_memory_usage_threshold = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold
-
-  lb_5xx_threshold       = var.encryptionkeyservice_lb_5xx_threshold
-  lb_5xx_ratio_threshold = var.encryptionkeyservice_lb_5xx_ratio_threshold
-  lb_max_latency_ms      = var.encryptionkeyservice_lb_max_latency_ms
-
-  get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
-  encryption_key_service_severity_map               = var.alert_severity_overrides
 }
 
 module "domain_a_records" {
@@ -337,11 +284,6 @@ module "allowed_operators" {
 }
 
 # Key set acl kek pool
-moved {
-  from = module.allowed_operators.module.kek_pool
-  to   = module.key_set_acl_kek_pool
-}
-
 module "key_set_acl_kek_pool" {
   for_each = var.allowed_operators
   source   = "../../modules/allowed_operator_pool"

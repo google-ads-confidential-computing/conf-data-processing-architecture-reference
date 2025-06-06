@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Google LLC
+ * Copyright 2022-2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ locals {
 # Dedicated VPC network.
 module "vpc_network" {
   source  = "terraform-google-modules/network/google"
-  version = "~> 4.0"
+  version = ">= 4.0"
 
   project_id = var.project_id
   # If auto_create_subnetworks set to false, the network name has to be renamed
@@ -57,15 +57,16 @@ module "vpc_network" {
 # Cloud NAT to provide internet to VMs without external IPs.
 module "vpc_nat" {
   source  = "terraform-google-modules/cloud-nat/google"
-  version = "~> 1.2"
+  version = ">= 1.2"
 
   for_each = var.regions
 
-  project_id    = var.project_id
-  network       = module.vpc_network.network_self_link
-  region        = each.value
-  create_router = true
-  router        = "${var.environment}-router"
+  project_id                          = var.project_id
+  network                             = module.vpc_network.network_self_link
+  region                              = each.value
+  create_router                       = true
+  router                              = "${var.environment}-router"
+  enable_endpoint_independent_mapping = true
 }
 
 resource "google_compute_subnetwork" "worker_subnet" {
@@ -76,6 +77,13 @@ resource "google_compute_subnetwork" "worker_subnet" {
   purpose       = "PRIVATE"
   region        = one(var.regions[*])
   ip_cidr_range = var.worker_subnet_cidr
+
+  lifecycle {
+    precondition {
+      condition     = var.worker_subnet_cidr != null
+      error_message = "The cidr block for the worker subnet can not be empty."
+    }
+  }
 }
 
 resource "google_compute_subnetwork" "collector_subnet" {
@@ -88,6 +96,10 @@ resource "google_compute_subnetwork" "collector_subnet" {
   ip_cidr_range = var.collector_subnet_cidr
   lifecycle {
     create_before_destroy = true
+    precondition {
+      condition     = var.collector_subnet_cidr != null
+      error_message = "The cidr block for the collector subnet can not be empty."
+    }
   }
 }
 
@@ -103,5 +115,9 @@ resource "google_compute_subnetwork" "proxy_subnet" {
   lifecycle {
     ignore_changes        = [ipv6_access_type]
     create_before_destroy = true
+    precondition {
+      condition     = var.proxy_subnet_cidr != null
+      error_message = "The cidr block for the proxy subnet can not be empty."
+    }
   }
 }

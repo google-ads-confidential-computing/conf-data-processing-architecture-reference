@@ -34,7 +34,7 @@ write_files:
 
     [Service]
     Restart=on-failure
-    ExecStart=/usr/bin/docker run --rm --name otelcol --log-driver=gcplogs -p ${grpc_receiver_port}:${grpc_receiver_port} -v /tmp/config.yaml:/etc/otelcol-contrib/config.yaml ${otel_collector_image_uri} "--config=/etc/otelcol-contrib/config.yaml" "--feature-gates=exporter.googlecloud.CustomMonitoredResources"
+    ExecStart=/usr/bin/docker run --rm --name otelcol --log-driver=gcplogs -p ${http_receiver_port}:${http_receiver_port} -v /tmp/config.yaml:/etc/otelcol-contrib/config.yaml ${otel_collector_image_uri} "--config=/etc/otelcol-contrib/config.yaml" "--feature-gates=exporter.googlecloud.CustomMonitoredResources"
     ExecStop=/usr/bin/docker stop otel
     ExecStopPost=/usr/bin/docker rm otel
 
@@ -45,12 +45,8 @@ write_files:
     receivers:
       otlp:
         protocols:
-          grpc:
-            endpoint: :${grpc_receiver_port}
-      otlp/internal:
-        protocols:
           http:
-            endpoint: :8888
+            endpoint: :${http_receiver_port}
 
     exporters:
       debug:
@@ -80,7 +76,7 @@ write_files:
     service:
       pipelines:
         metrics:
-          receivers: [otlp, otlp/internal]
+          receivers: [otlp]
           processors: [batch, memory_limiter, resourcedetection]
           exporters: [googlecloud]
       telemetry:
@@ -90,7 +86,7 @@ write_files:
                 exporter:
                   otlp:
                     protocol: http/protobuf
-                    endpoint: localhost:8888
+                    endpoint: localhost:${http_receiver_port}
 
 runcmd:
 - sudo /etc/user/local/install-ops-agent.sh

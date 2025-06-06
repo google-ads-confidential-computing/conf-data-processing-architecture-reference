@@ -45,7 +45,7 @@ import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectId;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpZone;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.Meter;
-import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
+import io.opentelemetry.exporter.otlp.http.metrics.OtlpHttpMetricExporter;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
@@ -85,7 +85,7 @@ public class GcpMetricModule extends MetricModule {
       throws ParameterClientException {
     Optional<String> metricExportInternalParam =
         parameterClient.getParameter(METRIC_EXPORTER_INTERVAL_IN_MILLIS.name());
-    return metricExportInternalParam.map(Integer::valueOf).orElse(5);
+    return metricExportInternalParam.map(Integer::valueOf).orElse(60000);
   }
 
   @Provides
@@ -94,7 +94,9 @@ public class GcpMetricModule extends MetricModule {
       throws ParameterClientException {
     Optional<String> endpointParam =
         parameterClient.getParameter(OPENTELEMETRY_COLLECTOR_ADDRESS.name());
-    return endpointParam.isPresent() ? String.format("http://%s", endpointParam.get()) : "";
+    return endpointParam.isPresent()
+        ? String.format("http://%s/v1/metrics", endpointParam.get())
+        : "";
   }
 
   @Provides
@@ -119,13 +121,13 @@ public class GcpMetricModule extends MetricModule {
   @Provides
   @Singleton
   @OtlpCollectorExporter
-  Optional<MetricExporter> provideOpenTelemetryGrpcMetricExporter(
+  Optional<MetricExporter> provideOpenTelemetryHttpMetricExporter(
       @OtlpCollectorAddress String otlpCollectorAddress) throws IOException {
     if (Strings.isNullOrEmpty(otlpCollectorAddress)) {
       return Optional.empty();
     } else {
       return Optional.of(
-          OtlpGrpcMetricExporter.builder().setEndpoint(otlpCollectorAddress).build());
+          OtlpHttpMetricExporter.builder().setEndpoint(otlpCollectorAddress).build());
     }
   }
 

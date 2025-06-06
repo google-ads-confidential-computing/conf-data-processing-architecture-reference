@@ -35,7 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Performs the lookup for a specific private key. */
-public final class GetEncryptedPrivateKeyTask extends ApiTask {
+public class GetEncryptedPrivateKeyTask extends ApiTask {
 
   private static final Logger logger = LoggerFactory.getLogger(GetEncryptedPrivateKeyTask.class);
   private final KeyDb keyDb;
@@ -43,10 +43,16 @@ public final class GetEncryptedPrivateKeyTask extends ApiTask {
 
   @Inject
   public GetEncryptedPrivateKeyTask(KeyDb keyDb, LogMetricHelper logMetricHelper) {
-    super("GET",
+    this(keyDb, logMetricHelper, "v1Alpha");
+  }
+
+  protected GetEncryptedPrivateKeyTask(
+      KeyDb keyDb, LogMetricHelper logMetricHelper, String apiVersion) {
+    super(
+        "GET",
         Pattern.compile("/encryptionKeys/(?<id>[a-zA-Z0-9\\-]+)"),
         "GetEncryptedPrivateKey",
-        "both",
+        apiVersion,
         logMetricHelper);
     this.keyDb = keyDb;
     this.logMetricHelper = logMetricHelper;

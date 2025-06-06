@@ -24,6 +24,7 @@ java_test(
         "//java/com/google/scp/operator/cpio/jobclient:model",
         "//java/com/google/scp/operator/cpio/lifecycleclient:local",
         "//java/com/google/scp/operator/cpio/metricclient",
+        "//java/com/google/scp/operator/cpio/metricclient:model",
         "//java/com/google/scp/operator/cpio/notificationclient",
         "//java/com/google/scp/operator/cpio/notificationclient:model",
         "//java/com/google/scp/operator/shared/dao/jobqueue/common",

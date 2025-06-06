@@ -36,6 +36,7 @@ java_library(
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
         "//java/external:guava",
+        "//java/external:guice",
         "//java/external:jackson_annotations",
     ],
 )
@@ -52,6 +53,7 @@ java_library(
         "//java/com/google/scp/operator/cpio/configclient",
         "//java/com/google/scp/operator/cpio/metricclient",
         "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:model",
         "//java/external:aws_auth",
         "//java/external:aws_cloudwatch",
         "//java/external:aws_core",

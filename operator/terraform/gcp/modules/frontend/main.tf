@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Google LLC
+ * Copyright 2022-2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,19 @@ locals {
     ? var.frontend_service_cloudfunction_runtime_sa_email
     : google_service_account.frontend_service_account[0].email
   )
+
+  service_environment_variables = {
+    PROJECT_ID             = var.project_id
+    INSTANCE_ID            = var.spanner_instance_name
+    DATABASE_ID            = var.spanner_database_name
+    PUBSUB_TOPIC_ID        = var.job_queue_topic
+    PUBSUB_SUBSCRIPTION_ID = var.job_queue_sub
+    JOB_METADATA_TTL       = var.job_metadata_table_ttl_days
+    JOB_TABLE_NAME         = var.job_table_name
+    JOB_VERSION            = var.job_version
+  }
+
+  create_multiple_cloud_run_frontends = length(var.frontend_service_cloud_run_regions) > 0
 }
 
 resource "google_service_account" "frontend_service_account" {
@@ -83,21 +96,95 @@ resource "google_cloudfunctions2_function" "frontend_service_cloudfunction" {
     service_account_email            = local.runtime_service_account
     vpc_connector                    = var.vpc_connector_id
     vpc_connector_egress_settings    = var.vpc_connector_id == null ? null : "ALL_TRAFFIC"
-    environment_variables = {
-      PROJECT_ID             = var.project_id
-      INSTANCE_ID            = var.spanner_instance_name
-      DATABASE_ID            = var.spanner_database_name
-      PUBSUB_TOPIC_ID        = var.job_queue_topic
-      PUBSUB_SUBSCRIPTION_ID = var.job_queue_sub
-      JOB_METADATA_TTL       = var.job_metadata_table_ttl_days
-      JOB_TABLE_NAME         = var.job_table_name
-      JOB_VERSION            = var.job_version
-    }
+    environment_variables            = local.service_environment_variables
   }
 
   labels = {
     environment = var.environment
   }
+}
+
+module "cloud_run_fe" {
+  for_each = var.frontend_service_cloud_run_regions
+
+  source                        = "../cloud_run_service"
+  project                       = var.project_id
+  environment                   = var.environment
+  service_name                  = "${var.environment}-${each.key}-cr-frontend-service"
+  deletion_protection           = var.frontend_service_cloud_run_deletion_protection
+  region                        = each.key
+  description                   = "Cloud Run handler for frontend service in region ${each.key}"
+  source_container_image_url    = var.frontend_service_cloud_run_source_container_image_url
+  environment_variables         = local.service_environment_variables
+  min_instance_count            = var.frontend_service_cloudfunction_min_instances
+  max_instance_count            = var.frontend_service_cloudfunction_max_instances
+  concurrency                   = var.frontend_service_cloudfunction_max_instance_request_concurrency
+  cpu_idle                      = var.frontend_service_cloud_run_cpu_idle
+  startup_cpu_boost             = var.frontend_service_cloud_run_startup_cpu_boost
+  cpu_count                     = var.frontend_service_cloudfunction_num_cpus
+  memory_mb                     = var.frontend_service_cloudfunction_memory_mb
+  timeout_seconds               = var.frontend_service_cloudfunction_timeout_sec
+  runtime_service_account_email = local.runtime_service_account
+  vpc_connector_id              = var.vpc_connector_id
+  ingress_traffic_setting       = var.frontend_service_cloud_run_ingress_traffic_setting
+  cloud_run_invoker_iam_members = var.frontend_service_cloud_run_allowed_invoker_iam_members
+  binary_authorization          = var.frontend_service_cloud_run_binary_authorization
+  custom_audiences              = setunion([var.frontend_service_lb_domain], var.frontend_service_cloud_run_custom_audiences)
+}
+
+# Reserve IP address for FE LB.
+resource "google_compute_global_address" "cloud_run_fe_ip_address" {
+  count = local.create_multiple_cloud_run_frontends ? 1 : 0
+
+  project = var.project_id
+  name    = "${var.environment}-fe-lb-ip-addr"
+}
+
+# Map custom URL to LB IP address
+module "fe_service_dns_a_records" {
+  count = local.create_multiple_cloud_run_frontends ? 1 : 0
+
+  source = "../domain_a_records"
+
+  parent_domain_name         = var.frontend_service_parent_domain_name
+  parent_domain_name_project = var.frontend_service_parent_domain_name_project_id
+
+  # Map with Key: Service domain and Value: External IP address."
+  service_domain_to_address_map = {
+    "${var.frontend_service_lb_domain}" = google_compute_global_address.cloud_run_fe_ip_address[0].address
+  }
+}
+
+module "cloud_run_fe_load_balancer" {
+  count = local.create_multiple_cloud_run_frontends ? 1 : 0
+
+  source      = "../cloud_run_load_balancer"
+  project     = var.project_id
+  environment = var.environment
+  backend_id  = "wrkr-fe"
+  cloud_run_information = [for region, cr_info in module.cloud_run_fe :
+    {
+      service_name = cr_info.service_name
+      region       = region
+    }
+  ]
+  enable_backend_logging = var.frontend_service_enable_lb_backend_logging
+  backend_service_paths  = var.frontend_service_lb_allowed_request_paths
+  service_domain         = var.frontend_service_lb_domain
+
+  external_ip_address = google_compute_global_address.cloud_run_fe_ip_address[0].address
+
+  outlier_detection_interval_seconds                      = var.frontend_service_lb_outlier_detection_interval_seconds
+  outlier_detection_base_ejection_time_seconds            = var.frontend_service_lb_outlier_detection_base_ejection_time_seconds
+  outlier_detection_consecutive_errors                    = var.frontend_service_lb_outlier_detection_consecutive_errors
+  outlier_detection_enforcing_consecutive_errors          = var.frontend_service_lb_outlier_detection_enforcing_consecutive_errors
+  outlier_detection_consecutive_gateway_failure           = var.frontend_service_lb_outlier_detection_consecutive_gateway_failure
+  outlier_detection_enforcing_consecutive_gateway_failure = var.frontend_service_lb_outlier_detection_enforcing_consecutive_gateway_failure
+  outlier_detection_max_ejection_percent                  = var.frontend_service_lb_outlier_detection_max_ejection_percent
+
+  depends_on = [
+    module.fe_service_dns_a_records,
+  ]
 }
 
 # JobMetadata read/write permissions

@@ -66,12 +66,12 @@ variable "collector_startup_script" {
 }
 
 variable "collector_service_port_name" {
-  description = "The name of the gRPC port that receives traffic destined for the OpenTelemetry collector."
+  description = "The name of the http port that receives traffic destined for the OpenTelemetry collector."
   type        = string
 }
 
 variable "collector_service_port" {
-  description = "The value of the gRpc port that receives traffic destined for the OpenTelemetry collector."
+  description = "The value of the http port that receives traffic destined for the OpenTelemetry collector."
   type        = number
 }
 

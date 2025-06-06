@@ -208,3 +208,13 @@ variable "java_job_validations_to_alert" {
   EOT
   type        = list(string)
 }
+
+variable "enable_new_metrics" {
+  description = "When true, enable new metrics created after enable remote metric aggregation"
+  type        = bool
+}
+
+variable "enable_legacy_metrics" {
+  description = "When true, disable legacy metrics created before enable remote metric aggregation"
+  type        = bool
+}

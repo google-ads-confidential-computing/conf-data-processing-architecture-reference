@@ -16,6 +16,259 @@
 
 locals {
   function_name = google_cloudfunctions2_function.frontend_service_cloudfunction.name
+
+  create_cloud_run_widgets = length(module.cloud_run_fe) > 0
+
+  // Template for a single dashboard data set for Cloud Run service
+  // Substitution order:
+  // 1. Template name
+  // 2. Aggregation
+  // 3. Filter
+  // 4. Secondary aggregation
+  single_data_set_template = <<EOF
+{
+  "legendTemplate" : "%s",
+  "minAlignmentPeriod" : "60s",
+  "plotType" : "LINE",
+  "targetAxis" : "Y2",
+  "timeSeriesQuery" : {
+    "timeSeriesFilter" : {
+      "aggregation" : %s,
+      "filter" : "%s",
+      "secondaryAggregation" : %s
+    }
+  }
+}
+EOF
+
+  request_latency_data_sets = local.create_cloud_run_widgets ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
+    {
+      legend : "p99",
+      metric : "run.googleapis.com/request_latencies"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_99"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"service_name\"",
+          "resource.label.\"region\""
+        ],
+      }
+    },
+    {
+      legend : "p95",
+      metric : "run.googleapis.com/request_latencies"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_95"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"service_name\"",
+          "resource.label.\"region\""
+        ],
+      }
+    },
+    {
+      legend : "p50",
+      metric : "run.googleapis.com/request_latencies"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_50"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"service_name\"",
+          "resource.label.\"region\""
+        ],
+      }
+    }
+    ]) : format(
+    local.single_data_set_template,
+    "${p[1].legend} ${p[0].region}",
+    jsonencode(p[1].aggregation),
+    "metric.type=\\\"${p[1].metric}\\\" resource.type=\\\"cloud_run_revision\\\" resource.label.\\\"service_name\\\"=\\\"${p[0].service_name}\\\"",
+    jsonencode(p[1].secondaryAggregation)
+    )
+  ]) : []
+
+  request_latencies_widget = <<EOF
+{
+  "title" : "Cloud Run Request Latencies",
+  "xyChart" : {
+    "chartOptions" : {
+      "mode" : "COLOR"
+    },
+    "dataSets" : [
+      ${join(",", local.request_latency_data_sets)}
+    ],
+    "timeshiftDuration" : "0s",
+    "y2Axis" : {
+      "label" : "y2Axis",
+      "scale" : "LINEAR"
+    }
+  }
+}
+EOF
+
+  request_count_data_sets = local.create_cloud_run_widgets ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
+    {
+      legend : "Executions",
+      metric : "run.googleapis.com/request_count"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_RATE"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_SUM",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"service_name\"",
+          "resource.label.\"region\""
+        ],
+      }
+    }
+    ]) : format(
+    local.single_data_set_template,
+    "${p[1].legend} ${p[0].region}",
+    jsonencode(p[1].aggregation),
+    "metric.type=\\\"${p[1].metric}\\\" resource.type=\\\"cloud_run_revision\\\" resource.label.\\\"service_name\\\"=\\\"${p[0].service_name}\\\"",
+    jsonencode(p[1].secondaryAggregation)
+    )
+  ]) : []
+
+  request_count_widget = <<EOF
+{
+  "title" : "Cloud Run Executions",
+  "xyChart" : {
+    "chartOptions" : {
+      "mode" : "COLOR"
+    },
+    "dataSets" : [
+      ${join(",", local.request_count_data_sets)}
+    ],
+    "timeshiftDuration" : "0s",
+    "y2Axis" : {
+      "label" : "y2Axis",
+      "scale" : "LINEAR"
+    }
+  }
+}
+EOF
+
+  bad_response_code_data_sets = local.create_cloud_run_widgets ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
+    {
+      legend : "\u0024{metric.labels.response_code_class}",
+      metric : "run.googleapis.com/request_count"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_RATE"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_SUM",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"service_name\"",
+          "resource.label.\"region\"",
+          "metric.label.\"response_code_class\""
+        ],
+      }
+    }
+    ]) : format(
+    local.single_data_set_template,
+    "${p[1].legend} ${p[0].region}",
+    jsonencode(p[1].aggregation),
+    "metric.type=\\\"${p[1].metric}\\\" resource.type=\\\"cloud_run_revision\\\" resource.label.\\\"service_name\\\"=\\\"${p[0].service_name}\\\" metric.label.\\\"response_code_class\\\"!=\\\"2xx\\\"",
+    jsonencode(p[1].secondaryAggregation)
+    )
+  ]) : []
+
+  request_errors_widget = <<EOF
+{
+  "title" : "Cloud Run Errors",
+  "xyChart" : {
+    "chartOptions" : {
+      "mode" : "COLOR"
+    },
+    "dataSets" : [
+      ${join(",", local.bad_response_code_data_sets)}
+    ],
+    "timeshiftDuration" : "0s",
+    "y2Axis" : {
+      "label" : "y2Axis",
+      "scale" : "LINEAR"
+    }
+  }
+}
+EOF
+
+  max_concurrent_request_data_sets = local.create_cloud_run_widgets ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
+    {
+      legend : "Max Concurrent Requests",
+      metric : "run.googleapis.com/container/max_request_concurrencies"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        groupByFields : [
+          "resource.label.\"service_name\""
+        ],
+        perSeriesAligner : "ALIGN_SUM"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s"
+      }
+    }
+    ]) : format(
+    local.single_data_set_template,
+    "${p[1].legend} ${p[0].region}",
+    jsonencode(p[1].aggregation),
+    "metric.type=\\\"${p[1].metric}\\\" resource.type=\\\"cloud_run_revision\\\" resource.label.\\\"service_name\\\"=\\\"${p[0].service_name}\\\" metric.label.\\\"state\\\"=\\\"active\\\"",
+    jsonencode(p[1].secondaryAggregation)
+    )
+  ]) : []
+
+  max_concurrent_requests_widget = <<EOF
+{
+  "title" : "Cloud Run Max Concurrent Requests",
+  "xyChart" : {
+    "chartOptions" : {
+      "mode" : "COLOR"
+    },
+    "dataSets" : [
+      ${join(",", local.max_concurrent_request_data_sets)}
+    ],
+    "timeshiftDuration" : "0s",
+    "y2Axis" : {
+      "label" : "y2Axis",
+      "scale" : "LINEAR"
+    }
+  }
+}
+EOF
 }
 
 module "frontendservice_cloudfunction_alarms" {
@@ -238,6 +491,10 @@ resource "google_monitoring_dashboard" "frontend_dashboard" {
               }
             }
           },
+          (local.create_cloud_run_widgets ? [jsondecode(local.request_count_widget)] : []),
+          (local.create_cloud_run_widgets ? [jsondecode(local.request_latencies_widget)] : []),
+          (local.create_cloud_run_widgets ? [jsondecode(local.request_errors_widget)] : []),
+          (local.create_cloud_run_widgets ? [jsondecode(local.max_concurrent_requests_widget)] : [])
         ])
       }
     }

@@ -56,6 +56,7 @@ import com.google.scp.operator.cpio.lifecycleclient.local.LocalLifecycleClient;
 import com.google.scp.operator.cpio.lifecycleclient.local.LocalLifecycleModule;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.local.LocalMetricClient;
+import com.google.scp.operator.cpio.metricclient.model.Annotations.LegacyMetricClient;
 import com.google.scp.operator.cpio.notificationclient.NotificationClient;
 import com.google.scp.operator.cpio.notificationclient.NotificationClient.NotificationClientException;
 import com.google.scp.operator.cpio.notificationclient.model.PublishMessageRequest;
@@ -109,6 +110,7 @@ public final class JobClientImplTest {
   @Inject FakeMetadataDb jobMetadataDb;
   private static ParameterClient parameterClient;
   private static NotificationClient notificationClient;
+  @LegacyMetricClient private static MetricClient legacyMetricClient;
 
   private JobQueueItem baseJobQueueItem;
   private JobMetadata baseJobMetadata;
@@ -913,6 +915,11 @@ public final class JobClientImplTest {
       OptionalBinder.newOptionalBinder(binder(), NotificationClient.class)
           .setBinding()
           .toInstance(notificationClient);
+
+      legacyMetricClient = mock(MetricClient.class);
+      bind(MetricClient.class)
+          .annotatedWith(LegacyMetricClient.class)
+          .toInstance(legacyMetricClient);
     }
 
     @Provides

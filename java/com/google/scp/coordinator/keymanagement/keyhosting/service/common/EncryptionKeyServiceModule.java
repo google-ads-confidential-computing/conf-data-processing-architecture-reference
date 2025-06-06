@@ -20,8 +20,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import com.google.inject.multibindings.StringMapKey;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetEncryptedPrivateKeyTask;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.GetActiveEncryptionKeysTask;
+import com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.GetEncryptedPrivateKeyTask;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.ListRecentEncryptionKeysTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import java.util.List;
@@ -32,7 +32,8 @@ public class EncryptionKeyServiceModule extends AbstractModule {
   @ProvidesIntoMap
   @StringMapKey("/v1alpha")
   List<ApiTask> provideV1AlphaTasks(
-      GetEncryptedPrivateKeyTask getEncryptedPrivateKeyTask,
+      com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetEncryptedPrivateKeyTask
+          getEncryptedPrivateKeyTask,
       com.google.scp.coordinator.keymanagement.keyhosting.tasks.ListRecentEncryptionKeysTask
           listRecentEncryptionKeysTask) {
     return ImmutableList.of(getEncryptedPrivateKeyTask, listRecentEncryptionKeysTask);

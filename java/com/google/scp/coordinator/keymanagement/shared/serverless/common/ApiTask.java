@@ -19,6 +19,7 @@ package com.google.scp.coordinator.keymanagement.shared.serverless.common;
 import com.google.common.collect.ImmutableMap;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.shared.api.exception.ServiceException;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,8 +68,19 @@ public abstract class ApiTask {
     logger.info(
         logMetricHelper.format(
             "count", ImmutableMap.of("apiVersion", apiVersion, "methodId", methodId)));
-    // TODO(b/417703825): Add logging for latency of call
+    var start = Instant.now().toEpochMilli();
     execute(matcher, request, response);
+    var end = Instant.now().toEpochMilli();
+    logger.info(
+        logMetricHelper.format(
+            "duration",
+            ImmutableMap.of(
+                "apiVersion",
+                apiVersion,
+                "methodId",
+                methodId,
+                "timeMs",
+                Long.toString(end - start))));
     return true;
   }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Google LLC
+ * Copyright 2023-2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -263,7 +263,7 @@ module "opentelemetry_collector" {
   collector_startup_script = templatefile("../../modules/opentelemetry_collector/collector_startup.tftpl", {
     otel_collector_image_uri = "otel/opentelemetry-collector-contrib:0.122.1"
 
-    grpc_receiver_port   = var.collector_service_port
+    http_receiver_port   = var.collector_service_port
     metric_prefix        = "custom.googleapis.com"
     send_batch_max_size  = var.collector_send_batch_max_size
     send_batch_size      = var.collector_send_batch_size
@@ -334,4 +334,29 @@ module "frontend" {
   lb_5xx_threshold                     = var.frontend_lb_5xx_threshold
   lb_max_latency_ms                    = var.frontend_lb_max_latency_ms
   use_java21_runtime                   = var.frontend_service_cloudfunction_use_java21_runtime
+
+  frontend_service_cloud_run_regions                     = var.frontend_service_cloud_run_regions
+  frontend_service_cloud_run_deletion_protection         = var.frontend_service_cloud_run_deletion_protection
+  frontend_service_cloud_run_source_container_image_url  = var.frontend_service_cloud_run_source_container_image_url
+  frontend_service_cloud_run_cpu_idle                    = var.frontend_service_cloud_run_cpu_idle
+  frontend_service_cloud_run_startup_cpu_boost           = var.frontend_service_cloud_run_startup_cpu_boost
+  frontend_service_cloud_run_ingress_traffic_setting     = var.frontend_service_cloud_run_ingress_traffic_setting
+  frontend_service_cloud_run_allowed_invoker_iam_members = var.frontend_service_cloud_run_allowed_invoker_iam_members
+  frontend_service_cloud_run_binary_authorization        = var.frontend_service_cloud_run_binary_authorization
+  frontend_service_cloud_run_custom_audiences            = var.frontend_service_cloud_run_custom_audiences
+
+  frontend_service_enable_lb_backend_logging = var.frontend_service_enable_lb_backend_logging
+  frontend_service_lb_allowed_request_paths  = var.frontend_service_lb_allowed_request_paths
+  frontend_service_lb_domain                 = var.frontend_service_lb_domain
+
+  frontend_service_lb_outlier_detection_interval_seconds                      = var.frontend_service_lb_outlier_detection_interval_seconds
+  frontend_service_lb_outlier_detection_base_ejection_time_seconds            = var.frontend_service_lb_outlier_detection_base_ejection_time_seconds
+  frontend_service_lb_outlier_detection_consecutive_errors                    = var.frontend_service_lb_outlier_detection_consecutive_errors
+  frontend_service_lb_outlier_detection_enforcing_consecutive_errors          = var.frontend_service_lb_outlier_detection_enforcing_consecutive_errors
+  frontend_service_lb_outlier_detection_consecutive_gateway_failure           = var.frontend_service_lb_outlier_detection_consecutive_gateway_failure
+  frontend_service_lb_outlier_detection_enforcing_consecutive_gateway_failure = var.frontend_service_lb_outlier_detection_enforcing_consecutive_gateway_failure
+  frontend_service_lb_outlier_detection_max_ejection_percent                  = var.frontend_service_lb_outlier_detection_max_ejection_percent
+
+  frontend_service_parent_domain_name            = var.frontend_service_parent_domain_name
+  frontend_service_parent_domain_name_project_id = var.frontend_service_parent_domain_name_project_id
 }

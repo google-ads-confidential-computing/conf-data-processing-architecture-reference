@@ -48,6 +48,31 @@ module "job_service" {
   frontend_service_cloudfunction_runtime_sa_email                 = var.frontend_service_cloudfunction_runtime_sa_email
   job_version                                                     = var.job_version
 
+  frontend_service_cloud_run_regions                     = var.frontend_service_cloud_run_regions
+  frontend_service_cloud_run_deletion_protection         = var.frontend_service_cloud_run_deletion_protection
+  frontend_service_cloud_run_source_container_image_url  = var.frontend_service_cloud_run_source_container_image_url
+  frontend_service_cloud_run_cpu_idle                    = var.frontend_service_cloud_run_cpu_idle
+  frontend_service_cloud_run_startup_cpu_boost           = var.frontend_service_cloud_run_startup_cpu_boost
+  frontend_service_cloud_run_ingress_traffic_setting     = var.frontend_service_cloud_run_ingress_traffic_setting
+  frontend_service_cloud_run_allowed_invoker_iam_members = var.frontend_service_cloud_run_allowed_invoker_iam_members
+  frontend_service_cloud_run_binary_authorization        = var.frontend_service_cloud_run_binary_authorization
+  frontend_service_cloud_run_custom_audiences            = var.frontend_service_cloud_run_custom_audiences
+
+  frontend_service_enable_lb_backend_logging = var.frontend_service_enable_lb_backend_logging
+  frontend_service_lb_allowed_request_paths  = var.frontend_service_lb_allowed_request_paths
+  frontend_service_lb_domain                 = var.frontend_service_lb_domain
+
+  frontend_service_lb_outlier_detection_interval_seconds                      = var.frontend_service_lb_outlier_detection_interval_seconds
+  frontend_service_lb_outlier_detection_base_ejection_time_seconds            = var.frontend_service_lb_outlier_detection_base_ejection_time_seconds
+  frontend_service_lb_outlier_detection_consecutive_errors                    = var.frontend_service_lb_outlier_detection_consecutive_errors
+  frontend_service_lb_outlier_detection_enforcing_consecutive_errors          = var.frontend_service_lb_outlier_detection_enforcing_consecutive_errors
+  frontend_service_lb_outlier_detection_consecutive_gateway_failure           = var.frontend_service_lb_outlier_detection_consecutive_gateway_failure
+  frontend_service_lb_outlier_detection_enforcing_consecutive_gateway_failure = var.frontend_service_lb_outlier_detection_enforcing_consecutive_gateway_failure
+  frontend_service_lb_outlier_detection_max_ejection_percent                  = var.frontend_service_lb_outlier_detection_max_ejection_percent
+
+  frontend_service_parent_domain_name            = var.frontend_service_parent_domain_name
+  frontend_service_parent_domain_name_project_id = var.frontend_service_parent_domain_name_project_id
+
   # Frontend Service Alarms
   frontend_alarm_duration_sec                   = var.frontend_alarm_duration_sec
   frontend_alarm_eval_period_sec                = var.frontend_alarm_eval_period_sec
@@ -116,6 +141,7 @@ module "job_service" {
   # OpenTelemetry Collector
   enable_native_metric_aggregation   = var.enable_native_metric_aggregation
   enable_remote_metric_aggregation   = var.enable_remote_metric_aggregation
+  enable_legacy_metrics              = var.enable_legacy_metrics
   metric_exporter_interval_in_millis = var.metric_exporter_interval_in_millis
   collector_instance_type            = var.collector_instance_type
   max_collector_instances            = var.max_collector_instances

@@ -70,23 +70,22 @@ variable "network_name_suffix" {
   type        = string
   default     = "network-with-custom-subnet"
 }
-
 variable "worker_subnet_cidr" {
   description = "The range of internal addresses that are owned by worker subnet."
   type        = string
-  default     = "10.16.0.0/20"
+  default     = null
 }
 
 variable "collector_subnet_cidr" {
   description = "The range of internal addresses that are owned by collector subnet."
   type        = string
-  default     = "10.20.0.0/20"
+  default     = null
 }
 
 variable "proxy_subnet_cidr" {
   description = "The range of internal addresses that are owned by proxy subnet."
   type        = string
-  default     = "10.32.0.0/20"
+  default     = null
 }
 
 ################################################################################
@@ -186,6 +185,171 @@ variable "job_version" {
   description = "The version of frontend service. Version 2 supports new job schema from C++ CMRT library."
   type        = string
   default     = "1"
+}
+
+################################################################################
+# Frontend Service Cloud Run Variables.
+################################################################################
+
+
+variable "frontend_service_cloud_run_regions" {
+  description = "The regions to deploy the Cloud Run FE handlers in."
+  type        = set(string)
+  nullable    = false
+  default     = []
+}
+
+variable "frontend_service_cloud_run_deletion_protection" {
+  description = "Whether to prevent the instance from being deleted by terraform during apply."
+  type        = bool
+  nullable    = false
+  default     = false # CRs might need to be replaced during normal TF apply
+}
+
+variable "frontend_service_cloud_run_source_container_image_url" {
+  description = "The URL for the container image to run on this service."
+  type        = string
+  nullable    = false
+  default     = ""
+}
+
+variable "frontend_service_cloud_run_cpu_idle" {
+  description = "Determines whether the CPU is always allocated (false) or if only allocated for usage (true)."
+  type        = bool
+  nullable    = false
+  default     = true # Allocate only when used
+}
+
+variable "frontend_service_cloud_run_startup_cpu_boost" {
+  description = "Whether to over-allocate CPU for faster new instance startup."
+  type        = bool
+  nullable    = false
+  default     = true # Always boost startup
+}
+
+variable "frontend_service_cloud_run_ingress_traffic_setting" {
+  description = "Which type of traffic to allow. Options are INGRESS_TRAFFIC_ALL INGRESS_TRAFFIC_INTERNAL_ONLY, INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  type        = string
+  nullable    = false
+  default     = "INGRESS_TRAFFIC_ALL"
+}
+
+variable "frontend_service_cloud_run_allowed_invoker_iam_members" {
+  description = "The identities allowed to invoke this cloud run service. Require the GCP IAM prefixes such as serviceAccount: or user:"
+  type        = set(string)
+  nullable    = false
+  default     = []
+}
+
+variable "frontend_service_cloud_run_binary_authorization" {
+  description = "Binary Authorization config."
+  type = object({
+    breakglass_justification = optional(bool)
+    use_default              = optional(bool)
+    policy                   = optional(string)
+  })
+  nullable = true
+  default  = null
+}
+
+variable "frontend_service_cloud_run_custom_audiences" {
+  description = "The full URL to be used as a custom audience for invoking this Cloud Run."
+  type        = set(string)
+  nullable    = false
+  default     = []
+}
+
+################################################################################
+# Frontend Service Load Balancer Variables.
+################################################################################
+
+
+variable "frontend_service_enable_lb_backend_logging" {
+  description = "Whether to enable logging for the load balancer traffic served by the backend service."
+  type        = bool
+  nullable    = false
+  default     = false
+}
+
+variable "frontend_service_lb_allowed_request_paths" {
+  description = "The requests paths that will be forwarded to the backend."
+  type        = set(string)
+  nullable    = false
+  default     = ["/*"]
+}
+
+variable "frontend_service_lb_domain" {
+  description = "The domain name to use to identify the load balancer. e.g. my.service.com. Will be used ot create a new cert."
+  type        = string
+  nullable    = true
+  default     = null
+}
+
+variable "frontend_service_lb_outlier_detection_interval_seconds" {
+  description = "Time interval between ejection sweep analysis. This can result in both new ejections as well as hosts being returned to service."
+  type        = number
+  nullable    = false
+  default     = 10
+}
+
+variable "frontend_service_lb_outlier_detection_base_ejection_time_seconds" {
+  description = "The base time that a host is ejected for. The real time is equal to the base time multiplied by the number of times the host has been ejected."
+  type        = number
+  nullable    = false
+  default     = 120
+}
+
+variable "frontend_service_lb_outlier_detection_consecutive_errors" {
+  description = "Number of errors before a host is ejected from the connection pool. When the backend host is accessed over HTTP, a 5xx return code qualifies as an error."
+  type        = number
+  nullable    = false
+  default     = 2
+}
+
+variable "frontend_service_lb_outlier_detection_enforcing_consecutive_errors" {
+  description = "The percentage chance that a host will be actually ejected when an outlier status is detected through consecutive 5xx. This setting can be used to disable ejection or to ramp it up slowly."
+  type        = number
+  nullable    = false
+  default     = 100
+}
+
+variable "frontend_service_lb_outlier_detection_consecutive_gateway_failure" {
+  description = "The number of consecutive gateway failures (502, 503, 504 status or connection errors that are mapped to one of those status codes) before a consecutive gateway failure ejection occurs."
+  type        = number
+  nullable    = false
+  default     = 2
+}
+
+variable "frontend_service_lb_outlier_detection_enforcing_consecutive_gateway_failure" {
+  description = "The percentage chance that a host will be actually ejected when an outlier status is detected through consecutive gateway failures. This setting can be used to disable ejection or to ramp it up slowly."
+  type        = number
+  nullable    = false
+  default     = 100
+}
+
+variable "frontend_service_lb_outlier_detection_max_ejection_percent" {
+  description = "Maximum percentage of hosts in the load balancing pool for the backend service that can be ejected."
+  type        = number
+  nullable    = false
+  default     = 60
+}
+
+################################################################################
+# Frontend Service Domain Variables.
+################################################################################
+
+variable "frontend_service_parent_domain_name" {
+  description = "The parent domain name used for the DNS record for the FE e.g. 'my.domain.com'."
+  type        = string
+  nullable    = false
+  default     = ""
+}
+
+variable "frontend_service_parent_domain_name_project_id" {
+  description = "The ID of the project where the DNS hosted zone for the parent domain exists."
+  type        = string
+  nullable    = false
+  default     = ""
 }
 
 ################################################################################
@@ -616,6 +780,11 @@ variable "enable_remote_metric_aggregation" {
   type        = bool
   default     = false
 }
+variable "enable_legacy_metrics" {
+  description = "When true, enable legacy metrics created prior to opentelemetry"
+  type        = bool
+  default     = true
+}
 variable "metric_exporter_interval_in_millis" {
   description = "The interval of metric exporter exports metric data points to the cloud"
   type        = number
@@ -634,15 +803,15 @@ variable "user_provided_collector_sa_email" {
 }
 
 variable "collector_service_port_name" {
-  description = "The name of the gRPC port that receives traffic destined for the OpenTelemetry collector."
+  description = "The name of the http port that receives traffic destined for the OpenTelemetry collector."
   type        = string
   default     = "otlp"
 }
 
 variable "collector_service_port" {
-  description = "The gRPC port that receives traffic destined for the OpenTelemetry collector."
+  description = "The http port that receives traffic destined for the OpenTelemetry collector."
   type        = number
-  default     = 4317
+  default     = 4318
 }
 
 variable "collector_domain_name" {

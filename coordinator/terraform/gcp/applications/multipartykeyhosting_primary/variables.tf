@@ -327,8 +327,8 @@ variable "cloudfunction_timeout_seconds" {
 
 ### Public Key Service
 
-variable "public_key_service_launch_cloud_run" {
-  description = "Flag to control launching Cloud Run Public Key Service."
+variable "public_key_service_add_cr_lb" {
+  description = "Flag to control launching adding Cloud Run Public Key Service to Load Balancer."
   type        = bool
   nullable    = false
 }
@@ -413,11 +413,6 @@ variable "private_key_service_cloud_run_concurrency" {
 }
 
 ### EKS
-variable "delete_encryption_key_service" {
-  description = "Flag to control removal of the EKS."
-  type        = bool
-}
-
 variable "encryption_key_service_jar" {
   description = <<-EOT
           Encryption key service cloud function path. If not provided defaults to locally built jar file.
@@ -480,27 +475,27 @@ variable "public_key_service_cdn_serve_while_stale_seconds" {
 # Public Key Alarm Variables.
 ################################################################################
 
-variable "get_public_key_alarm_eval_period_sec" {
+variable "public_key_service_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
   type        = string
 }
 
-variable "get_public_key_alarm_duration_sec" {
+variable "public_key_service_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = string
 }
 
-variable "get_public_key_cloudfunction_error_ratio_threshold" {
+variable "public_key_service_error_ratio_threshold" {
   description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
   type        = number
 }
 
-variable "get_public_key_cloudfunction_max_execution_time_max" {
+variable "public_key_service_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number
 }
 
-variable "get_public_key_cloudfunction_5xx_threshold" {
+variable "public_key_service_5xx_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
@@ -510,27 +505,27 @@ variable "publickeyservice_cloudfunction_alert_on_memory_usage_threshold" {
   type        = number
 }
 
-variable "get_public_key_lb_max_latency_ms" {
+variable "public_key_service_lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
   type        = string
 }
 
-variable "get_public_key_lb_5xx_threshold" {
+variable "public_key_service_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "get_public_key_lb_5xx_ratio_threshold" {
+variable "public_key_service_lb_5xx_ratio_threshold" {
   description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "get_public_key_empty_key_set_error_threshold" {
+variable "public_key_service_empty_key_set_error_threshold" {
   description = "Get Public Key Empty Key Set error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "get_public_key_general_error_threshold" {
+variable "public_key_service_general_error_threshold" {
   description = "Get Public Key General error count greater than this to send alarm. Example: 0."
   type        = number
 }

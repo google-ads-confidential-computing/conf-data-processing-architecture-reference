@@ -248,12 +248,11 @@ module "enable_native_metric_aggregation" {
 }
 
 module "remote_metric_collector_address" {
-  count          = coalesce(var.metric_client_parameter_values.enable_remote_metric_aggregation, false) ? 1 : 0
-  source         = "../../modules/parameters"
-  environment    = var.environment
-  parameter_name = var.metric_client_parameter_names.remote_metric_collector_address
-  parameter_value = format("%s.%s.%s:%s",
-  var.environment, var.collector_domain_name, var.collector_dns_name, var.collector_service_port)
+  count           = coalesce(var.metric_client_parameter_values.enable_remote_metric_aggregation, false) ? 1 : 0
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = var.metric_client_parameter_names.remote_metric_collector_address
+  parameter_value = module.opentelemetry_collector_load_balancer[0].loadbalancer_dns_address
 }
 module "metric_exporter_interval_in_ms" {
   count           = var.metric_client_parameter_values.metric_exporter_interval_in_ms == null ? 0 : 1

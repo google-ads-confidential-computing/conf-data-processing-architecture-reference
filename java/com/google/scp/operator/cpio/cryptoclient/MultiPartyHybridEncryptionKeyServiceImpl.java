@@ -48,12 +48,17 @@ import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.crypto.tink.CloudAeadSelector;
 import com.google.scp.shared.util.KeySplitUtil;
+import io.github.resilience4j.core.IntervalFunction;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.net.ConnectException;
 import java.security.GeneralSecurityException;
+import java.time.Duration;
 import java.util.Base64;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -94,6 +99,32 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
                 }
               });
 
+  private static final ImmutableSet<ErrorReason> KEY_DECRYPTION_NON_RETRYABLE_FAILURE_REASONS =
+      ImmutableSet.of(
+          ErrorReason.UNAUTHENTICATED,
+          ErrorReason.PERMISSION_DENIED,
+          ErrorReason.KEY_NOT_FOUND,
+          ErrorReason.INVALID_ARGUMENT);
+
+  private static final RetryConfig DEFAULT_PRIVATE_KEY_DECRYPTION_RETRY_CONFIG =
+      RetryConfig.custom()
+          .maxAttempts(4)
+          .intervalFunction(IntervalFunction.ofExponentialBackoff(Duration.ofMillis(400), 2))
+          .retryOnException(
+              t -> {
+                if (t instanceof GeneralSecurityException) {
+                  var parsedException = generateKeyFetchExceptionFromGrpcException(t);
+                  return !KEY_DECRYPTION_NON_RETRYABLE_FAILURE_REASONS.contains(
+                      parsedException.getReason());
+                }
+                // Do not retry other exceptions
+                return false;
+              })
+          .failAfterMaxAttempts(true)
+          .build();
+
+  private Optional<Retry> splitKeyDecryptionRetry = Optional.empty();
+
   /** Creates a new instance of the {@code MultiPartyHybridEncryptionKeyServiceImpl} class. */
   @Inject
   public MultiPartyHybridEncryptionKeyServiceImpl(
@@ -109,6 +140,32 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
     this.coordinatorBAeadService = coordinatorBAeadService;
   }
 
+  private MultiPartyHybridEncryptionKeyServiceImpl(
+      EncryptionKeyFetchingService coordinatorAEncryptionKeyFetchingService,
+      EncryptionKeyFetchingService coordinatorBEncryptionKeyFetchingService,
+      CloudAeadSelector coordinatorAAeadService,
+      CloudAeadSelector coordinatorBAeadService,
+      boolean enablePrivateKeyDecryptionRetries,
+      Optional<RetryConfig> privateKeyDecryptionRetryConfig) {
+
+    this(
+        coordinatorAEncryptionKeyFetchingService,
+        coordinatorBEncryptionKeyFetchingService,
+        coordinatorAAeadService,
+        coordinatorBAeadService);
+
+    if (enablePrivateKeyDecryptionRetries) {
+      if (privateKeyDecryptionRetryConfig.isPresent()) {
+        this.splitKeyDecryptionRetry =
+            Optional.of(Retry.of("splitKeyDecryptionRetry", privateKeyDecryptionRetryConfig.get()));
+      } else {
+        this.splitKeyDecryptionRetry =
+            Optional.of(
+                Retry.of("splitKeyDecryptionRetry", DEFAULT_PRIVATE_KEY_DECRYPTION_RETRY_CONFIG));
+      }
+    }
+  }
+
   /**
    * Create a new instance of {@link MultiPartyHybridEncryptionKeyServiceImpl} with an object {@link
    * MultiPartyHybridEncryptionKeyServiceParams}
@@ -119,7 +176,10 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
         params.coordAKeyFetchingService(),
         params.coordBKeyFetchingService(),
         params.coordAAeadService(),
-        params.coordBAeadService());
+        params.coordBAeadService(),
+        (params.enablePrivateKeyDecryptionRetries().isPresent()
+            && params.enablePrivateKeyDecryptionRetries().get()),
+        params.privateKeyDecryptionRetryConfig());
   }
 
   /** Returns the decrypter for the provided key. */
@@ -172,6 +232,9 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
         case MULTI_PARTY_HYBRID_EVEN_KEYSPLIT:
           var secondaryEncryptionKey =
               coordinatorBEncryptionKeyFetchingService.fetchEncryptionKey(keyId);
+          if (splitKeyDecryptionRetry.isPresent()) {
+            return createDecrypterSplitKeyWithRetries(primaryEncryptionKey, secondaryEncryptionKey);
+          }
           return createDecrypterSplitKey(primaryEncryptionKey, secondaryEncryptionKey);
         default:
           throw new KeyFetchException(
@@ -216,6 +279,28 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
         KeySplitUtil.reconstructXorKeysetHandle(
             ImmutableList.of(ByteString.copyFrom(splitA), ByteString.copyFrom(splitB)));
     return keySetHandle;
+  }
+
+  /**
+   * Runs the KMS decryption call with retries. It does not check for the existence of the Retry
+   * object, so this method should only be called after validating the retry object exists.
+   */
+  private KeysetHandle createDecrypterSplitKeyWithRetries(
+      EncryptionKey encryptionKeyA, EncryptionKey encryptionKeyB)
+      throws GeneralSecurityException, IOException {
+    try {
+      return Retry.decorateCheckedSupplier(
+              splitKeyDecryptionRetry.get(),
+              () -> {
+                return createDecrypterSplitKey(encryptionKeyA, encryptionKeyB);
+              })
+          .apply();
+    } catch (GeneralSecurityException | IOException e) {
+      throw e;
+    } catch (Throwable t) {
+      logger.error("Unexpected exception while creating split-key decrypter", t);
+      throw new IOException(t);
+    }
   }
 
   /** Find {@code KeyData} object owned by the coordinator. */

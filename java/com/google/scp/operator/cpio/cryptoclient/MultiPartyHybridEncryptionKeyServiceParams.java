@@ -18,6 +18,8 @@ package com.google.scp.operator.cpio.cryptoclient;
 
 import com.google.auto.value.AutoValue;
 import com.google.scp.shared.crypto.tink.CloudAeadSelector;
+import io.github.resilience4j.retry.RetryConfig;
+import java.util.Optional;
 
 // Parameters to construct a MultiPartyHybridEncryptionKeyService class
 @AutoValue
@@ -40,6 +42,12 @@ public abstract class MultiPartyHybridEncryptionKeyServiceParams {
   /** Returns the {@link CloudAeadSelector} for coordinator B. */
   public abstract CloudAeadSelector coordBAeadService();
 
+  /** Whether to enable retries for the decryption of the coordinator private keys. */
+  public abstract Optional<Boolean> enablePrivateKeyDecryptionRetries();
+
+  /** If present will overwrite the default retry config. */
+  public abstract Optional<RetryConfig> privateKeyDecryptionRetryConfig();
+
   /** Builder for {@link MultiPartyHybridEncryptionKeyServiceParams}. */
   @AutoValue.Builder
   public abstract static class Builder {
@@ -60,5 +68,11 @@ public abstract class MultiPartyHybridEncryptionKeyServiceParams {
 
     /** Sets coordinator B {@link CloudAeadSelector} object. */
     public abstract Builder setCoordBAeadService(CloudAeadSelector coordBAeadService);
+
+    public abstract Builder setEnablePrivateKeyDecryptionRetries(
+        boolean enablePrivateKeyDecryptionRetries);
+
+    public abstract Builder setPrivateKeyDecryptionRetryConfig(
+        RetryConfig privateKeyDecryptionRetryConfig);
   }
 }

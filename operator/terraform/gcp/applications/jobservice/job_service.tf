@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Google LLC
+ * Copyright 2022-2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -178,6 +178,13 @@ module "enable_remote_metric_aggregation" {
   parameter_value = var.enable_remote_metric_aggregation
 }
 
+module "enable_legacy_metrics" {
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = "ENABLE_LEGACY_METRICS"
+  parameter_value = var.enable_legacy_metrics
+}
+
 module "metric_exporter_interval_in_millis" {
   source          = "../../modules/parameters"
   environment     = var.environment
@@ -215,7 +222,7 @@ module "opentelemetry_collector" {
   collector_startup_script = templatefile("../../modules/opentelemetry_collector/collector_startup.tftpl", {
     otel_collector_image_uri = "otel/opentelemetry-collector-contrib:0.122.1"
 
-    grpc_receiver_port   = var.collector_service_port
+    http_receiver_port   = var.collector_service_port
     metric_prefix        = "custom.googleapis.com"
     send_batch_max_size  = var.collector_send_batch_max_size
     send_batch_size      = var.collector_send_batch_size
@@ -286,6 +293,31 @@ module "frontend" {
   lb_5xx_threshold                     = var.frontend_lb_5xx_threshold
   lb_max_latency_ms                    = var.frontend_lb_max_latency_ms
   use_java21_runtime                   = var.frontend_cloudfunction_use_java21_runtime
+
+  frontend_service_cloud_run_regions                     = var.frontend_service_cloud_run_regions
+  frontend_service_cloud_run_deletion_protection         = var.frontend_service_cloud_run_deletion_protection
+  frontend_service_cloud_run_source_container_image_url  = var.frontend_service_cloud_run_source_container_image_url
+  frontend_service_cloud_run_cpu_idle                    = var.frontend_service_cloud_run_cpu_idle
+  frontend_service_cloud_run_startup_cpu_boost           = var.frontend_service_cloud_run_startup_cpu_boost
+  frontend_service_cloud_run_ingress_traffic_setting     = var.frontend_service_cloud_run_ingress_traffic_setting
+  frontend_service_cloud_run_allowed_invoker_iam_members = var.frontend_service_cloud_run_allowed_invoker_iam_members
+  frontend_service_cloud_run_binary_authorization        = var.frontend_service_cloud_run_binary_authorization
+  frontend_service_cloud_run_custom_audiences            = var.frontend_service_cloud_run_custom_audiences
+
+  frontend_service_enable_lb_backend_logging = var.frontend_service_enable_lb_backend_logging
+  frontend_service_lb_allowed_request_paths  = var.frontend_service_lb_allowed_request_paths
+  frontend_service_lb_domain                 = var.frontend_service_lb_domain
+
+  frontend_service_lb_outlier_detection_interval_seconds                      = var.frontend_service_lb_outlier_detection_interval_seconds
+  frontend_service_lb_outlier_detection_base_ejection_time_seconds            = var.frontend_service_lb_outlier_detection_base_ejection_time_seconds
+  frontend_service_lb_outlier_detection_consecutive_errors                    = var.frontend_service_lb_outlier_detection_consecutive_errors
+  frontend_service_lb_outlier_detection_enforcing_consecutive_errors          = var.frontend_service_lb_outlier_detection_enforcing_consecutive_errors
+  frontend_service_lb_outlier_detection_consecutive_gateway_failure           = var.frontend_service_lb_outlier_detection_consecutive_gateway_failure
+  frontend_service_lb_outlier_detection_enforcing_consecutive_gateway_failure = var.frontend_service_lb_outlier_detection_enforcing_consecutive_gateway_failure
+  frontend_service_lb_outlier_detection_max_ejection_percent                  = var.frontend_service_lb_outlier_detection_max_ejection_percent
+
+  frontend_service_parent_domain_name            = var.frontend_service_parent_domain_name
+  frontend_service_parent_domain_name_project_id = var.frontend_service_parent_domain_name_project_id
 }
 
 module "worker" {
@@ -330,6 +362,8 @@ module "worker" {
   alarm_eval_period_sec              = var.worker_alarm_eval_period_sec
   notification_channel_id            = local.notification_channel_id
   java_job_validations_to_alert      = var.java_job_validations_to_alert
+  enable_new_metrics                 = var.enable_remote_metric_aggregation
+  enable_legacy_metrics              = var.enable_legacy_metrics
 
   # Make sure the otel collector is running before creating the server instances.
   depends_on = [module.opentelemetry_collector]

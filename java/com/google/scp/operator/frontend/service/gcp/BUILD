@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
-load("@rules_pkg//:pkg.bzl", "pkg_zip")
+load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_zip")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -70,5 +71,31 @@ pkg_zip(
     name = "FrontendServiceHttpCloudFunctionDeploy_zip",
     srcs = [
         ":FrontendServiceHttpCloudFunction_deploy.jar",
+    ],
+)
+
+pkg_tar(
+    name = "function_invoker_tar",
+    srcs = ["//java/external:gcp_function_invoker"],
+)
+
+pkg_tar(
+    name = "frontend_cloud_function_tar",
+    srcs = [":FrontendServiceHttpCloudFunctionDeploy"],
+)
+
+container_image(
+    name = "FrontendCloudFunctionRuntimeContainer",
+    base = "@java_base_21//image",
+    cmd = [
+        "./java-function-invoker-1.3.1.jar",
+        "--classpath",
+        "./FrontendServiceHttpCloudFunction_deploy.jar",
+        "--target",
+        "com.google.scp.operator.frontend.service.gcp.FrontendServiceHttpFunction",
+    ],
+    tars = [
+        ":function_invoker_tar",
+        ":frontend_cloud_function_tar",
     ],
 )

@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,18 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "load_balancer_ip" {
-  value = module.lb-http_serverless_negs.external_ip
+output "service_name" {
+  description = "The name of the Cloud Run service."
+  value       = google_cloud_run_v2_service.cloud_run_service.name
 }
 
-output "key_storage_cloudfunction_url" {
-  value = google_cloudfunctions2_function.key_storage_cloudfunction.service_config[0].uri
-}
-
-output "key_storage_service_account_email" {
-  value = google_service_account.key_storage_service_account.email
-}
-
-output "key_storage_cloud_run_url" {
-  value = var.source_container_image_url == null ? "" : module.cloud_run[0].url
+output "region" {
+  description = "The region where the Cloud Run service is deployed."
+  value       = google_cloud_run_v2_service.cloud_run_service.location
 }

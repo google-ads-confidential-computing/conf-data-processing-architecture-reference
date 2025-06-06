@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 locals {
-  job_validation_filter = length(var.java_job_validations_to_alert) == 0 ? "" : format(" AND metric.label.\"Validator\"=monitoring.regex.full_match(\"%s\")", join("|", var.java_job_validations_to_alert))
+  new_job_validation_filter = length(var.java_job_validations_to_alert) == 0 ? "" : format(" AND metric.label.\"Validator\"=monitoring.regex.full_match(\"%s\")", join("|", var.java_job_validations_to_alert))
 }
 
-resource "google_monitoring_metric_descriptor" "jobclient_job_validation_failure_metric" {
-  count        = var.enable_legacy_metrics ? 1 : 0
+resource "google_monitoring_metric_descriptor" "jobclient_job_validation_failure_counter_metric" {
+  count        = var.enable_new_metrics ? 1 : 0
   display_name = "Job Client Validation Failures"
   description  = "Custom metric for validation failures in the job client."
 
-  type        = "custom.googleapis.com/scp/jobclient/${var.environment}/jobvalidationfailure"
-  metric_kind = "GAUGE"
+  type        = "custom.googleapis.com/scp/jobclient/${var.environment}/jobvalidationfailurecounter"
+  metric_kind = "CUMULATIVE"
   value_type  = "DOUBLE"
 
   labels {
@@ -31,14 +31,14 @@ resource "google_monitoring_metric_descriptor" "jobclient_job_validation_failure
   }
 }
 
-resource "google_monitoring_alert_policy" "jobclient_job_validation_failure_alert" {
-  count        = length(var.java_job_validations_to_alert) > 0 && var.enable_legacy_metrics ? 1 : 0
+resource "google_monitoring_alert_policy" "jobclient_job_validation_failure_counter_alert" {
+  count        = length(var.java_job_validations_to_alert) == 0 && !var.enable_new_metrics ? 0 : 1
   display_name = "${var.environment} Job Client Validation Failure Alert"
   combiner     = "OR"
   conditions {
     display_name = "Validation Failures"
     condition_threshold {
-      filter     = "metric.type=\"${google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric[0].type}\" AND resource.type=\"gce_instance\"${local.job_validation_filter}"
+      filter     = "metric.type=\"${google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric[0].type}\" AND resource.type=\"gce_instance\"${local.new_job_validation_filter}"
       duration   = "${var.alarm_duration_sec}s"
       comparison = "COMPARISON_GT"
       aggregations {
@@ -57,13 +57,13 @@ resource "google_monitoring_alert_policy" "jobclient_job_validation_failure_aler
   }
 }
 
-resource "google_monitoring_metric_descriptor" "jobclient_job_client_error_metric" {
-  count        = var.enable_legacy_metrics ? 1 : 0
+resource "google_monitoring_metric_descriptor" "jobclient_job_client_error_counter_metric" {
+  count        = var.enable_new_metrics ? 1 : 0
   display_name = "Job Client Errors"
   description  = "Custom metric for errors in the job client."
 
-  type        = "custom.googleapis.com/scp/jobclient/${var.environment}/jobclienterror"
-  metric_kind = "GAUGE"
+  type        = "custom.googleapis.com/scp/jobclient/${var.environment}/jobclienterrorcounter"
+  metric_kind = "CUMULATIVE"
   value_type  = "DOUBLE"
 
   labels {
@@ -71,12 +71,12 @@ resource "google_monitoring_metric_descriptor" "jobclient_job_client_error_metri
   }
 }
 
-resource "google_monitoring_metric_descriptor" "worker_job_error_metric" {
-  count        = var.enable_legacy_metrics ? 1 : 0
+resource "google_monitoring_metric_descriptor" "worker_job_error_new_metric" {
+  count        = var.enable_new_metrics ? 1 : 0
   display_name = "Worker Job Errors"
   description  = "Custom metric for errors with worker job handling."
 
-  type        = "custom.googleapis.com/scp/worker/${var.environment}/workerjoberror"
+  type        = "custom.googleapis.com/scp/worker/${var.environment}/workerjoberrornew"
   metric_kind = "GAUGE"
   value_type  = "DOUBLE"
 
@@ -85,14 +85,14 @@ resource "google_monitoring_metric_descriptor" "worker_job_error_metric" {
   }
 }
 
-resource "google_monitoring_alert_policy" "worker_job_error_alert" {
-  count        = var.enable_legacy_metrics ? 1 : 0
+resource "google_monitoring_alert_policy" "worker_job_error_new_alert" {
+  count        = var.enable_new_metrics ? 1 : 0
   display_name = "${var.environment} Worker Job Errors Alert"
   combiner     = "OR"
   conditions {
     display_name = "Worker Job Errors"
     condition_threshold {
-      filter     = "metric.type=\"${google_monitoring_metric_descriptor.worker_job_error_metric[0].type}\" AND resource.type=\"gce_instance\""
+      filter     = "metric.type=\"${google_monitoring_metric_descriptor.worker_job_error_new_metric[0].type}\" AND resource.type=\"gce_instance\""
       duration   = "${var.alarm_duration_sec}s"
       comparison = "COMPARISON_GT"
       aggregations {
@@ -111,11 +111,11 @@ resource "google_monitoring_alert_policy" "worker_job_error_alert" {
   }
 }
 
-resource "google_monitoring_dashboard" "worker_custom_metrics_dashboard" {
-  count = var.enable_legacy_metrics ? 1 : 0
+resource "google_monitoring_dashboard" "worker_custom_metrics_new_dashboard" {
+  count = var.enable_new_metrics ? 1 : 0
   dashboard_json = jsonencode(
     {
-      "displayName" : "${var.environment} Worker Custom Metrics Dashboard",
+      "displayName" : "${var.environment} New Worker Custom Metrics Dashboard",
       "gridLayout" : {
         "columns" : "2",
         "widgets" : [
@@ -135,10 +135,9 @@ resource "google_monitoring_dashboard" "worker_custom_metrics_dashboard" {
                     "timeSeriesFilter" : {
                       "aggregation" : {
                         "alignmentPeriod" : "60s",
-                        "perSeriesAligner" : "ALIGN_SUM",
-                        "crossSeriesReducer" : "REDUCE_SUM",
+                        "perSeriesAligner" : "ALIGN_RATE",
                       },
-                      "filter" : "metric.type=\"${google_monitoring_metric_descriptor.jobclient_job_client_error_metric[0].type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\"",
+                      "filter" : "metric.type=\"${google_monitoring_metric_descriptor.jobclient_job_client_error_counter_metric[0].type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\"",
                       "secondaryAggregation" : {
                         "alignmentPeriod" : "60s",
                       }
@@ -153,13 +152,12 @@ resource "google_monitoring_dashboard" "worker_custom_metrics_dashboard" {
                     "timeSeriesFilter" : {
                       "aggregation" : {
                         "alignmentPeriod" : "60s",
-                        "perSeriesAligner" : "ALIGN_SUM",
-                        "crossSeriesReducer" : "REDUCE_SUM",
+                        "perSeriesAligner" : "ALIGN_RATE",
                         "groupByFields" : [
                           "metric.label.\"Validator\""
                         ]
                       },
-                      "filter" : "metric.type=\"${google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric[0].type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\"",
+                      "filter" : "metric.type=\"${google_monitoring_metric_descriptor.jobclient_job_validation_failure_counter_metric[0].type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\"",
                       "secondaryAggregation" : {
                         "alignmentPeriod" : "60s",
                       }
@@ -178,7 +176,7 @@ resource "google_monitoring_dashboard" "worker_custom_metrics_dashboard" {
                         "perSeriesAligner" : "ALIGN_SUM",
                         "crossSeriesReducer" : "REDUCE_SUM",
                       },
-                      "filter" : "metric.type=\"${google_monitoring_metric_descriptor.worker_job_error_metric[0].type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\"",
+                      "filter" : "metric.type=\"${google_monitoring_metric_descriptor.worker_job_error_new_metric[0].type}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\"",
                       "secondaryAggregation" : {
                         "alignmentPeriod" : "60s",
                       }
@@ -197,35 +195,4 @@ resource "google_monitoring_dashboard" "worker_custom_metrics_dashboard" {
       }
     }
   )
-}
-
-
-moved {
-  from = google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric
-  to   = google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric[0]
-}
-
-moved {
-  from = google_monitoring_alert_policy.jobclient_job_validation_failure_alert
-  to   = google_monitoring_alert_policy.jobclient_job_validation_failure_alert[0]
-}
-
-moved {
-  from = google_monitoring_alert_policy.jobclient_job_client_error_metric
-  to   = google_monitoring_alert_policy.jobclient_job_client_error_metric[0]
-}
-
-moved {
-  from = google_monitoring_alert_policy.worker_job_error_metric
-  to   = google_monitoring_alert_policy.worker_job_error_metric[0]
-}
-
-moved {
-  from = google_monitoring_alert_policy.worker_job_error_alert
-  to   = google_monitoring_alert_policy.worker_job_error_alert[0]
-}
-
-moved {
-  from = google_monitoring_alert_policy.worker_custom_metrics_dashboard
-  to   = google_monitoring_alert_policy.worker_custom_metrics_dashboard[0]
 }

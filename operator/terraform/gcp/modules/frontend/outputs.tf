@@ -18,3 +18,13 @@ output "frontend_service_cloudfunction_url" {
   value       = google_cloudfunctions2_function.frontend_service_cloudfunction.service_config[0].uri
   description = "The frontend service cloud function gen2 url."
 }
+
+output "frontend_cloud_run_information" {
+  value = toset([
+    for region, service_name in module.cloud_run_fe : {
+      region       = region
+      service_name = service_name
+    }
+  ])
+  description = "A set of object containing the Cloud Run region and service name."
+}

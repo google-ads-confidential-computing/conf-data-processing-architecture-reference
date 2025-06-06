@@ -26,6 +26,7 @@ import com.google.scp.operator.cpio.jobclient.JobHandlerModule;
 import com.google.scp.operator.cpio.jobclient.JobPullBackoff;
 import com.google.scp.operator.cpio.jobclient.JobPullBackoffImpl;
 import com.google.scp.operator.cpio.jobclient.JobValidatorModule;
+import com.google.scp.operator.cpio.metricclient.aws.AwsLegacyMetricModule;
 import com.google.scp.operator.cpio.notificationclient.NotificationClient;
 import com.google.scp.operator.shared.dao.jobqueue.aws.SqsJobQueue;
 import com.google.scp.operator.shared.dao.jobqueue.aws.SqsJobQueue.JobQueueSqsMaxWaitTimeSeconds;
@@ -75,6 +76,7 @@ public final class AwsJobHandlerModule extends JobHandlerModule {
     bind(Integer.class).annotatedWith(MetadataDbDynamoTtlDays.class).toInstance(365);
     OptionalBinder.newOptionalBinder(binder(), Key.get(NotificationClient.class));
     install(new JobValidatorModule());
+    install(new AwsLegacyMetricModule());
   }
 
   /** Provider for an instance of the {@code SqsClient} class. */

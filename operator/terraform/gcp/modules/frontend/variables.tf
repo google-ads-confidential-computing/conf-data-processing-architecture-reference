@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Google LLC
+ * Copyright 2022-2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,141 @@ variable "job_version" {
 }
 
 ################################################################################
+# Cloud Run Variables.
+################################################################################
+
+variable "frontend_service_cloud_run_regions" {
+  description = "The regions to deploy the Cloud Run FE handlers in."
+  type        = set(string)
+  nullable    = false
+}
+
+variable "frontend_service_cloud_run_deletion_protection" {
+  description = "Whether to prevent the instance from being deleted by terraform during apply."
+  type        = bool
+  nullable    = false
+}
+
+variable "frontend_service_cloud_run_source_container_image_url" {
+  description = "The URL for the container image to run on this service."
+  type        = string
+  nullable    = false
+}
+
+variable "frontend_service_cloud_run_cpu_idle" {
+  description = "Determines whether the CPU is always allocated (false) or if only allocated for usage (true)."
+  type        = bool
+  nullable    = false
+}
+
+variable "frontend_service_cloud_run_startup_cpu_boost" {
+  description = "Whether to over-allocate CPU for faster new instance startup."
+  type        = bool
+  nullable    = false
+}
+
+variable "frontend_service_cloud_run_ingress_traffic_setting" {
+  description = "Which type of traffic to allow. Options are INGRESS_TRAFFIC_ALL INGRESS_TRAFFIC_INTERNAL_ONLY, INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  type        = string
+  nullable    = false
+}
+
+variable "frontend_service_cloud_run_allowed_invoker_iam_members" {
+  description = "The identities allowed to invoke this cloud run service. Require the GCP IAM prefixes such as serviceAccount: or user:"
+  type        = set(string)
+  nullable    = false
+}
+
+variable "frontend_service_cloud_run_binary_authorization" {
+  description = "Binary Authorization config."
+  type = object({
+    breakglass_justification = optional(bool)
+    use_default              = optional(bool)
+    policy                   = optional(string)
+  })
+  nullable = true
+}
+
+variable "frontend_service_cloud_run_custom_audiences" {
+  description = "The full URL to be used as a custom audience for invoking this Cloud Run."
+  type        = set(string)
+  nullable    = false
+}
+
+variable "frontend_service_enable_lb_backend_logging" {
+  description = "Whether to enable logging for the load balancer traffic served by the backend service."
+  type        = bool
+  nullable    = false
+}
+
+variable "frontend_service_lb_allowed_request_paths" {
+  description = "The requests paths that will be forwarded to the backend."
+  type        = set(string)
+  nullable    = false
+}
+
+variable "frontend_service_lb_domain" {
+  description = "The domain name to use to identify the load balancer. e.g. my.service.com. Will be used ot create a new cert."
+  type        = string
+  nullable    = true
+}
+
+variable "frontend_service_parent_domain_name" {
+  description = "The parent domain name used for the DNS record for the FE e.g. 'my.domain.com'."
+  type        = string
+  nullable    = false
+}
+
+variable "frontend_service_parent_domain_name_project_id" {
+  description = "The ID of the project where the DNS hosted zone for the parent domain exists."
+  type        = string
+  nullable    = false
+}
+
+variable "frontend_service_lb_outlier_detection_interval_seconds" {
+  description = "Time interval between ejection sweep analysis. This can result in both new ejections as well as hosts being returned to service."
+  type        = number
+  nullable    = false
+}
+
+variable "frontend_service_lb_outlier_detection_base_ejection_time_seconds" {
+  description = "The base time that a host is ejected for. The real time is equal to the base time multiplied by the number of times the host has been ejected."
+  type        = number
+  nullable    = false
+}
+
+variable "frontend_service_lb_outlier_detection_consecutive_errors" {
+  description = "Number of errors before a host is ejected from the connection pool. When the backend host is accessed over HTTP, a 5xx return code qualifies as an error."
+  type        = number
+  nullable    = false
+}
+
+variable "frontend_service_lb_outlier_detection_enforcing_consecutive_errors" {
+  description = "The percentage chance that a host will be actually ejected when an outlier status is detected through consecutive 5xx. This setting can be used to disable ejection or to ramp it up slowly."
+  type        = number
+  nullable    = false
+}
+
+variable "frontend_service_lb_outlier_detection_consecutive_gateway_failure" {
+  description = "The number of consecutive gateway failures (502, 503, 504 status or connection errors that are mapped to one of those status codes) before a consecutive gateway failure ejection occurs."
+  type        = number
+  nullable    = false
+}
+
+variable "frontend_service_lb_outlier_detection_enforcing_consecutive_gateway_failure" {
+  description = "The percentage chance that a host will be actually ejected when an outlier status is detected through consecutive gateway failures. This setting can be used to disable ejection or to ramp it up slowly."
+  type        = number
+  nullable    = false
+}
+
+variable "frontend_service_lb_outlier_detection_max_ejection_percent" {
+  description = "Maximum percentage of hosts in the load balancing pool for the backend service that can be ejected."
+  type        = number
+  nullable    = false
+}
+
+
+################################################################################
 # Cloud Function Variables.
 ################################################################################
 
@@ -69,37 +204,37 @@ variable "frontend_service_zip" {
 }
 
 variable "frontend_service_cloudfunction_num_cpus" {
-  description = "The number of CPU to use for frontend service cloud function."
+  description = "The number of CPU to use for frontend service cloud function. Reused for Cloud Run."
   type        = number
 }
 
 variable "frontend_service_cloudfunction_memory_mb" {
-  description = "Memory size in MB for frontend service cloud function."
+  description = "Memory size in MB for frontend service cloud function. Reused for Cloud Run."
   type        = number
 }
 
 variable "frontend_service_cloudfunction_min_instances" {
-  description = "The minimum number of frontend function instances that may coexist at a given time."
+  description = "The minimum number of frontend function instances that may coexist at a given time. Reused for Cloud Run."
   type        = number
 }
 
 variable "frontend_service_cloudfunction_max_instances" {
-  description = "The maximum number of frontend function instances that may coexist at a given time."
+  description = "The maximum number of frontend function instances that may coexist at a given time. Reused for Cloud Run."
   type        = number
 }
 
 variable "frontend_service_cloudfunction_max_instance_request_concurrency" {
-  description = "The maximum number of concurrent requests that frontend function instances can receive."
+  description = "The maximum number of concurrent requests that frontend function instances can receive. Reused for Cloud Run."
   type        = number
 }
 
 variable "frontend_service_cloudfunction_timeout_sec" {
-  description = "Number of seconds after which a frontend function instance times out."
+  description = "Number of seconds after which a frontend function instance times out. Reused for Cloud Run."
   type        = number
 }
 
 variable "frontend_service_cloudfunction_runtime_sa_email" {
-  description = "Email of the service account to use as the runtime identity of the FE service."
+  description = "Email of the service account to use as the runtime identity of the FE service. Reused for Cloud Run."
   type        = string
   nullable    = true
 }

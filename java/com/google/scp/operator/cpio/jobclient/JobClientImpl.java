@@ -17,6 +17,8 @@
 package com.google.scp.operator.cpio.jobclient;
 
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
+import static com.google.scp.shared.clients.configclient.model.WorkerParameter.ENABLE_LEGACY_METRICS;
+import static com.google.scp.shared.clients.configclient.model.WorkerParameter.ENABLE_REMOTE_METRIC_AGGREGATION;
 import static com.google.scp.shared.clients.configclient.model.WorkerParameter.JOB_COMPLETION_NOTIFICATIONS_TOPIC_ID;
 import static com.google.scp.shared.clients.configclient.model.WorkerParameter.NOTIFICATIONS_TOPIC_ID;
 import static java.util.function.Predicate.not;
@@ -36,6 +38,7 @@ import com.google.scp.operator.cpio.lifecycleclient.LifecycleClient;
 import com.google.scp.operator.cpio.lifecycleclient.LifecycleClient.LifecycleClientException;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
+import com.google.scp.operator.cpio.metricclient.model.Annotations.LegacyMetricClient;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.operator.cpio.notificationclient.NotificationClient;
@@ -91,12 +94,17 @@ public final class JobClientImpl implements JobClient {
   /** Namespace used to track job validation failures. */
   static final String METRIC_NAMESPACE = "scp/jobclient";
 
+  static final String NEW_METRIC_NAMESPACE = "scp/jobclient/metrics";
+
   private final JobQueue jobQueue;
   private final JobMetadataDb metadataDb;
   private final JobPullBackoff pullBackoff;
   ImmutableList<JobValidator> jobValidators;
   private final LifecycleClient lifecycleClient;
   private final MetricClient metricClient;
+  private final MetricClient legacyMetricClient;
+  private final boolean enableRemoteAggregationMetrics;
+  private final boolean enableLegacyMetrics;
   private final Optional<NotificationClient> notificationClient;
   private final ParameterClient parameterClient;
   private boolean pollForJob = false;
@@ -118,7 +126,9 @@ public final class JobClientImpl implements JobClient {
       LifecycleClient lifecycleClient,
       Optional<NotificationClient> notificationClient,
       ParameterClient parameterClient,
-      Clock clock) {
+      Clock clock,
+      @LegacyMetricClient MetricClient legacyMetricClient)
+      throws ParameterClientException {
     this.jobQueue = jobQueue;
     this.metadataDb = metadataDb;
     this.pullBackoff = pullBackoff;
@@ -128,6 +138,15 @@ public final class JobClientImpl implements JobClient {
     this.notificationClient = notificationClient;
     this.parameterClient = parameterClient;
     this.clock = clock;
+
+    this.enableLegacyMetrics =
+        Boolean.valueOf(parameterClient.getParameter(ENABLE_LEGACY_METRICS.name()).orElse("true"));
+    this.enableRemoteAggregationMetrics =
+        Boolean.valueOf(
+            parameterClient.getParameter(ENABLE_REMOTE_METRIC_AGGREGATION.name()).orElse("false"));
+
+    this.legacyMetricClient = legacyMetricClient;
+
     startJobProcessingExtender();
   }
 
@@ -200,16 +219,32 @@ public final class JobClientImpl implements JobClient {
           jobQueue.acknowledgeJobCompletion(queueItem.get());
 
           try {
-            CustomMetric metric =
-                CustomMetric.builder()
-                    .setNameSpace(METRIC_NAMESPACE)
-                    .setName("JobValidationFailure")
-                    .setValue(1.0)
-                    .setUnit("Count")
-                    .setMetricType(MetricType.DOUBLE_COUNTER)
-                    .addLabel("Validator", failedCheck.get().getClass().getSimpleName())
-                    .build();
-            metricClient.recordMetric(metric);
+            if (enableLegacyMetrics) {
+              CustomMetric metric =
+                  CustomMetric.builder()
+                      .setNameSpace(METRIC_NAMESPACE)
+                      .setName("JobValidationFailure")
+                      .setValue(1.0)
+                      .setUnit("Count")
+                      .setMetricType(MetricType.DOUBLE_GAUGE)
+                      .addLabel("Validator", failedCheck.get().getClass().getSimpleName())
+                      .build();
+              legacyMetricClient.recordMetric(metric);
+            }
+            if (enableRemoteAggregationMetrics) {
+              // A dual write for same data point to two metrics due to the change of Metric type.
+              // TODO: Remove the metric above once the new metric is stable.
+              CustomMetric newValidationFailureMetric =
+                  CustomMetric.builder()
+                      .setNameSpace(NEW_METRIC_NAMESPACE)
+                      .setName("JobValidationFailureCounter")
+                      .setValue(1.0)
+                      .setUnit("Count")
+                      .setMetricType(MetricType.DOUBLE_COUNTER)
+                      .addLabel("Validator", failedCheck.get().getClass().getSimpleName())
+                      .build();
+              metricClient.recordMetric(newValidationFailureMetric);
+            }
           } catch (MetricClientException e) {
             logger.warning(String.format("Could not record JobValidationFailure metric.\n%s", e));
           }
@@ -631,16 +666,32 @@ public final class JobClientImpl implements JobClient {
 
   private void recordJobClientError(ErrorReason errorReason) {
     try {
-      CustomMetric metric =
-          CustomMetric.builder()
-              .setNameSpace(METRIC_NAMESPACE)
-              .setName("JobClientError")
-              .setValue(1.0)
-              .setUnit("Count")
-              .setMetricType(MetricType.DOUBLE_COUNTER)
-              .addLabel("ErrorReason", errorReason.toString())
-              .build();
-      metricClient.recordMetric(metric);
+      if (enableLegacyMetrics) {
+        CustomMetric metric =
+            CustomMetric.builder()
+                .setNameSpace(METRIC_NAMESPACE)
+                .setName("JobClientError")
+                .setValue(1.0)
+                .setUnit("Count")
+                .setMetricType(MetricType.DOUBLE_GAUGE)
+                .addLabel("ErrorReason", errorReason.toString())
+                .build();
+        legacyMetricClient.recordMetric(metric);
+      }
+      if (enableRemoteAggregationMetrics) {
+        // A dual write for same data point to two metrics due to the change of Metric type.
+        // TODO: Remove the metric above once the new metric is stable.
+        CustomMetric newClientErrorMetric =
+            CustomMetric.builder()
+                .setNameSpace(NEW_METRIC_NAMESPACE)
+                .setName("JobClientErrorCounter")
+                .setValue(1.0)
+                .setUnit("Count")
+                .setMetricType(MetricType.DOUBLE_COUNTER)
+                .addLabel("ErrorReason", errorReason.toString())
+                .build();
+        metricClient.recordMetric(newClientErrorMetric);
+      }
     } catch (Exception e) {
       logger.warning(String.format("Could not record job client metric.\n%s", e));
     }

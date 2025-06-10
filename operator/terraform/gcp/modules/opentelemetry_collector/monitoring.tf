@@ -334,35 +334,6 @@ resource "google_monitoring_dashboard" "opentelemetry_metrics_dashboard" {
             }
           },
           {
-            "title" : "Collector VM Memory Usage",
-            "xyChart" : {
-              "chartOptions" : {
-                "mode" : "COLOR"
-              },
-              "dataSets" : [
-                {
-                  "minAlignmentPeriod" : "60s",
-                  "plotType" : "LINE",
-                  "targetAxis" : "Y1",
-                  "timeSeriesQuery" : {
-                    "timeSeriesFilter" : {
-                      "aggregation" : {
-                        "alignmentPeriod" : "60s",
-                        "perSeriesAligner" : "ALIGN_MEAN"
-                      },
-                      "filter" : "metric.type=\"agent.googleapis.com/memory/bytes_used\" resource.type=\"gce_instance\" metric.label.\"state\"=\"used\" metadata.system_labels.\"instance_group\"=\"${google_compute_region_instance_group_manager.collector_instance.name}\""
-                    }
-                  }
-                }
-              ],
-              "timeshiftDuration" : "0s",
-              "yAxis" : {
-                "label" : "y2Axis",
-                "scale" : "LINEAR"
-              }
-            }
-          },
-          {
             "title" : "Collector Instances - Export Errors",
             "xyChart" : {
               "chartOptions" : {

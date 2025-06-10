@@ -17,11 +17,13 @@
 package com.google.scp.operator.cpio.metricclient.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.cloud.monitoring.v3.MetricServiceClient;
+import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.shared.clients.configclient.ParameterClient;
@@ -74,7 +76,8 @@ public class GcpMetricClientTest {
   }
 
   @Test
-  public void testRecordMetric_UseMetricServiceClient() throws ParameterClientException {
+  public void testRecordMetric_UseMetricServiceClient_DefaultType()
+      throws ParameterClientException, MetricClientException {
     // arrange
     CustomMetric metric =
         CustomMetric.builder()
@@ -83,13 +86,78 @@ public class GcpMetricClientTest {
             .setUnit("Double")
             .setValue(1.2)
             .build();
+
     // act
-    try {
-      metricClient.recordMetric(metric);
-    } catch (Exception e) {
-      // verify
-      verify(parameterClient, times(1)).getEnvironmentName();
-    }
+    metricClient.recordMetric(metric);
+    // verify
+    verify(parameterClient, times(1)).getEnvironmentName();
+  }
+
+  @Test
+  public void testRecordMetric_UseMetricServiceClient_GaugeType()
+      throws ParameterClientException, MetricClientException {
+    // arrange
+    CustomMetric metric =
+        CustomMetric.builder()
+            .setName("testMetric")
+            .setNameSpace("scp/test")
+            .setUnit("Double")
+            .setValue(1.2)
+            .setMetricType(MetricType.DOUBLE_GAUGE)
+            .build();
+
+    // act
+    metricClient.recordMetric(metric);
+    // verify
+    verify(parameterClient, times(1)).getEnvironmentName();
+  }
+
+  @Test
+  public void testRecordMetric_UseMetricServiceClient_CounterType()
+      throws ParameterClientException {
+    // arrange
+    CustomMetric metric =
+        CustomMetric.builder()
+            .setName("testMetric")
+            .setNameSpace("scp/test")
+            .setUnit("Double")
+            .setValue(1.2)
+            .setMetricType(MetricType.DOUBLE_COUNTER)
+            .build();
+
+    assertThrows(MetricClientException.class, () -> metricClient.recordMetric(metric));
+  }
+
+  @Test
+  public void testRecordMetric_UseMetricServiceClient_HistogramType()
+      throws ParameterClientException {
+    // arrange
+    CustomMetric metric =
+        CustomMetric.builder()
+            .setName("testMetric")
+            .setNameSpace("scp/test")
+            .setUnit("Double")
+            .setValue(1.2)
+            .setMetricType(MetricType.HISTOGRAM)
+            .build();
+
+    assertThrows(MetricClientException.class, () -> metricClient.recordMetric(metric));
+  }
+
+  @Test
+  public void testRecordMetric_UseMetricServiceClient_UnknownType()
+      throws ParameterClientException {
+    // arrange
+    CustomMetric metric =
+        CustomMetric.builder()
+            .setName("testMetric")
+            .setNameSpace("scp/test")
+            .setUnit("Double")
+            .setValue(1.2)
+            .setMetricType(MetricType.UNKNOWN)
+            .build();
+
+    assertThrows(MetricClientException.class, () -> metricClient.recordMetric(metric));
   }
 
   @Test

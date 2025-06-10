@@ -211,6 +211,7 @@ variable "frontend_service_lb_outlier_detection_base_ejection_time_seconds" {
   description = "The base time that a host is ejected for. The real time is equal to the base time multiplied by the number of times the host has been ejected."
   type        = number
   nullable    = false
+  default     = 120
 }
 
 variable "frontend_service_lb_outlier_detection_consecutive_errors" {

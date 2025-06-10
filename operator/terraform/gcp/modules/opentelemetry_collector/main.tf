@@ -132,7 +132,7 @@ resource "google_compute_instance_template" "collector" {
 
   disk {
     device_name  = "${var.environment}-otel-collector"
-    source_image = "projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-amd64"
+    source_image = "projects/cos-cloud/global/images/family/cos-121-lts"
   }
 
   network_interface {

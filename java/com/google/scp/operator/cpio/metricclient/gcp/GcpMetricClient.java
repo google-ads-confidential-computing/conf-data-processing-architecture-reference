@@ -152,56 +152,69 @@ public final class GcpMetricClient implements MetricClient {
   }
 
   private void writeMetricThroughMetricServiceClient(CustomMetric metric)
-      throws ApiException, StatusRuntimeException {
-    ProjectName projectName = ProjectName.of(projectId);
-    TimeInterval interval =
-        TimeInterval.newBuilder()
-            .setEndTime(Timestamps.fromMillis(System.currentTimeMillis()))
-            .build();
-    TypedValue value = TypedValue.newBuilder().setDoubleValue(metric.value()).build();
-    Point point = Point.newBuilder().setInterval(interval).setValue(value).build();
+      throws ApiException, StatusRuntimeException, MetricClientException {
+    switch (metric.metricType()) {
+      case DOUBLE_GAUGE:
+        ProjectName projectName = ProjectName.of(projectId);
+        TimeInterval interval =
+            TimeInterval.newBuilder()
+                .setEndTime(Timestamps.fromMillis(System.currentTimeMillis()))
+                .build();
+        TypedValue value = TypedValue.newBuilder().setDoubleValue(metric.value()).build();
+        Point point = Point.newBuilder().setInterval(interval).setValue(value).build();
 
-    List<Point> pointList = new ArrayList<>();
-    pointList.add(point);
+        List<Point> pointList = new ArrayList<>();
+        pointList.add(point);
 
-    Map<String, String> metricLabels = new HashMap<String, String>(metric.labels());
-    String metricType =
-        String.format(
-            "custom.googleapis.com/%s/%s/%s",
-            metric.nameSpace(),
-            this.getEnvironmentName(),
-            metric.name().replace(' ', '_').toLowerCase());
-    Metric gcpMetric = Metric.newBuilder().setType(metricType).putAllLabels(metricLabels).build();
-    Map<String, String> resourceLabels = new HashMap<>();
-    resourceLabels.put("instance_id", instanceId);
-    resourceLabels.put("zone", zone);
-    resourceLabels.put("project_id", projectId);
+        Map<String, String> metricLabels = new HashMap<String, String>(metric.labels());
+        String metricType =
+            String.format(
+                "custom.googleapis.com/%s/%s/%s",
+                metric.nameSpace(),
+                this.getEnvironmentName(),
+                metric.name().replace(' ', '_').toLowerCase());
+        Metric gcpMetric =
+            Metric.newBuilder().setType(metricType).putAllLabels(metricLabels).build();
+        Map<String, String> resourceLabels = new HashMap<>();
+        resourceLabels.put("instance_id", instanceId);
+        resourceLabels.put("zone", zone);
+        resourceLabels.put("project_id", projectId);
 
-    MonitoredResource resource =
-        MonitoredResource.newBuilder().setType("gce_instance").putAllLabels(resourceLabels).build();
+        MonitoredResource resource =
+            MonitoredResource.newBuilder()
+                .setType("gce_instance")
+                .putAllLabels(resourceLabels)
+                .build();
 
-    // Prepares the time series request
-    TimeSeries timeSeries =
-        TimeSeries.newBuilder()
-            .setMetric(gcpMetric)
-            .setResource(resource)
-            .addAllPoints(pointList)
-            .setValueType(ValueType.DOUBLE)
-            .setMetricKind(MetricKind.GAUGE)
-            .build();
+        // Prepares the time series request
+        TimeSeries timeSeries =
+            TimeSeries.newBuilder()
+                .setMetric(gcpMetric)
+                .setResource(resource)
+                .addAllPoints(pointList)
+                .setValueType(ValueType.DOUBLE)
+                .setMetricKind(MetricKind.GAUGE)
+                .build();
 
-    List<TimeSeries> timeSeriesList = new ArrayList<>();
-    timeSeriesList.add(timeSeries);
+        List<TimeSeries> timeSeriesList = new ArrayList<>();
+        timeSeriesList.add(timeSeries);
 
-    // Writes time series data
-    CreateTimeSeriesRequest request =
-        CreateTimeSeriesRequest.newBuilder()
-            .setName(projectName.toString())
-            .addAllTimeSeries(timeSeriesList)
-            .build();
+        // Writes time series data
+        CreateTimeSeriesRequest request =
+            CreateTimeSeriesRequest.newBuilder()
+                .setName(projectName.toString())
+                .addAllTimeSeries(timeSeriesList)
+                .build();
 
-    // write metric
-    msClient.createTimeSeries(request);
+        // write metric
+        msClient.createTimeSeries(request);
+        break;
+      case DOUBLE_COUNTER:
+      case HISTOGRAM:
+      default:
+        throw new MetricClientException(
+            "Metric type " + metric.metricType().toString() + " not supported.");
+    }
   }
 
   private String getEnvironmentName() {

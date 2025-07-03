@@ -27,7 +27,8 @@
 #include "cpio/client_providers/kms_client_provider/src/aws/nontee_aws_kms_client_provider.h"
 #include "cpio/client_providers/role_credentials_provider/src/aws/aws_role_credentials_provider.h"
 #include "cpio/common/src/common_error_codes.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;

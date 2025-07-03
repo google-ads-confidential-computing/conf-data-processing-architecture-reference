@@ -57,7 +57,10 @@ public final class SpannerKeyDbTestModule extends AbstractModule {
               + "  ActivationTime TIMESTAMP NOT NULL,"
               + "  TtlTime TIMESTAMP,"
               + "  CreatedAt TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),"
-              + "  UpdatedAt TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true)"
+              + "  UpdatedAt TIMESTAMP NOT NULL OPTIONS (allow_commit_timestamp=true),"
+              + "  MigrationPrivateKey STRING(1000),"
+              + "  MigrationKeySplitData JSON,"
+              + "  MigrationKeyEncryptionKeyUri STRING(1000)"
               + ") PRIMARY KEY (KeyId)");
 
   @Provides

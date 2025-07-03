@@ -27,7 +27,8 @@
 #include "core/interface/async_context.h"
 #include "google/cloud/future.h"
 #include "google/cloud/monitoring/metric_client.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 #include "error_codes.h"

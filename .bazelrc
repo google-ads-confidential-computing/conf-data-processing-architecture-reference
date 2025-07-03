@@ -15,8 +15,10 @@ build:clang --config=cpp
 build:clang --cxxopt=-fbracket-depth=512
 
 # Force bazel to use specific JDK, otherwise JDK may not be predictable
-build:java --java_language_version=11
-build:java --java_runtime_version=remotejdk_11
+build:java --java_language_version=21
+build:java --java_runtime_version=remotejdk_21
+build:java --tool_java_language_version=21
+build:java --tool_java_runtime_version=remotejdk_21
 
 # We build aws targets with java11 for now
 build:java11 --java_language_version=11

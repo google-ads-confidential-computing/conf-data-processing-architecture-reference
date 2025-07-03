@@ -19,7 +19,7 @@ package com.google.scp.coordinator.keymanagement.keystorage.service.common;
 import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.DataKeyConverter;
+import com.google.scp.coordinator.keymanagement.shared.converter.DataKeyConverter;
 import com.google.scp.coordinator.keymanagement.keystorage.converters.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.GetDataKeyTask;

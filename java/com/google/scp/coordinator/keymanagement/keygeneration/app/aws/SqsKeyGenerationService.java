@@ -16,6 +16,9 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.app.aws;
 
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
+import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
+
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.aws.model.KeyGenerationQueueItem;
@@ -70,7 +73,8 @@ public final class SqsKeyGenerationService extends AbstractExecutionThreadServic
           Thread.sleep(THREAD_SLEEP_TIME_MILLIS);
         } else {
           logger.info("Key generation message pulled");
-          createSplitKeyTask.create(numDesiredKeys, validityInDays, ttlInDays);
+          createSplitKeyTask.create(
+              DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, numDesiredKeys, validityInDays, ttlInDays);
           sqsKeyGenerationQueue.acknowledgeKeyGenerationCompletion(item.get());
         }
 

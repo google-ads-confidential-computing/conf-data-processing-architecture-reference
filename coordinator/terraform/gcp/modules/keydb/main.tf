@@ -61,6 +61,9 @@ resource "google_spanner_database" "keydb" {
     , "ALTER TABLE KeySets ALTER COLUMN ExpiryTime TIMESTAMP"
     , "ALTER TABLE KeySets ALTER COLUMN TtlTime TIMESTAMP"
     , "CREATE INDEX KeySetsByNameExpiryActivationDesc ON KeySets(SetName, ExpiryTime DESC, ActivationTime DESC)"
+    , "ALTER TABLE KeySets ADD COLUMN MigrationPrivateKey STRING(1000)"
+    , "ALTER TABLE KeySets ADD COLUMN MigrationKeySplitData JSON"
+    , "ALTER TABLE KeySets ADD COLUMN MigrationKeyEncryptionKeyUri STRING(1000)"
   ]
 
   deletion_protection = true

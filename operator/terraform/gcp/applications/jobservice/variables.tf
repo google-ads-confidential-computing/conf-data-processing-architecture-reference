@@ -54,21 +54,21 @@ variable "network_name_suffix" {
 }
 
 variable "worker_subnet_cidr" {
-  description = "The range of internal addresses that are owned by worker subnet."
-  type        = string
-  default     = null
+  description = "The range of internal addresses that are owned by worker subnet.Map with Key: region and Value: cidr range."
+  type        = map(string)
+  default     = {}
 }
 
 variable "collector_subnet_cidr" {
-  description = "The range of internal addresses that are owned by collector subnet."
-  type        = string
-  default     = null
+  description = "The range of internal addresses that are owned by collector subnet.Map with Key: region and Value: cidr range."
+  type        = map(string)
+  default     = {}
 }
 
 variable "proxy_subnet_cidr" {
-  description = "The range of internal addresses that are owned by proxy subnet."
-  type        = string
-  default     = null
+  description = "The range of internal addresses that are owned by proxy subnet.Map with Key: region and Value: cidr range."
+  type        = map(string)
+  default     = {}
 }
 
 ################################################################################
@@ -407,6 +407,45 @@ variable "job_metadata_table_ttl_days" {
   }
 }
 
+variable "frontend_cloud_run_error_5xx_alarm_config" {
+  description = "The configuration for the 5xx error alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    error_threshold = number # error count greater than this to send alarm. Example: 0.
+  })
+
+  default = null
+}
+
+variable "frontend_cloud_run_non_5xx_error_alarm_config" {
+  description = "The configuration for the non-5xx error (3xx-4xx) alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    error_threshold = number # error count greater than this to send alarm. Example: 500.
+  })
+
+  default = null
+}
+
+variable "frontend_cloud_run_execution_time_alarm_config" {
+  description = "The configuration for the execution time alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    threshold_ms    = number # Execution times greater than this to send alarm. Example: 0.
+  })
+
+  default = null
+}
+
 ################################################################################
 # Worker Variables.
 ################################################################################
@@ -530,6 +569,12 @@ variable "java_job_validations_to_alert" {
       ["JobValidatorCheckFields", "JobValidatorCheckRetryLimit", "JobValidatorCheckStatus"]
   EOT
   type        = list(string)
+}
+
+variable "enable_remote_metric_aggregation" {
+  description = "When true, the worker will start sending metric data through remote collector approach."
+  type        = bool
+  default     = false
 }
 
 ################################################################################
@@ -736,13 +781,7 @@ variable "job_completion_notifications_service_account_email" {
 # OpenTelemetry Collector variables
 ################################################################################
 
-variable "enable_native_metric_aggregation" {
-  description = "Enable native metric aggregation."
-  type        = bool
-  default     = false
-}
-
-variable "enable_remote_metric_aggregation" {
+variable "enable_opentelemetry_collector" {
   description = "When true, install the collector module to operator_service"
   type        = bool
   default     = false
@@ -757,7 +796,7 @@ variable "enable_legacy_metrics" {
 variable "metric_exporter_interval_in_millis" {
   description = "The interval of metric exporter exports metric data points to the cloud"
   type        = number
-  default     = 5
+  default     = 60000
 }
 
 variable "collector_instance_type" {
@@ -959,6 +998,66 @@ variable "worker_exporting_metrics_error_alarm" {
     duration_sec : 300,
     alignment_period_sec : 600,
     threshold : 50,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}
+
+variable "collector_queue_size_ratio_alarm" {
+  description = "Configuration for the collector queue size alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 0.8,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}
+
+variable "collector_send_metric_points_ratio_alarm" {
+  description = "Configuration for the collector send metric points ratio alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 0.05,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}
+
+variable "collector_refuse_metric_points_ratio_alarm" {
+  description = "Configuration for the collector refuse metric points ratio alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 0.05,
     severity : "moderate",
     auto_close_sec : 1800
   }

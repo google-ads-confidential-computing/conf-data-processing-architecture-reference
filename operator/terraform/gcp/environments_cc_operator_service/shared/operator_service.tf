@@ -90,6 +90,7 @@ module "operator_service" {
   vpc_connector_machine_type = var.vpc_connector_machine_type
 
   # OpenTelemetry Collector
+  enable_opentelemetry_collector   = var.enable_opentelemetry_collector
   collector_instance_type          = var.collector_instance_type
   max_collector_instances          = var.max_collector_instances
   min_collector_instances          = var.min_collector_instances

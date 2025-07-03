@@ -34,6 +34,8 @@
 #include "cpio/common/src/gcp/gcp_utils.h"
 #include "google/cloud/options.h"
 #include "google/cloud/spanner/timestamp.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/interface/nosql_database_client/type_def.h"
 #include "public/cpio/proto/nosql_database_service/v1/nosql_database_service.pb.h"
 

@@ -36,10 +36,6 @@ output "key_storage_base_url" {
   value = "https://${local.key_storage_domain}"
 }
 
-output "key_encryption_key_id" {
-  value = google_kms_crypto_key.key_encryption_key.id
-}
-
 output "workload_identity_pool_provider_name" {
   value = module.workload_identity_pool.workload_identity_pool_provider_name
 }
@@ -60,6 +56,14 @@ output "allowed_operators_wipp_names" {
   ]
 }
 
+output "key_encryption_key_id" {
+  value = google_kms_crypto_key.key_encryption_key.id
+}
+
 output "kms_key_base_uri" {
   value = local.kms_key_base_uri
+}
+
+output "migration_kms_key_base_uri" {
+  value = local.migration_kms_key_base_uri
 }

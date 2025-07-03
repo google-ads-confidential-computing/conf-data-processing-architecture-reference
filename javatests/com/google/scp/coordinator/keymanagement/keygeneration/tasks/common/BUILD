@@ -26,6 +26,7 @@ java_library(
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/common",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/crypto/tink",

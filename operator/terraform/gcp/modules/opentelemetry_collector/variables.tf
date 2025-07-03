@@ -169,3 +169,39 @@ variable "worker_exporting_metrics_error_alarm" {
     auto_close_sec : number
   })
 }
+
+variable "collector_queue_size_ratio_alarm" {
+  description = "Configuration for the collector queue size alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+}
+
+variable "collector_send_metric_points_ratio_alarm" {
+  description = "Configuration for the collector send metric points ratio alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+}
+
+variable "collector_refuse_metric_points_ratio_alarm" {
+  description = "Configuration for the collector refuse metric points ratio alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+}

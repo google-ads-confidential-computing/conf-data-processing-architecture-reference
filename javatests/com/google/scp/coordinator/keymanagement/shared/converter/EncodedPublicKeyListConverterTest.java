@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter;
+package com.google.scp.coordinator.keymanagement.shared.converter;
 
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.UUID.randomUUID;
@@ -25,7 +25,7 @@ import com.google.crypto.tink.BinaryKeysetReader;
 import com.google.crypto.tink.CleartextKeysetHandle;
 import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.subtle.Base64;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncodedPublicKeyListConverter.Mode;
+import com.google.scp.coordinator.keymanagement.shared.converter.EncodedPublicKeyListConverter.Mode;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.EncodedPublicKeyProto.EncodedPublicKey;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.EncodedPublicKeyProto.EncodedPublicKey.KeyOneofCase;

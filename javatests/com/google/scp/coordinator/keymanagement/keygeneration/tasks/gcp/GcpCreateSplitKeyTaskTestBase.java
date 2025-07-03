@@ -20,6 +20,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTask.KEY_REFRESH_WINDOW;
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
+import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -79,12 +81,18 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     int expectedTtlInDays = 20;
     var encryptionKeyCaptor = ArgumentCaptor.forClass(EncryptionKey.class);
     var encryptedKeySplitCaptor = ArgumentCaptor.forClass(String.class);
-    task.createSplitKey(keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
+    task.createSplitKey(
+        DEFAULT_SET_NAME,
+        DEFAULT_TINK_TEMPLATE,
+        keysToCreate,
+        expectedExpiryInDays,
+        expectedTtlInDays,
+        Instant.now());
 
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
     assertThat(keys).hasSize(keysToCreate);
 
-    EncryptionKey key = keys.get(0);
+    EncryptionKey key = keys.getFirst();
     String keyEncryptionKeyUri = keyEncryptionKeyBaseUri.replace("$setName$", setName);
 
     // Validate that the key split decrypts (currently no associated data)
@@ -157,7 +165,9 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
 
     ServiceException ex =
         assertThrows(
-            ServiceException.class, () -> task.createSplitKey(keysToCreate, 10, 20, Instant.now()));
+            ServiceException.class,
+            () -> task.createSplitKey(
+                DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
     assertThat(ex.getErrorCode()).isEqualTo(Code.INTERNAL);
@@ -178,62 +188,13 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
 
     ServiceException ex =
         assertThrows(
-            ServiceException.class, () -> task.createSplitKey(keysToCreate, 10, 20, Instant.now()));
+            ServiceException.class,
+            () -> task.createSplitKey(
+                DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(KeyStorageServiceException.class);
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
     assertThat(keys).hasSize(3);
-  }
-
-  /** Tests that invoking replaceExpiringKeys multiple times doesn't create multiple keys. */
-  @Test
-  public void replaceExpiringKeys_duplicate() throws Exception {
-    task.replaceExpiringKeys(
-        /* numDesiredKeys= */ 3, /* validityInDays= */ 2, /* ttlInDays= */ 365);
-
-    assertThat(keyDb.getAllKeys().size()).isEqualTo(3);
-
-    task.replaceExpiringKeys(
-        /* numDesiredKeys= */ 3, /* validityInDays= */ 2, /* ttlInDays= */ 365);
-
-    assertThat(keyDb.getAllKeys().size()).isEqualTo(3);
-  }
-
-  @Test
-  public void replaceExpiringKeys_refreshesAllKeys() throws Exception {
-    // Create 5 keys that will expire soon
-    for (var i = 0; i < 5; i++) {
-      insertKeyWithExpiration(Instant.now().plus(Duration.ofHours(20)));
-    }
-
-    assertThat(keyDb.getAllKeys().size()).isEqualTo(5);
-
-    // All 5 keys should be refreshed.
-    task.replaceExpiringKeys(
-        /* numDesiredKeys= */ 5, /* validityInDays= */ 7, /* ttlInDays= */ 365);
-
-    assertThat(keyDb.getAllKeys().size()).isEqualTo(10);
-
-    // There are 5 fresh keys so this should be a no-op.
-    task.replaceExpiringKeys(
-        /* numDesiredKeys= */ 5, /* validityInDays= */ 7, /* ttlInDays= */ 365);
-
-    assertThat(keyDb.getAllKeys().size()).isEqualTo(10);
-  }
-
-  @Test
-  public void replaceExpiringKeys_refreshesSomeKeys() throws Exception {
-    // Create 1 key inside the refresh window and one key outside the refreshWindow
-    insertKeyWithExpiration(Instant.now().plus(Duration.ofHours(1))); // inside
-    insertKeyWithExpiration(Instant.now().plus(Duration.ofDays(5))); // outside
-
-    assertThat(keyDb.getAllKeys().size()).isEqualTo(2);
-
-    task.replaceExpiringKeys(
-        /* numDesiredKeys= */ 2, /* validityInDays= */ 5, /* ttlInDays= */ 365);
-
-    // Only one key is inside the refresh window so only one key should be created.
-    assertThat(keyDb.getAllKeys().size()).isEqualTo(3);
   }
 
   @Test
@@ -245,12 +206,18 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     var encryptionKeyCaptor = ArgumentCaptor.forClass(EncryptionKey.class);
     var encryptedKeySplitCaptor = ArgumentCaptor.forClass(String.class);
 
-    task.createSplitKey(keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
+    task.createSplitKey(
+        DEFAULT_SET_NAME,
+        DEFAULT_TINK_TEMPLATE,
+        keysToCreate,
+        expectedExpiryInDays,
+        expectedTtlInDays,
+        Instant.now());
 
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
     assertThat(keys).hasSize(keysToCreate);
 
-    EncryptionKey key = keys.get(0);
+    EncryptionKey key = keys.getFirst();
 
     // Validate that the key split decrypts (currently no associated data)
     String keyEncryptionKeyUri = keyEncryptionKeyBaseUri.replace("$setName$", setName);
@@ -329,10 +296,6 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
                     keyDb.DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofDays(36500)))
                 .size())
         .isEqualTo(1);
-  }
-
-  protected void insertKeyWithExpiration(Instant expirationTime) throws ServiceException {
-    keyDb.createKey(FakeEncryptionKey.withExpirationTime(expirationTime));
   }
 
   @Override

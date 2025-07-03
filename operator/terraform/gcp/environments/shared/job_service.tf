@@ -83,6 +83,10 @@ module "job_service" {
   frontend_lb_max_latency_ms                    = var.frontend_lb_max_latency_ms
   job_metadata_table_ttl_days                   = var.job_metadata_table_ttl_days
 
+  frontend_cloud_run_error_5xx_alarm_config      = var.frontend_cloud_run_error_5xx_alarm_config
+  frontend_cloud_run_non_5xx_error_alarm_config  = var.frontend_cloud_run_non_5xx_error_alarm_config
+  frontend_cloud_run_execution_time_alarm_config = var.frontend_cloud_run_execution_time_alarm_config
+
   # Worker
   instance_type                 = var.instance_type
   instance_disk_image_family    = var.instance_disk_image_family
@@ -139,8 +143,8 @@ module "job_service" {
   vpc_connector_machine_type = var.vpc_connector_machine_type
 
   # OpenTelemetry Collector
-  enable_native_metric_aggregation   = var.enable_native_metric_aggregation
   enable_remote_metric_aggregation   = var.enable_remote_metric_aggregation
+  enable_opentelemetry_collector     = var.enable_opentelemetry_collector
   enable_legacy_metrics              = var.enable_legacy_metrics
   metric_exporter_interval_in_millis = var.metric_exporter_interval_in_millis
   collector_instance_type            = var.collector_instance_type
@@ -157,12 +161,15 @@ module "job_service" {
   collector_send_batch_timeout       = var.collector_send_batch_timeout
   collector_queue_size               = var.collector_queue_size
 
-  collector_exceed_cpu_usage_alarm     = var.collector_exceed_cpu_usage_alarm
-  collector_exceed_memory_usage_alarm  = var.collector_exceed_memory_usage_alarm
-  collector_export_error_alarm         = var.collector_export_error_alarm
-  collector_run_error_alarm            = var.collector_run_error_alarm
-  collector_crash_error_alarm          = var.collector_crash_error_alarm
-  worker_exporting_metrics_error_alarm = var.worker_exporting_metrics_error_alarm
+  collector_exceed_cpu_usage_alarm           = var.collector_exceed_cpu_usage_alarm
+  collector_exceed_memory_usage_alarm        = var.collector_exceed_memory_usage_alarm
+  collector_export_error_alarm               = var.collector_export_error_alarm
+  collector_run_error_alarm                  = var.collector_run_error_alarm
+  collector_crash_error_alarm                = var.collector_crash_error_alarm
+  worker_exporting_metrics_error_alarm       = var.worker_exporting_metrics_error_alarm
+  collector_queue_size_ratio_alarm           = var.collector_queue_size_ratio_alarm
+  collector_send_metric_points_ratio_alarm   = var.collector_send_metric_points_ratio_alarm
+  collector_refuse_metric_points_ratio_alarm = var.collector_refuse_metric_points_ratio_alarm
 
   # Notifications
   enable_job_completion_notifications = var.enable_job_completion_notifications

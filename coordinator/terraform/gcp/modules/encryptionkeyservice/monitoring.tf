@@ -43,7 +43,6 @@ module "encryptionkeyservice_cloudfunction_alarms" {
   eval_period_sec                 = var.alarm_eval_period_sec
   error_5xx_threshold             = var.cloudfunction_5xx_threshold
   execution_time_max              = var.cloudfunction_max_execution_time_max
-  execution_error_ratio_threshold = var.cloudfunction_error_ratio_threshold
   alert_on_memory_usage_threshold = var.cloudfunction_alert_on_memory_usage_threshold
   duration_sec                    = var.alarm_duration_sec
   cloud_function_severity_map     = var.encryption_key_service_severity_map

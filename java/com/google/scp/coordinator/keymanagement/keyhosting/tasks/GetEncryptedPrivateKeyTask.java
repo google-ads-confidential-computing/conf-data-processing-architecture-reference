@@ -16,11 +16,11 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
-import static com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncryptionKeyConverter.toApiEncryptionKey;
+import static com.google.scp.coordinator.keymanagement.shared.converter.EncryptionKeyConverter.toApiEncryptionKey;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.GetEncryptedKeyCache;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
@@ -38,23 +38,23 @@ import org.slf4j.LoggerFactory;
 public class GetEncryptedPrivateKeyTask extends ApiTask {
 
   private static final Logger logger = LoggerFactory.getLogger(GetEncryptedPrivateKeyTask.class);
-  private final KeyDb keyDb;
+  private final GetEncryptedKeyCache cache;
   private final LogMetricHelper logMetricHelper;
 
   @Inject
-  public GetEncryptedPrivateKeyTask(KeyDb keyDb, LogMetricHelper logMetricHelper) {
-    this(keyDb, logMetricHelper, "v1Alpha");
+  public GetEncryptedPrivateKeyTask(GetEncryptedKeyCache cache, LogMetricHelper logMetricHelper) {
+    this(cache, logMetricHelper, "v1Alpha");
   }
 
   protected GetEncryptedPrivateKeyTask(
-      KeyDb keyDb, LogMetricHelper logMetricHelper, String apiVersion) {
+      GetEncryptedKeyCache cache, LogMetricHelper logMetricHelper, String apiVersion) {
     super(
         "GET",
         Pattern.compile("/encryptionKeys/(?<id>[a-zA-Z0-9\\-]+)"),
         "GetEncryptedPrivateKey",
         apiVersion,
         logMetricHelper);
-    this.keyDb = keyDb;
+    this.cache = cache;
     this.logMetricHelper = logMetricHelper;
   }
 
@@ -74,7 +74,7 @@ public class GetEncryptedPrivateKeyTask extends ApiTask {
   }
 
   private EncryptionKey getKey(String id) throws ServiceException {
-    var key = keyDb.getKey(id);
+    var key = cache.getKey(id);
     var nowMilli = Instant.now().toEpochMilli();
     var activationAgeInMillis = nowMilli - key.getActivationTime();
     var dayInMillis = TimeUnit.DAYS.toMillis(1);

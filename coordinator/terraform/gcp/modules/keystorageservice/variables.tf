@@ -78,7 +78,6 @@ variable "key_storage_service_source_path" {
 variable "source_container_image_url" {
   description = "The URL for the container image to run on this service."
   type        = string
-  nullable    = true
 }
 
 variable "key_storage_cloudfunction_memory" {
@@ -146,11 +145,6 @@ variable "alarm_duration_sec" {
   type        = string
 }
 
-variable "cloudfunction_error_ratio_threshold" {
-  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = number
-}
-
 variable "cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number
@@ -186,6 +180,15 @@ variable "key_storage_severity_map" {
   type        = map(string)
 }
 
+variable "populate_migration_key_data" {
+  description = <<EOT
+  Controls whether to populate the migration columns when generating keys.
+
+  Note: This should only should only be used in preparation for or during a migration.
+  EOT
+  type        = string
+}
+
 variable "disable_key_set_acl" {
   description = "Controls whether to generate keys enforcing key set level acl."
   type        = string
@@ -193,6 +196,11 @@ variable "disable_key_set_acl" {
 
 variable "kms_key_base_uri" {
   description = "Kms encryption key base uri for composing kms encryption keys."
+  type        = string
+}
+
+variable "migration_kms_key_base_uri" {
+  description = "Migration kms encryption key base uri for composing kms encryption keys."
   type        = string
 }
 

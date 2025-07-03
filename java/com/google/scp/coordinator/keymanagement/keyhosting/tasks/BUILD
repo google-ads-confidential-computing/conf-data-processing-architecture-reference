@@ -22,7 +22,9 @@ java_library(
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common/converter",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common/cache",
+        "//java/com/google/scp/coordinator/keymanagement/shared/converter",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",

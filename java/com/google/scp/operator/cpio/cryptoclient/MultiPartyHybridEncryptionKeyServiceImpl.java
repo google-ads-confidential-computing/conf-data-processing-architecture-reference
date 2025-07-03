@@ -73,6 +73,11 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
   private static final Logger logger =
       LoggerFactory.getLogger(MultiPartyHybridEncryptionKeyServiceImpl.class);
 
+  // NOTE: This value is used to extract log-based metrics. So the metrics should be updated
+  // accordingly, if this value is changed.
+  private static final String SPLIT_KEY_AEAD_DECRYPT_LOG_TEMPLATE =
+      "cloud-kms-split-key-aead-decrypt-%s";
+
   private static final ImmutableSet<Integer> RETRYABLE_HTTP_STATUS_CODES =
       ImmutableSet.of(
           STATUS_CODE_SERVER_ERROR /* 500 */,
@@ -163,6 +168,28 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
             Optional.of(
                 Retry.of("splitKeyDecryptionRetry", DEFAULT_PRIVATE_KEY_DECRYPTION_RETRY_CONFIG));
       }
+
+      var splitKeyDecryptionRetryEventPublisher =
+          this.splitKeyDecryptionRetry.get().getEventPublisher();
+      splitKeyDecryptionRetryEventPublisher.onSuccess(
+          // This event informs that a call has been retried and a retry was successful. This event
+          // is not published when a call was successful without a retry attempt.
+          event -> {
+            logger.info(String.format(SPLIT_KEY_AEAD_DECRYPT_LOG_TEMPLATE, "RETRY_SUCCESS"));
+            logger.info(
+                String.format(SPLIT_KEY_AEAD_DECRYPT_LOG_TEMPLATE, "RETRY_SUCCESS_COUNT:")
+                    + event.getNumberOfRetryAttempts());
+          });
+      splitKeyDecryptionRetryEventPublisher.onError(
+          // This event informs that a call has been retried, but still failed. That is, the
+          // maximum number of attempts has been reached.
+          event ->
+              logger.error(String.format(SPLIT_KEY_AEAD_DECRYPT_LOG_TEMPLATE, "RETRY_FAILURE")));
+      splitKeyDecryptionRetryEventPublisher.onIgnoredError(
+          // This event informs that an error occurred and has been ignored - not retried.
+          // An error is ignored when the exception is determined to be non-retriable, based on the
+          // RetryConfig.
+          event -> logger.error(String.format(SPLIT_KEY_AEAD_DECRYPT_LOG_TEMPLATE, "FAILURE")));
     }
   }
 
@@ -233,6 +260,7 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
           var secondaryEncryptionKey =
               coordinatorBEncryptionKeyFetchingService.fetchEncryptionKey(keyId);
           if (splitKeyDecryptionRetry.isPresent()) {
+            logger.info(String.format(SPLIT_KEY_AEAD_DECRYPT_LOG_TEMPLATE, "CALL"));
             return createDecrypterSplitKeyWithRetries(primaryEncryptionKey, secondaryEncryptionKey);
           }
           return createDecrypterSplitKey(primaryEncryptionKey, secondaryEncryptionKey);

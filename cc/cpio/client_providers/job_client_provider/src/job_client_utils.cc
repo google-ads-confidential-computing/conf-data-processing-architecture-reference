@@ -26,7 +26,8 @@
 #include "core/common/serialization/src/serialization.h"
 #include "core/interface/async_context.h"
 #include "google/protobuf/util/time_util.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 #include "error_codes.h"
 

@@ -29,6 +29,8 @@
 #include "cpio/client_providers/private_key_client_provider/src/private_key_client_provider.h"
 #include "cpio/server/interface/private_key_service/private_key_service_factory_interface.h"
 #include "cpio/server/src/service_utils.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/interface/private_key_client/type_def.h"
 #include "public/cpio/proto/private_key_service/v1/configuration_keys.pb.h"
 

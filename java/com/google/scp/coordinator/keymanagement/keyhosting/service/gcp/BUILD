@@ -23,8 +23,7 @@ java_library(
         "GcpKeyServiceModule.java",
     ],
     deps = [
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
@@ -96,7 +95,7 @@ container_image(
     name = "PublicKeyServiceRuntimeContainer",
     base = "@java_base_21//image",
     cmd = [
-        "./java-function-invoker-1.3.1.jar",
+        "./processed_java-function-invoker-1.3.1.jar",
         "--classpath",
         "./PublicKeyServiceHttpCloudFunction_deploy.jar",
         "--target",
@@ -169,7 +168,7 @@ container_image(
     name = "EncryptionKeyServiceRuntimeContainer",
     base = "@java_base_21//image",
     cmd = [
-        "./java-function-invoker-1.3.1.jar",
+        "./processed_java-function-invoker-1.3.1.jar",
         "--classpath",
         "./EncryptionKeyServiceHttpCloudFunction_deploy.jar",
         "--target",

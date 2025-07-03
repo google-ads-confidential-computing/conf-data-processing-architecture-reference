@@ -62,7 +62,7 @@ metric_client_parameter_values = {
 
 auto_create_subnetworks = false
 network_name_suffix     = "network-with-custom-subnet"
-worker_subnet_cidr      = "11.16.0.0/20"
+worker_subnet_cidr      = { "us-central1" = "10.2.0.0/16" }
 
 # TODO: uncomment them when switch to use build and deploy script.
 # worker_scale_in_jar  = "/tmp/mc_postsubmit/oper_tar/jars/WorkerScaleInCloudFunction_deploy.jar"

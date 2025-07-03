@@ -24,7 +24,8 @@
 #include "core/interface/type_def.h"
 #include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
 #include "google/protobuf/util/time_util.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/job_service/v1/job_service.pb.h"
 
 #include "error_codes.h"

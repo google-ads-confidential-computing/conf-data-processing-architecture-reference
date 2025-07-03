@@ -20,7 +20,7 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotat
 import com.google.scp.coordinator.keymanagement.keyhosting.service.aws.testing.LocalPublicKeyHostingServiceModule;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.aws.testing.MultiLocalGetEncryptionKeyHostingServiceModule;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.aws.testing.MultiLocalListRecentEncryptionKeysHostingServiceModule;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.keystorage.service.aws.testing.KeyStorageServiceKeysProviderModule;
 import com.google.scp.coordinator.keymanagement.keystorage.service.aws.testing.LocalKeyStorageServiceModule;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbTableName;

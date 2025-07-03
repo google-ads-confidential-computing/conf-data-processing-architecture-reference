@@ -35,6 +35,10 @@ import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPr
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
+import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
+import com.google.scp.operator.cpio.metricclient.model.Annotations.EnableRemoteMetricAggregation;
+import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
+import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
 import com.google.scp.operator.worker.logger.ResultLogger;
@@ -45,6 +49,8 @@ import com.google.scp.operator.worker.model.Fact;
 import com.google.scp.operator.worker.reader.RecordReader;
 import com.google.scp.operator.worker.reader.RecordReader.RecordReadException;
 import com.google.scp.operator.worker.reader.RecordReaderFactory;
+import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.time.Clock;
 import java.time.Instant;
@@ -70,6 +76,8 @@ public class SimpleProcessor implements JobProcessor {
   private final Clock clock;
   private final DistributedPrivacyBudgetClient distributedPrivacyBudgetClient;
   private final MetricClient metricClient;
+  private final ParameterClient parameterClient;
+  private final boolean enableRemoteAggregationMetrics;
 
   @Inject
   SimpleProcessor(
@@ -78,13 +86,18 @@ public class SimpleProcessor implements JobProcessor {
       ResultLogger resultLogger,
       Clock clock,
       DistributedPrivacyBudgetClient distributedPrivacyBudgetClient,
-      MetricClient metricClient) {
+      MetricClient metricClient,
+      ParameterClient parameterClient,
+      @EnableRemoteMetricAggregation boolean enableRemoteMetricAggregation)
+      throws ParameterClientException {
     this.recordReaderFactory = recordReaderFactory;
     this.reportDecrypter = reportDecrypter;
     this.resultLogger = resultLogger;
     this.clock = clock;
     this.distributedPrivacyBudgetClient = distributedPrivacyBudgetClient;
     this.metricClient = metricClient;
+    this.parameterClient = parameterClient;
+    this.enableRemoteAggregationMetrics = enableRemoteMetricAggregation;
   }
 
   @Override
@@ -95,17 +108,17 @@ public class SimpleProcessor implements JobProcessor {
         BlobStorageClient.getDataLocation(
             job.requestInfo().getInputDataBucketName(), job.requestInfo().getInputDataBlobPrefix());
     try (RecordReader recordReader = recordReaderFactory.of(inputDataLocation)) {
-      // TODO: Enable it when remote aggregration is enabled.
-      // CustomMetric metric =
-      //     CustomMetric.builder()
-      //         .setNameSpace(METRIC_NAMESPACE)
-      //         .setName("ProcessJobCount")
-      //         .setValue(1.0)
-      //         .setUnit("Count")
-      //         .setMetricType(MetricType.DOUBLE_COUNTER)
-      //         .build();
-      // metricClient.recordMetric(metric);
-
+      if (enableRemoteAggregationMetrics) {
+        CustomMetric metric =
+            CustomMetric.builder()
+                .setNameSpace(METRIC_NAMESPACE)
+                .setName("ProcessJobCounter")
+                .setValue(1.0)
+                .setUnit("Count")
+                .setMetricType(MetricType.DOUBLE_COUNTER)
+                .build();
+        metricClient.recordMetric(metric);
+      }
       Stream<EncryptedReport> encryptedReports =
           recordReader.readEncryptedReports(inputDataLocation);
 
@@ -183,20 +196,18 @@ public class SimpleProcessor implements JobProcessor {
                   .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
                   .build())
           .build();
+    } catch (MetricClientException e) {
+      logger.error("Exception occurred during recording metrics.", e);
+      return jobResultBuilder
+          .setResultInfo(
+              ResultInfo.newBuilder()
+                  .setReturnCode(INTERNAL_ERROR.name())
+                  .setReturnMessage(Throwables.getStackTraceAsString(e))
+                  .setErrorSummary(ErrorSummary.getDefaultInstance())
+                  .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
+                  .build())
+          .build();
     }
-    // TODO: Enable it when remote aggregration is enabled.
-    // catch (MetricClientException e) {
-    //   logger.error("Exception occurred during recording metrics.", e);
-    //   return jobResultBuilder
-    //       .setResultInfo(
-    //           ResultInfo.newBuilder()
-    //               .setReturnCode(INTERNAL_ERROR.name())
-    //               .setReturnMessage(Throwables.getStackTraceAsString(e))
-    //               .setErrorSummary(ErrorSummary.getDefaultInstance())
-    //               .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-    //               .build())
-    //       .build();
-    // }
   }
 
   /**

@@ -41,6 +41,9 @@ std::string ToString(ExecutionStatus status);
 #define ASSERT_SUCCESS(expression) \
   ASSERT_THAT(expression, ::google::scp::core::test::IsSuccessful())
 
+#define __UNIQUE_VAR_NAME_HELPER(x, y) x##y
+#define __UNIQUE_VAR_NAME(x) __UNIQUE_VAR_NAME_HELPER(__var, x)
+
 // Macro for shortening this pattern:
 // ASSERT_SUCCESS(execution_result_or);
 // auto value = execution_result_or.release();

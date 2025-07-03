@@ -20,7 +20,7 @@ worker_memory_monitoring_enabled = true
 
 auto_create_subnetworks = true
 # network_name_suffix     = "network-with-custom-subnet"
-# worker_subnet_cidr      = "8.16.0.0/20"
+# worker_subnet_cidr      = { "us-central1" = "10.2.0.0/16" }
 
 enable_job_completion_notifications = true
 

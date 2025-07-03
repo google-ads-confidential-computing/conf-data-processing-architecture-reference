@@ -23,7 +23,8 @@
 #include "core/common/global_logger/src/global_logger.h"
 #include "core/interface/errors.h"
 #include "cpio/client_providers/global_cpio/src/global_cpio.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/nosql_database_service/v1/nosql_database_service.pb.h"
 #include "public/cpio/utils/sync_utils/src/sync_utils.h"
 

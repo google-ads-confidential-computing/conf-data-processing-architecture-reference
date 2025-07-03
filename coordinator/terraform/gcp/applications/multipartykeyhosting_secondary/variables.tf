@@ -211,15 +211,9 @@ variable "encryption_key_service_jar" {
   type        = string
 }
 
-variable "encryption_key_service_source_path" {
-  description = "GCS path to Encryption Key Service source archive in the package bucket."
-  type        = string
-}
-
-variable "encryptionkeyservice_use_java21_runtime" {
-  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
+variable "enable_private_key_service_cache" {
+  description = "Variable to enable server side cache in the Private Key Service."
   type        = bool
-  nullable    = false
 }
 
 ### Key Storage
@@ -266,7 +260,6 @@ variable "location_new_key_ring" {
 variable "key_storage_service_container_image_url" {
   description = "The full path (registry + tag) to the container image used to deploy Key Storage Service."
   type        = string
-  nullable    = true
 }
 
 ################################################################################
@@ -348,11 +341,6 @@ variable "keystorageservice_alarm_eval_period_sec" {
   type        = string
 }
 
-variable "keystorageservice_cloudfunction_error_ratio_threshold" {
-  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = number
-}
-
 variable "keystorageservice_cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number
@@ -395,11 +383,6 @@ variable "keystorageservice_alarm_duration_sec" {
 variable "encryptionkeyservice_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
   type        = string
-}
-
-variable "encryptionkeyservice_cloudfunction_error_ratio_threshold" {
-  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = number
 }
 
 variable "encryptionkeyservice_cloudfunction_max_execution_time_max" {
@@ -468,6 +451,34 @@ variable "key_sets_config" {
       count            = number
       validity_in_days = number
       ttl_in_days      = number
+    }))
+  })
+}
+
+variable "populate_migration_key_data" {
+  description = <<EOT
+  Controls whether to populate the migration columns when generating keys.
+
+  Note: This should only should only be used in preparation for or during a migration.
+  EOT
+  type        = string
+}
+
+variable "key_sets_vending_config" {
+  description = <<EOT
+  Configuration for controlling key set vending.
+
+  Note: Any key sets without configurations set will by default serve the default key data columns for all callers.
+
+  Attributes:
+    key_sets                                   (list) - The list of individual key set configuration, one for each unique key set.
+    key_sets[].name                            (string) - The unique set name for the key set, the value should be a valid URL path segment (e.g. ^[a-zA-Z0-9\\-\\._~]+$).
+    key_sets[].callers_using_migration_data    (list(string)) - The list of callers allowed to consume from the migration columns in the KeySet Db.
+  EOT
+  type = object({
+    key_sets = list(object({
+      name                         = string
+      callers_using_migration_data = list(string)
     }))
   })
 }

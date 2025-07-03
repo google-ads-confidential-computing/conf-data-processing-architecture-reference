@@ -19,10 +19,10 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncodedPublicKeyListConverter;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncodedPublicKeyListConverter.Mode;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.CacheControlMaximum;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.shared.converter.EncodedPublicKeyListConverter;
+import com.google.scp.coordinator.keymanagement.shared.converter.EncodedPublicKeyListConverter.Mode;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
@@ -58,7 +58,7 @@ public class GetActivePublicKeysTask extends ApiTask {
       LogMetricHelper logMetricHelper) {
     super("GET",
         Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/publicKeys(?<raw>:raw)?"),
-        "getActivePublicKeys",
+        "GetActivePublicKeys",
         "v1Beta",
         logMetricHelper);
     this.keyDb = keyDb;

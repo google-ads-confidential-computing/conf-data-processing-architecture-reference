@@ -40,18 +40,11 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotati
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import java.security.GeneralSecurityException;
-import java.util.Optional;
 
 /** Module for Business Layer bindings used for KeyGeneration. Handles multiparty key generation. */
 public final class GcpSplitKeyGenerationTasksModule extends AbstractModule {
-  private final Optional<String> encodedKeysetHandle;
-  private final Optional<String> peerCoordinatorEncodedKeysetHandle;
 
-  public GcpSplitKeyGenerationTasksModule(
-      Optional<String> encodedKeysetHandle, Optional<String> peerCoordinatorEncodedKeysetHandle) {
-    this.encodedKeysetHandle = encodedKeysetHandle;
-    this.peerCoordinatorEncodedKeysetHandle = peerCoordinatorEncodedKeysetHandle;
-  }
+  public GcpSplitKeyGenerationTasksModule() {}
 
   /** Provides the kmsKeyUri for this coordinator from either args or parameter client. */
   @Provides

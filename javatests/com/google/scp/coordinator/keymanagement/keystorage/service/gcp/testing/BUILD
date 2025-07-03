@@ -23,8 +23,7 @@ java_library(
         "KeyStorageHttpFunctionModule.java",
     ],
     deps = [
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
         "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",

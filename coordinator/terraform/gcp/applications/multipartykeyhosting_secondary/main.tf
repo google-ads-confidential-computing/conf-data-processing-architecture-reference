@@ -45,7 +45,13 @@ locals {
   key_sets = flatten([
     for key_set in var.key_sets_config.key_sets : key_set.name
   ])
+
+  # TODO: b/428770204 - Update kms base uri to the migration uri post migration
   kms_key_base_uri = "gcp-kms://${google_kms_key_ring.key_encryption_ring.id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
+  migration_kms_key_base_uri = (var.location_new_key_ring == null || !var.populate_migration_key_data
+    ? local.kms_key_base_uri
+    : "gcp-kms://${module.key_management_service[0].kms_key_ring.id}/cryptoKeys/${var.environment}_$setName$_key"
+  )
 
   service_domain_to_address_map = {
     (local.key_storage_domain) : module.keystorageservice.load_balancer_ip,
@@ -99,7 +105,9 @@ module "keystorageservice" {
   # Function vars
   key_encryption_key_id                           = google_kms_crypto_key.key_encryption_key.id
   disable_key_set_acl                             = var.disable_key_set_acl
+  populate_migration_key_data                     = var.populate_migration_key_data
   kms_key_base_uri                                = local.kms_key_base_uri
+  migration_kms_key_base_uri                      = local.migration_kms_key_base_uri
   package_bucket_name                             = var.use_tf_created_bucket_for_binary ? google_storage_bucket.mpkhs_secondary_package_bucket.name : var.mpkhs_secondary_package_bucket
   load_balancer_name                              = "keystoragelb"
   spanner_database_name                           = module.keydb.keydb_name
@@ -122,7 +130,6 @@ module "keystorageservice" {
   alarm_eval_period_sec                         = var.keystorageservice_alarm_eval_period_sec
   alarm_duration_sec                            = var.keystorageservice_alarm_duration_sec
   cloudfunction_5xx_threshold                   = var.keystorageservice_cloudfunction_5xx_threshold
-  cloudfunction_error_ratio_threshold           = var.keystorageservice_cloudfunction_error_ratio_threshold
   cloudfunction_max_execution_time_max          = var.keystorageservice_cloudfunction_max_execution_time_max
   cloudfunction_alert_on_memory_usage_threshold = var.keystorageservice_cloudfunction_alert_on_memory_usage_threshold
 
@@ -160,10 +167,12 @@ module "private_key_service" {
   max_instance_count = var.encryption_key_service_cloudfunction_max_instances
   min_instance_count = var.encryption_key_service_cloudfunction_min_instances
 
-  # Spanner
+  # Spanner and access configs
   spanner_database_name      = module.keydb.keydb_name
   spanner_instance_name      = module.keydb.keydb_instance_name
   spanner_staleness_read_sec = var.spanner_staleness_read_sec
+  enable_cache               = var.enable_private_key_service_cache
+  key_sets_vending_config    = var.key_sets_vending_config
 
   # Alert settings
   alarms_enabled           = var.alarms_enabled
@@ -175,7 +184,6 @@ module "private_key_service" {
 
   cloud_run_5xx_threshold                   = var.encryptionkeyservice_cloudfunction_5xx_threshold
   cloud_run_alert_on_memory_usage_threshold = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold
-  cloud_run_error_ratio_threshold           = var.encryptionkeyservice_cloudfunction_error_ratio_threshold
   cloud_run_max_execution_time_max          = var.encryptionkeyservice_cloudfunction_max_execution_time_max
 
   lb_5xx_threshold       = var.encryptionkeyservice_lb_5xx_threshold
@@ -292,7 +300,9 @@ module "key_set_acl_kek_pool" {
   key_encryption_key_ring_id = google_kms_key_ring.key_encryption_ring.id
   key_encryption_key_id      = google_kms_crypto_key.key_encryption_key.id
 
-  key_sets         = toset(each.value.key_sets)
+  key_sets           = toset(each.value.key_sets)
+  global_kms_key_ids = var.location_new_key_ring == null ? {} : module.key_management_service[0].kms_key_ids
+
   allowed_operator = each.value
   pool_name        = each.key
 }
@@ -307,4 +317,12 @@ module "key_management_service" {
   service_account_email = module.keystorageservice.key_storage_service_account_email
   location_new_key_ring = var.location_new_key_ring
   key_sets              = local.key_sets
+}
+
+resource "google_kms_crypto_key_iam_member" "key_set_wip_sa" {
+  for_each      = var.location_new_key_ring == null ? {} : module.key_management_service[0].kms_key_ids
+  crypto_key_id = each.value
+  member        = "serviceAccount:${module.workload_identity_pool.wip_verified_service_account}"
+  role          = "roles/cloudkms.cryptoKeyEncrypter"
+  depends_on    = [module.workload_identity_pool, module.key_management_service]
 }

@@ -17,6 +17,8 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.aws;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
+import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -66,12 +68,23 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
 
-    task.createSplitKey(keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
+    task.createSplitKey(
+        DEFAULT_SET_NAME,
+        DEFAULT_TINK_TEMPLATE,
+        keysToCreate,
+        expectedExpiryInDays,
+        expectedTtlInDays,
+        Instant.now());
 
-    task.createSplitKey(keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
+    task.createSplitKey(
+        DEFAULT_SET_NAME,
+        DEFAULT_TINK_TEMPLATE,
+        keysToCreate,
+        expectedExpiryInDays,
+        expectedTtlInDays,
+        Instant.now());
 
     List<String> keys = sortKeysById();
-
     for (int i = 0; i < 2 * keysToCreate; i++) {
       String keyId = keyIdFactory.encodeKeyIdToString((long) i);
       assertThat(keys.get(i)).isEqualTo(keyId);
@@ -82,9 +95,8 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
   public void createSplitKey_successWithOverflow() throws Exception {
     int keysToCreate = 100;
 
-    SequenceKeyIdFactory sequenceKeyIdFactory = keyIdFactory;
     for (int i = 75; i > 50; i--) {
-      insertKeyWithKeyId(sequenceKeyIdFactory.encodeKeyIdToString(Long.MAX_VALUE - i));
+      insertKeyWithKeyId(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE - i));
     }
     List<String> keys = sortKeysById();
     // Make sure keys are created correctly
@@ -95,7 +107,13 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
 
-    task.createSplitKey(keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
+    task.createSplitKey(
+        DEFAULT_SET_NAME,
+        DEFAULT_TINK_TEMPLATE,
+        keysToCreate,
+        expectedExpiryInDays,
+        expectedTtlInDays,
+        Instant.now());
 
     keys = sortKeysById();
     // First half after overflow
@@ -115,15 +133,20 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
   public void createSplitKey_successAtOverflow() throws Exception {
     int keysToCreate = 100;
 
-    SequenceKeyIdFactory sequenceKeyIdFactory = keyIdFactory;
-    insertKeyWithKeyId(sequenceKeyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
+    insertKeyWithKeyId(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
     List<String> keys = sortKeysById();
     // Make sure keys are created correctly
-    assertThat(keys.get(0)).isEqualTo(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
+    assertThat(keys.getFirst()).isEqualTo(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
 
-    task.createSplitKey(keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
+    task.createSplitKey(
+        DEFAULT_SET_NAME,
+        DEFAULT_TINK_TEMPLATE,
+        keysToCreate,
+        expectedExpiryInDays,
+        expectedTtlInDays,
+        Instant.now());
 
     keys = sortKeysById();
     for (int i = 0; i < keysToCreate; i++) {
@@ -136,9 +159,8 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
   public void createSplitKey_successAfterOverflow() throws Exception {
     int keysToCreate = 100;
 
-    SequenceKeyIdFactory sequenceKeyIdFactory = (SequenceKeyIdFactory) keyIdFactory;
-    insertKeyWithKeyId(sequenceKeyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
-    insertKeyWithKeyId(sequenceKeyIdFactory.encodeKeyIdToString(Long.MIN_VALUE));
+    insertKeyWithKeyId(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
+    insertKeyWithKeyId(keyIdFactory.encodeKeyIdToString(Long.MIN_VALUE));
     List<String> keys = sortKeysById();
     // Make sure keys are created correctly
     assertThat(keys.get(0)).isEqualTo(keyIdFactory.encodeKeyIdToString(Long.MIN_VALUE));
@@ -146,7 +168,13 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
 
-    task.createSplitKey(keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
+    task.createSplitKey(
+        DEFAULT_SET_NAME,
+        DEFAULT_TINK_TEMPLATE,
+        keysToCreate,
+        expectedExpiryInDays,
+        expectedTtlInDays,
+        Instant.now());
 
     keys = sortKeysById();
     for (int i = 0; i < keysToCreate + 1; i++) {
@@ -160,13 +188,18 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
     int keysToCreate = 3;
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
-    SequenceKeyIdFactory sequenceKeyIdFactory = (SequenceKeyIdFactory) keyIdFactory;
     when(keyStorageClient.createKey(any(), any()))
         .thenCallRealMethod()
         .thenThrow(new KeyStorageServiceException("Failure", new GeneralSecurityException()))
         .thenCallRealMethod();
     try {
-      task.createSplitKey(keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
+      task.createSplitKey(
+          DEFAULT_SET_NAME,
+          DEFAULT_TINK_TEMPLATE,
+          keysToCreate,
+          expectedExpiryInDays,
+          expectedTtlInDays,
+          Instant.now());
     } catch (ServiceException e) {
       List<String> keys = sortKeysById();
       assertThat(keys.size()).isEqualTo(2);
@@ -175,37 +208,17 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
         assertThat(keys.get(i)).isEqualTo(keyId);
       }
       Map<String, EncryptionKey> key =
-          keyDb.getAllKeys().stream().collect(Collectors.toMap(a -> a.getKeyId(), a -> a));
+          keyDb.getAllKeys().stream().collect(Collectors.toMap(EncryptionKey::getKeyId, a -> a));
       // Make sure the placeholder key is invalid
-      assertThat(key.get(sequenceKeyIdFactory.encodeKeyIdToString(1L)).getActivationTime())
-          .isEqualTo(key.get(sequenceKeyIdFactory.encodeKeyIdToString(1L)).getExpirationTime());
+      assertThat(key.get(keyIdFactory.encodeKeyIdToString(1L)).getActivationTime())
+          .isEqualTo(key.get(keyIdFactory.encodeKeyIdToString(1L)).getExpirationTime());
     }
   }
 
   private List<String> sortKeysById() throws Exception {
-    SequenceKeyIdFactory sequenceKeyIdFactory = (SequenceKeyIdFactory) keyIdFactory;
-
-    List<String> keys =
-        keyDb.getAllKeys().stream().map(a -> a.getKeyId()).collect(Collectors.toList());
-    Collections.sort(
-        keys,
-        new Comparator<String>() {
-          @Override
-          public int compare(String o1, String o2) {
-            return sequenceKeyIdFactory
-                .decodeKeyIdFromString(o1)
-                .compareTo(sequenceKeyIdFactory.decodeKeyIdFromString(o2));
-          }
-        });
-    return keys;
-  }
-
-  protected void insertKeyWithExpiration(Instant expirationTime) throws ServiceException {
-    keyDb.createKey(
-        FakeEncryptionKey.createBuilderWithDefaults()
-            .setKeyId(keyIdFactory.getNextKeyId(keyDb))
-            .setExpirationTime(expirationTime.toEpochMilli())
-            .build());
+    return keyDb.getAllKeys().stream().map(EncryptionKey::getKeyId)
+        .sorted(Comparator.comparing(keyIdFactory::decodeKeyIdFromString))
+        .collect(Collectors.toList());
   }
 
   private void insertKeyWithKeyId(String keyId) throws ServiceException {

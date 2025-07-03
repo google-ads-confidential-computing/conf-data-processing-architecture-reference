@@ -23,7 +23,8 @@
 #include "cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_utils.h"
 #include "cpio/client_providers/interface/otel_metric_client_provider_interface.h"
 #include "cpio/client_providers/otel_metric_client_provider/src/opentelemetry_utils.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
 using google::cmrt::sdk::instance_service::v1::InstanceDetails;

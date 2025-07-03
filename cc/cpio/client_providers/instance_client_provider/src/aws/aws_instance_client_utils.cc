@@ -27,7 +27,8 @@
 #include "absl/strings/str_split.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/http_types.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 #include "error_codes.h"
 

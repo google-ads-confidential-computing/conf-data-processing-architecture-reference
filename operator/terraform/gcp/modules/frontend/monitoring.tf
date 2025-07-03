@@ -17,7 +17,8 @@
 locals {
   function_name = google_cloudfunctions2_function.frontend_service_cloudfunction.name
 
-  create_cloud_run_widgets = length(module.cloud_run_fe) > 0
+  create_cloud_run_resources = length(module.cloud_run_fe) > 0
+  lb_url_map_name            = local.create_cloud_run_resources ? module.cloud_run_fe_load_balancer[0].url_map_name : ""
 
   // Template for a single dashboard data set for Cloud Run service
   // Substitution order:
@@ -41,7 +42,7 @@ locals {
 }
 EOF
 
-  request_latency_data_sets = local.create_cloud_run_widgets ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
+  request_latency_data_sets = local.create_cloud_run_resources ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
     {
       legend : "p99",
       metric : "run.googleapis.com/request_latencies"
@@ -127,7 +128,7 @@ EOF
 }
 EOF
 
-  request_count_data_sets = local.create_cloud_run_widgets ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
+  request_count_data_sets = local.create_cloud_run_resources ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
     {
       legend : "Executions",
       metric : "run.googleapis.com/request_count"
@@ -175,7 +176,7 @@ EOF
 }
 EOF
 
-  bad_response_code_data_sets = local.create_cloud_run_widgets ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
+  bad_response_code_data_sets = local.create_cloud_run_resources ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
     {
       legend : "\u0024{metric.labels.response_code_class}",
       metric : "run.googleapis.com/request_count"
@@ -224,7 +225,7 @@ EOF
 }
 EOF
 
-  max_concurrent_request_data_sets = local.create_cloud_run_widgets ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
+  max_concurrent_request_data_sets = local.create_cloud_run_resources ? ([for p in setproduct([for cr in module.cloud_run_fe : cr], [
     {
       legend : "Max Concurrent Requests",
       metric : "run.googleapis.com/container/max_request_concurrencies"
@@ -269,6 +270,289 @@ EOF
   }
 }
 EOF
+
+  lb_latency_data_sets = local.create_cloud_run_resources ? ([for item in [
+    {
+      legend : "p50 Total Latencies",
+      metric : "loadbalancing.googleapis.com/https/total_latencies"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_50"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+        ],
+      }
+    },
+    {
+      legend : "p95 Total Latencies",
+      metric : "loadbalancing.googleapis.com/https/total_latencies"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_95"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+        ],
+      }
+    },
+    {
+      legend : "p99 Total Latencies",
+      metric : "loadbalancing.googleapis.com/https/total_latencies"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_99"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+        ],
+      }
+    },
+    {
+      legend : "p50 Backend Latencies",
+      metric : "loadbalancing.googleapis.com/https/backend_latencies"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_50"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+        ],
+      }
+    },
+    {
+      legend : "p95 Backend Latencies",
+      metric : "loadbalancing.googleapis.com/https/backend_latencies"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_95"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+        ],
+      }
+    },
+    {
+      legend : "p99 Backend Latencies",
+      metric : "loadbalancing.googleapis.com/https/backend_latencies"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_99"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+        ],
+      }
+    },
+    {
+      legend : "p50 Frontend TCP RTT",
+      metric : "loadbalancing.googleapis.com/https/frontend_tcp_rtt"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_50"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+        ],
+      }
+    },
+    {
+      legend : "p95 Frontend TCP RTT",
+      metric : "loadbalancing.googleapis.com/https/frontend_tcp_rtt"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_95"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+        ],
+      }
+    },
+    {
+      legend : "p99 Frontend TCP RTT",
+      metric : "loadbalancing.googleapis.com/https/frontend_tcp_rtt"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_PERCENTILE_99"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_MEAN",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+        ],
+      }
+    },
+    ] : format(
+    local.single_data_set_template,
+    "${item.legend}",
+    jsonencode(item.aggregation),
+    "metric.type=\\\"${item.metric}\\\" resource.type=\\\"https_lb_rule\\\" resource.label.\\\"url_map_name\\\"=\\\"${local.lb_url_map_name}\\\"",
+    jsonencode(item.secondaryAggregation)
+  )]) : []
+
+  lb_latency_widget = <<EOF
+{
+  "title" : "Load Balancer Latencies",
+  "xyChart" : {
+    "chartOptions" : {
+      "mode" : "COLOR"
+    },
+    "dataSets" : [
+      ${join(",", local.lb_latency_data_sets)}
+    ],
+    "timeshiftDuration" : "0s",
+    "y2Axis" : {
+      "label" : "y2Axis",
+      "scale" : "LINEAR"
+    }
+  }
+}
+EOF
+
+  lb_request_count_data_sets = local.create_cloud_run_resources ? ([for item in [
+    {
+      legend : "Request Count",
+      metric : "loadbalancing.googleapis.com/https/request_count"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_RATE"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_SUM",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+        ],
+      }
+    },
+    ] : format(
+    local.single_data_set_template,
+    "${item.legend}",
+    jsonencode(item.aggregation),
+    "metric.type=\\\"${item.metric}\\\" resource.type=\\\"https_lb_rule\\\" resource.label.\\\"url_map_name\\\"=\\\"${local.lb_url_map_name}\\\"",
+    jsonencode(item.secondaryAggregation)
+  )]) : []
+
+  lb_request_count_widget = <<EOF
+{
+  "title" : "Load Balancer Request Count",
+  "xyChart" : {
+    "chartOptions" : {
+      "mode" : "COLOR"
+    },
+    "dataSets" : [
+      ${join(",", local.lb_request_count_data_sets)}
+    ],
+    "timeshiftDuration" : "0s",
+    "y2Axis" : {
+      "label" : "y2Axis",
+      "scale" : "LINEAR"
+    }
+  }
+}
+EOF
+
+  lb_errors_data_sets = local.create_cloud_run_resources ? ([for item in [
+    {
+      legend : "\u0024{metric.labels.response_code_class}",
+      metric : "loadbalancing.googleapis.com/https/request_count"
+
+      aggregation : {
+        alignmentPeriod : "60s",
+        perSeriesAligner : "ALIGN_RATE"
+      },
+
+      secondaryAggregation : {
+        alignmentPeriod : "60s",
+        crossSeriesReducer : "REDUCE_SUM",
+        perSeriesAligner : "ALIGN_MEAN",
+        groupByFields : [
+          "resource.label.\"url_map_name\"",
+          "metric.label.\"response_code_class\""
+        ],
+      }
+    },
+    ] : format(
+    local.single_data_set_template,
+    "${item.legend}",
+    jsonencode(item.aggregation),
+    "metric.type=\\\"${item.metric}\\\" resource.type=\\\"https_lb_rule\\\" resource.label.\\\"url_map_name\\\"=\\\"${local.lb_url_map_name}\\\" metric.label.\\\"response_code_class\\\"!=200",
+    jsonencode(item.secondaryAggregation)
+  )]) : []
+
+  lb_errors_widget = <<EOF
+{
+  "title" : "Load Balancer Errors",
+  "xyChart" : {
+    "chartOptions" : {
+      "mode" : "COLOR"
+    },
+    "dataSets" : [
+      ${join(",", local.lb_errors_data_sets)}
+    ],
+    "timeshiftDuration" : "0s",
+    "y2Axis" : {
+      "label" : "y2Axis",
+      "scale" : "LINEAR"
+    }
+  }
+}
+EOF
 }
 
 module "frontendservice_cloudfunction_alarms" {
@@ -285,6 +569,21 @@ module "frontendservice_cloudfunction_alarms" {
   execution_time_max        = var.cloudfunction_max_execution_time_max
   execution_error_threshold = var.cloudfunction_error_threshold
   duration_sec              = var.alarm_duration_sec
+}
+
+module "frontendservice_cloud_run_alarms" {
+  source = "../shared/cloud_run_alarms"
+  count  = (var.alarms_enabled && local.create_cloud_run_resources) ? 1 : 0
+
+  cloud_run_service_names = [for cr in module.cloud_run_fe : cr.service_name]
+
+  environment             = var.environment
+  notification_channel_id = var.notification_channel_id
+  service_prefix          = "${var.environment} Frontend Service"
+
+  error_5xx_alarm_config      = var.cloud_run_error_5xx_alarm_config
+  non_5xx_error_alarm_config  = var.cloud_run_non_5xx_error_alarm_config
+  execution_time_alarm_config = var.cloud_run_execution_time_alarm_config
 }
 
 resource "google_monitoring_dashboard" "frontend_dashboard" {
@@ -491,10 +790,13 @@ resource "google_monitoring_dashboard" "frontend_dashboard" {
               }
             }
           },
-          (local.create_cloud_run_widgets ? [jsondecode(local.request_count_widget)] : []),
-          (local.create_cloud_run_widgets ? [jsondecode(local.request_latencies_widget)] : []),
-          (local.create_cloud_run_widgets ? [jsondecode(local.request_errors_widget)] : []),
-          (local.create_cloud_run_widgets ? [jsondecode(local.max_concurrent_requests_widget)] : [])
+          (local.create_cloud_run_resources ? [jsondecode(local.lb_request_count_widget)] : []),
+          (local.create_cloud_run_resources ? [jsondecode(local.lb_latency_widget)] : []),
+          (local.create_cloud_run_resources ? [jsondecode(local.lb_errors_widget)] : []),
+          (local.create_cloud_run_resources ? [jsondecode(local.request_count_widget)] : []),
+          (local.create_cloud_run_resources ? [jsondecode(local.request_latencies_widget)] : []),
+          (local.create_cloud_run_resources ? [jsondecode(local.request_errors_widget)] : []),
+          (local.create_cloud_run_resources ? [jsondecode(local.max_concurrent_requests_widget)] : [])
         ])
       }
     }

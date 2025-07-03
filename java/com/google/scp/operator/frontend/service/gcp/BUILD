@@ -88,7 +88,7 @@ container_image(
     name = "FrontendCloudFunctionRuntimeContainer",
     base = "@java_base_21//image",
     cmd = [
-        "./java-function-invoker-1.3.1.jar",
+        "./processed_java-function-invoker-1.3.1.jar",
         "--classpath",
         "./FrontendServiceHttpCloudFunction_deploy.jar",
         "--target",

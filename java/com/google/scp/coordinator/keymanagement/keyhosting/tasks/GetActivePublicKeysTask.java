@@ -20,10 +20,10 @@ import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.D
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncodedPublicKeyListConverter;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncodedPublicKeyListConverter.Mode;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.CacheControlMaximum;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.shared.converter.EncodedPublicKeyListConverter;
+import com.google.scp.coordinator.keymanagement.shared.converter.EncodedPublicKeyListConverter.Mode;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
@@ -62,7 +62,7 @@ public final class GetActivePublicKeysTask extends ApiTask {
     super(
         "GET",
         Pattern.compile("/publicKeys((?<raw>:raw)|(?<tink>:tink))?"),
-        "getActivePublicKeys",
+        "GetActivePublicKeys",
         "v1Alpha",
         logMetricHelper);
     this.keyDb = keyDb;

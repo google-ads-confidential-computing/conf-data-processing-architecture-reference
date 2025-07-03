@@ -757,11 +757,6 @@ alias(
 )
 
 alias(
-    name = "google_cloud_opentelemetry_exporter_metrics",
-    actual = "@maven//:com_google_cloud_opentelemetry_exporter_metrics",
-)
-
-alias(
     name = "google_cloud_opentelemetry_detector_resources",
     actual = "@maven//:com_google_cloud_opentelemetry_detector_resources",
 )

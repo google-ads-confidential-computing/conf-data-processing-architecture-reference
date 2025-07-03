@@ -17,10 +17,8 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.testing;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Key;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.CacheControlMaximum;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil;
@@ -31,9 +29,6 @@ public final class KeyHostingHttpFunctionModule extends AbstractModule {
   protected void configure() {
     bind(Integer.class).annotatedWith(KeyLimit.class).toInstance(5);
     bind(Long.class).annotatedWith(CacheControlMaximum.class).toInstance(604800L);
-    bind(Long.class)
-        .annotatedWith(Annotations.CacheControlMaximum.class)
-        .to(Key.get(Long.class, CacheControlMaximum.class));
     bind(SpannerKeyDbConfig.class).toInstance(SpannerKeyDbTestUtil.getSpannerKeyDbConfig());
     install(new SpannerKeyDbModule());
   }

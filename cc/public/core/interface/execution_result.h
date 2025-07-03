@@ -22,9 +22,6 @@
 
 #include "public/core/interface/execution_result.pb.h"
 
-#include "execution_result_macros.h"
-#include "execution_result_or_macros.h"
-
 namespace google::scp::core {
 
 /// Operation's execution status.

@@ -25,7 +25,8 @@
 #include "core/interface/async_context.h"
 #include "core/interface/http_client_interface.h"
 #include "core/interface/http_types.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/interface/private_key_client/type_def.h"
 #include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 

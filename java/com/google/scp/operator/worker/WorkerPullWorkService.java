@@ -28,6 +28,9 @@ import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
+import com.google.scp.operator.cpio.metricclient.model.Annotations.EnableRemoteMetricAggregation;
+import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
+import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.operator.worker.Annotations.BenchmarkMode;
 import com.google.scp.operator.worker.perf.StopwatchExporter;
 import com.google.scp.operator.worker.perf.StopwatchRegistry;
@@ -48,6 +51,7 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
   private final JobClient jobClient;
   private final ParameterClient parameterClient;
   private final MetricClient metricClient;
+  private final boolean enableRemoteAggregationMetrics;
   private final JobProcessor jobProcessor;
   private final StopwatchRegistry stopwatchRegistry;
   private final StopwatchExporter stopwatchExporter;
@@ -66,7 +70,8 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
       JobProcessor jobProcessor,
       StopwatchRegistry stopwatchRegistry,
       StopwatchExporter stopwatchExporter,
-      @BenchmarkMode boolean benchmarkMode)
+      @BenchmarkMode boolean benchmarkMode,
+      @EnableRemoteMetricAggregation boolean enableRemoteMetricAggregation)
       throws ParameterClientException {
     this.jobClient = jobClient;
     this.parameterClient = parameterClient;
@@ -85,6 +90,7 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
             .put(JobType.MRP.name(), firstCustomerTopicId)
             .put(JobType.CoPla.name(), secondCustomerTopicId)
             .build();
+    this.enableRemoteAggregationMetrics = enableRemoteMetricAggregation;
   }
 
   @Override
@@ -102,16 +108,17 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
                     })
                 .build();
         job = jobClient.getJob(request);
-        // TODO: Enable it when remote aggregration is enabled.
-        // CustomMetric metric =
-        //     CustomMetric.builder()
-        //         .setNameSpace(METRIC_NAMESPACE)
-        //         .setName("TryPullJobCount")
-        //         .setValue(1.0)
-        //         .setUnit("Count")
-        //         .setMetricType(MetricType.DOUBLE_COUNTER)
-        //         .build();
-        // metricClient.recordMetric(metric);
+        if (enableRemoteAggregationMetrics) {
+          CustomMetric metrics =
+              CustomMetric.builder()
+                  .setNameSpace(METRIC_NAMESPACE)
+                  .setName("TryPullJobCounter")
+                  .setValue(1.0)
+                  .setUnit("Count")
+                  .setMetricType(MetricType.DOUBLE_COUNTER)
+                  .build();
+          metricClient.recordMetric(metrics);
+        }
 
         if (job.isEmpty()) {
           logger.info("No job pulled.");

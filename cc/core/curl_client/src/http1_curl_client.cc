@@ -17,6 +17,9 @@
 
 #include <utility>
 
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
+
 #include "http1_curl_wrapper.h"
 
 using google::scp::core::common::RetryStrategy;

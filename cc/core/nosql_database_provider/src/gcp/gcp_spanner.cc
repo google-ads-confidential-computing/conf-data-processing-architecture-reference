@@ -32,6 +32,8 @@
 #include "core/interface/configuration_keys.h"
 #include "core/nosql_database_provider/src/common/error_codes.h"
 #include "core/nosql_database_provider/src/common/nosql_database_provider_utils.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 #include "gcp_spanner_utils.h"
 

@@ -118,11 +118,6 @@ variable "alarm_duration_sec" {
   type        = string
 }
 
-variable "cloudfunction_error_ratio_threshold" {
-  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = number
-}
-
 variable "cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number

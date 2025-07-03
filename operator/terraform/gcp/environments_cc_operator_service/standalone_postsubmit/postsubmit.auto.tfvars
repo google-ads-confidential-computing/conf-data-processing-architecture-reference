@@ -48,7 +48,7 @@ alarms_notification_email            = "fakeemail@google.com"
 
 auto_create_subnetworks = false
 network_name_suffix     = "network-with-custom-subnet"
-worker_subnet_cidr      = "13.16.0.0/20"
+worker_subnet_cidr      = { "us-central1" = "10.2.0.0/16" }
 
 worker_scale_in_jar  = "/tmp/standalone_postsubmit/jars/WorkerScaleInCloudFunction_deploy.jar"
 frontend_service_jar = "/tmp/standalone_postsubmit/jars/FrontendServiceHttpCloudFunction_deploy.jar"

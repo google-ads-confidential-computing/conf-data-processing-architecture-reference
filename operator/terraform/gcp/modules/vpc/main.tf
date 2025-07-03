@@ -18,6 +18,14 @@ locals {
   vpc_network_name    = var.auto_create_subnetworks ? "${var.environment}-network" : "${var.environment}-${var.network_name_suffix}"
 }
 
+data "google_compute_subnetwork" "auto_created_subnets" {
+  for_each = var.auto_create_subnetworks ? var.regions : []
+  region   = each.key
+  name     = module.vpc_network.network_name
+
+  depends_on = [module.vpc_network]
+}
+
 # Dedicated VPC network.
 module "vpc_network" {
   source  = "terraform-google-modules/network/google"
@@ -42,7 +50,7 @@ module "vpc_network" {
   delete_default_internet_gateway_routes = true
   routes = [
     {
-      name              = "${var.environment}-egress-internet"
+      name              = var.auto_create_subnetworks ? "${var.environment}-egress-internet" : "${var.environment}-egress-inet"
       description       = "Route to the Internet."
       destination_range = "0.0.0.0/0"
       tags = join(",", [
@@ -70,54 +78,63 @@ module "vpc_nat" {
 }
 
 resource "google_compute_subnetwork" "worker_subnet" {
-  count = var.auto_create_subnetworks ? 0 : 1
+  for_each = var.auto_create_subnetworks ? [] : var.regions
 
-  name          = "${var.environment}-worker-subnet"
-  network       = module.vpc_network.network_self_link
-  purpose       = "PRIVATE"
-  region        = one(var.regions[*])
-  ip_cidr_range = var.worker_subnet_cidr
+  name    = "${var.environment}-worker-subnet"
+  network = module.vpc_network.network_self_link
+  purpose = "PRIVATE"
+  region  = each.value
+
+  ip_cidr_range = var.worker_subnet_cidr[each.value]
 
   lifecycle {
+    create_before_destroy = true
+
     precondition {
-      condition     = var.worker_subnet_cidr != null
-      error_message = "The cidr block for the worker subnet can not be empty."
+      condition     = length(var.worker_subnet_cidr) >= length(var.regions)
+      error_message = "A worker subnet cidr range must be provided for all regions."
     }
   }
 }
 
 resource "google_compute_subnetwork" "collector_subnet" {
-  count = var.enable_remote_metric_aggregation ? 1 : 0
+  for_each = var.enable_opentelemetry_collector ? var.regions : []
 
-  name          = "${var.environment}-backend-subnet"
-  network       = module.vpc_network.network_self_link
-  purpose       = "PRIVATE"
-  region        = one(var.regions[*])
-  ip_cidr_range = var.collector_subnet_cidr
+  name    = "${var.environment}-backend-subnet"
+  network = module.vpc_network.network_self_link
+  purpose = "PRIVATE"
+  region  = each.value
+
+  ip_cidr_range = var.collector_subnet_cidr[each.value]
+
   lifecycle {
     create_before_destroy = true
+
     precondition {
-      condition     = var.collector_subnet_cidr != null
-      error_message = "The cidr block for the collector subnet can not be empty."
+      condition     = length(var.collector_subnet_cidr) >= length(var.regions)
+      error_message = "A collector subnet cidr range must be provided for all regions."
     }
   }
 }
 
 resource "google_compute_subnetwork" "proxy_subnet" {
-  count = var.enable_remote_metric_aggregation ? 1 : 0
+  for_each = var.enable_opentelemetry_collector ? var.regions : []
 
-  name          = "${var.environment}-proxy-subnet"
-  network       = module.vpc_network.network_self_link
-  purpose       = "GLOBAL_MANAGED_PROXY"
-  region        = one(var.regions[*])
-  ip_cidr_range = var.proxy_subnet_cidr
-  role          = "ACTIVE"
+  name    = "${var.environment}-proxy-subnet"
+  network = module.vpc_network.network_self_link
+  purpose = "GLOBAL_MANAGED_PROXY"
+  region  = each.value
+  role    = "ACTIVE"
+
+  ip_cidr_range = var.proxy_subnet_cidr[each.value]
+
   lifecycle {
     ignore_changes        = [ipv6_access_type]
     create_before_destroy = true
+
     precondition {
-      condition     = var.proxy_subnet_cidr != null
-      error_message = "The cidr block for the proxy subnet can not be empty."
+      condition     = length(var.proxy_subnet_cidr) >= length(var.regions)
+      error_message = "A proxy subnet cidr range must be provided for all regions."
     }
   }
 }

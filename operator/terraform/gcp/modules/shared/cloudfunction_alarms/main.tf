@@ -39,7 +39,8 @@ resource "google_monitoring_alert_policy" "error_count_5xx" {
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -69,7 +70,8 @@ resource "google_monitoring_alert_policy" "execution_times" {
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -98,6 +100,7 @@ resource "google_monitoring_alert_policy" "error_count" {
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }

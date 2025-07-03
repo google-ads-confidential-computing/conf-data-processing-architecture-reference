@@ -34,6 +34,12 @@ class ScpTestBase : public ::testing::Test {
   }
 
   /**
+   * @brief Useful for debugging, inheriting classes can call this to aid in
+   * debugging.
+   */
+  void LogToConsole() { TestLoggingUtils::EnableLogOutputToConsole(); }
+
+  /**
    * @brief Runs one time before the first test in the test suite
    */
   static void SetUpTestSuite() {

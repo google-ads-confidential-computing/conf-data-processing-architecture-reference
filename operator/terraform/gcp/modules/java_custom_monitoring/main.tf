@@ -53,7 +53,8 @@ resource "google_monitoring_alert_policy" "jobclient_job_validation_failure_aler
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -107,7 +108,8 @@ resource "google_monitoring_alert_policy" "worker_job_error_alert" {
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 

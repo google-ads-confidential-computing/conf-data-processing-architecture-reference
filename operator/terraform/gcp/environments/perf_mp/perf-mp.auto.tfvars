@@ -38,7 +38,7 @@ instance_disk_image_family = {
 
 auto_create_subnetworks = false
 network_name_suffix     = "network-with-custom-subnet"
-worker_subnet_cidr      = "9.16.0.0/20"
+worker_subnet_cidr      = { "us-central1" = "10.2.0.0/16" }
 
 user_provided_worker_sa_email = "perf-mp-worker-account@admcloud-adtech1.iam.gserviceaccount.com"
 

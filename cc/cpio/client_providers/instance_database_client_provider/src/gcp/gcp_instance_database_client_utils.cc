@@ -31,7 +31,8 @@
 #include "google/protobuf/util/time_util.h"
 #include "operator/protos/shared/backend/asginstance/asg_instance.pb.h"
 #include "operator/protos/shared/backend/asginstance/instance_status.pb.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 using google::cloud::spanner::Row;
 using google::cloud::spanner::Timestamp;

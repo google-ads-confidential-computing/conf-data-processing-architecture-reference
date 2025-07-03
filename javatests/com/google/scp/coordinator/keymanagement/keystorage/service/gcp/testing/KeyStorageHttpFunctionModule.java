@@ -22,15 +22,13 @@ import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KmsClient;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
-import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.kms.LocalGcpKmsClient;
 import com.google.kms.LocalKmsServerContainer;
 import com.google.protobuf.ByteString;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.CacheControlMaximum;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKekUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKeyAead;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DisableKeySetAcl;
@@ -71,9 +69,6 @@ public class KeyStorageHttpFunctionModule extends AbstractModule {
   protected void configure() {
     bind(Integer.class).annotatedWith(KeyLimit.class).toInstance(5);
     bind(Long.class).annotatedWith(CacheControlMaximum.class).toInstance(604800L);
-    bind(Long.class)
-        .annotatedWith(Annotations.CacheControlMaximum.class)
-        .to(Key.get(Long.class, CacheControlMaximum.class));
     bind(SpannerKeyDbConfig.class).toInstance(SpannerKeyDbTestUtil.getSpannerKeyDbConfig());
     bind(CreateKeyTask.class).to(GcpCreateKeyTask.class);
     bind(SignDataKeyTask.class).to(GcpSignDataKeyTask.class);

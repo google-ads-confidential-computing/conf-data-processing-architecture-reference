@@ -23,10 +23,6 @@ max_worker_instances             = 2
 alarms_enabled                   = true
 alarms_notification_email        = "fakeemail@google.com"
 
-auto_create_subnetworks = false
-network_name_suffix     = "network-with-custom-subnet"
-worker_subnet_cidr      = "14.16.0.0/20"
-
 enable_job_completion_notifications = true
 
 enable_job_completion_notifications_per_job           = true
@@ -37,13 +33,17 @@ job_completion_notifications_cloud_function_memory_mb = "512"
 worker_scale_in_jar  = "/tmp/postsubmit_mp/jars/WorkerScaleInCloudFunction_deploy.jar"
 frontend_service_jar = "/tmp/postsubmit_mp/jars/FrontendServiceHttpCloudFunction_deploy.jar"
 
-enable_native_metric_aggregation   = false
+auto_create_subnetworks = false
+network_name_suffix     = "network-with-custom-subnet"
+worker_subnet_cidr      = { "us-central1" = "10.2.0.0/16" }
+
 enable_remote_metric_aggregation   = true
-metric_exporter_interval_in_millis = 5000
+enable_opentelemetry_collector     = true
+metric_exporter_interval_in_millis = 60000
 collector_domain_name              = "collector.metrics"
 collector_dns_name                 = "scp.testings.postsubmit"
-collector_subnet_cidr              = "14.20.0.0/20"
-proxy_subnet_cidr                  = "14.32.0.0/20"
+collector_subnet_cidr              = { "us-central1" = "10.3.0.0/16" }
+proxy_subnet_cidr                  = { "us-central1" = "10.4.0.0/16" }
 
 collector_exceed_cpu_usage_alarm = {
   enable_alarm : true,
@@ -90,6 +90,30 @@ worker_exporting_metrics_error_alarm = {
   duration_sec : 300,
   alignment_period_sec : 600,
   threshold : 50,
+  severity : "moderate",
+  auto_close_sec : 1800
+}
+collector_queue_size_ratio_alarm = {
+  enable_alarm : true,
+  duration_sec : 300,
+  alignment_period_sec : 600,
+  threshold : 0.8,
+  severity : "moderate",
+  auto_close_sec : 1800
+}
+collector_send_metric_points_ratio_alarm = {
+  enable_alarm : true,
+  duration_sec : 300,
+  alignment_period_sec : 600,
+  threshold : 0.05,
+  severity : "moderate",
+  auto_close_sec : 1800
+}
+collector_refuse_metric_points_ratio_alarm = {
+  enable_alarm : true,
+  duration_sec : 300,
+  alignment_period_sec : 600,
+  threshold : 0.05,
   severity : "moderate",
   auto_close_sec : 1800
 }

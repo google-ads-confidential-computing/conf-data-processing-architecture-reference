@@ -46,6 +46,8 @@
 #include "cpio/client_providers/blob_storage_client_provider/src/common/error_codes.h"
 #include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
 #include "cpio/common/src/aws/aws_utils.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/interface/blob_storage_client/type_def.h"
 
 using Aws::MakeShared;

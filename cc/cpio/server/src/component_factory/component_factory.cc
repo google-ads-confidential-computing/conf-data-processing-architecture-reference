@@ -22,6 +22,8 @@
 #include "cc/core/common/uuid/src/uuid.h"
 #include "core/common/global_logger/src/global_logger.h"
 #include "cpio/server/interface/component_factory/component_factory_interface.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;

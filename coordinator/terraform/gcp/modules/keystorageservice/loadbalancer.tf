@@ -39,7 +39,7 @@ module "lb-http_serverless_negs" {
 
       groups = [
         {
-          group = google_compute_region_network_endpoint_group.key_storage_endpoint_group.id
+          group = google_compute_region_network_endpoint_group.key_storage_endpoint_group_cr.id
         }
       ]
 
@@ -54,6 +54,20 @@ module "lb-http_serverless_negs" {
         sample_rate = null
       }
     }
+  }
+}
+
+moved {
+  from = google_compute_region_network_endpoint_group.key_storage_endpoint_group_cr[0]
+  to   = google_compute_region_network_endpoint_group.key_storage_endpoint_group_cr
+}
+
+resource "google_compute_region_network_endpoint_group" "key_storage_endpoint_group_cr" {
+  name                  = "${var.environment}-key-storage-group"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+  cloud_run {
+    service = module.cloud_run.name
   }
 }
 

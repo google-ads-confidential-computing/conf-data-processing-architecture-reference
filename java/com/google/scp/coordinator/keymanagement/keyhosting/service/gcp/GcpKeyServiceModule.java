@@ -17,10 +17,9 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Key;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.CacheControlMaximum;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
 import java.util.Map;
@@ -39,6 +38,7 @@ public final class GcpKeyServiceModule extends AbstractModule {
   private static final String SPANNER_ENDPOINT = "SPANNER_ENDPOINT";
   private static final String PROJECT_ID_ENV_VAR = "PROJECT_ID";
   private static final String CACHE_CONTROL_MAXIMUM_ENV_VAR = "CACHE_CONTROL_MAXIMUM";
+  private static final String ENABLE_CACHE_ENV_VAR = "ENABLE_CACHE";
 
   /** Returns KeyLimit as Integer from environment variables. Default value of 5 */
   private Integer getKeyLimit() {
@@ -61,6 +61,14 @@ public final class GcpKeyServiceModule extends AbstractModule {
     return Long.valueOf(env.getOrDefault(CACHE_CONTROL_MAXIMUM_ENV_VAR, "604800"));
   }
 
+  /**
+   * Returns ENABLE_CACHE value from environment variables. Default of false.
+   */
+  private static Boolean getEnableCache() {
+    Map<String, String> env = System.getenv();
+    return Boolean.valueOf(env.getOrDefault(ENABLE_CACHE_ENV_VAR, "false"));
+  }
+
   @Override
   protected void configure() {
     Map<String, String> env = System.getenv();
@@ -71,12 +79,10 @@ public final class GcpKeyServiceModule extends AbstractModule {
 
     // Service layer bindings
     bind(Long.class).annotatedWith(CacheControlMaximum.class).toInstance(getCacheControlMaximum());
-    bind(Long.class)
-        .annotatedWith(Annotations.CacheControlMaximum.class)
-        .to(Key.get(Long.class, CacheControlMaximum.class));
 
     // Business layer bindings
     bind(Integer.class).annotatedWith(KeyLimit.class).toInstance(getKeyLimit());
+    bind(Boolean.class).annotatedWith(EnableCache.class).toInstance(getEnableCache());
 
     // Data layer bindings
     SpannerKeyDbConfig config =

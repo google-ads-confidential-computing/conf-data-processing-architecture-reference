@@ -21,6 +21,9 @@
 
 #include <openssl/base64.h>
 
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
+
 #include "error_codes.h"
 
 using std::make_unique;

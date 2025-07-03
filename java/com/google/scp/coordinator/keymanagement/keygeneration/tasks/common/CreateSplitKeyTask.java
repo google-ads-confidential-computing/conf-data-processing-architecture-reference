@@ -16,9 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
-import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.shared.api.exception.ServiceException;
-import com.google.scp.shared.util.KeyParams;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -36,9 +34,6 @@ public interface CreateSplitKeyTask {
    * applicable), encryption key generation and splitting, key storage request, and database
    * persistence with signatures.
    *
-   * <p>For key regeneration {@link CreateSplitKeyTask#replaceExpiringKeys(int, int, int)} should be
-   * used.
-   *
    * @param setName the name of the key set the keys belong to.
    * @param tinkTemplate the Tink template used for key generation.
    * @param count the number of keys is ensured to be active.
@@ -53,36 +48,6 @@ public interface CreateSplitKeyTask {
       int validityInDays,
       int ttlInDays,
       Instant activation)
-      throws ServiceException;
-
-  /**
-   * Same as {@link #createSplitKey(String, String, int, int, int, Instant)} except with {@link
-   * KeyDb#DEFAULT_SET_NAME} as the key set name and {@link KeyParams#DEFAULT_TINK_TEMPLATE} as the
-   * Tink template.
-   *
-   * @deprecated Use {@link #createSplitKey(String, String, int, int, int, Instant)} and specify the
-   *     key set name and the Tink template.
-   */
-  @Deprecated
-  default void createSplitKey(int count, int validityInDays, int ttlInDays, Instant activation)
-      throws ServiceException {
-    createSplitKey(
-        KeyDb.DEFAULT_SET_NAME,
-        KeyParams.DEFAULT_TINK_TEMPLATE,
-        count,
-        validityInDays,
-        ttlInDays,
-        activation);
-  }
-
-  /**
-   * Counts the number of active keys in the KeyDB and creates enough keys to both replace any keys
-   * expiring soon and replace any missing keys.
-   *
-   * <p>The generated keys will expire after validityInDays days, will have a Time-to-Live of
-   * ttlInDays, and will be stored in the KeyDB.
-   */
-  void replaceExpiringKeys(int numDesiredKeys, int validityInDays, int ttlInDays)
       throws ServiceException;
 
   /**
@@ -104,22 +69,4 @@ public interface CreateSplitKeyTask {
   void create(
       String setName, String tinkTemplate, int numDesiredKeys, int validityInDays, int ttlInDays)
       throws ServiceException;
-
-  /**
-   * Same as {@link #create(String, String, int, int, int)} except with {@link
-   * KeyDb#DEFAULT_SET_NAME} as the key set name and {@link KeyParams#DEFAULT_TINK_TEMPLATE} as the
-   * Tink template.
-   *
-   * @deprecated Use {@link #create(String, String, int, int, int)} and specify the key set name.
-   */
-  @Deprecated
-  default void create(int numDesiredKeys, int validityInDays, int ttlInDays)
-      throws ServiceException {
-    create(
-        KeyDb.DEFAULT_SET_NAME,
-        KeyParams.DEFAULT_TINK_TEMPLATE,
-        numDesiredKeys,
-        validityInDays,
-        ttlInDays);
-  }
 }

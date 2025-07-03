@@ -33,7 +33,8 @@
 #include "core/interface/http_types.h"
 #include "core/utils/src/base64.h"
 #include "cpio/client_providers/interface/private_key_fetcher_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 
 #include "error_codes.h"

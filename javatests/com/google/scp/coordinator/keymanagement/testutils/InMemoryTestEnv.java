@@ -21,12 +21,11 @@ import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTe
 
 import com.google.acai.TestScoped;
 import com.google.inject.AbstractModule;
-import com.google.inject.Key;
 import com.google.inject.Provides;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.CacheControlMaximum;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.DisableActivationTime;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.DisableActivationTime;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 
@@ -47,10 +46,8 @@ public final class InMemoryTestEnv extends AbstractModule {
   @Override
   public void configure() {
     bind(Integer.class).annotatedWith(KeyLimit.class).toInstance(KEY_LIMIT);
+    bind(Boolean.class).annotatedWith(EnableCache.class).toInstance(true);
     bind(Long.class).annotatedWith(CacheControlMaximum.class).toInstance(CACHE_CONTROL_MAX);
-    bind(Long.class)
-        .annotatedWith(Annotations.CacheControlMaximum.class)
-        .to(Key.get(Long.class, CacheControlMaximum.class));
     bind(Boolean.class).annotatedWith(DisableActivationTime.class).toInstance(false);
   }
 }

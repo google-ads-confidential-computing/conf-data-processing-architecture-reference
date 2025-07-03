@@ -42,39 +42,8 @@ resource "google_monitoring_alert_policy" "collector_exceed_cpu_usage_alarm" {
   }
 
   alert_strategy {
-    auto_close = "${var.collector_exceed_cpu_usage_alarm.auto_close_sec}s"
-  }
-}
-
-resource "google_monitoring_alert_policy" "collector_exceed_memory_usage_alarm" {
-  count        = var.collector_exceed_memory_usage_alarm.enable_alarm ? 1 : 0
-  display_name = "${var.environment} Collector Memory Usage Too High"
-  combiner     = "OR"
-  conditions {
-    display_name = "Memory Usage Too High"
-    condition_threshold {
-      filter          = "metric.type=\"agent.googleapis.com/memory/bytes_used\" resource.type=\"gce_instance\" metric.label.\"state\"=\"used\" metadata.system_labels.\"instance_group\"=\"${google_compute_region_instance_group_manager.collector_instance.name}\""
-      duration        = "${var.collector_exceed_memory_usage_alarm.duration_sec}s"
-      comparison      = "COMPARISON_GT"
-      threshold_value = var.collector_exceed_memory_usage_alarm.threshold
-      trigger {
-        count = 1
-      }
-      aggregations {
-        alignment_period     = "${var.collector_exceed_memory_usage_alarm.alignment_period_sec}s"
-        per_series_aligner   = "ALIGN_MAX"
-        cross_series_reducer = "REDUCE_MAX"
-      }
-    }
-  }
-
-  user_labels = {
-    environment = var.environment
-    severity    = var.collector_exceed_memory_usage_alarm.severity
-  }
-
-  alert_strategy {
-    auto_close = "${var.collector_exceed_memory_usage_alarm.auto_close_sec}s"
+    auto_close           = "${var.collector_exceed_cpu_usage_alarm.auto_close_sec}s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -129,7 +98,8 @@ resource "google_monitoring_alert_policy" "collector_export_error_alert" {
     severity    = var.collector_export_error_alarm.severity
   }
   alert_strategy {
-    auto_close = "${var.collector_export_error_alarm.auto_close_sec}s"
+    auto_close           = "${var.collector_export_error_alarm.auto_close_sec}s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -183,7 +153,8 @@ resource "google_monitoring_alert_policy" "collector_run_error_alert" {
     severity    = var.collector_run_error_alarm.severity
   }
   alert_strategy {
-    auto_close = "${var.collector_run_error_alarm.auto_close_sec}s"
+    auto_close           = "${var.collector_run_error_alarm.auto_close_sec}s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -237,7 +208,8 @@ resource "google_monitoring_alert_policy" "collector_crash_error_alert" {
     severity    = var.collector_crash_error_alarm.severity
   }
   alert_strategy {
-    auto_close = "${var.collector_crash_error_alarm.auto_close_sec}s"
+    auto_close           = "${var.collector_crash_error_alarm.auto_close_sec}s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -292,7 +264,8 @@ resource "google_monitoring_alert_policy" "worker_export_metric_error_alert" {
     severity    = var.worker_exporting_metrics_error_alarm.severity
   }
   alert_strategy {
-    auto_close = "${var.worker_exporting_metrics_error_alarm.auto_close_sec}s"
+    auto_close           = "${var.worker_exporting_metrics_error_alarm.auto_close_sec}s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -300,9 +273,8 @@ resource "google_monitoring_dashboard" "opentelemetry_metrics_dashboard" {
   dashboard_json = jsonencode(
     {
       "displayName" : "${var.environment} OpenTelemetry Metrics Dashboard",
-      "dashboardFilters" : [],
       "gridLayout" : {
-        "columns" : 2,
+        "columns" : "2",
         "widgets" : [
           {
             "title" : "Collector VM CPU Utilization",

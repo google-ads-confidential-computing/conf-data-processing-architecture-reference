@@ -30,6 +30,8 @@
 #include "cpio/client_providers/role_credentials_provider/src/aws/aws_role_credentials_provider.h"
 #include "cpio/server/interface/private_key_service/private_key_service_factory_interface.h"
 #include "cpio/server/src/component_factory/component_factory.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;

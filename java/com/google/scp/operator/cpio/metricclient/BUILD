@@ -24,8 +24,13 @@ java_library(
     ]),
     deps = [
         ":model",
+        "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:model",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
+        "//java/external:opentelemetry_exporter_otlp",
+        "//java/external:opentelemetry_sdk_metrics",
     ],
 )
 
@@ -62,6 +67,8 @@ java_library(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
+        "//java/external:opentelemetry_exporter_otlp",
+        "//java/external:opentelemetry_sdk_metrics",
     ],
 )
 
@@ -86,7 +93,6 @@ java_library(
         "//java/external:gcp_monitoring_v3",
         "//java/external:google_auth_library_oauth2_http",
         "//java/external:google_cloud_opentelemetry_detector_resources",
-        "//java/external:google_cloud_opentelemetry_exporter_metrics",
         "//java/external:google_common_proto",
         "//java/external:grpc_api",
         "//java/external:guava",

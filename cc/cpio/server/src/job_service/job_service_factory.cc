@@ -23,6 +23,8 @@
 #include "cc/core/common/uuid/src/uuid.h"
 #include "cpio/client_providers/job_client_provider/src/job_client_provider.h"
 #include "cpio/server/src/service_utils.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/job_service/v1/configuration_keys.pb.h"
 
 using google::cmrt::sdk::job_service::v1::ClientConfigurationKeys;

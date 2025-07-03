@@ -32,7 +32,7 @@ resource "google_monitoring_metric_descriptor" "jobclient_job_validation_failure
 }
 
 resource "google_monitoring_alert_policy" "jobclient_job_validation_failure_counter_alert" {
-  count        = length(var.java_job_validations_to_alert) == 0 && !var.enable_new_metrics ? 0 : 1
+  count        = length(var.java_job_validations_to_alert) > 0 && var.enable_new_metrics ? 1 : 0
   display_name = "${var.environment} Job Client Validation Failure Alert"
   combiner     = "OR"
   conditions {
@@ -53,7 +53,8 @@ resource "google_monitoring_alert_policy" "jobclient_job_validation_failure_coun
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -107,7 +108,8 @@ resource "google_monitoring_alert_policy" "worker_job_error_new_alert" {
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 

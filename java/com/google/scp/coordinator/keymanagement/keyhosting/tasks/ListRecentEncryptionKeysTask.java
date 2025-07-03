@@ -19,7 +19,7 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.EncryptionKeyConverter;
+import com.google.scp.coordinator.keymanagement.shared.converter.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;

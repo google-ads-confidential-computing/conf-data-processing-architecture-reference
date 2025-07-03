@@ -69,12 +69,14 @@ resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
     service_account_email = google_service_account.key_storage_service_account.email
     ingress_settings      = "ALLOW_INTERNAL_AND_GCLB"
     environment_variables = {
-      PROJECT_ID          = var.project_id
-      GCP_KMS_URI         = "gcp-kms://${var.key_encryption_key_id}"
-      SPANNER_INSTANCE    = var.spanner_instance_name
-      SPANNER_DATABASE    = var.spanner_database_name
-      GCP_KMS_BASE_URI    = var.kms_key_base_uri
-      DISABLE_KEY_SET_ACL = var.disable_key_set_acl
+      PROJECT_ID                  = var.project_id
+      GCP_KMS_URI                 = "gcp-kms://${var.key_encryption_key_id}"
+      SPANNER_INSTANCE            = var.spanner_instance_name
+      SPANNER_DATABASE            = var.spanner_database_name
+      GCP_KMS_BASE_URI            = var.kms_key_base_uri
+      MIGRATION_GCP_KMS_BASE_URI  = var.migration_kms_key_base_uri
+      DISABLE_KEY_SET_ACL         = var.disable_key_set_acl
+      POPULATE_MIGRATION_KEY_DATA = var.populate_migration_key_data
     }
   }
 

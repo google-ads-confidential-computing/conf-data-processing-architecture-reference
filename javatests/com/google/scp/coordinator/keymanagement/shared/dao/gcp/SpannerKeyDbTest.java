@@ -40,11 +40,14 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDbUtil;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyStatusProto.EncryptionKeyStatus;
+import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Rule;
@@ -86,6 +89,9 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
     assertThat(receivedKey.getKeyId()).isEqualTo(keyId);
     assertThat(receivedKey.getPublicKey()).isEqualTo(expectedKey.getPublicKey());
     assertThat(receivedKey.getJsonEncodedKeyset()).isEqualTo(expectedKey.getJsonEncodedKeyset());
+    assertThat(receivedKey.getMigrationKeyEncryptionKeyUri()).isEqualTo("");
+    assertThat(receivedKey.getMigrationJsonEncodedKeyset()).isEqualTo("");
+    assertThat(receivedKey.getMigrationKeySplitDataList()).hasSize(0);
   }
 
   @Test
@@ -285,5 +291,43 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
               assertThat(keys).isNotNull();
               assertThat(keys).hasSize(expectedSize);
             });
+  }
+
+  @Test
+  public void createKey_successAddWithMigration() throws ServiceException {
+    String keyId = "test-key-id";
+    List<KeySplitData> keySplitData = new ArrayList<>();
+    List<KeySplitData> migrationKeySplitData = new ArrayList<>();
+    keySplitData.add(KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri("URI").build());
+    migrationKeySplitData.add(
+        KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri("MIG_URI").build());
+
+    EncryptionKey expectedKey =
+        EncryptionKey.newBuilder()
+            .setKeyId(keyId)
+            .setPublicKey("12345")
+            .setPublicKeyMaterial("12345")
+            .setJsonEncodedKeyset("67890")
+            .setKeyEncryptionKeyUri("URI")
+            .addAllKeySplitData(keySplitData)
+            .setCreationTime(0L)
+            .setExpirationTime(0L)
+            .setMigrationJsonEncodedKeyset("09876")
+            .setMigrationKeyEncryptionKeyUri("MIG_URI")
+            .addAllMigrationKeySplitData(migrationKeySplitData)
+            .build();
+
+    keyDb.createKey(expectedKey);
+    EncryptionKey receivedKey = keyDb.getKey(keyId);
+
+    assertThat(receivedKey.getKeyId()).isEqualTo(keyId);
+    assertThat(receivedKey.getPublicKey()).isEqualTo(expectedKey.getPublicKey());
+    assertThat(receivedKey.getJsonEncodedKeyset()).isEqualTo(expectedKey.getJsonEncodedKeyset());
+    assertThat(receivedKey.getMigrationKeyEncryptionKeyUri())
+        .isEqualTo((expectedKey.getMigrationKeyEncryptionKeyUri()));
+    assertThat(receivedKey.getMigrationJsonEncodedKeyset())
+        .isEqualTo((expectedKey.getMigrationJsonEncodedKeyset()));
+    assertThat(receivedKey.getMigrationKeySplitData(0))
+        .isEqualTo((expectedKey.getMigrationKeySplitData(0)));
   }
 }

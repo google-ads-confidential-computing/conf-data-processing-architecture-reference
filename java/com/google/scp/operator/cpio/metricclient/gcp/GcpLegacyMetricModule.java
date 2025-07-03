@@ -52,7 +52,6 @@ public class GcpLegacyMetricModule extends AbstractModule {
         projectId,
         instanceId,
         zone,
-        /* enableNativeMetricAggregation */ false,
         /* enableRemoteMetricAggregation */ false);
   }
 }

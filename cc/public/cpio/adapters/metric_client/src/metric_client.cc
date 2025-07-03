@@ -34,6 +34,8 @@
 #include "cpio/client_providers/interface/metric_client_provider_interface.h"
 #include "cpio/client_providers/interface/otel_metric_client_provider_interface.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/adapters/common/adapter_utils.h"
 #include "public/cpio/interface/error_codes.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"

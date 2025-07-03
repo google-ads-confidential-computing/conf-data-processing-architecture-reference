@@ -37,7 +37,8 @@
 #include "google/cloud/options.h"
 #include "google/cloud/status_or.h"
 #include "operator/protos/shared/backend/asginstance/instance_status.pb.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/auto_scaling_service/v1/auto_scaling_service.pb.h"
 
 #include "error_codes.h"

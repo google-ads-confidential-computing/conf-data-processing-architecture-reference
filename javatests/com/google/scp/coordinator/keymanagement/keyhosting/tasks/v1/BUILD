@@ -27,6 +27,7 @@ java_test(
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks/v1",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",

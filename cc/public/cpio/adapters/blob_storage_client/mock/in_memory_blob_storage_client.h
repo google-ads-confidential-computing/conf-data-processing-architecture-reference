@@ -77,10 +77,13 @@ class InMemoryBlobStorageClient : public BlobStorageClientInterface {
   GetBlobSync(cmrt::sdk::blob_storage_service::v1::GetBlobRequest
                   request) noexcept override {
     cmrt::sdk::blob_storage_service::v1::GetBlobResponse response;
-    RETURN_IF_FAILURE(
+    auto result =
         SyncUtils::AsyncToSync2(std::bind(&InMemoryBlobStorageClient::GetBlob,
                                           this, std::placeholders::_1),
-                                std::move(request), response));
+                                std::move(request), response);
+    if (!result.Successful()) {
+      return result;
+    }
     return response;
   }
 
@@ -125,10 +128,13 @@ class InMemoryBlobStorageClient : public BlobStorageClientInterface {
   PutBlobSync(cmrt::sdk::blob_storage_service::v1::PutBlobRequest
                   request) noexcept override {
     cmrt::sdk::blob_storage_service::v1::PutBlobResponse response;
-    RETURN_IF_FAILURE(
+    auto result =
         SyncUtils::AsyncToSync2(std::bind(&InMemoryBlobStorageClient::PutBlob,
                                           this, std::placeholders::_1),
-                                std::move(request), response));
+                                std::move(request), response);
+    if (!result.Successful()) {
+      return result;
+    }
     return response;
   }
 

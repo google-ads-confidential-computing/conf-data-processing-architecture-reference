@@ -88,7 +88,7 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
   }
 
   @Test
-  public void testExecute_nonExistingKey_throwsException() throws Exception {
+  public void testExecute_nonExistingKey_throwsException() {
     // Given
     doReturn("non-existing-key").when(matcher).group("id");
 

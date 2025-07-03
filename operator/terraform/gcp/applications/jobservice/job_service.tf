@@ -29,6 +29,35 @@ provider "google" {
   zone    = var.region_zone
 }
 
+locals {
+  fe_cloud_run_5xx_errors_alarm_config = ((var.frontend_cloud_run_error_5xx_alarm_config == null) ?
+    {
+      enable_alarm    = var.alarms_enabled
+      eval_period_sec = tonumber(var.frontend_alarm_eval_period_sec)
+      duration_sec    = tonumber(var.frontend_alarm_duration_sec)
+      error_threshold = tonumber(var.frontend_cloudfunction_5xx_threshold)
+    }
+  : var.frontend_cloud_run_error_5xx_alarm_config)
+
+  fe_cloud_run_non_5xx_errors_alarm_config = ((var.frontend_cloud_run_non_5xx_error_alarm_config == null) ?
+    {
+      enable_alarm    = var.alarms_enabled
+      eval_period_sec = tonumber(var.frontend_alarm_eval_period_sec)
+      duration_sec    = tonumber(var.frontend_alarm_duration_sec)
+      error_threshold = tonumber(var.frontend_cloudfunction_error_threshold)
+    }
+  : var.frontend_cloud_run_non_5xx_error_alarm_config)
+
+  fe_cloud_run_execution_time_alarm_config = ((var.frontend_cloud_run_execution_time_alarm_config == null) ?
+    {
+      enable_alarm    = var.alarms_enabled
+      eval_period_sec = tonumber(var.frontend_alarm_eval_period_sec)
+      duration_sec    = tonumber(var.frontend_alarm_duration_sec)
+      threshold_ms    = tonumber(var.frontend_cloudfunction_max_execution_time_max)
+    }
+  : var.frontend_cloud_run_execution_time_alarm_config)
+}
+
 module "bazel" {
   source = "../../modules/bazel"
 }
@@ -38,16 +67,16 @@ module "vpc" {
 
   environment = var.environment
   project_id  = var.project_id
-  regions     = toset([var.region])
+  regions     = setunion([var.region], var.frontend_service_cloud_run_regions)
 
   auto_create_subnetworks = var.auto_create_subnetworks
   # These variables are only be used if auto_create_subnetworks is set to false.
   network_name_suffix = var.network_name_suffix
   worker_subnet_cidr  = var.worker_subnet_cidr
 
-  enable_remote_metric_aggregation = var.enable_remote_metric_aggregation
-  collector_subnet_cidr            = var.collector_subnet_cidr
-  proxy_subnet_cidr                = var.proxy_subnet_cidr
+  enable_opentelemetry_collector = var.enable_opentelemetry_collector
+  collector_subnet_cidr          = var.collector_subnet_cidr
+  proxy_subnet_cidr              = var.proxy_subnet_cidr
 
   create_connectors      = var.vpcsc_compatible
   connector_machine_type = var.vpc_connector_machine_type
@@ -164,13 +193,6 @@ module "notifications_topic_id" {
   parameter_value = module.notifications[0].notifications_pubsub_topic_id
 }
 
-module "enable_native_metric_aggregation" {
-  source          = "../../modules/parameters"
-  environment     = var.environment
-  parameter_name  = "ENABLE_NATIVE_METRIC_AGGREGATION"
-  parameter_value = var.enable_native_metric_aggregation
-}
-
 module "enable_remote_metric_aggregation" {
   source          = "../../modules/parameters"
   environment     = var.environment
@@ -202,13 +224,13 @@ module "opentelemetry_collector_address" {
 }
 
 module "opentelemetry_collector" {
-  count = var.enable_remote_metric_aggregation ? 1 : 0
+  count = var.enable_opentelemetry_collector ? 1 : 0
 
   source      = "../../modules/opentelemetry_collector"
   environment = var.environment
   project_id  = var.project_id
   region      = var.region
-  subnet_id   = module.vpc.collector_subnet_id
+  subnet_id   = module.vpc.collector_subnet_ids[var.region]
   network     = module.vpc.network
 
   user_provided_collector_sa_email = var.user_provided_collector_sa_email
@@ -230,24 +252,27 @@ module "opentelemetry_collector" {
     collector_queue_size = var.collector_queue_size
   })
 
-  collector_exceed_cpu_usage_alarm     = var.collector_exceed_cpu_usage_alarm
-  collector_exceed_memory_usage_alarm  = var.collector_exceed_memory_usage_alarm
-  collector_export_error_alarm         = var.collector_export_error_alarm
-  collector_run_error_alarm            = var.collector_run_error_alarm
-  collector_crash_error_alarm          = var.collector_crash_error_alarm
-  worker_exporting_metrics_error_alarm = var.worker_exporting_metrics_error_alarm
+  collector_exceed_cpu_usage_alarm           = var.collector_exceed_cpu_usage_alarm
+  collector_exceed_memory_usage_alarm        = var.collector_exceed_memory_usage_alarm
+  collector_export_error_alarm               = var.collector_export_error_alarm
+  collector_run_error_alarm                  = var.collector_run_error_alarm
+  collector_crash_error_alarm                = var.collector_crash_error_alarm
+  worker_exporting_metrics_error_alarm       = var.worker_exporting_metrics_error_alarm
+  collector_queue_size_ratio_alarm           = var.collector_queue_size_ratio_alarm
+  collector_send_metric_points_ratio_alarm   = var.collector_send_metric_points_ratio_alarm
+  collector_refuse_metric_points_ratio_alarm = var.collector_refuse_metric_points_ratio_alarm
 }
 
 module "opentelemetry_collector_load_balancer" {
-  count = var.enable_remote_metric_aggregation ? 1 : 0
+  count = var.enable_opentelemetry_collector ? 1 : 0
 
-  source            = "../../modules/loadbalancer"
+  source            = "../../modules/otel_load_balancer"
   environment       = var.environment
   project_id        = var.project_id
   network           = module.vpc.network
   region            = var.region
-  subnet_id         = module.vpc.collector_subnet_id
-  proxy_subnet      = module.vpc.proxy_subnet_id
+  subnet_id         = module.vpc.collector_subnet_ids[var.region]
+  proxy_subnet      = module.vpc.proxy_subnet_ids[var.region]
   instance_group    = module.opentelemetry_collector[0].collector_instance_group
   service_name      = "collector"
   service_port_name = var.collector_service_port_name
@@ -257,12 +282,12 @@ module "opentelemetry_collector_load_balancer" {
 }
 
 module "frontend" {
-  source           = "../../modules/frontend"
-  environment      = var.environment
-  project_id       = var.project_id
-  region           = var.region
-  vpc_connector_id = var.vpcsc_compatible ? module.vpc.connectors[var.region] : null
-  job_version      = var.job_version
+  source            = "../../modules/frontend"
+  environment       = var.environment
+  project_id        = var.project_id
+  region            = var.region
+  vpc_connector_ids = var.vpcsc_compatible ? module.vpc.connectors : {}
+  job_version       = var.job_version
 
   spanner_instance_name       = module.metadatadb.metadatadb_instance_name
   spanner_database_name       = module.metadatadb.metadatadb_name
@@ -292,7 +317,12 @@ module "frontend" {
   cloudfunction_max_execution_time_max = var.frontend_cloudfunction_max_execution_time_max
   lb_5xx_threshold                     = var.frontend_lb_5xx_threshold
   lb_max_latency_ms                    = var.frontend_lb_max_latency_ms
-  use_java21_runtime                   = var.frontend_cloudfunction_use_java21_runtime
+
+  cloud_run_error_5xx_alarm_config      = local.fe_cloud_run_5xx_errors_alarm_config
+  cloud_run_non_5xx_error_alarm_config  = local.fe_cloud_run_non_5xx_errors_alarm_config
+  cloud_run_execution_time_alarm_config = local.fe_cloud_run_execution_time_alarm_config
+
+  use_java21_runtime = var.frontend_cloudfunction_use_java21_runtime
 
   frontend_service_cloud_run_regions                     = var.frontend_service_cloud_run_regions
   frontend_service_cloud_run_deletion_protection         = var.frontend_service_cloud_run_deletion_protection
@@ -325,7 +355,7 @@ module "worker" {
   environment                   = var.environment
   project_id                    = var.project_id
   network                       = module.vpc.network
-  subnet_id                     = module.vpc.worker_subnet_id
+  subnet_id                     = module.vpc.worker_subnet_ids[var.region]
   egress_internet_tag           = module.vpc.egress_internet_tag
   worker_instance_force_replace = var.worker_instance_force_replace
 
@@ -374,7 +404,7 @@ module "autoscaling" {
   environment             = var.environment
   project_id              = var.project_id
   region                  = var.region
-  subnet_id               = module.vpc.worker_subnet_id
+  subnet_id               = module.vpc.worker_subnet_ids[var.region]
   vpc_connector_id        = var.vpcsc_compatible ? module.vpc.connectors[var.region] : null
   auto_create_subnetworks = var.auto_create_subnetworks
 

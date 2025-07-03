@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter;
+package com.google.scp.coordinator.keymanagement.shared.converter;
 
 import com.google.common.base.Converter;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.DataKeyProto;

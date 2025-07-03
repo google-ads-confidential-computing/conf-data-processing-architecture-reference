@@ -68,7 +68,10 @@ class SyncUtils {
     }
 
     auto [result, actual_response] = request_promise.get_future().get();
-    RETURN_IF_FAILURE(result);
+    // RETURN_IF_FAILURE(result);  // Can't use the macro in a header file.
+    if (!result.Successful()) {
+      return result;
+    }
     response = std::move(*actual_response);
     return core::SuccessExecutionResult();
   }
@@ -89,7 +92,10 @@ class SyncUtils {
     func(context);
 
     auto [result, actual_response] = request_promise.get_future().get();
-    RETURN_IF_FAILURE(result);
+    // RETURN_IF_FAILURE(result);  // Can't use the macro in a header file.
+    if (!result.Successful()) {
+      return result;
+    }
     response = std::move(*actual_response);
     return core::SuccessExecutionResult();
   }

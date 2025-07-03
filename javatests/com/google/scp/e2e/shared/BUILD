@@ -22,7 +22,7 @@ java_library(
         ["MultiCoordinatorTestEnv.java"],
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/common",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
         "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/aws",
         "//java/com/google/scp/operator/cpio/configclient",

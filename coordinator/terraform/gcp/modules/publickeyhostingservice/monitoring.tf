@@ -30,7 +30,6 @@ module "cloud_function_alarms" {
   duration_sec                    = var.alarm_duration_sec
   error_5xx_threshold             = var.get_public_key_cloudfunction_5xx_threshold
   execution_time_max              = var.get_public_key_cloudfunction_max_execution_time_max
-  execution_error_ratio_threshold = var.get_public_key_cloudfunction_error_ratio_threshold
   alert_on_memory_usage_threshold = var.cloudfunction_alert_on_memory_usage_threshold
   cloud_function_severity_map     = var.public_key_alerts_severity_overrides
 }

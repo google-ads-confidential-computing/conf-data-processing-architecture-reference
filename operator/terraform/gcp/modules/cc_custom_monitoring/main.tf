@@ -66,7 +66,8 @@ resource "google_monitoring_alert_policy" "joblifecyclehelper_job_pulling_failur
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -187,7 +188,8 @@ resource "google_monitoring_alert_policy" "joblifecyclehelper_job_completion_fai
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -270,7 +272,8 @@ resource "google_monitoring_alert_policy" "joblifecyclehelper_job_processing_tim
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -313,7 +316,8 @@ resource "google_monitoring_alert_policy" "joblifecyclehelper_job_extender_failu
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -382,7 +386,8 @@ resource "google_monitoring_alert_policy" "joblifecyclehelper_job_pool_failure_a
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -478,7 +483,8 @@ resource "google_monitoring_alert_policy" "joblifecyclehelper_job_waiting_time_a
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 
@@ -534,7 +540,8 @@ resource "google_monitoring_alert_policy" "joblifecyclehelper_job_release_failur
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }
 

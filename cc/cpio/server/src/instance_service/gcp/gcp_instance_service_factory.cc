@@ -29,6 +29,8 @@
 #include "cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cpio/server/interface/instance_service/instance_service_factory_interface.h"
 #include "cpio/server/src/service_utils.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 using google::scp::core::AsyncExecutor;
 using google::scp::core::ConfigProviderInterface;

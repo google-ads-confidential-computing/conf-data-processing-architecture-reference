@@ -56,21 +56,21 @@ variable "network_name_suffix" {
 }
 
 variable "worker_subnet_cidr" {
-  description = "The range of internal addresses that are owned by worker subnet."
-  type        = string
-  default     = null
+  description = "The range of internal addresses that are owned by worker subnet.Map with Key: region and Value: cidr range."
+  type        = map(string)
+  default     = {}
 }
 
 variable "collector_subnet_cidr" {
-  description = "The range of internal addresses that are owned by collector subnet."
-  type        = string
-  default     = null
+  description = "The range of internal addresses that are owned by collector subnet. Map with Key: region and Value: cidr range."
+  type        = map(string)
+  default     = {}
 }
 
 variable "proxy_subnet_cidr" {
-  description = "The range of internal addresses that are owned by proxy subnet."
-  type        = string
-  default     = null
+  description = "The range of internal addresses that are owned by proxy subnet. Map with Key: region and Value: cidr range."
+  type        = map(string)
+  default     = {}
 }
 
 ################################################################################
@@ -714,6 +714,45 @@ variable "frontend_lb_5xx_threshold" {
   default     = "0"
 }
 
+variable "frontend_cloud_run_error_5xx_alarm_config" {
+  description = "The configuration for the 5xx error alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    error_threshold = number # error count greater than this to send alarm. Example: 0.
+  })
+
+  default = null
+}
+
+variable "frontend_cloud_run_non_5xx_error_alarm_config" {
+  description = "The configuration for the non-5xx error (3xx-4xx) alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    error_threshold = number # error count greater than this to send alarm. Example: 500.
+  })
+
+  default = null
+}
+
+variable "frontend_cloud_run_execution_time_alarm_config" {
+  description = "The configuration for the execution time alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    threshold_ms    = number # Execution times greater than this to send alarm. Example: 0.
+  })
+
+  default = null
+}
+
 ################################################################################
 # Worker Alert thresholds
 ################################################################################
@@ -763,6 +802,12 @@ variable "joblifecyclehelper_job_waiting_time_threshold" {
 ################################################################################
 # OpenTelemetry Collector variables
 ################################################################################
+variable "enable_opentelemetry_collector" {
+  description = "When true, install the collector module to operator_service."
+  type        = bool
+  default     = false
+}
+
 variable "collector_instance_type" {
   description = "GCE instance type for worker."
   type        = string
@@ -962,6 +1007,66 @@ variable "worker_exporting_metrics_error_alarm" {
     duration_sec : 300,
     alignment_period_sec : 600,
     threshold : 50,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}
+
+variable "collector_queue_size_ratio_alarm" {
+  description = "Configuration for the collector queue size alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 0.8,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}
+
+variable "collector_send_metric_points_ratio_alarm" {
+  description = "Configuration for the collector send metric points ratio alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 0.05,
+    severity : "moderate",
+    auto_close_sec : 1800
+  }
+}
+
+variable "collector_refuse_metric_points_ratio_alarm" {
+  description = "Configuration for the collector refuse metric points ratio alarm."
+  type = object({
+    enable_alarm : bool,
+    duration_sec : number,
+    alignment_period_sec : number,
+    threshold : number,
+    severity : string,
+    auto_close_sec : number
+  })
+  default = {
+    enable_alarm : false,
+    duration_sec : 300,
+    alignment_period_sec : 600,
+    threshold : 0.05,
     severity : "moderate",
     auto_close_sec : 1800
   }

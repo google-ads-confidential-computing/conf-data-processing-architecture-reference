@@ -117,9 +117,11 @@ class ConfigurationFetcherUtils {
     std::vector<std::string> enum_str_list = absl::StrSplit(value, ",");
     std::unordered_set<EnumT> enum_set;
     for (auto& enum_str : enum_str_list) {
-      EnumT enum_value;
-      ASSIGN_OR_RETURN(enum_value, StringToEnum<EnumT>(enum_str, enum_map));
-      enum_set.insert(enum_value);
+      auto enum_value_or = StringToEnum<EnumT>(enum_str, enum_map);
+      if (!enum_value_or.Successful()) {
+        return enum_value_or.result();
+      }
+      enum_set.insert(enum_value_or.release());
     }
     return enum_set;
   }

@@ -143,6 +143,10 @@ resource "google_compute_instance_template" "collector" {
 
   machine_type = var.collector_instance_type
 
+  shielded_instance_config {
+    enable_secure_boot = true
+  }
+
   service_account {
     email  = local.collector_service_account_email
     scopes = ["cloud-platform"]

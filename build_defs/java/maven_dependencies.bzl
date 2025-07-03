@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_jvm_external//:defs.bzl", "maven_install")
+load("@rules_jvm_external//:specs.bzl", "maven")
 load("//build_defs/shared:java_grpc.bzl", "GAPIC_GENERATOR_JAVA_VERSION")
 load("//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS")
 
@@ -65,7 +66,6 @@ def maven_dependencies():
             # Need to include these two, otherwise,
             # complain about google-api-client and cloudkms mismatch.
             "com.google.api-client:google-api-client:2.7.0",
-            "com.google.apis:google-api-services-cloudkms:v1-rev20240808-2.0.0",
             "com.google.cloud:google-cloud-kms:2.48.0",
             "com.google.cloud:google-cloud-pubsub:1.132.0",
             "com.google.cloud:google-cloud-storage:2.41.0",
@@ -146,9 +146,15 @@ def maven_dependencies():
             "io.opentelemetry:opentelemetry-sdk-common:1.31.0",
             "io.opentelemetry:opentelemetry-sdk-metrics:1.31.0",
             "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.31.0",
-            "com.google.cloud.opentelemetry:exporter-metrics:0.26.0",
             "com.google.cloud.opentelemetry:detector-resources:0.26.0-alpha",
             "org.threeten:threetenbp:1.7.0",
+            # maven_install can't generate the right url to download this library
+            # with com.google.apis:google-api-services-cloudkms:<version>
+            maven.artifact(
+                group = "com.google.apis",
+                artifact = "google-api-services-cloudkms",
+                version = "v1-rev20240808-2.0.0",
+            ),
         ] + TINK_MAVEN_ARTIFACTS,
         repositories = [
             "https://repo1.maven.org/maven2",

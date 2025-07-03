@@ -20,11 +20,9 @@ import static com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotation
 import static com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbTableName;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Key;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.CacheControlMaximum;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.Annotations.DisableActivationTime;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.DisableActivationTime;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDbModule;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
@@ -111,9 +109,6 @@ public final class AwsKeyServiceModule extends AbstractModule {
     install(new DynamoKeyDbModule(Optional.ofNullable(env.get(ENDPOINT_OVERRIDE_ENV_VAR))));
     bind(Integer.class).annotatedWith(KeyLimit.class).toInstance(getKeyLimit());
     bind(Long.class).annotatedWith(CacheControlMaximum.class).toInstance(getCacheControlMaximum());
-    bind(Long.class)
-        .annotatedWith(Annotations.CacheControlMaximum.class)
-        .to(Key.get(Long.class, CacheControlMaximum.class));
     bind(KeyDb.class).to(DynamoKeyDb.class);
     bind(Boolean.class)
         .annotatedWith(DisableActivationTime.class)

@@ -19,6 +19,8 @@
 
 #include "cpio/client_providers/job_client_provider/src/error_codes.h"
 #include "cpio/common/src/gcp/gcp_utils.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;

@@ -15,9 +15,9 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-RULES_JVM_EXTERNAL_TAG = "4.4"
+RULES_JVM_EXTERNAL_TAG = "6.6"
 
-RULES_JVM_EXTERNAL_SHA = "0068b92a1527799d7268f6774654ed35024a660c6c68ac1f8011edade905929d"
+RULES_JVM_EXTERNAL_SHA = "ec60d258e6f55a1014368e40ca52058b1a645a3d455ca471c4edb7c03f4b8d88"
 
 def rules_jvm_external():
     maybe(

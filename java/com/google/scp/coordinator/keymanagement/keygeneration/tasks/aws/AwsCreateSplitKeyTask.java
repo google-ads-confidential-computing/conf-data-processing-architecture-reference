@@ -74,9 +74,6 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
    * encryption key generation and splitting, key storage request, and database persistence with
    * signatures.
    *
-   * <p>For key regeneration {@link CreateSplitKeyTaskBase#replaceExpiringKeys(int, int, int)}
-   * should be used.
-   *
    * @see CreateSplitKeyTaskBase#createSplitKey(String, String, int, int, int, Instant)
    */
   @Override

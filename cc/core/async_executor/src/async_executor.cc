@@ -23,7 +23,8 @@
 
 #include "cc/core/interface/async_context.h"
 #include "cc/core/interface/async_executor_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 #include "error_codes.h"
 #include "typedef.h"

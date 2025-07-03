@@ -29,6 +29,8 @@
 #include "cpio/client_providers/role_credentials_provider/test/aws/test_aws_role_credentials_provider.h"
 #include "cpio/server/src/private_key_service/aws/nontee_aws_private_key_service_factory.h"
 #include "cpio/server/src/service_utils.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/private_key_service/v1/test_configuration_keys.pb.h"
 #include "public/cpio/test/private_key_client/test_aws_private_key_client_options.h"
 

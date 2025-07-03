@@ -25,7 +25,8 @@
 #include "core/interface/errors.h"
 #include "cpio/client_providers/global_cpio/src/global_cpio.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/kms_service/v1/kms_service.pb.h"
 #include "public/cpio/utils/sync_utils/src/sync_utils.h"
 

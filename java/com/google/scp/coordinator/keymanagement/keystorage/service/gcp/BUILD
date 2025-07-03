@@ -99,7 +99,7 @@ container_image(
     name = "KeyStorageServiceRuntimeContainer",
     base = "@java_base_21//image",
     cmd = [
-        "./java-function-invoker-1.3.1.jar",
+        "./processed_java-function-invoker-1.3.1.jar",
         "--classpath",
         "./KeyStorageServiceHttpCloudFunction_deploy.jar",
         "--target",

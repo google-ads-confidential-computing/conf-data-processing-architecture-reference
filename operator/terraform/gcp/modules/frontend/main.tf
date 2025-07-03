@@ -46,6 +46,8 @@ locals {
   }
 
   create_multiple_cloud_run_frontends = length(var.frontend_service_cloud_run_regions) > 0
+
+  lb_fe_https_custom_audience = (var.frontend_service_lb_domain != null && var.frontend_service_lb_domain != "") ? "https://${var.frontend_service_lb_domain}" : ""
 }
 
 resource "google_service_account" "frontend_service_account" {
@@ -94,8 +96,8 @@ resource "google_cloudfunctions2_function" "frontend_service_cloudfunction" {
     available_cpu                    = var.frontend_service_cloudfunction_num_cpus
     available_memory                 = "${var.frontend_service_cloudfunction_memory_mb}M"
     service_account_email            = local.runtime_service_account
-    vpc_connector                    = var.vpc_connector_id
-    vpc_connector_egress_settings    = var.vpc_connector_id == null ? null : "ALL_TRAFFIC"
+    vpc_connector                    = length(var.vpc_connector_ids) == 0 ? null : var.vpc_connector_ids[var.region]
+    vpc_connector_egress_settings    = length(var.vpc_connector_ids) == 0 ? null : "ALL_TRAFFIC"
     environment_variables            = local.service_environment_variables
   }
 
@@ -125,11 +127,11 @@ module "cloud_run_fe" {
   memory_mb                     = var.frontend_service_cloudfunction_memory_mb
   timeout_seconds               = var.frontend_service_cloudfunction_timeout_sec
   runtime_service_account_email = local.runtime_service_account
-  vpc_connector_id              = var.vpc_connector_id
+  vpc_connector_id              = length(var.vpc_connector_ids) == 0 ? null : var.vpc_connector_ids[each.value]
   ingress_traffic_setting       = var.frontend_service_cloud_run_ingress_traffic_setting
   cloud_run_invoker_iam_members = var.frontend_service_cloud_run_allowed_invoker_iam_members
   binary_authorization          = var.frontend_service_cloud_run_binary_authorization
-  custom_audiences              = setunion([var.frontend_service_lb_domain], var.frontend_service_cloud_run_custom_audiences)
+  custom_audiences              = setunion((local.lb_fe_https_custom_audience != "" ? [local.lb_fe_https_custom_audience] : []), var.frontend_service_cloud_run_custom_audiences)
 }
 
 # Reserve IP address for FE LB.

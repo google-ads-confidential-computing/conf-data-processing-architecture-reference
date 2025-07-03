@@ -327,7 +327,7 @@ variable "cloudfunction_timeout_seconds" {
 
 ### Public Key Service
 
-variable "public_key_service_add_cr_lb" {
+variable "public_key_service_use_only_cr" {
   description = "Flag to control launching adding Cloud Run Public Key Service to Load Balancer."
   type        = bool
   nullable    = false
@@ -350,6 +350,12 @@ variable "get_public_key_service_jar" {
 variable "get_public_key_service_source_path" {
   description = "GCS path to public Key Service source archive in the package bucket."
   type        = string
+}
+
+variable "public_key_service_cr_regions" {
+  description = "Additional regions beyond primary and secondary that Public KS will run in."
+  type        = list(string)
+  nullable    = false
 }
 
 variable "public_key_service_cloud_run_cpu_count" {
@@ -412,17 +418,17 @@ variable "private_key_service_cloud_run_concurrency" {
   type        = number
 }
 
+variable "enable_private_key_service_cache" {
+  description = "Variable to enable server side cache in the Private Key Service."
+  type        = bool
+}
+
 ### EKS
 variable "encryption_key_service_jar" {
   description = <<-EOT
           Encryption key service cloud function path. If not provided defaults to locally built jar file.
         Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
       EOT
-  type        = string
-}
-
-variable "encryption_key_service_source_path" {
-  description = "GCS path to Encryption Key Service source archive in the package bucket."
   type        = string
 }
 
@@ -439,12 +445,6 @@ variable "encryption_key_service_cloudfunction_min_instances" {
 variable "encryption_key_service_cloudfunction_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
-}
-
-variable "encryptionkeyservice_use_java21_runtime" {
-  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
-  type        = bool
-  nullable    = false
 }
 
 ################################################################################
@@ -471,6 +471,11 @@ variable "public_key_service_cdn_serve_while_stale_seconds" {
   type        = number
 }
 
+variable "public_key_service_regions_to_exclude_from_lb" {
+  description = "Maximum CDN TTL seconds that cache header directive cannot surpass."
+  type        = set(string)
+}
+
 ################################################################################
 # Public Key Alarm Variables.
 ################################################################################
@@ -483,11 +488,6 @@ variable "public_key_service_alarm_eval_period_sec" {
 variable "public_key_service_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = string
-}
-
-variable "public_key_service_error_ratio_threshold" {
-  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = number
 }
 
 variable "public_key_service_max_execution_time_max" {
@@ -537,11 +537,6 @@ variable "public_key_service_general_error_threshold" {
 variable "encryptionkeyservice_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
   type        = string
-}
-
-variable "encryptionkeyservice_cloudfunction_error_ratio_threshold" {
-  description = "Error ratio greater than this to send alarm. Must be in decimal form: 10% = 0.10. Example: '0.0'."
-  type        = number
 }
 
 variable "encryptionkeyservice_cloudfunction_max_execution_time_max" {
@@ -614,6 +609,35 @@ variable "alert_severity_overrides" {
   type        = map(string)
 }
 
+variable "populate_migration_key_data" {
+  description = <<EOT
+  Controls whether to populate the migration columns when generating keys.
+
+  Note: This should only should only be used in preparation for or during a migration.
+  EOT
+  type        = string
+  nullable    = true
+}
+
+variable "key_sets_vending_config" {
+  description = <<EOT
+  Configuration for controlling key set vending.
+
+  Note: Any key sets without configurations set will by default serve the default key data columns for all callers.
+
+  Attributes:
+    key_sets                                   (list) - The list of individual key set configuration, one for each unique key set.
+    key_sets[].name                            (string) - The unique set name for the key set, the value should be a valid URL path segment (e.g. ^[a-zA-Z0-9\\-\\._~]+$).
+    key_sets[].callers_using_migration_data    (list(string)) - The list of callers allowed to consume from the migration columns in the KeySet Db.
+  EOT
+  type = object({
+    key_sets = list(object({
+      name                         = string
+      callers_using_migration_data = list(string)
+    }))
+  })
+}
+
 variable "disable_key_set_acl" {
   description = "Controls whether to generate keys enforcing key set level acl."
   type        = string
@@ -621,5 +645,10 @@ variable "disable_key_set_acl" {
 
 variable "peer_coordinator_kms_key_base_uri" {
   description = "Kms key base url from peer coordinator."
+  type        = string
+}
+
+variable "migration_peer_coordinator_kms_key_base_uri" {
+  description = "Migration kms key base url from peer coordinator."
   type        = string
 }

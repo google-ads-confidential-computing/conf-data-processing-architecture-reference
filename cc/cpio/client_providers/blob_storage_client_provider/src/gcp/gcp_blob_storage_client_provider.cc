@@ -43,7 +43,8 @@
 #include "google/cloud/status_or.h"
 #include "google/cloud/storage/client.h"
 #include "google/cloud/storage/object_read_stream.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/interface/blob_storage_client/type_def.h"
 
 #include "gcp_blob_storage_client_utils.h"

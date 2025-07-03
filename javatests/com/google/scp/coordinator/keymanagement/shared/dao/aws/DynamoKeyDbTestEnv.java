@@ -22,7 +22,7 @@ import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTest
 import com.google.acai.TestScoped;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbTableName;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;

@@ -71,7 +71,6 @@ public class GcpMetricClientTest {
             PROJECT_ID,
             "testInstance123",
             "testZone123",
-            false,
             false);
   }
 
@@ -171,8 +170,7 @@ public class GcpMetricClientTest {
             PROJECT_ID,
             "testInstance123",
             "testZone123",
-            true,
-            false);
+            true);
     var argument = ArgumentCaptor.forClass(String.class);
     CustomMetric metric =
         CustomMetric.builder()
@@ -203,8 +201,7 @@ public class GcpMetricClientTest {
             PROJECT_ID,
             "testInstance123",
             "testZone123",
-            true,
-            false);
+            true);
     var argument = ArgumentCaptor.forClass(String.class);
     CustomMetric metric =
         CustomMetric.builder()
@@ -236,8 +233,7 @@ public class GcpMetricClientTest {
             PROJECT_ID,
             "testInstance123",
             "testZone123",
-            true,
-            false);
+            true);
     var argument = ArgumentCaptor.forClass(String.class);
     CustomMetric metric =
         CustomMetric.builder()
@@ -269,8 +265,7 @@ public class GcpMetricClientTest {
             PROJECT_ID,
             "testInstance123",
             "testZone123",
-            true,
-            false);
+            true);
     var argument = ArgumentCaptor.forClass(String.class);
     CustomMetric metric =
         CustomMetric.builder()

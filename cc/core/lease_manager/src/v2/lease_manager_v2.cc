@@ -23,6 +23,8 @@
 #include "core/common/time_provider/src/time_provider.h"
 #include "core/interface/lease_manager_interface.h"
 #include "core/lease_manager/src/v2/lease_refresh_liveness_enforcer.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 #include "error_codes.h"
 

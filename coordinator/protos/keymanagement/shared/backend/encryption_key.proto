@@ -47,6 +47,18 @@ message EncryptionKey {
   // indicated by the text of keyType. See EncryptionKeyType.
   string json_encoded_keyset = 4;
 
+  // Migration key data payload. The meaning of this field depends on keyType.
+  // If keyType is the empty string, then this acts as json-encoded private key
+  // data in the single-party protocol. Is empty when returning Public Keys.
+  //
+  // If keyType is non-empty, it is the private keyset data handle belonging to
+  // this coordinator, in the multi-party protocol. The type of handle is
+  // indicated by the text of keyType. See EncryptionKeyType.
+  //
+  // Should only be used in preparation for and during an active migration of
+  // private key material.
+  string migration_json_encoded_keyset = 14;
+
   // Defines status of EncryptionKey. Eg, ACTIVE.
   EncryptionKeyStatus status = 5;
 
@@ -59,6 +71,19 @@ message EncryptionKey {
   // For GCP this will include the resource name of the symmetric key e.g.
   // "gcp-kms://projects/example-project-98765/locations/us-central1/keyRings/example-ring/cryptoKeys/example-key"
   string key_encryption_key_uri = 6;
+
+  // Migration URI of the the key used to encrypt this encryption key -- the Key
+  // Encryption Key (KEK). Includes URI prefix used by Tink (e.g. "aws-kms://").
+  //
+  // For AWS this will include the ARN of the symmetric key e.g.
+  // "aws-kms://arn:aws:kms:us-east-1:012345678901:key/abcdef12-3456-7890-abcd-1234567890ab"
+  //
+  // For GCP this will include the resource name of the symmetric key e.g.
+  // "gcp-kms://projects/example-project-98765/locations/us-central1/keyRings/example-ring/cryptoKeys/example-key"
+  //
+  // Should only be used in preparation for and during an active migration of
+  // private key material.
+  string migration_key_encryption_key_uri = 15;
 
   // Date in epoch milliseconds when Key is created
   int64 creation_time = 7;
@@ -77,6 +102,13 @@ message EncryptionKey {
   // Stores key metadata for each coordinator (e.g. key signatures and KEKs),
   // as a collection of KeySplitData.
   repeated KeySplitData key_split_data = 10;
+
+  // Stores migration key metadata for each coordinator (e.g. key signatures and
+  // KEKs), as a collection of KeySplitData.
+  //
+  // Should only be used in preparation for and during an active migration of
+  // private key material.
+  repeated KeySplitData migration_key_split_data = 16;
 
   // String representation of the type of key split - if empty it is assumed to
   // be a legacy type single party key (and the key data is in

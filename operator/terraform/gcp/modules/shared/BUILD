@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2022-2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 pkg_filegroup(
     name = "modules_shared_pkg",
     srcs = [
+        "//operator/terraform/gcp/modules/shared/cloud_run_alarms",
         "//operator/terraform/gcp/modules/shared/cloudfunction_alarms",
     ],
     prefix = "modules/shared",

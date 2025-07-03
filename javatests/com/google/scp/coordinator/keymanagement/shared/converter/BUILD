@@ -24,7 +24,7 @@ java_test(
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common/converter",
+        "//java/com/google/scp/coordinator/keymanagement/shared/converter",
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:tink",
@@ -41,8 +41,8 @@ java_test(
         "//coordinator/protos/keymanagement/keystorage/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common/converter",
         "//java/com/google/scp/coordinator/keymanagement/keystorage/service/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/converter",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
@@ -60,7 +60,7 @@ java_test(
     deps = [
         "//coordinator/protos/keymanagement/keystorage/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common/converter",
+        "//java/com/google/scp/coordinator/keymanagement/shared/converter",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
         "//java/external:google_truth",
     ],

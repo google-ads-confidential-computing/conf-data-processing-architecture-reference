@@ -26,15 +26,6 @@ variable "project_id" {
 variable "regions" {
   description = "Regions with Cloud NAT support."
   type        = set(string)
-  validation {
-    # We currently only support single region for deploying operator workers.
-    # We can't change the variable to single string as it'll force terraform to
-    # recreate Cloud NAT and its router and will fail during deployment.
-    # Set the validation to 1 region until we figure out how to solve this
-    # without destory exisiting resources.
-    condition     = length(var.regions) == 1
-    error_message = "Only single region is supported."
-  }
 }
 
 variable "network_name_suffix" {
@@ -48,21 +39,21 @@ variable "auto_create_subnetworks" {
 }
 
 variable "worker_subnet_cidr" {
-  description = "The range of internal addresses that are owned by worker subnet."
-  type        = string
+  description = "The range of internal addresses that are owned by worker subnet.Map with Key: region and Value: cidr range."
+  type        = map(string)
 }
 
 variable "collector_subnet_cidr" {
-  description = "The range of internal addresses that are owned by collector subnet."
-  type        = string
+  description = "The range of internal addresses that are owned by collector subnet.Map with Key: region and Value: cidr range."
+  type        = map(string)
 }
 
 variable "proxy_subnet_cidr" {
-  description = "The range of internal addresses that are owned by proxy subnet."
-  type        = string
+  description = "The range of internal addresses that are owned by proxy subnet.Map with Key: region and Value: cidr range."
+  type        = map(string)
 }
 
-variable "enable_remote_metric_aggregation" {
+variable "enable_opentelemetry_collector" {
   description = "When true, create the collector subnet"
   type        = bool
 }

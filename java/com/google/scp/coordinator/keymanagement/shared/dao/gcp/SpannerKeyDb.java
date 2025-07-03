@@ -67,6 +67,10 @@ public final class SpannerKeyDb implements KeyDb {
   private static final String ACTIVATION_TIME_COLUMN = "ActivationTime";
   private static final String CREATED_AT_COLUMN = "CreatedAt";
   private static final String UPDATED_AT_COLUMN = "UpdatedAt";
+  private static final String MIGRATION_PRIVATE_KEY_COLUMN = "MigrationPrivateKey";
+  private static final String MIGRATION_KEY_SPLIT_DATA_COLUMN = "MigrationKeySplitData";
+  private static final String MIGRATION_KEY_ENCRYPTION_KEY_URI_COLUMN =
+      "MigrationKeyEncryptionKeyUri";
   private static final String TABLE_NAME = "KeySets";
   private static final String NATURAL_ORDERING =
       EXPIRY_TIME_COLUMN + " DESC, " + ACTIVATION_TIME_COLUMN + " DESC, " + KEY_ID_COLUMN + " DESC";
@@ -80,9 +84,10 @@ public final class SpannerKeyDb implements KeyDb {
   @Inject
   public SpannerKeyDb(@KeyDbClient DatabaseClient dbClient, SpannerKeyDbConfig dbConfig) {
     this.dbClient = dbClient;
-    this.stalenessBound = dbConfig.readStalenessSeconds() > 0
-        ? TimestampBound.ofExactStaleness(dbConfig.readStalenessSeconds(), TimeUnit.SECONDS)
-        : TimestampBound.strong();
+    this.stalenessBound =
+        dbConfig.readStalenessSeconds() > 0
+            ? TimestampBound.ofExactStaleness(dbConfig.readStalenessSeconds(), TimeUnit.SECONDS)
+            : TimestampBound.strong();
   }
 
   @Override
@@ -103,7 +108,8 @@ public final class SpannerKeyDb implements KeyDb {
                     + " <= @nowParam)"
                     // Filter keys with matching set name, if it's the default set, includes keys
                     // with null set name.
-                    + " AND (SetName = @setName OR (@setName = @defaultSetName AND SetName IS NULL))"
+                    + " AND (SetName = @setName"
+                    + " OR (@setName = @defaultSetName AND SetName IS NULL))"
                     // Ordering implementation should follow {@link
                     // KeyDbUtil.getActiveKeysComparator}
                     + " ORDER BY "
@@ -147,7 +153,8 @@ public final class SpannerKeyDb implements KeyDb {
                     + " >= @nowParam "
                     // Filter keys with matching set name, if it's the default set, includes keys
                     // with null set name.
-                    + " AND (SetName = @setName OR (@setName = @defaultSetName AND SetName IS NULL))"
+                    + " AND (SetName = @setName"
+                    + " OR (@setName = @defaultSetName AND SetName IS NULL))"
                     // Add expiry time to improve usage of KeySetsByNameExpiryActivationDesc.
                     // Expiry time can be null for no rotation keys.
                     + " AND ("
@@ -256,11 +263,19 @@ public final class SpannerKeyDb implements KeyDb {
             TimeUnit.MICROSECONDS.convert(key.getActivationTime(), TimeUnit.MILLISECONDS));
     // Serialize keySplitData to JSON and wrap it in Value object for Spanner
     Value keySplitJsonValue;
+    Value migrationKeySplitJsonValue;
     try {
       KeySplitDataList proto =
           KeySplitDataList.newBuilder().addAllKeySplitData(key.getKeySplitDataList()).build();
       String json = JSON_PRINTER.print(proto);
       keySplitJsonValue = Value.json(json);
+
+      KeySplitDataList migrationProto =
+          KeySplitDataList.newBuilder()
+              .addAllKeySplitData(key.getMigrationKeySplitDataList())
+              .build();
+      String migrationJson = JSON_PRINTER.print(migrationProto);
+      migrationKeySplitJsonValue = Value.json(migrationJson);
     } catch (InvalidProtocolBufferException ex) {
       // TODO: remove after proto migration. Currently cannot throw checked exception in java
       // stream.
@@ -284,12 +299,18 @@ public final class SpannerKeyDb implements KeyDb {
         .to(key.getPublicKeyMaterial())
         .set(PRIVATE_KEY_COLUMN)
         .to(key.getJsonEncodedKeyset())
+        .set(MIGRATION_PRIVATE_KEY_COLUMN)
+        .to(key.getMigrationJsonEncodedKeyset())
         .set(KEY_SPLIT_DATA_COLUMN)
         .to(keySplitJsonValue)
+        .set(MIGRATION_KEY_SPLIT_DATA_COLUMN)
+        .to(migrationKeySplitJsonValue)
         .set(KEY_TYPE)
         .to(key.getKeyType())
         .set(KEY_ENCRYPTION_KEY_URI)
         .to(key.getKeyEncryptionKeyUri())
+        .set(MIGRATION_KEY_ENCRYPTION_KEY_URI_COLUMN)
+        .to(key.getMigrationKeyEncryptionKeyUri())
         .set(EXPIRY_TIME_COLUMN)
         .to(expireTime)
         .set(TTL_TIME_COLUMN)
@@ -304,17 +325,11 @@ public final class SpannerKeyDb implements KeyDb {
   }
 
   private static EncryptionKey buildEncryptionKey(ResultSet resultSet) throws ServiceException {
-    List<KeySplitData> keySplitData;
-    try {
-      String json = resultSet.getJson(KEY_SPLIT_DATA_COLUMN);
-      KeySplitDataList.Builder builder = KeySplitDataList.newBuilder();
-      JSON_PARSER.merge(json, builder);
-      keySplitData = builder.build().getKeySplitDataList();
-    } catch (InvalidProtocolBufferException ex) {
-      String message = "Spanner encountered deserialization error with KeySplitData";
-      LOGGER.error(message, ex);
-      throw new ServiceException(INTERNAL, DATASTORE_ERROR.name(), message, ex);
-    }
+    ImmutableList<KeySplitData> keySplitData = getKeySplitData(KEY_SPLIT_DATA_COLUMN, resultSet);
+    ImmutableList<KeySplitData> migrationKeySplitData =
+        !resultSet.isNull(MIGRATION_KEY_SPLIT_DATA_COLUMN)
+            ? getKeySplitData(MIGRATION_KEY_SPLIT_DATA_COLUMN, resultSet)
+            : ImmutableList.of();
     // For backward compatibility with existing keys without set names.
     String setName =
         resultSet.isNull(SET_NAME_COLUMN) ? DEFAULT_SET_NAME : resultSet.getString(SET_NAME_COLUMN);
@@ -336,7 +351,31 @@ public final class SpannerKeyDb implements KeyDb {
     if (!resultSet.isNull(EXPIRY_TIME_COLUMN)) {
       keyBuilder.setExpirationTime(toEpochMilliSeconds(resultSet.getTimestamp(EXPIRY_TIME_COLUMN)));
     }
+    if (!resultSet.isNull(MIGRATION_PRIVATE_KEY_COLUMN)) {
+      keyBuilder.setMigrationJsonEncodedKeyset(resultSet.getString(MIGRATION_PRIVATE_KEY_COLUMN));
+    }
+    if (!resultSet.isNull(MIGRATION_KEY_SPLIT_DATA_COLUMN)) {
+      keyBuilder.addAllMigrationKeySplitData(migrationKeySplitData);
+    }
+    if (!resultSet.isNull(MIGRATION_KEY_ENCRYPTION_KEY_URI_COLUMN)) {
+      keyBuilder.setMigrationKeyEncryptionKeyUri(
+          resultSet.getString(MIGRATION_KEY_ENCRYPTION_KEY_URI_COLUMN));
+    }
     return keyBuilder.build();
+  }
+
+  private static ImmutableList<KeySplitData> getKeySplitData(String columnName, ResultSet resultSet)
+      throws ServiceException {
+    try {
+      String json = resultSet.getJson(columnName);
+      KeySplitDataList.Builder builder = KeySplitDataList.newBuilder();
+      JSON_PARSER.merge(json, builder);
+      return builder.build().getKeySplitDataList().stream().collect(toImmutableList());
+    } catch (InvalidProtocolBufferException ex) {
+      String message = "Spanner encountered deserialization error with KeySplitData";
+      LOGGER.error(message, ex);
+      throw new ServiceException(INTERNAL, DATASTORE_ERROR.name(), message, ex);
+    }
   }
 
   private static long toEpochMilliSeconds(Timestamp timestamp) throws ServiceException {

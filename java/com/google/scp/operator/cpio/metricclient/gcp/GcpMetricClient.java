@@ -30,8 +30,7 @@ import com.google.monitoring.v3.TimeSeries;
 import com.google.monitoring.v3.TypedValue;
 import com.google.protobuf.util.Timestamps;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
-import com.google.scp.operator.cpio.metricclient.gcp.Annotations.EnableNativeMetricAggregation;
-import com.google.scp.operator.cpio.metricclient.gcp.Annotations.EnableRemoteMetricAggregation;
+import com.google.scp.operator.cpio.metricclient.model.Annotations.EnableRemoteMetricAggregation;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
@@ -67,7 +66,6 @@ public final class GcpMetricClient implements MetricClient {
   private final ParameterClient parameterClient;
   private final MetricServiceClient msClient;
   private final Optional<Meter> meter;
-  private final Boolean enableNativeMetricAggregation;
   private final Boolean enableRemoteMetricAggregation;
   private static ConcurrentHashMap<String, DoubleCounter> counterCache = new ConcurrentHashMap<>();
   private static ConcurrentHashMap<String, DoubleGauge> gaugeCache = new ConcurrentHashMap<>();
@@ -82,7 +80,6 @@ public final class GcpMetricClient implements MetricClient {
       @GcpProjectId String projectId,
       @GcpInstanceId String instanceId,
       @GcpZone String zone,
-      @EnableNativeMetricAggregation Boolean enableNativeMetricAggregation,
       @EnableRemoteMetricAggregation Boolean enableRemoteMetricAggregation) {
     this.msClient = msClient;
     this.meter = meter;
@@ -90,14 +87,13 @@ public final class GcpMetricClient implements MetricClient {
     this.instanceId = instanceId;
     this.zone = zone;
     this.projectId = projectId;
-    this.enableNativeMetricAggregation = enableNativeMetricAggregation;
     this.enableRemoteMetricAggregation = enableRemoteMetricAggregation;
   }
 
   @Override
   public void recordMetric(CustomMetric metric) throws MetricClientException {
     try {
-      if (enableNativeMetricAggregation || enableRemoteMetricAggregation) {
+      if (enableRemoteMetricAggregation) {
         writeMetricThroughOpenTelemetryExporter(metric);
       } else {
         writeMetricThroughMetricServiceClient(metric);

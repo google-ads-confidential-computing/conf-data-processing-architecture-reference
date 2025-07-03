@@ -20,7 +20,7 @@ java_library(
     name = "DynamoKeyDbTestEnv",
     srcs = ["DynamoKeyDbTestEnv.java"],
     deps = [
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/aws",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",

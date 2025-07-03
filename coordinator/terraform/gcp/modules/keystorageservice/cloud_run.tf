@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+moved {
+  from = module.cloud_run[0]
+  to   = module.cloud_run
+}
 
 module "cloud_run" {
-  count  = var.source_container_image_url == null ? 0 : 1
   source = "../cloud_run"
 
   environment         = var.environment
@@ -56,6 +59,5 @@ module "cloud_run" {
 
   cloud_run_5xx_threshold                   = var.cloudfunction_5xx_threshold
   cloud_run_alert_on_memory_usage_threshold = var.cloudfunction_alert_on_memory_usage_threshold
-  cloud_run_error_ratio_threshold           = var.cloudfunction_error_ratio_threshold
   cloud_run_max_execution_time_max          = var.cloudfunction_max_execution_time_max
 }

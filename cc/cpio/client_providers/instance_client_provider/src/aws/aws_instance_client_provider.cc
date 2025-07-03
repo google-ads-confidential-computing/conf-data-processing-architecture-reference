@@ -36,6 +36,8 @@
 #include "cpio/common/src/aws/aws_utils.h"
 #include "cpio/common/src/cpio_utils.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/utils/sync_utils/src/sync_utils.h"
 
 #include "aws_instance_client_utils.h"

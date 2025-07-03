@@ -33,10 +33,10 @@ variable "region" {
   type        = string
 }
 
-variable "vpc_connector_id" {
-  description = "Serverless VPC Access connector ID to use for all egress traffic."
-  type        = string
-  default     = null
+variable "vpc_connector_ids" {
+  description = "Serverless VPC Access connector ID to use for all egress traffic. Map with Key: region and Value: the connector ID."
+  type        = map(string)
+  default     = {}
 }
 
 variable "job_version" {
@@ -334,4 +334,37 @@ variable "lb_max_latency_ms" {
 variable "lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = string
+}
+
+variable "cloud_run_error_5xx_alarm_config" {
+  description = "The configuration for the 5xx error alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    error_threshold = number # error count greater than this to send alarm. Example: 0.
+  })
+}
+
+variable "cloud_run_non_5xx_error_alarm_config" {
+  description = "The configuration for the non-5xx error (3xx-4xx) alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    error_threshold = number # error count greater than this to send alarm. Example: 500.
+  })
+}
+
+variable "cloud_run_execution_time_alarm_config" {
+  description = "The configuration for the execution time alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    threshold_ms    = number # Execution times greater than this to send alarm. Example: 0.
+  })
 }

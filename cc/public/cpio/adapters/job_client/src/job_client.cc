@@ -26,7 +26,8 @@
 #include "cpio/client_providers/global_cpio/src/global_cpio.h"
 #include "cpio/client_providers/interface/nosql_database_client_provider_interface.h"
 #include "cpio/client_providers/interface/queue_client_provider_interface.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/job_service/v1/job_service.pb.h"
 #include "public/cpio/utils/sync_utils/src/sync_utils.h"
 

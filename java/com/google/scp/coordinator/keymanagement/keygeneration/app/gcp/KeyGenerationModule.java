@@ -248,9 +248,7 @@ public final class KeyGenerationModule extends AbstractModule {
       // Key Storage Bindings
       install(new GcpKeyStorageConfigModule());
 
-      install(
-          new GcpSplitKeyGenerationTasksModule(
-              args.getTestEncodedKeysetHandle(), args.getTestPeerCoordinatorEncodedKeysetHandle()));
+      install(new GcpSplitKeyGenerationTasksModule());
     }
 
     // Data layer bindings

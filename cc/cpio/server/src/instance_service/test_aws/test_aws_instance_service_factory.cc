@@ -21,6 +21,8 @@
 
 #include "cpio/client_providers/instance_client_provider/test/aws/test_aws_instance_client_provider.h"
 #include "cpio/server/src/service_utils.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/instance_service/v1/test_configuration_keys.pb.h"
 
 using google::cmrt::sdk::instance_service::v1::TestClientConfigurationKeys;

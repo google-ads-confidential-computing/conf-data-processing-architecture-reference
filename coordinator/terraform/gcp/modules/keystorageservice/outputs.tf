@@ -25,5 +25,5 @@ output "key_storage_service_account_email" {
 }
 
 output "key_storage_cloud_run_url" {
-  value = var.source_container_image_url == null ? "" : module.cloud_run[0].url
+  value = module.cloud_run.url
 }

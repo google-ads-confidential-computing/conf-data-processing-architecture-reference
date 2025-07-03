@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "public/core/interface/execution_result_macros.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -23,6 +25,7 @@
 #include "core/logger/src/log_providers/console_log_provider.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/interface/execution_result.pb.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 
 using google::scp::core::common::GlobalLogger;

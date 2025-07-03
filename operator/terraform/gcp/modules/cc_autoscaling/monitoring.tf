@@ -46,6 +46,7 @@ resource "google_monitoring_alert_policy" "autoscaling_max_instances_alarm" {
     environment = var.environment
   }
   alert_strategy {
-    auto_close = "604800s"
+    auto_close           = "604800s"
+    notification_prompts = ["OPENED"]
   }
 }

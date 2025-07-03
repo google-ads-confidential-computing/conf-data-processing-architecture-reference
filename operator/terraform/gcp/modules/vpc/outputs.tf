@@ -32,18 +32,17 @@ output "connectors" {
   )
 }
 
-output "worker_subnet_id" {
-  description = "The worker subnet id of the VPC network."
-  # This module only support single region so there's only one single subnet.
-  value = var.auto_create_subnetworks ? module.vpc_network.network_name : google_compute_subnetwork.worker_subnet[0].name
+output "worker_subnet_ids" {
+  description = "Map with Key: region and Value: subnet ID for the worker subnet ids of the VPC network."
+  value       = var.auto_create_subnetworks ? { for region, subnet in data.google_compute_subnetwork.auto_created_subnets : region => subnet.name } : { for region, subnet in google_compute_subnetwork.worker_subnet : region => subnet.name }
 }
 
-output "collector_subnet_id" {
-  description = "The collector subnet id of the VPC network."
-  value       = var.enable_remote_metric_aggregation ? google_compute_subnetwork.collector_subnet[0].name : ""
+output "collector_subnet_ids" {
+  description = "Map with Key: region and Value: subnet ID for the collector subnet ids of the VPC network."
+  value       = var.enable_opentelemetry_collector ? { for region, subnet in google_compute_subnetwork.collector_subnet : region => subnet.name } : {}
 }
 
-output "proxy_subnet_id" {
-  description = "The proxy subnet id of the VPC network."
-  value       = var.enable_remote_metric_aggregation ? google_compute_subnetwork.proxy_subnet[0].name : ""
+output "proxy_subnet_ids" {
+  description = "Map with Key: region and Value: subnet ID for the proxy subnet ids of the VPC network."
+  value       = var.enable_opentelemetry_collector ? { for region, subnet in google_compute_subnetwork.proxy_subnet : region => subnet.name } : {}
 }

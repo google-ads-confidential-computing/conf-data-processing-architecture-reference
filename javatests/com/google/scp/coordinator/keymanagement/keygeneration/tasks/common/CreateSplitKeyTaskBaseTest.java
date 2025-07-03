@@ -17,6 +17,8 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
+import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
 import static com.google.scp.shared.util.KeySplitUtil.reconstructXorKeysetHandle;
 
 import com.google.common.collect.ImmutableList;
@@ -87,7 +89,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE)).isEmpty();
 
     // When
-    task.create(5, 7, 365);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365);
 
     // Then
     assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE)).hasSize(5);
@@ -97,12 +99,12 @@ public abstract class CreateSplitKeyTaskBaseTest {
   @Test
   public void create_onlyOneButNotEnough_createsOnlyMissingKey() throws Exception {
     // Given
-    task.create(1, 7, 365);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 7, 365);
     assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE)).hasSize(1);
     assertThat(task.keyDb.getAllKeys()).hasSize(2);
 
     // When
-    task.create(5, 7, 365);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365);
 
     // Then
     assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE)).hasSize(5);
@@ -115,7 +117,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE)).isEmpty();
 
     // When
-    task.create(5, 7, 365);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365);
 
     // Then
     EncryptionKey key = task.keyDb.getActiveKeys(Integer.MAX_VALUE).get(0);

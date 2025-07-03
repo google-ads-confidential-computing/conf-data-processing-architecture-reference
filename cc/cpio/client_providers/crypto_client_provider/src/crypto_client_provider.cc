@@ -58,7 +58,8 @@
 #include "cpio/client_providers/interface/type_def.h"
 #include "proto/hpke.pb.h"
 #include "proto/tink.pb.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
 
 #include "error_codes.h"

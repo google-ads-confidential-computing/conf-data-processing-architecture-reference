@@ -24,7 +24,7 @@ import com.google.inject.Inject;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.CoordinatorBHttpClient;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.converter.DataKeyConverter;
+import com.google.scp.coordinator.keymanagement.shared.converter.DataKeyConverter;
 import com.google.scp.coordinator.keymanagement.keystorage.converters.EncryptionKeyConverter;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.CreateKeyRequestProto.CreateKeyRequest;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.DataKeyProto;

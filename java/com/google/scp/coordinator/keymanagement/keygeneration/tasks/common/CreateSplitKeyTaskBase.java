@@ -119,26 +119,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       EncryptionKey unsignedCoordinatorBKey, String encryptedKeySplitB, Optional<DataKey> dataKey)
       throws ServiceException;
 
-  /**
-   * Counts the number of active keys in the KeyDB and creates enough keys to both replace any keys
-   * expiring soon and replace any missing keys.
-   *
-   * <p>The generated keys will expire after validityInDays days, will have a Time-to-Live of
-   * ttlInDays, and will be stored in the KeyDB.
-   */
-  public void replaceExpiringKeys(int numDesiredKeys, int validityInDays, int ttlInDays)
-      throws ServiceException {
-    var numExistingKeys = countExistingValidKeys(keyDb, KEY_REFRESH_WINDOW, numDesiredKeys);
-    var numKeysToCreate = numDesiredKeys - numExistingKeys;
-
-    if (numKeysToCreate <= 0) {
-      LOGGER.info(String.format("Found %d valid keys, skipping key creation", numExistingKeys));
-      return;
-    }
-
-    createSplitKey(numKeysToCreate, validityInDays, ttlInDays, Instant.now());
-  }
-
   public void create(
       String setName, String tinkTemplate, int numDesiredKeys, int validityInDays, int ttlInDays)
       throws ServiceException {

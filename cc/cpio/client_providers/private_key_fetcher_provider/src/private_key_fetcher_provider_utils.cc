@@ -29,7 +29,8 @@
 #include "absl/strings/str_cat.h"
 #include "cc/core/utils/src/base64.h"
 #include "core/interface/http_types.h"
-#include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
+#include "public/core/interface/execution_result_or_macros.h"
 
 #include "error_codes.h"
 

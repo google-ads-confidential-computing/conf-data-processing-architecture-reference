@@ -39,7 +39,11 @@ public final class GetEncryptedKeyCache extends KeyDbCache<String, EncryptionKey
   @Inject
   public GetEncryptedKeyCache(
       KeyDb keyDb, @EnableCache Boolean enableCache, LogMetricHelper logMetricHelper) {
-    super(CacheBuilder.newBuilder().maximumSize(2000), enableCache, logMetricHelper);
+    super(
+        CacheBuilder.newBuilder().maximumSize(2000),
+        enableCache,
+        "getEncryptedKeyCache",
+        logMetricHelper);
     this.keyDb = keyDb;
     this.missingKeyCache = CacheBuilder.newBuilder()
         .maximumSize(1000)
@@ -69,10 +73,5 @@ public final class GetEncryptedKeyCache extends KeyDbCache<String, EncryptionKey
       }
       throw e;
     }
-  }
-
-  @Override
-  String metricName() {
-    return "getEncryptedKeyCache";
   }
 }

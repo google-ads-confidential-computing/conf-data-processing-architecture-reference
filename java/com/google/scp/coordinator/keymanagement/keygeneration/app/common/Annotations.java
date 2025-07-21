@@ -90,6 +90,12 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface PeerCoordinatorKmsKeyBaseUri {}
 
+  /** Uri of KMS migration key for peer coordinator */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface MigrationPeerCoordinatorKmsKeyBaseUri {}
+
   /** Service account of peer coordinator */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
@@ -111,4 +117,9 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface DisableKeySetAcl {}
+
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface PopulateMigrationKeyData {}
 }

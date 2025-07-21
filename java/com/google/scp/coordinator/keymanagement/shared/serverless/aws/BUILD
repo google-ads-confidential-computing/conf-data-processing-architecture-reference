@@ -23,6 +23,7 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
         "//java/external:aws_lambda_java_core",
         "//java/external:aws_lambda_java_events",
+        "//java/external:guava",
         "//java/external:guice",
     ],
 )

@@ -18,7 +18,6 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.KeyGenerationUtil.countExistingValidKeys;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleartext;
 
 import com.google.common.collect.ImmutableList;
@@ -102,11 +101,22 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKey)
       throws ServiceException;
 
+  protected abstract String encryptMigrationPeerCoordinatorSplit(
+      String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKey)
+      throws ServiceException;
+
   /** Takes in kmsKeyEncryptionKeyUri and returns an Aead for the key. */
   protected abstract Aead getAead(String kmsKeyEncryptionKeyUri) throws GeneralSecurityException;
 
+  /** Takes in migrationKmsKeyEncryptionKeyUri and returns an Aead for the key. */
+  protected abstract Aead getMigrationAead(String migrationKmsKeyEncryptionKeyUri)
+      throws GeneralSecurityException;
+
   /** Takes in setName and returns kmsKeyEncryptionKeyUri for the key set. */
   protected abstract String getKmsKeyEncryptionKeyUri(String setName);
+
+  /** Takes in setName and returns the migrationKmsKeyEncryptionKeyUri for the key set. */
+  protected abstract String getMigrationKmsKeyEncryptionKeyUri(String setName);
 
   /**
    * Takes in an encrypted KeySplit for Coordinator B and an unsignedKey to send to the KeyStorage
@@ -116,7 +126,10 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
    * @throws ServiceException in case of key storage errors.
    */
   protected abstract EncryptionKey sendKeySplitToPeerCoordinator(
-      EncryptionKey unsignedCoordinatorBKey, String encryptedKeySplitB, Optional<DataKey> dataKey)
+      EncryptionKey unsignedCoordinatorBKey,
+      String encryptedKeySplitB,
+      Optional<String> encryptedMigrationKeySplitB,
+      Optional<DataKey> dataKey)
       throws ServiceException;
 
   public void create(
@@ -148,7 +161,8 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       LOGGER.error(format(setName, "activeKeys_lt_numDesiredKeys"));
       throw new AssertionError(
           String.format(
-              "Unexpected failure to generate sufficient immediately active keys for key set \"%s\". Only %d of %d found.",
+              "Unexpected failure to generate sufficient immediately active keys for key set"
+                  + " \"%s\". Only %d of %d found.",
               setName, activeKeys.size(), numDesiredKeys));
     }
 
@@ -190,7 +204,8 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         LOGGER.error(format(setName, "actual_lt_numDesiredKeys"));
         throw new AssertionError(
             String.format(
-                "Unexpected failure to generate sufficient pending active keys for datetime=%s for key set \"%s\". Only %d of %d found.",
+                "Unexpected failure to generate sufficient pending active keys for datetime=%s for"
+                    + " key set \"%s\". Only %d of %d found.",
                 expiration, setName, actual, numDesiredKeys));
       }
     }
@@ -212,11 +227,20 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int validityInDays,
       int ttlInDays,
       Instant activation,
-      Optional<DataKey> dataKey)
+      Optional<DataKey> dataKey,
+      Boolean populateMigrationData)
       throws ServiceException {
     LOGGER.info("[{}] Trying to generate {} keys.", setName, count);
     for (int i = 0; i < count; i++) {
-      createSplitKeyBase(setName, tinkTemplate, validityInDays, ttlInDays, activation, dataKey, 0);
+      createSplitKeyBase(
+          setName,
+          tinkTemplate,
+          validityInDays,
+          ttlInDays,
+          activation,
+          dataKey,
+          populateMigrationData,
+          0);
     }
     LOGGER.info(
         "[{}] Successfully generated {} keys to be active on {}.", setName, count, activation);
@@ -229,12 +253,14 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int ttlInDays,
       Instant activation,
       Optional<DataKey> dataKey,
+      Boolean populateMigrationData,
       int keyIdConflictRetryCount)
       throws ServiceException {
     Instant creationTime = Instant.now();
     EncryptionKey unsignedCoordinatorAKey;
     EncryptionKey unsignedCoordinatorBKey;
     String encryptedKeySplitB;
+    Optional<String> encryptedMigrationKeySplitB;
     try {
       var template = KeyTemplates.get(tinkTemplate);
       KeysetHandle privateKeysetHandle = generateKeysetHandleWithJitter(template);
@@ -242,6 +268,10 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
       ImmutableList<ByteString> keySplits = KeySplitUtil.xorSplit(privateKeysetHandle, 2);
       String keyEncryptionKeyUri = getKmsKeyEncryptionKeyUri(setName);
+      Optional<String> migrationKeyEncryptionKeyUri =
+          populateMigrationData
+              ? Optional.of(getMigrationKmsKeyEncryptionKeyUri(setName))
+              : Optional.empty();
       EncryptionKey key =
           buildEncryptionKey(
               setName,
@@ -252,15 +282,31 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
               ttlInDays,
               publicKeysetHandle,
               keyEncryptionKeyUri,
+              migrationKeyEncryptionKeyUri,
               signatureKey);
       unsignedCoordinatorAKey =
-          createCoordinatorAKey(
-              keySplits.get(0), key, getAead(keyEncryptionKeyUri), keyEncryptionKeyUri);
+          migrationKeyEncryptionKeyUri.isEmpty()
+              ? createCoordinatorAKey(
+                  keySplits.get(0), key, getAead(keyEncryptionKeyUri), keyEncryptionKeyUri)
+              : createCoordinatorAKeyWithMigration(
+                  keySplits.get(0),
+                  key,
+                  getAead(keyEncryptionKeyUri),
+                  keyEncryptionKeyUri,
+                  getMigrationAead(migrationKeyEncryptionKeyUri.get()),
+                  migrationKeyEncryptionKeyUri.get());
       unsignedCoordinatorBKey = createCoordinatorBKey(key);
 
       encryptedKeySplitB =
           encryptPeerCoordinatorSplit(
               setName, keySplits.get(1), dataKey, key.getPublicKeyMaterial());
+      // Only encrypt with the peer migration KEK when there is an active ongoing migration.
+      encryptedMigrationKeySplitB =
+          populateMigrationData
+              ? Optional.of(
+                  encryptMigrationPeerCoordinatorSplit(
+                      setName, keySplits.get(1), dataKey, key.getPublicKeyMaterial()))
+              : Optional.empty();
     } catch (GeneralSecurityException | IOException e) {
       LOGGER.error(format(setName, "crypto_error"));
       String msg = "Error generating keys.";
@@ -294,6 +340,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             ttlInDays,
             activation,
             dataKey,
+            populateMigrationData,
             keyIdConflictRetryCount + 1);
         return;
       }
@@ -304,19 +351,38 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
     // Send Coordinator B valid key split
     EncryptionKey partyBResponse =
-        sendKeySplitToPeerCoordinator(unsignedCoordinatorBKey, encryptedKeySplitB, dataKey);
+        sendKeySplitToPeerCoordinator(
+            unsignedCoordinatorBKey, encryptedKeySplitB, encryptedMigrationKeySplitB, dataKey);
 
-    // Accumulate signatures and store to KeyDB
-    EncryptionKey signedCoordinatorAKey =
-        unsignedCoordinatorAKey.toBuilder()
-            // Need to clear KeySplitData before adding the combined KeySplitData list.
-            .clearKeySplitData()
-            .addAllKeySplitData(
-                combineKeySplitData(
-                    partyBResponse.getKeySplitDataList(),
-                    unsignedCoordinatorAKey.getKeySplitDataList()))
-            .build();
+    // Accumulate signatures
+    EncryptionKey.Builder signedCoordinatorAKeyBuilder = unsignedCoordinatorAKey.toBuilder();
+    signedCoordinatorAKeyBuilder
+        // Need to clear KeySplitData before adding the combined KeySplitData lists.
+        .clearKeySplitData()
+        .addAllKeySplitData(
+            combineKeySplitData(
+                partyBResponse.getKeySplitDataList(),
+                unsignedCoordinatorAKey.getKeySplitDataList()))
+        .clearMigrationKeySplitData()
+        .addAllMigrationKeySplitData(
+            combineKeySplitData(
+                partyBResponse.getMigrationKeySplitDataList(),
+                unsignedCoordinatorAKey.getMigrationKeySplitDataList()));
 
+    // Migration data was not populated from the secondary coordinator so it should not be written
+    // to the primary coordinator's DB.
+    if (populateMigrationData && partyBResponse.getMigrationKeySplitDataList().isEmpty()) {
+      signedCoordinatorAKeyBuilder
+          .clearMigrationJsonEncodedKeyset()
+          .clearMigrationKeyEncryptionKeyUri()
+          .clearMigrationKeySplitData();
+      String logMessage =
+          "Key {} for set {} will exclude migration data. Coordinator B's response missing"
+              + " migration key split data.";
+      LOGGER.warn(logMessage, partyBResponse.getKeyId(), partyBResponse.getSetName());
+    }
+
+    EncryptionKey signedCoordinatorAKey = signedCoordinatorAKeyBuilder.build();
     // Note: We want to store the keys as they are generated and signed.
     try {
       keyDb.createKey(signedCoordinatorAKey, true);
@@ -348,12 +414,41 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
   }
 
   /**
+   * Create unsigned EncryptionKey with migration data for Coordinator A, to store after receiving
+   * signature from Coordinator B. Performs key split encryption for Coordinator A.
+   */
+  private static EncryptionKey createCoordinatorAKeyWithMigration(
+      ByteString keySplit,
+      EncryptionKey key,
+      Aead keyEncryptionKeyAead,
+      String keyEncryptionKeyUri,
+      Aead migrationKeyEncryptionKeyAead,
+      String migrationKeyEncryptionKeyUri)
+      throws GeneralSecurityException, IOException {
+    EncryptionKey keyWithoutMigrationData =
+        createCoordinatorAKey(keySplit, key, keyEncryptionKeyAead, keyEncryptionKeyUri);
+    String migrationEncryptedKeySplitA =
+        Base64.getEncoder()
+            .encodeToString(
+                migrationKeyEncryptionKeyAead.encrypt(keySplit.toByteArray(), new byte[0]));
+    return keyWithoutMigrationData.toBuilder()
+        .setMigrationJsonEncodedKeyset(migrationEncryptedKeySplitA)
+        .setMigrationKeyEncryptionKeyUri(migrationKeyEncryptionKeyUri)
+        .build();
+  }
+
+  /**
    * Create unsigned EncryptionKey for Coordinator B, to send to Coordinator B in the Create Key
    * service.
    */
   private static EncryptionKey createCoordinatorBKey(EncryptionKey key)
       throws GeneralSecurityException, IOException {
-    return key.toBuilder().setJsonEncodedKeyset("").setKeyEncryptionKeyUri("").build();
+    return key.toBuilder()
+        .setJsonEncodedKeyset("")
+        .setKeyEncryptionKeyUri("")
+        .setMigrationJsonEncodedKeyset("")
+        .setMigrationKeyEncryptionKeyUri("")
+        .build();
   }
 
   /**
@@ -369,6 +464,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int ttlInDays,
       Optional<KeysetHandle> publicKeysetHandle,
       String keyEncryptionKeyUri,
+      Optional<String> migrationkeyEncryptionKeyUri,
       Optional<PublicKeySign> signatureKey)
       throws ServiceException, IOException {
     // LINT.IfChange
@@ -398,7 +494,10 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
     try {
       return KeySplitDataUtil.addKeySplitData(
-          unsignedEncryptionKey.build(), keyEncryptionKeyUri, signatureKey);
+          unsignedEncryptionKey.build(),
+          keyEncryptionKeyUri,
+          migrationkeyEncryptionKeyUri,
+          signatureKey);
     } catch (GeneralSecurityException e) {
       String msg = "Error generating public key signature";
       throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);

@@ -18,7 +18,12 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 4.48"
+      version = "<= 6.37"
+    }
+
+    google-beta = {
+      source  = "hashicorp/google-beta"
+      version = "<= 6.37"
     }
   }
 }
@@ -296,9 +301,10 @@ module "frontend" {
   job_queue_topic             = module.jobqueue.jobqueue_pubsub_topic_name
   job_queue_sub               = module.jobqueue.jobqueue_pubsub_sub_name
 
-  operator_package_bucket_name = var.frontend_service_path.bucket_name != "" ? var.frontend_service_path.bucket_name : google_storage_bucket.operator_package_bucket[0].id
-  frontend_service_jar         = local.frontend_service_jar
-  frontend_service_zip         = var.frontend_service_path.zip_file_name
+  create_frontend_service_cloud_function = var.create_frontend_service_cloud_function
+  operator_package_bucket_name           = var.frontend_service_path.bucket_name != "" ? var.frontend_service_path.bucket_name : google_storage_bucket.operator_package_bucket[0].id
+  frontend_service_jar                   = local.frontend_service_jar
+  frontend_service_zip                   = var.frontend_service_path.zip_file_name
 
   frontend_service_cloudfunction_num_cpus                         = var.frontend_service_cloudfunction_num_cpus
   frontend_service_cloudfunction_memory_mb                        = var.frontend_service_cloudfunction_memory_mb
@@ -348,6 +354,10 @@ module "frontend" {
 
   frontend_service_parent_domain_name            = var.frontend_service_parent_domain_name
   frontend_service_parent_domain_name_project_id = var.frontend_service_parent_domain_name_project_id
+
+  lb_error_5xx_alarm_config         = var.frontend_lb_error_5xx_alarm_config
+  lb_non_5xx_error_alarm_config     = var.frontend_lb_non_5xx_error_alarm_config
+  lb_request_latencies_alarm_config = var.frontend_lb_request_latencies_alarm_config
 }
 
 module "worker" {

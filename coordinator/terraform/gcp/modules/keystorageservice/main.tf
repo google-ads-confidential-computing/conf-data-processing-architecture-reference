@@ -21,78 +21,97 @@ terraform {
   }
 }
 
-locals {
-  key_storage_package_zip = "${var.key_storage_service_jar}.zip"
-}
-
-# Archives the JAR in a ZIP file
-data "archive_file" "function_archive" {
-  type        = "zip"
-  source_file = var.key_storage_service_jar
-  output_path = local.key_storage_package_zip
-}
-
 resource "google_service_account" "key_storage_service_account" {
   # Service account id has a 30 character limit
   account_id   = "${var.environment}-keystorageuser"
   display_name = "KeyStorage Service Account"
 }
 
-resource "google_storage_bucket_object" "key_storage_archive" {
-  # Need hash in name so cloudfunction knows to redeploy when code changes
-  name   = "${var.environment}_key_storage_${data.archive_file.function_archive.output_md5}"
-  bucket = var.package_bucket_name
-  source = local.key_storage_package_zip
+module "cloud_run" {
+  source = "../cloud_run"
+
+  environment         = var.environment
+  project             = var.project_id
+  region              = var.region
+  description         = "Key Storage Service Cloud Run"
+  service_name_suffix = "key-ss-cr"
+  service_domain      = var.key_storage_domain
+
+  # Access variables
+  runtime_service_account_email          = google_service_account.key_storage_service_account.email
+  allowed_all_users                      = false
+  allowed_invoker_service_account_emails = var.allowed_wip_service_accounts
+  allowed_user_group                     = var.allowed_wip_user_group
+  ingress                                = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+
+  # CR settings
+  source_container_image_url = var.source_container_image_url
+  concurrency                = 2
+  cpu_count                  = 2
+  min_instance_count         = var.key_storage_service_cloudfunction_min_instances
+  max_instance_count         = var.key_storage_service_cloudfunction_max_instances
+  memory_mb                  = var.key_storage_cloudfunction_memory
+
+  environment_variables = {
+    PROJECT_ID                  = var.project_id
+    GCP_KMS_URI                 = "gcp-kms://${var.key_encryption_key_id}"
+    SPANNER_INSTANCE            = var.spanner_instance_name
+    SPANNER_DATABASE            = var.spanner_database_name
+    GCP_KMS_BASE_URI            = var.kms_key_base_uri
+    MIGRATION_GCP_KMS_BASE_URI  = var.migration_kms_key_base_uri
+    POPULATE_MIGRATION_KEY_DATA = var.populate_migration_key_data
+    DISABLE_KEY_SET_ACL         = var.disable_key_set_acl
+  }
+
+  # Alert settings
+  alarms_enabled           = var.alarms_enabled
+  alarm_eval_period_sec    = var.alarm_eval_period_sec
+  alarm_duration_sec       = var.alarm_duration_sec
+  alert_severity_overrides = var.key_storage_severity_map
+
+  cloud_run_5xx_threshold                   = var.cloudfunction_5xx_threshold
+  cloud_run_alert_on_memory_usage_threshold = var.cloudfunction_alert_on_memory_usage_threshold
+  cloud_run_max_execution_time_max          = var.cloudfunction_max_execution_time_max
 }
 
-resource "google_cloudfunctions2_function" "key_storage_cloudfunction" {
-  name        = "${var.environment}-${var.region}-${var.key_storage_cloudfunction_name}"
-  location    = var.region
-  description = "Cloud Function for key storage service"
-
-  build_config {
-    runtime     = var.use_java21_runtime ? "java21" : "java11"
-    entry_point = "com.google.scp.coordinator.keymanagement.keystorage.service.gcp.KeyStorageServiceHttpFunction"
-    source {
-      storage_source {
-        bucket = var.package_bucket_name
-        object = google_storage_bucket_object.key_storage_archive.name
-      }
+locals {
+  cloud_run_ids = [
+    {
+      name     = module.cloud_run.name
+      location = module.cloud_run.location
     }
-  }
+  ]
+}
 
-  service_config {
-    min_instance_count    = var.key_storage_service_cloudfunction_min_instances
-    max_instance_count    = var.key_storage_service_cloudfunction_max_instances
-    timeout_seconds       = var.cloudfunction_timeout_seconds
-    available_memory      = "${var.key_storage_cloudfunction_memory}M"
-    service_account_email = google_service_account.key_storage_service_account.email
-    ingress_settings      = "ALLOW_INTERNAL_AND_GCLB"
-    environment_variables = {
-      PROJECT_ID                  = var.project_id
-      GCP_KMS_URI                 = "gcp-kms://${var.key_encryption_key_id}"
-      SPANNER_INSTANCE            = var.spanner_instance_name
-      SPANNER_DATABASE            = var.spanner_database_name
-      GCP_KMS_BASE_URI            = var.kms_key_base_uri
-      MIGRATION_GCP_KMS_BASE_URI  = var.migration_kms_key_base_uri
-      DISABLE_KEY_SET_ACL         = var.disable_key_set_acl
-      POPULATE_MIGRATION_KEY_DATA = var.populate_migration_key_data
-    }
-  }
+module "load_balancer" {
+  source = "../../modules/load_balancer"
 
-  labels = {
-    environment = var.environment
-  }
+  environment     = var.environment
+  project_id      = var.project_id
+  service_id      = "key-ss-service"
+  ssl_cert_id     = "key-ss"
+  monitoring_name = "Key Storage Service"
 
-  lifecycle {
-    ignore_changes = [
-      # ATTOW these attributes always have detected changes even after apply.
-      # Ignoring these for now until it's no longer an issue or we need use them
-      # explicitly.
-      service_config[0].environment_variables["LOG_EXECUTION_ID"],
-      build_config[0].docker_repository
-    ]
-  }
+  enable_cdn                    = false
+  cdn_default_ttl_seconds       = 30
+  cdn_max_ttl_seconds           = 60
+  cdn_serve_while_stale_seconds = 60
+
+  regions_to_exclude_from_lb = []
+
+  cloud_run_ids = local.cloud_run_ids
+
+  # Custom url/domain
+  managed_domain = var.key_storage_domain
+
+  # Alert settings
+  alarms_enabled           = var.alarms_enabled
+  alarm_eval_period_sec    = var.alarm_eval_period_sec
+  alarm_duration_sec       = var.alarm_duration_sec
+  alert_severity_overrides = var.key_storage_severity_map
+  lb_5xx_threshold         = var.lb_5xx_threshold
+  lb_5xx_ratio_threshold   = var.lb_5xx_ratio_threshold
+  lb_max_latency_ms        = var.lb_max_latency_ms
 }
 
 # IAM entry for key storage service account to use the database
@@ -101,29 +120,6 @@ resource "google_spanner_database_iam_member" "keydb_iam_policy" {
   database = var.spanner_database_name
   role     = "roles/spanner.databaseUser"
   member   = "serviceAccount:${google_service_account.key_storage_service_account.email}"
-}
-
-# IAM entry to invoke the function. Gen 2 cloud functions need CloudRun permissions.
-resource "google_cloud_run_service_iam_member" "cloud_function_iam_policy" {
-  count = var.allowed_wip_user_group != null ? 1 : 0
-
-  project  = var.project_id
-  location = google_cloudfunctions2_function.key_storage_cloudfunction.location
-  service  = google_cloudfunctions2_function.key_storage_cloudfunction.name
-
-  role   = "roles/run.invoker"
-  member = "group:${var.allowed_wip_user_group}"
-}
-
-resource "google_cloud_run_service_iam_member" "cloud_function_iam_invokers" {
-  for_each = toset(var.allowed_wip_service_accounts)
-
-  project  = var.project_id
-  location = google_cloudfunctions2_function.key_storage_cloudfunction.location
-  service  = google_cloudfunctions2_function.key_storage_cloudfunction.name
-
-  role   = "roles/run.invoker"
-  member = "serviceAccount:${each.key}"
 }
 
 # IAM entry to allow function to encrypt and decrypt using KMS
@@ -138,4 +134,11 @@ resource "google_kms_crypto_key_iam_member" "kms_iam_policy" {
   crypto_key_id = var.key_encryption_key_id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:${google_service_account.key_storage_service_account.email}"
+}
+
+module "keystorageservice_monitoring_dashboard" {
+  source        = "../shared/cloudfunction_dashboards"
+  environment   = var.environment
+  service_name  = "Key Storage"
+  function_name = module.cloud_run.name
 }

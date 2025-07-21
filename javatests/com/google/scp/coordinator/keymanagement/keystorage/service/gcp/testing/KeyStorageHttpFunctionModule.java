@@ -36,6 +36,9 @@ import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotati
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyAead;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyUri;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.MigrationKmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.MigrationKmsKeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.SignDataKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyTask;
@@ -78,11 +81,16 @@ public class KeyStorageHttpFunctionModule extends AbstractModule {
         .toInstance("inline-kms://unused_so_far");
     bind(String.class).annotatedWith(CoordinatorKekUri.class).toInstance("");
     bind(String.class).annotatedWith(DisableKeySetAcl.class).toInstance("false");
+    bind(String.class).annotatedWith(PopulateMigrationKeyData.class).toInstance("false");
     bind(String.class)
         .annotatedWith(KmsKeyEncryptionKeyBaseUri.class)
         .toInstance(
             "gcp-kms://projects/admcloud-coordinator1/locations/us/keyRings/scp-test/cryptoKeys/$setName$-key-b");
+    bind(String.class).annotatedWith(MigrationKmsKeyEncryptionKeyBaseUri.class).toInstance("");
     bind(KmsClient.class).annotatedWith(KmsAeadClient.class).toInstance(getKmsClient());
+    bind(KmsClient.class)
+        .annotatedWith(MigrationKmsAeadClient.class)
+        .toInstance(getMigrationKmsClient());
     // This is not used for GCP but is needed for binding purposes.
     bind(Aead.class).annotatedWith(CoordinatorKeyAead.class).toInstance(getAead());
     install(new SpannerKeyDbModule());
@@ -123,6 +131,24 @@ public class KeyStorageHttpFunctionModule extends AbstractModule {
   }
 
   private KmsClient getKmsClient() {
+    String encodedKeySetHandle = System.getenv(keysetHandleStringName);
+    if (encodedKeySetHandle != null) {
+      return new FakeKmsClient(encodedKeySetHandle);
+    }
+    String kmsEndpoint = System.getenv(KMS_ENDPOINT_ENV_VAR_NAME);
+    if (kmsEndpoint != null) {
+      LocalGcpKmsClient client = new LocalGcpKmsClient(kmsEndpoint);
+      try {
+        client.withoutCredentials();
+        return client;
+      } catch (GeneralSecurityException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return new FakeKmsClient();
+  }
+
+  private KmsClient getMigrationKmsClient() {
     String encodedKeySetHandle = System.getenv(keysetHandleStringName);
     if (encodedKeySetHandle != null) {
       return new FakeKmsClient(encodedKeySetHandle);

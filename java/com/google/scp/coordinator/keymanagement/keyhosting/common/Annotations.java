@@ -48,6 +48,12 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface EnableCache {}
 
+  /** Binds cache refresh time in minutes.  */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface CacheRefreshInMinutes {}
+
   /** Binds limit value that determines count of active keys returned from Key database */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})

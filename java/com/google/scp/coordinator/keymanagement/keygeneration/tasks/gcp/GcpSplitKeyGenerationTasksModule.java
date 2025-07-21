@@ -18,6 +18,7 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp;
 
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_BASE_URI;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_URI;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.MIGRATION_KMS_KEY_BASE_URI;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.crypto.tink.KmsClient;
@@ -29,12 +30,17 @@ import com.google.scp.coordinator.clients.configclient.gcp.Annotations.PeerCoord
 import com.google.scp.coordinator.clients.configclient.gcp.GcpCoordinatorClientConfig;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.DisableKeySetAcl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KmsKeyUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.MigrationPeerCoordinatorKmsKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorKmsKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorServiceAccount;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorWipProvider;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.MigrationKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTask;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.KmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationKmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerCoordinatorKeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerKmsAeadClient;
 import com.google.scp.shared.clients.configclient.ParameterClient;
@@ -55,8 +61,18 @@ public final class GcpSplitKeyGenerationTasksModule extends AbstractModule {
       @KmsKeyUri String kmsKeyUri,
       @DisableKeySetAcl boolean disableKeySetAcl)
       throws ParameterClientException {
+    // TODO: b/428770204 - Remove option of KMS_KEY_URI and disableKeySetAcl post migration.
     String kmsParam = disableKeySetAcl ? KMS_KEY_URI : KMS_KEY_BASE_URI;
     return parameterClient.getParameter(kmsParam).orElse(kmsKeyUri);
+  }
+
+  /** Provides the migrationKmsKeyUri for this coordinator from parameter client. */
+  @Provides
+  @Singleton
+  @MigrationKeyEncryptionKeyBaseUri
+  String provideMigrationKeyEncryptionKeyBaseUri(ParameterClient parameterClient)
+      throws ParameterClientException {
+    return parameterClient.getParameter(MIGRATION_KMS_KEY_BASE_URI).orElse("");
   }
 
   @Provides
@@ -65,6 +81,15 @@ public final class GcpSplitKeyGenerationTasksModule extends AbstractModule {
   String providesPeerCoordinatorKeyEncryptionKeyBaseUri(
       @PeerCoordinatorKmsKeyBaseUri String peerCoordinatorKmsKeyBaseUri) {
     return peerCoordinatorKmsKeyBaseUri;
+  }
+
+  @Provides
+  @Singleton
+  @MigrationPeerCoordinatorKeyEncryptionKeyBaseUri
+  String providesMigrationPeerCoordinatorKeyEncryptionKeyBaseUri(
+      @MigrationPeerCoordinatorKmsKeyBaseUri
+          String migrationPeerCoordinatorKmsKeyBaseUri) {
+    return migrationPeerCoordinatorKmsKeyBaseUri;
   }
 
   @Provides
@@ -91,9 +116,28 @@ public final class GcpSplitKeyGenerationTasksModule extends AbstractModule {
 
   @Provides
   @Singleton
+  @MigrationKmsAeadClient
+  KmsClient provideMigrationKmsAeadClient() throws GeneralSecurityException {
+    GcpKmsClient client = new GcpKmsClient();
+    client.withDefaultCredentials();
+    return client;
+  }
+
+  @Provides
+  @Singleton
   @PeerKmsAeadClient
   KmsClient providePeerKmsAeadClient(@PeerCoordinatorCredentials GoogleCredentials credentials)
       throws GeneralSecurityException {
+    GcpKmsClient client = new GcpKmsClient();
+    client.withCredentials(credentials);
+    return client;
+  }
+
+  @Provides
+  @Singleton
+  @MigrationPeerKmsAeadClient
+  KmsClient provideMigrationPeerKmsAeadClient(
+      @PeerCoordinatorCredentials GoogleCredentials credentials) throws GeneralSecurityException {
     GcpKmsClient client = new GcpKmsClient();
     client.withCredentials(credentials);
     return client;

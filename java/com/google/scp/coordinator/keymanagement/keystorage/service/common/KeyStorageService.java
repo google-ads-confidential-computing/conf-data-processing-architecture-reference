@@ -19,10 +19,10 @@ package com.google.scp.coordinator.keymanagement.keystorage.service.common;
 import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.shared.converter.DataKeyConverter;
 import com.google.scp.coordinator.keymanagement.keystorage.converters.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.GetDataKeyTask;
+import com.google.scp.coordinator.keymanagement.shared.converter.DataKeyConverter;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.CreateKeyRequestProto.CreateKeyRequest;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto.EncryptionKey;
@@ -57,12 +57,21 @@ public final class KeyStorageService {
       switch (request.getKeySplitEncryptionType()) {
         case UNKNOWN: // fall through.
         case DIRECT:
-          storedKey = createKeyTask.createKey(receivedKey, request.getEncryptedKeySplit());
+          storedKey =
+              createKeyTask.createKey(
+                  receivedKey,
+                  request.getEncryptedKeySplit(),
+                  request.getMigrationEncryptedKeySplit());
           break;
         case DATA_KEY:
           var dataKey =
               DataKeyConverter.INSTANCE.reverse().convert(request.getEncryptedKeySplitDataKey());
-          storedKey = createKeyTask.createKey(receivedKey, dataKey, request.getEncryptedKeySplit());
+          storedKey =
+              createKeyTask.createKey(
+                  receivedKey,
+                  dataKey,
+                  request.getEncryptedKeySplit(),
+                  request.getMigrationEncryptedKeySplit());
           break;
         default:
           throw new IllegalArgumentException(

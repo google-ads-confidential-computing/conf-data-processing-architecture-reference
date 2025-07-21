@@ -61,6 +61,15 @@ resource "google_compute_backend_service" "cloud_run_backend" {
 
     max_ejection_percent = var.outlier_detection_max_ejection_percent
   }
+
+  // Needed in the event that a region is removed.
+  // In this case, the terraform apply would normally fail,
+  // since terraform would first try to delete the network
+  // endpoint groups, before updating this resource to
+  // remove the backend, so this ensures the backend is updated first.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # The URL map creates the HTTPS LB

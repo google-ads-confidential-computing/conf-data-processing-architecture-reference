@@ -16,6 +16,7 @@
 
 #include "core/common/operation_dispatcher/src/operation_dispatcher.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <atomic>
@@ -42,6 +43,12 @@ using std::string;
 using std::chrono::milliseconds;
 
 namespace google::scp::core::common::test {
+class MockCallback {
+ public:
+  // MOCK_METHOD(return_type, method_name, (arg_types), (specifiers));
+  MOCK_METHOD(void, invoke, (), ());
+};
+
 TEST(OperationDispatcherTests, SuccessfulOperation) {
   std::shared_ptr<AsyncExecutorInterface> mock_async_executor =
       make_shared<MockAsyncExecutor>();
@@ -383,4 +390,170 @@ TEST(OperationDispatcherTests, RetryOnAcceptance) {
   WaitUntil([&]() { return condition.load(); });
 }
 
+TEST(OperationDispatcherTests, FailureAfterExhaustingRetries) {
+  std::shared_ptr<AsyncExecutorInterface> mock_async_executor =
+      make_shared<MockAsyncExecutor>();
+  RetryStrategy retry_strategy(RetryStrategyType::Exponential, 10, 5);
+  MockCallback mock_callback;
+  EXPECT_CALL(mock_callback, invoke()).Times(1);
+  std::function<void(const OperationDispatcher::RetryInformationEvent event)>
+      event_handler =
+          [&mock_callback](
+              const OperationDispatcher::RetryInformationEvent event) {
+            mock_callback.invoke();
+            EXPECT_EQ(event.retry_event,
+                      OperationDispatcher::RetryEvent::kFailureAfterRetry);
+            EXPECT_EQ(event.retry_count, 5);
+          };
+
+  OperationDispatcher dispatcher(mock_async_executor, retry_strategy,
+                                 event_handler);
+
+  atomic<bool> condition(false);
+  AsyncContext<string, string> context;
+  context.callback = [&](AsyncContext<string, string>& context) {
+    EXPECT_THAT(context.result,
+                ResultIs(FailureExecutionResult(
+                    core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES)));
+    EXPECT_EQ(context.retry_count, 5);
+    condition = true;
+  };
+
+  function<ExecutionResult(AsyncContext<string, string>&)>
+      dispatch_to_component = [](AsyncContext<string, string>& context) {
+        context.result = RetryExecutionResult(1);
+        context.Finish();
+        return SuccessExecutionResult();
+      };
+
+  dispatcher.Dispatch(context, dispatch_to_component);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST(OperationDispatcherTests, FailureAfterRetries) {
+  std::shared_ptr<AsyncExecutorInterface> mock_async_executor =
+      make_shared<MockAsyncExecutor>();
+  RetryStrategy retry_strategy(RetryStrategyType::Exponential, 10, 5);
+  MockCallback mock_callback;
+  EXPECT_CALL(mock_callback, invoke()).Times(1);
+  std::function<void(const OperationDispatcher::RetryInformationEvent event)>
+      event_handler =
+          [&mock_callback](
+              const OperationDispatcher::RetryInformationEvent event) {
+            mock_callback.invoke();
+            EXPECT_EQ(event.retry_event,
+                      OperationDispatcher::RetryEvent::kFailureAfterRetry);
+            EXPECT_EQ(event.retry_count, 2);
+          };
+
+  OperationDispatcher dispatcher(mock_async_executor, retry_strategy,
+                                 event_handler);
+
+  atomic<bool> condition(false);
+  AsyncContext<string, string> context;
+  context.callback = [&](AsyncContext<string, string>& context) {
+    EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(1)));
+    EXPECT_EQ(context.retry_count, 2);
+    condition = true;
+  };
+
+  function<ExecutionResult(AsyncContext<string, string>&)>
+      dispatch_to_component = [](AsyncContext<string, string>& context) {
+        // Retry twice and then fail
+        if (context.retry_count == 2) {
+          context.result = FailureExecutionResult(1);
+        } else {
+          context.result = RetryExecutionResult(1);
+        }
+        context.Finish();
+        return SuccessExecutionResult();
+      };
+
+  dispatcher.Dispatch(context, dispatch_to_component);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST(OperationDispatcherTests, SuccessAfterRetries) {
+  std::shared_ptr<AsyncExecutorInterface> mock_async_executor =
+      make_shared<MockAsyncExecutor>();
+  RetryStrategy retry_strategy(RetryStrategyType::Exponential, 10, 5);
+  MockCallback mock_callback;
+  EXPECT_CALL(mock_callback, invoke()).Times(1);
+  std::function<void(const OperationDispatcher::RetryInformationEvent event)>
+      event_handler =
+          [&mock_callback](
+              const OperationDispatcher::RetryInformationEvent event) {
+            mock_callback.invoke();
+            EXPECT_EQ(event.retry_event,
+                      OperationDispatcher::RetryEvent::kSuccessAfterRetry);
+            EXPECT_EQ(event.retry_count, 2);
+          };
+
+  OperationDispatcher dispatcher(mock_async_executor, retry_strategy,
+                                 event_handler);
+
+  atomic<bool> condition(false);
+  AsyncContext<string, string> context;
+  context.callback = [&](AsyncContext<string, string>& context) {
+    EXPECT_THAT(context.result, ResultIs(SuccessExecutionResult()));
+    EXPECT_EQ(context.retry_count, 2);
+    condition = true;
+  };
+
+  function<ExecutionResult(AsyncContext<string, string>&)>
+      dispatch_to_component = [](AsyncContext<string, string>& context) {
+        // Retry twice and then succeed
+        if (context.retry_count == 2) {
+          context.result = SuccessExecutionResult();
+        } else {
+          context.result = RetryExecutionResult(1);
+        }
+
+        context.Finish();
+        return SuccessExecutionResult();
+      };
+
+  dispatcher.Dispatch(context, dispatch_to_component);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST(OperationDispatcherTests, FailureWithoutRetries) {
+  std::shared_ptr<AsyncExecutorInterface> mock_async_executor =
+      make_shared<MockAsyncExecutor>();
+  RetryStrategy retry_strategy(RetryStrategyType::Exponential, 10, 5);
+  MockCallback mock_callback;
+  EXPECT_CALL(mock_callback, invoke()).Times(1);
+  std::function<void(const OperationDispatcher::RetryInformationEvent event)>
+      event_handler =
+          [&mock_callback](
+              const OperationDispatcher::RetryInformationEvent event) {
+            mock_callback.invoke();
+            EXPECT_EQ(OperationDispatcher::RetryEvent::kNonRetriableFailure,
+                      event.retry_event);
+            // No retries occurred
+            EXPECT_EQ(0, event.retry_count);
+          };
+
+  OperationDispatcher dispatcher(mock_async_executor, retry_strategy,
+                                 event_handler);
+
+  atomic<bool> condition(false);
+  AsyncContext<string, string> context;
+  context.callback = [&](AsyncContext<string, string>& context) {
+    EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(1)));
+    EXPECT_EQ(context.retry_count, 0);
+    condition = true;
+  };
+
+  function<ExecutionResult(AsyncContext<string, string>&)>
+      dispatch_to_component = [](AsyncContext<string, string>& context) {
+        // Fail right away
+        context.result = FailureExecutionResult(1);
+        context.Finish();
+        return SuccessExecutionResult();
+      };
+
+  dispatcher.Dispatch(context, dispatch_to_component);
+  WaitUntil([&]() { return condition.load(); });
+}
 }  // namespace google::scp::core::common::test

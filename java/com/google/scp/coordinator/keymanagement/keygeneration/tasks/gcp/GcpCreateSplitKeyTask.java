@@ -20,13 +20,19 @@ import com.google.common.collect.ImmutableMap;
 import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KmsClient;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.google.protobuf.ByteString;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient.KeyStorageServiceException;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.MigrationKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBase;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.KmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationKmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerCoordinatorKeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
@@ -56,16 +62,27 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
 
   private final LogMetricHelper logMetricHelper;
   private final String keyEncryptionKeyBaseUri;
+  private final String migrationKeyEncryptionKeyBaseUri;
   private final String peerCoordinatorKeyEncryptionKeyBaseUri;
+  private final String migrationPeerCoordinatorKeyEncryptionKeyBaseUri;
   private final KmsClient kmsClient;
+  private final KmsClient migrationKmsClient;
   private final KmsClient peerKmsClient;
+  private final KmsClient migrationPeerKmsClient;
+  private final Provider<Boolean> populateMigrationDataProvider;
+
 
   @Inject
   public GcpCreateSplitKeyTask(
       @KeyEncryptionKeyBaseUri String keyEncryptionKeyBaseUri,
+      @MigrationKeyEncryptionKeyBaseUri String migrationKeyEncryptionKeyBaseUri,
       @PeerCoordinatorKeyEncryptionKeyBaseUri String peerCoordinatorKeyEncryptionKeyBaseUri,
+      @MigrationPeerCoordinatorKeyEncryptionKeyBaseUri String migrationPeerCoordinatorKeyEncryptionKeyBaseUri,
       @KmsAeadClient KmsClient kmsClient,
+      @MigrationKmsAeadClient KmsClient migrationKmsClient,
       @PeerKmsAeadClient KmsClient peerKmsClient,
+      @MigrationPeerKmsAeadClient KmsClient migrationPeerKmsClient,
+      @PopulateMigrationKeyData Provider<Boolean> populateMigrationDataProvider,
       KeyIdFactory keyIdFactory,
       KeyDb keyDb,
       KeyStorageClient keyStorageClient,
@@ -73,9 +90,14 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
     super(Optional.empty(), keyDb, keyStorageClient, keyIdFactory, logMetricHelper);
     this.logMetricHelper = logMetricHelper;
     this.keyEncryptionKeyBaseUri = keyEncryptionKeyBaseUri;
+    this.migrationKeyEncryptionKeyBaseUri = migrationKeyEncryptionKeyBaseUri;
     this.peerCoordinatorKeyEncryptionKeyBaseUri = peerCoordinatorKeyEncryptionKeyBaseUri;
+    this.migrationPeerCoordinatorKeyEncryptionKeyBaseUri = migrationPeerCoordinatorKeyEncryptionKeyBaseUri;
     this.kmsClient = kmsClient;
+    this.migrationKmsClient = migrationKmsClient;
     this.peerKmsClient = peerKmsClient;
+    this.migrationPeerKmsClient = migrationPeerKmsClient;
+    this.populateMigrationDataProvider = populateMigrationDataProvider;
   }
 
   /**
@@ -93,7 +115,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       Instant activation)
       throws ServiceException {
     createSplitKeyBase(
-        setName, tinkTemplate, count, validityInDays, ttlInDays, activation, Optional.empty());
+        setName, tinkTemplate, count, validityInDays, ttlInDays, activation, Optional.empty(), populateMigrationDataProvider.get());
   }
 
   /**
@@ -105,11 +127,42 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
   protected String encryptPeerCoordinatorSplit(
       String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKeyMaterial)
       throws ServiceException {
+    return encryptPeerCoordinatorSplit(
+        setName,
+        keySplit,
+        publicKeyMaterial,
+        false);
+  }
+
+  /**
+   * Encrypt CoordinatorB Migration KeySplit using Migration Peer Coordinator KMS Key.
+   *
+   * @param dataKey Unused by design since GCP encrypts the keySplit directly.
+   */
+  @Override
+  protected String encryptMigrationPeerCoordinatorSplit(
+      String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKeyMaterial)
+      throws ServiceException {
+    return encryptPeerCoordinatorSplit(
+        setName,
+        keySplit,
+        publicKeyMaterial,
+        populateMigrationDataProvider.get());
+  }
+
+  /**
+   * Encrypt CoordinatorB KeySplit using Peer Coordinator KMS Key.
+   */
+  private String encryptPeerCoordinatorSplit(
+      String setName, ByteString keySplit, String publicKeyMaterial, Boolean useMigrationData)
+      throws ServiceException {
     try {
+      Aead aead = useMigrationData
+          ? getMigrationPeerAead(getMigrationPeerCoordinatorKmsKeyBaseUri(setName))
+          : getPeerAead(getPeerCoordinatorKmsKeyBaseUri(setName));
       return Base64.getEncoder()
           .encodeToString(
-              getPeerAead(getPeerCoordinatorKmsKeyBaseUri(setName))
-                  .encrypt(keySplit.toByteArray(), Base64.getDecoder().decode(publicKeyMaterial)));
+              aead.encrypt(keySplit.toByteArray(), Base64.getDecoder().decode(publicKeyMaterial)));
     } catch (GeneralSecurityException e) {
       throw new ServiceException(Code.INVALID_ARGUMENT, "Failed to encrypt key split.", e);
     }
@@ -122,24 +175,45 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
     return kmsClient.getAead(keyEncryptionKeyUri);
   }
 
+  protected Aead getMigrationAead(String keyEncryptionKeyUri) throws GeneralSecurityException {
+    logger.info("Migration Aead keyuri: " + keyEncryptionKeyUri);
+    return migrationKmsClient.getAead(keyEncryptionKeyUri);
+  }
+
   /** Takes in setName and returns kmsKeyEncryptionKeyUri for the key set. */
   @Override
   protected String getKmsKeyEncryptionKeyUri(String setName) {
     return getKeyEncryptionKeyUri(setName, this.keyEncryptionKeyBaseUri);
   }
 
+  /** Takes in setName and returns kmsKeyEncryptionMigrationKeyUri for the key set. */
+  @Override
+  protected String getMigrationKmsKeyEncryptionKeyUri(String setName) {
+    return getKeyEncryptionKeyUri(setName, this.migrationKeyEncryptionKeyBaseUri);
+  }
+
   private String getPeerCoordinatorKmsKeyBaseUri(String setName) {
     return getKeyEncryptionKeyUri(setName, this.peerCoordinatorKeyEncryptionKeyBaseUri);
   }
 
+  private String getMigrationPeerCoordinatorKmsKeyBaseUri(String setName) {
+    return getKeyEncryptionKeyUri(setName, this.migrationPeerCoordinatorKeyEncryptionKeyBaseUri);
+  }
+
   private String getKeyEncryptionKeyUri(String setName, String keyEncryptionKeyBaseUri) {
-    logger.info("Keyuri: " + keyEncryptionKeyBaseUri.replace("$setName$", setName));
-    return keyEncryptionKeyBaseUri.replace("$setName$", setName);
+    String keyEncryptionKeyUri = keyEncryptionKeyBaseUri.replace("$setName$", setName);
+    logger.info("Keyuri: " + keyEncryptionKeyUri);
+    return keyEncryptionKeyUri;
   }
 
   private Aead getPeerAead(String keyEncryptionKeyUri) throws GeneralSecurityException {
     logger.info("Peer Aead keyuri: " + keyEncryptionKeyUri);
     return peerKmsClient.getAead(keyEncryptionKeyUri);
+  }
+
+  private Aead getMigrationPeerAead(String keyEncryptionKeyUri) throws GeneralSecurityException {
+    logger.info("Migration Peer Aead keyuri: " + keyEncryptionKeyUri);
+    return migrationPeerKmsClient.getAead(keyEncryptionKeyUri);
   }
 
   /**
@@ -150,10 +224,10 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
    */
   @Override
   protected EncryptionKey sendKeySplitToPeerCoordinator(
-      EncryptionKey unsignedCoordinatorBKey, String encryptedKeySplitB, Optional<DataKey> dataKey)
+      EncryptionKey unsignedCoordinatorBKey, String encryptedKeySplitB, Optional<String> encryptedMigrationKeySplitB, Optional<DataKey> dataKey)
       throws ServiceException {
     try {
-      return keyStorageClient.createKey(unsignedCoordinatorBKey, encryptedKeySplitB);
+      return keyStorageClient.createKey(unsignedCoordinatorBKey, encryptedKeySplitB, encryptedMigrationKeySplitB);
     } catch (KeyStorageServiceException e) {
       logger.error(
           logMetricHelper.format(

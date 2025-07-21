@@ -35,15 +35,24 @@ frontend_service_jar = "/tmp/postsubmit_mp/jars/FrontendServiceHttpCloudFunction
 
 auto_create_subnetworks = false
 network_name_suffix     = "network-with-custom-subnet"
-worker_subnet_cidr      = { "us-central1" = "10.2.0.0/16" }
+worker_subnet_cidr = {
+  "us-central1" = "10.2.0.0/16",
+  "us-east1"    = "10.12.0.0/16"
+}
 
 enable_remote_metric_aggregation   = true
 enable_opentelemetry_collector     = true
 metric_exporter_interval_in_millis = 60000
 collector_domain_name              = "collector.metrics"
 collector_dns_name                 = "scp.testings.postsubmit"
-collector_subnet_cidr              = { "us-central1" = "10.3.0.0/16" }
-proxy_subnet_cidr                  = { "us-central1" = "10.4.0.0/16" }
+collector_subnet_cidr = {
+  "us-central1" = "10.3.0.0/16",
+  "us-east1"    = "10.13.0.0/16"
+}
+proxy_subnet_cidr = {
+  "us-central1" = "10.4.0.0/16",
+  "us-east1"    = "10.14.0.0/16"
+}
 
 collector_exceed_cpu_usage_alarm = {
   enable_alarm : true,
@@ -133,3 +142,12 @@ instance_disk_image_family = {
 instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-241000"
 
 vpcsc_compatible = true
+
+frontend_service_cloudfunction_num_cpus                = 1
+frontend_service_cloud_run_regions                     = ["us-central1", "us-east1"]
+frontend_service_cloud_run_source_container_image_url  = "us-docker.pkg.dev/admcloud-adtech1/docker-repo-dev/operator-fe-service:postsubmit-mp"
+frontend_service_lb_domain                             = "wrkr-fe-postsubmit-test.gcp.admcstesting.dev"
+frontend_service_parent_domain_name                    = "gcp.admcstesting.dev"
+frontend_service_parent_domain_name_project_id         = "admcloud-coordinator1"
+frontend_service_cloud_run_ingress_traffic_setting     = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+frontend_service_cloud_run_allowed_invoker_iam_members = ["serviceAccount:postsubmit@admcloud-adtech1.iam.gserviceaccount.com"]

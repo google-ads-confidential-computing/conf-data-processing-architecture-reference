@@ -19,6 +19,7 @@ package com.google.scp.coordinator.keymanagement.shared.serverless.gcp;
 import com.google.cloud.functions.HttpRequest;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
+import java.util.List;
 import java.util.Optional;
 
 /** {@link RequestContext} implementation for GCP Cloud Functions. */
@@ -37,6 +38,10 @@ public class GcpRequestContext extends RequestContext {
 
   public String getMethod() {
     return request.getMethod();
+  }
+
+  public Optional<String> getFirstHeader(String name) {
+    return request.getHeaders().getOrDefault(name, List.of()).stream().findFirst();
   }
 
   public Optional<String> getFirstQueryParameter(String name) {

@@ -27,7 +27,10 @@ import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.Test;
@@ -38,6 +41,7 @@ import org.junit.runners.JUnit4;
 public class AwsServerlessFunctionTest {
 
   private static final String TEST_RESPONSE = "test-response";
+  private static final String TEST_REQUEST_HEADER = "test-header";
 
   @Test
   public void testService_happyPath_returnsExpected() {
@@ -65,6 +69,47 @@ public class AwsServerlessFunctionTest {
     assertThat(response.getStatusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
   }
 
+  @Test
+  public void testService_withHeader_returnsHeaderInBody() throws Exception {
+    // Given
+    String expectedHeaderValue = "header-value";
+    Map<String, String> headers = new HashMap<>();
+    headers.put(TEST_REQUEST_HEADER, expectedHeaderValue);
+    headers.put("unused-header", "should-not-return");
+    APIGatewayProxyRequestEvent request =
+        new APIGatewayProxyRequestEvent()
+            .withHttpMethod("GET")
+            .withPath("/test-base/path-with-header")
+            .withHeaders(headers);
+    // .withMultiValueHeaders(headers);
+
+    // When
+    APIGatewayProxyResponseEvent response = new TestService().handleRequest(request, null);
+
+    // Then
+    assertThat(response.getBody()).isEqualTo(expectedHeaderValue);
+  }
+
+  @Test
+  public void testService_withMultiValueHeader_returnsHeaderInBody() throws Exception {
+    // Given
+    String expectedHeaderValue = "header-value";
+    Map<String, List<String>> headers = new HashMap<>();
+    headers.put(TEST_REQUEST_HEADER, List.of(expectedHeaderValue));
+    headers.put("unused-header", List.of("should-not-return"));
+    APIGatewayProxyRequestEvent request =
+        new APIGatewayProxyRequestEvent()
+            .withHttpMethod("GET")
+            .withPath("/test-base/path-with-header")
+            .withMultiValueHeaders(headers);
+
+    // When
+    APIGatewayProxyResponseEvent response = new TestService().handleRequest(request, null);
+
+    // Then
+    assertThat(response.getBody()).isEqualTo(expectedHeaderValue);
+  }
+
   public static final class TestService extends AwsServerlessFunction {
     @ProvidesIntoMap
     @StringMapKey("/test-base")
@@ -76,6 +121,23 @@ public class AwsServerlessFunctionTest {
             protected void execute(
                 Matcher matcher, RequestContext request, ResponseContext response) {
               response.setBody(TEST_RESPONSE);
+            }
+          },
+          new ApiTask(
+              "GET",
+              Pattern.compile("/path-with-header"),
+              "test",
+              "v1Test",
+              new LogMetricHelper("test")) {
+            @Override
+            protected void execute(
+                Matcher matcher, RequestContext request, ResponseContext response) {
+              Optional<String> headerValue = request.getFirstHeader(TEST_REQUEST_HEADER);
+              if (headerValue.isPresent()) {
+                response.setBody(headerValue.get());
+              } else {
+                response.setBody("");
+              }
             }
           });
     }

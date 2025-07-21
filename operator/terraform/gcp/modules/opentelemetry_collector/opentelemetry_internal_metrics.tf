@@ -15,11 +15,16 @@
  */
 locals {
   collector_instance_group_name   = google_compute_region_instance_group_manager.collector_instance.name
-  collecotr_instance_group_filter = "resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${local.collector_instance_group_name}\""
+  collecotr_instance_group_filter = "resource.type=\"gce_instance\" AND metadata.system_labels.\"instance_group\"=\"${local.collector_instance_group_name}\""
 }
 
+# Disable follwing alert policies using denominator.
+# They trigger a error while creating by terraform:
+# Error 400: All labels in the denominator must be in the numerator.
+# Will enable it once we fix the error.
+
 resource "google_monitoring_alert_policy" "collector_queue_size_alert_by_ratio" {
-  count        = var.collector_queue_size_ratio_alarm.enable_alarm ? 1 : 0
+  count        = 0
   display_name = "${var.environment} Collector Queue Size Alert"
   combiner     = "OR"
 
@@ -58,7 +63,7 @@ resource "google_monitoring_alert_policy" "collector_queue_size_alert_by_ratio" 
 }
 
 resource "google_monitoring_alert_policy" "collector_send_metric_points_failure_alert_by_ratio" {
-  count        = var.collector_send_metric_points_ratio_alarm.enable_alarm ? 1 : 0
+  count        = 0
   display_name = "${var.environment} Collector Send Metric Points Ratio Alert"
   combiner     = "OR"
 
@@ -97,7 +102,7 @@ resource "google_monitoring_alert_policy" "collector_send_metric_points_failure_
 }
 
 resource "google_monitoring_alert_policy" "collector_refuse_metric_points_alert_by_ratio" {
-  count        = var.collector_refuse_metric_points_ratio_alarm.enable_alarm ? 1 : 0
+  count        = 0
   display_name = "${var.environment} Collector Refuse Metric Points Ratio from Worker Alert"
   combiner     = "OR"
 

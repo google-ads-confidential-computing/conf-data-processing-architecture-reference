@@ -97,7 +97,7 @@ public final class CreateKeyApiGatewayHandlerIntegrationTest {
     var exception =
         assertThrows(
             KeyStorageServiceException.class,
-            () -> client.createKey(encryptionKey, invalidKeySplit));
+            () -> client.createKey(encryptionKey, invalidKeySplit, Optional.empty()));
 
     var serviceException = (ServiceException) exception.getCause();
     assertThat(serviceException.getErrorCode()).isEqualTo(Code.INVALID_ARGUMENT);
@@ -133,7 +133,7 @@ public final class CreateKeyApiGatewayHandlerIntegrationTest {
 
     assertThat(coordinatorBKeyDb.getAllKeys().size()).isEqualTo(0);
 
-    client.createKey(encryptionKey, dataKey, encryptedKeySplit);
+    client.createKey(encryptionKey, dataKey, encryptedKeySplit, Optional.empty());
 
     assertThat(coordinatorBKeyDb.getAllKeys().size()).isEqualTo(1);
     var key = coordinatorBKeyDb.getKey(keyId);
@@ -167,11 +167,15 @@ public final class CreateKeyApiGatewayHandlerIntegrationTest {
     var ex1 =
         assertThrows(
             KeyStorageServiceException.class,
-            () -> client.createKey(encryptionKey, invalidSignatureDataKey, encryptedKeySplit));
+            () ->
+                client.createKey(
+                    encryptionKey, invalidSignatureDataKey, encryptedKeySplit, Optional.empty()));
     var ex2 =
         assertThrows(
             KeyStorageServiceException.class,
-            () -> client.createKey(encryptionKey, invalidContextDataKey, encryptedKeySplit));
+            () ->
+                client.createKey(
+                    encryptionKey, invalidContextDataKey, encryptedKeySplit, Optional.empty()));
 
     assertThat(ex1).hasCauseThat().hasMessageThat().contains("Signature validation failed");
     assertThat(ex2).hasCauseThat().hasMessageThat().contains("Signature validation failed");
@@ -193,7 +197,7 @@ public final class CreateKeyApiGatewayHandlerIntegrationTest {
     var encryptionKey = FakeEncryptionKey.create();
     var encryptedKeySplit =
         FakeDataKeyUtil.encryptString(dataKey, "blah", encryptionKey.getPublicKeyMaterial());
-    client.createKey(encryptionKey, dataKey, encryptedKeySplit);
+    client.createKey(encryptionKey, dataKey, encryptedKeySplit, Optional.empty());
   }
 
   @Test
@@ -207,7 +211,7 @@ public final class CreateKeyApiGatewayHandlerIntegrationTest {
     var ex =
         assertThrows(
             KeyStorageServiceException.class,
-            () -> client.createKey(encryptionKey, dataKey, encryptedKeySplit));
+            () -> client.createKey(encryptionKey, dataKey, encryptedKeySplit, Optional.empty()));
     assertThat(ex).hasCauseThat().hasMessageThat().contains("Failed to decrypt using data key");
   }
 

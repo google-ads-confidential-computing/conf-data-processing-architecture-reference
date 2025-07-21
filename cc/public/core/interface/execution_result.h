@@ -75,6 +75,8 @@ struct ExecutionResult {
 
   bool Retryable() const { return this->status == ExecutionStatus::Retry; }
 
+  bool Failed() const { return this->status == ExecutionStatus::Failure; }
+
   explicit operator bool() const { return Successful(); }
 
   /// Status of the executed operation.

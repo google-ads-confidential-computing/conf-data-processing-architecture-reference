@@ -254,11 +254,11 @@ public abstract class KeyDbBaseTest {
   }
 
   private static EncryptionKey fakeEncryptionKey() {
-    return FakeEncryptionKey.createBuilderWithDefaults().build();
+    return FakeEncryptionKey.createBuilderWithDefaults(false).build();
   }
 
   private static EncryptionKey fakeEncryptionKey(String setName) {
-    return FakeEncryptionKey.createBuilderWithDefaults().setSetName(setName).build();
+    return FakeEncryptionKey.createBuilderWithDefaults(false).setSetName(setName).build();
   }
 
   private static EncryptionKey fakeEncryptionKey(

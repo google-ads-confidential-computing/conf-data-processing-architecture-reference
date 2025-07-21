@@ -15,10 +15,13 @@
  */
 
 locals {
-  function_name = google_cloudfunctions2_function.frontend_service_cloudfunction.name
+  create_cloud_function_resources = var.create_frontend_service_cloud_function
+  function_name                   = local.create_cloud_function_resources ? google_cloudfunctions2_function.frontend_service_cloudfunction[0].name : ""
 
   create_cloud_run_resources = length(module.cloud_run_fe) > 0
-  lb_url_map_name            = local.create_cloud_run_resources ? module.cloud_run_fe_load_balancer[0].url_map_name : ""
+  lb_url_map_name            = (local.create_cloud_run_resources && length(module.cloud_run_fe_load_balancer) > 0) ? module.cloud_run_fe_load_balancer[0].url_map_name : ""
+  create_lb_resources        = local.lb_url_map_name != ""
+
 
   // Template for a single dashboard data set for Cloud Run service
   // Substitution order:
@@ -557,7 +560,7 @@ EOF
 
 module "frontendservice_cloudfunction_alarms" {
   source = "../shared/cloudfunction_alarms"
-  count  = var.alarms_enabled ? 1 : 0
+  count  = var.alarms_enabled && local.create_cloud_function_resources ? 1 : 0
 
   environment             = var.environment
   notification_channel_id = var.notification_channel_id
@@ -586,6 +589,21 @@ module "frontendservice_cloud_run_alarms" {
   execution_time_alarm_config = var.cloud_run_execution_time_alarm_config
 }
 
+module "frontendservice_load_balancer_alarms" {
+  source = "../shared/cloud_run_lb_alarms"
+  count  = (var.alarms_enabled && local.create_lb_resources) ? 1 : 0
+
+  lb_url_map_name = local.lb_url_map_name
+
+  environment             = var.environment
+  notification_channel_id = var.notification_channel_id
+  service_prefix          = "${var.environment} Frontend Service"
+
+  error_5xx_alarm_config         = var.lb_error_5xx_alarm_config
+  non_5xx_error_alarm_config     = var.lb_non_5xx_error_alarm_config
+  request_latencies_alarm_config = var.lb_request_latencies_alarm_config
+}
+
 resource "google_monitoring_dashboard" "frontend_dashboard" {
   dashboard_json = jsonencode(
     {
@@ -593,7 +611,7 @@ resource "google_monitoring_dashboard" "frontend_dashboard" {
       "gridLayout" : {
         "columns" : "2",
         "widgets" : flatten([
-          {
+          local.create_cloud_function_resources ? [{
             "title" : "Cloud Function Executions",
             "xyChart" : {
               "chartOptions" : {
@@ -630,8 +648,8 @@ resource "google_monitoring_dashboard" "frontend_dashboard" {
                 "scale" : "LINEAR"
               }
             }
-          },
-          {
+          }] : [],
+          local.create_cloud_function_resources ? [{
             "title" : "Cloud Function Execution Times",
             "xyChart" : {
               "chartOptions" : {
@@ -714,8 +732,8 @@ resource "google_monitoring_dashboard" "frontend_dashboard" {
                 "scale" : "LINEAR"
               }
             }
-          },
-          {
+          }] : [],
+          local.create_cloud_function_resources ? [{
             "title" : "Cloud Function Errors",
             "xyChart" : {
               "chartOptions" : {
@@ -752,8 +770,8 @@ resource "google_monitoring_dashboard" "frontend_dashboard" {
                 "scale" : "LINEAR"
               }
             }
-          },
-          {
+          }] : [],
+          local.create_cloud_function_resources ? [{
             "title" : "Cloud Function Max Concurrent Requests",
             "xyChart" : {
               "chartOptions" : {
@@ -789,10 +807,10 @@ resource "google_monitoring_dashboard" "frontend_dashboard" {
                 "scale" : "LINEAR"
               }
             }
-          },
-          (local.create_cloud_run_resources ? [jsondecode(local.lb_request_count_widget)] : []),
-          (local.create_cloud_run_resources ? [jsondecode(local.lb_latency_widget)] : []),
-          (local.create_cloud_run_resources ? [jsondecode(local.lb_errors_widget)] : []),
+          }] : [],
+          (local.create_lb_resources ? [jsondecode(local.lb_request_count_widget)] : []),
+          (local.create_lb_resources ? [jsondecode(local.lb_latency_widget)] : []),
+          (local.create_lb_resources ? [jsondecode(local.lb_errors_widget)] : []),
           (local.create_cloud_run_resources ? [jsondecode(local.request_count_widget)] : []),
           (local.create_cloud_run_resources ? [jsondecode(local.request_latencies_widget)] : []),
           (local.create_cloud_run_resources ? [jsondecode(local.request_errors_widget)] : []),

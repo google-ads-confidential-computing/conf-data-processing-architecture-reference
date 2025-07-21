@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <set>
+#include <string>
 #include <utility>
 
 #include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
@@ -46,12 +47,12 @@ using google::scp::core::RetryExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::AutoExpiryConcurrentMap;
 using google::scp::core::common::kZeroUuid;
+using google::scp::core::common::OperationDispatcher;
 using google::scp::core::errors::
     SC_GCP_KMS_CLIENT_PROVIDER_BASE64_DECODING_FAILED;
 using google::scp::core::errors::
     SC_GCP_KMS_CLIENT_PROVIDER_CIPHERTEXT_NOT_FOUND;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_CLOUD_UNAVAILABLE;
-using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_CREATE_AEAD_FAILED;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_KEY_ARN_NOT_FOUND;
 using google::scp::core::utils::Base64Decode;
@@ -61,17 +62,21 @@ using std::move;
 using std::set;
 using std::shared_ptr;
 using std::string;
+using std::to_string;
 
 /// Filename for logging errors
 static constexpr char kGcpKmsClientProvider[] = "GcpKmsClientProvider";
+static constexpr char kGcpKmsClientAeadDecryptRetryLogTemplate[] =
+    "gcp-kms-client-aead-decrypt-%s";
 
 const set<google::cloud::StatusCode> kRetryStatusCodes = {
     google::cloud::StatusCode::kUnavailable,
-    /* The reason to retry on following status codes is because gRpc server
-       sometimes returns UNKNOWN or INTERNAL when using OAuth2 credentials.
-       The root cause appears to be a 503 error during token fetching and should
-       be retriable. The gRpc server also returns UNKNOWN status code for real
-       authentication error, so this client will also retries on it.
+    /* The reason to retry on following status codes is because gRpc
+       server sometimes returns UNKNOWN or INTERNAL when using OAuth2
+       credentials. The root cause appears to be a 503 error during
+       token fetching and should be retriable. The gRpc server also
+       returns UNKNOWN status code for real authentication error, so
+       this client will also retries on it.
     */
     google::cloud::StatusCode::kUnknown,
     google::cloud::StatusCode::kInternal,
@@ -118,6 +123,8 @@ void GcpKmsClientProvider::Decrypt(
       bind(&GcpKmsClientProvider::AeadDecrypt, this, decrypt_context);
 
   AsyncOperation decrypt_call_with_retries = [this, decrypt_context]() mutable {
+    SCP_INFO(kGcpKmsClientProvider, kZeroUuid,
+             kGcpKmsClientAeadDecryptRetryLogTemplate, "CALL");
     io_operation_dispatcher_
         .Dispatch<AsyncContext<DecryptRequest, DecryptResponse>>(
             decrypt_context,
@@ -230,7 +237,7 @@ void GcpKmsClientProvider::AeadDecrypt(
     return;
   }
   decrypt_context.response = make_shared<DecryptResponse>();
-  decrypt_context.response->set_plaintext(move(response_or->plaintext()));
+  decrypt_context.response->set_plaintext(std::move(response_or->plaintext()));
 
   FinishContext(SuccessExecutionResult(), decrypt_context, cpu_async_executor_);
 }
@@ -243,6 +250,46 @@ GcpKmsFactory::CreateGcpKeyManagementServiceClient(
       wip_provider, service_account_to_impersonate);
   return make_shared<GcpKeyManagementServiceClient>(
       key_management_service_client);
+}
+
+void GcpKmsClientProvider::RetryInformationEventHandler(
+    const OperationDispatcher::RetryInformationEvent event) noexcept {
+  string count_message = "";
+  switch (event.retry_event) {
+    // This event informs that a call has been retried and a retry was
+    // successful. This event is not published when a call was successful
+    // without a retry attempt.
+    case OperationDispatcher::RetryEvent::kSuccessAfterRetry:
+      SCP_INFO(kGcpKmsClientProvider, kZeroUuid,
+               kGcpKmsClientAeadDecryptRetryLogTemplate, "RETRY_SUCCESS");
+
+      count_message = "RETRY_SUCCESS_COUNT:" + to_string(event.retry_count);
+      SCP_INFO(kGcpKmsClientProvider, kZeroUuid,
+               kGcpKmsClientAeadDecryptRetryLogTemplate, count_message.c_str());
+      break;
+
+    // This event informs that a call has been retried, but still failed. That
+    // is, it at least retried once or the maximum number of attempts has been
+    // reached.
+    case OperationDispatcher::RetryEvent::kFailureAfterRetry:
+      SCP_INFO(kGcpKmsClientProvider, kZeroUuid,
+               kGcpKmsClientAeadDecryptRetryLogTemplate, "RETRY_FAILURE");
+      count_message = "RETRY_FAILURE_COUNT:" + to_string(event.retry_count);
+      SCP_INFO(kGcpKmsClientProvider, kZeroUuid,
+               kGcpKmsClientAeadDecryptRetryLogTemplate, count_message.c_str());
+      break;
+
+    // This event informs that an error occurred and has been ignored - not
+    // retried. An error is ignored when the client code directly retruns
+    // FailureExecutionResult.
+    case OperationDispatcher::RetryEvent::kNonRetriableFailure:
+      SCP_INFO(kGcpKmsClientProvider, kZeroUuid,
+               kGcpKmsClientAeadDecryptRetryLogTemplate, "FAILURE");
+      break;
+
+    default:
+      break;
+  }
 }
 
 #ifndef TEST_CPIO

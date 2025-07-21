@@ -113,6 +113,12 @@ variable "spanner_database_deletion_protection" {
 # Frontend Service Cloud Function Variables.
 ################################################################################
 
+variable "create_frontend_service_cloud_function" {
+  description = "Whether to create the FE cloud function."
+  type        = bool
+  default     = true
+}
+
 variable "frontend_service_jar" {
   description = <<-EOT
           Get frontend service cloud function path. If not provided defaults to locally built jar file.
@@ -442,6 +448,61 @@ variable "frontend_cloud_run_execution_time_alarm_config" {
 
   default = null
 }
+
+variable "frontend_lb_error_5xx_alarm_config" {
+  description = "The configuration for the Load Balancer 5xx error alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    error_threshold = number # error count greater than this to send alarm. Example: 0.
+  })
+
+  default = {
+    enable_alarm    = false
+    eval_period_sec = 60
+    duration_sec    = 60
+    error_threshold = 10
+  }
+}
+
+variable "frontend_lb_non_5xx_error_alarm_config" {
+  description = "The configuration for the Load Balancer non-5xx error (3xx-4xx) alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    error_threshold = number # error count greater than this to send alarm. Example: 500.
+  })
+
+  default = {
+    enable_alarm    = false
+    eval_period_sec = 60
+    duration_sec    = 60
+    error_threshold = 50
+  }
+}
+
+variable "frontend_lb_request_latencies_alarm_config" {
+  description = "The configuration for the Load Balancer request latency alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    threshold_ms    = number # Request latencies greater than this to send alarm. Example: 0.
+  })
+
+  default = {
+    enable_alarm    = false
+    eval_period_sec = 60
+    duration_sec    = 60
+    threshold_ms    = 60000
+  }
+}
+
 
 ################################################################################
 # Worker Variables.

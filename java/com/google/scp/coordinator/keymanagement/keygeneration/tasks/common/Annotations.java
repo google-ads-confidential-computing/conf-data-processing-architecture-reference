@@ -57,6 +57,11 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface KeyEncryptionKeyBaseUri {}
 
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface MigrationKeyEncryptionKeyBaseUri {}
+
   /** Binds instance of Kms Key Aead used to sign public keys on behalf of Coordinator A. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})

@@ -33,6 +33,11 @@ message CreateKeyRequest{
    * determined by key_split_encryption_type.
    */
   string encrypted_key_split = 3;
+  /**
+   * New migration key split to be used by the receiving coordinator. How this value is
+   * encrypted is determined by key_split_encryption_type.
+   */
+  string migration_encrypted_key_split = 6;
   /** How encrypted_key_split is encrypted. */
   KeySplitEncryptionType key_split_encryption_type = 4;
   /**

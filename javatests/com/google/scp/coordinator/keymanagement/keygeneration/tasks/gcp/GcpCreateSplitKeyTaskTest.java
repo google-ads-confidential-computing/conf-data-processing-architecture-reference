@@ -24,12 +24,17 @@ import com.google.crypto.tink.KmsClient;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.DisableKeySetAcl;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.MigrationKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBase;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.SplitKeyGenerationTestEnv;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.UuidKeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.KmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationKmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerCoordinatorKeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.testutils.FakeKmsClient;
@@ -53,8 +58,22 @@ public final class GcpCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskTestBa
 
     @Provides
     @TestScoped
+    @MigrationKmsAeadClient
+    public KmsClient provideMigrationKmsAeadClient() {
+      return spy(new FakeKmsClient());
+    }
+
+    @Provides
+    @TestScoped
     @PeerKmsAeadClient
     public KmsClient providePeerKmsAeadClient() {
+      return spy(new FakeKmsClient());
+    }
+
+    @Provides
+    @TestScoped
+    @MigrationPeerKmsAeadClient
+    public KmsClient provideMigrationPeerKmsAeadClient() {
       return spy(new FakeKmsClient());
     }
 
@@ -62,14 +81,20 @@ public final class GcpCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskTestBa
     public void configure() {
       install(new SplitKeyGenerationTestEnv());
       bind(CreateSplitKeyTaskBase.class).to(GcpCreateSplitKeyTask.class);
+      bind(String.class).annotatedWith(MigrationKeyEncryptionKeyBaseUri.class).toInstance("");
       bind(String.class)
           .annotatedWith(PeerCoordinatorKeyEncryptionKeyBaseUri.class)
           .toInstance("fake-kms://$setName$-fake-id-b");
+      bind(String.class)
+          .annotatedWith(MigrationPeerCoordinatorKeyEncryptionKeyBaseUri.class)
+          .toInstance("");
       bind(Boolean.class).annotatedWith(DisableKeySetAcl.class).toInstance(false);
       bind(String.class)
           .annotatedWith(KeyEncryptionKeyBaseUri.class)
           .toInstance("fake-kms://$setName$-fake-id-a");
       bind(KeyIdFactory.class).toInstance(new UuidKeyIdFactory());
+      // bind( new TypeLiteral<Provider<Boolean>>() {})
+      bind(Boolean.class).annotatedWith(PopulateMigrationKeyData.class).toInstance(false);
     }
   }
 }

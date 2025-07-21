@@ -28,6 +28,7 @@ import com.google.scp.coordinator.keymanagement.shared.serverless.common.Respons
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import java.net.ServerSocket;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.http.HttpResponse;
@@ -45,9 +46,8 @@ import org.junit.runners.JUnit4;
 public class GcpServerlessFunctionTest {
 
   private static final String TEST_RESPONSE = "test-response";
-
+  private static final String TEST_REQUEST_HEADER = "test-header";
   private static int testPort;
-
   private static Invoker invoker;
 
   @BeforeClass
@@ -103,6 +103,26 @@ public class GcpServerlessFunctionTest {
     assertThat(response.getStatusLine().getStatusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
   }
 
+  @Test
+  public void testService_withHeader_returnsHeaderInBody() throws Exception {
+    // Given
+    String headerValue = "header-value";
+    HttpGet request =
+        new HttpGet(String.format("http://localhost:%d/test-base/path-with-header", testPort));
+    request.addHeader(TEST_REQUEST_HEADER, headerValue);
+    request.addHeader("unused-header", "should-not-return");
+
+    // When
+    String body;
+    try (CloseableHttpClient client = HttpClients.createDefault()) {
+      HttpResponse response = client.execute(request);
+      body = EntityUtils.toString(response.getEntity());
+    }
+
+    // Then
+    assertThat(body).isEqualTo(headerValue);
+  }
+
   public static final class TestService extends GcpServerlessFunction {
     @ProvidesIntoMap
     @StringMapKey("/test-base")
@@ -114,6 +134,23 @@ public class GcpServerlessFunctionTest {
             protected void execute(
                 Matcher matcher, RequestContext request, ResponseContext response) {
               response.setBody(TEST_RESPONSE);
+            }
+          },
+          new ApiTask(
+              "GET",
+              Pattern.compile("/path-with-header"),
+              "test",
+              "v1Test",
+              new LogMetricHelper("test")) {
+            @Override
+            protected void execute(
+                Matcher matcher, RequestContext request, ResponseContext response) {
+              Optional<String> headerValue = request.getFirstHeader(TEST_REQUEST_HEADER);
+              if (headerValue.isPresent()) {
+                response.setBody(headerValue.get());
+              } else {
+                response.setBody("");
+              }
             }
           });
     }

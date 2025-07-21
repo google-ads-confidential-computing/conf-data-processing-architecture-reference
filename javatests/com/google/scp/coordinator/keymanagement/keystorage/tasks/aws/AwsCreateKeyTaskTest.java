@@ -95,7 +95,7 @@ public class AwsCreateKeyTaskTest {
   public void createKey_throwsIfNoDataKey() {
     var serviceException =
         assertThrows(
-            ServiceException.class, () -> task.createKey(FakeEncryptionKey.create(), "foo"));
+            ServiceException.class, () -> task.createKey(FakeEncryptionKey.create(), "foo", ""));
 
     assertThat(serviceException)
         .hasMessageThat()
@@ -123,7 +123,7 @@ public class AwsCreateKeyTaskTest {
             .putAll(fakeKeyVerifiers)
             .build();
 
-    task.createKey(key, dataKey, keySplit);
+    task.createKey(key, dataKey, keySplit, "");
 
     assertThat(keyDb.getAllKeys().size()).isEqualTo(1);
     var storedKey = keyDb.getKey(key.getKeyId());
@@ -165,8 +165,8 @@ public class AwsCreateKeyTaskTest {
             .setKeyId(keyId)
             .build();
 
-    task.createKey(key1, dataKey, keySplit1);
-    task.createKey(key2, dataKey, keySplit2);
+    task.createKey(key1, dataKey, keySplit1, "");
+    task.createKey(key2, dataKey, keySplit2, "");
 
     var result = keyDb.getKey(keyId);
     assertThat(keyDb.getAllKeys().size()).isEqualTo(1);
@@ -186,7 +186,7 @@ public class AwsCreateKeyTaskTest {
     keyDb.setServiceException(new ServiceException(INTERNAL, SERVICE_ERROR.name(), "error"));
 
     ServiceException ex =
-        assertThrows(ServiceException.class, () -> task.createKey(key, dataKey, keySplit));
+        assertThrows(ServiceException.class, () -> task.createKey(key, dataKey, keySplit, ""));
 
     assertThat(ex.getErrorCode()).isEqualTo(INTERNAL);
   }
@@ -199,7 +199,7 @@ public class AwsCreateKeyTaskTest {
     var keySplit = new String(Base64.getEncoder().encode("fake-split".getBytes()));
     var key = FakeEncryptionKey.create();
 
-    var ex = assertThrows(ServiceException.class, () -> task.createKey(key, dataKey, keySplit));
+    var ex = assertThrows(ServiceException.class, () -> task.createKey(key, dataKey, keySplit, ""));
 
     assertThat(ex.getErrorCode()).isEqualTo(Code.INVALID_ARGUMENT);
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
@@ -214,7 +214,7 @@ public class AwsCreateKeyTaskTest {
     var key = FakeEncryptionKey.create();
     var keySplit = FakeDataKeyUtil.encryptString(dataKey, "", key.getPublicKeyMaterial());
 
-    var ex = assertThrows(ServiceException.class, () -> task.createKey(key, dataKey, keySplit));
+    var ex = assertThrows(ServiceException.class, () -> task.createKey(key, dataKey, keySplit, ""));
 
     assertThat(ex.getErrorCode()).isEqualTo(Code.INVALID_ARGUMENT);
     assertThat(ex.getMessage()).contains("payload is empty");
@@ -232,7 +232,7 @@ public class AwsCreateKeyTaskTest {
         FakeDataKeyUtil.encryptString(
             FakeDataKeyUtil.createDataKey(), "fake-split", key.getPublicKeyMaterial());
 
-    var ex = assertThrows(ServiceException.class, () -> task.createKey(key, dataKey, keySplit));
+    var ex = assertThrows(ServiceException.class, () -> task.createKey(key, dataKey, keySplit, ""));
 
     assertThat(ex.getErrorCode()).isEqualTo(Code.INVALID_ARGUMENT);
     assertThat(ex.getMessage()).isEqualTo("Failed to decrypt using data key");
@@ -250,7 +250,7 @@ public class AwsCreateKeyTaskTest {
     var key = FakeEncryptionKey.create().toBuilder().setPublicKey("bar").build();
     var keySplit = FakeDataKeyUtil.encryptString(dataKey, "fake-split", key.getPublicKeyMaterial());
 
-    var ex = assertThrows(ServiceException.class, () -> task.createKey(key, dataKey, keySplit));
+    var ex = assertThrows(ServiceException.class, () -> task.createKey(key, dataKey, keySplit, ""));
 
     assertThat(ex).hasCauseThat().hasMessageThat().isEqualTo(verifyFailedMessage);
     assertThat(keyDb.getAllKeys().size()).isEqualTo(0);
@@ -267,7 +267,7 @@ public class AwsCreateKeyTaskTest {
         new AwsCreateKeyTask(
             keyDb, mockAead, KEK_URI, Optional.empty(), aeadSelector, signDataKeyTask);
 
-    task.createKey(key, dataKey, keySplit);
+    task.createKey(key, dataKey, keySplit, "");
 
     var storedKey = keyDb.getKey(key.getKeyId());
     ImmutableMap<String, KeySplitData> keySplitDataMap =

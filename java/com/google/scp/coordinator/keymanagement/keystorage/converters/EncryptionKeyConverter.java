@@ -23,6 +23,7 @@ import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.KeyDataProt
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
 import com.google.scp.shared.proto.ProtoUtil;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -48,16 +49,9 @@ public final class EncryptionKeyConverter {
     }
 
     // currently ignores keyMaterial
-    ImmutableList<KeySplitData> keySplitData =
-        ImmutableList.copyOf(
-            encryptionKey.getKeyDataList().stream()
-                .map(
-                    keyData ->
-                        KeySplitData.newBuilder()
-                            .setKeySplitKeyEncryptionKeyUri(keyData.getKeyEncryptionKeyUri())
-                            .setPublicKeySignature(keyData.getPublicKeySignature())
-                            .build())
-                .iterator());
+    ImmutableList<KeySplitData> keySplitData = getKeySplitData(encryptionKey.getKeyDataList());
+    ImmutableList<KeySplitData> migrationKeySplitData =
+        getKeySplitData(encryptionKey.getMigrationKeyDataList());
 
     EncryptionKeyProto.EncryptionKey.Builder keyBuilder =
         EncryptionKeyProto.EncryptionKey.newBuilder()
@@ -68,6 +62,7 @@ public final class EncryptionKeyConverter {
             .setActivationTime(encryptionKey.getActivationTime())
             .setCreationTime(encryptionKey.getCreationTime())
             .addAllKeySplitData(keySplitData)
+            .addAllMigrationKeySplitData(migrationKeySplitData)
             .setKeyType(encryptionKey.getEncryptionKeyType().name());
     if (encryptionKey.hasTtlTime()) {
       keyBuilder.setTtlTime((long) encryptionKey.getTtlTime());
@@ -90,15 +85,9 @@ public final class EncryptionKeyConverter {
     String name = PRIVATE_KEY_RESOURCE_COLLECTION + encryptionKey.getKeyId();
 
     // Does not populate keyMaterial
-    ImmutableList<KeyData> keyData =
-        encryptionKey.getKeySplitDataList().stream()
-            .map(
-                keySplitData ->
-                    KeyData.newBuilder()
-                        .setPublicKeySignature(keySplitData.getPublicKeySignature())
-                        .setKeyEncryptionKeyUri(keySplitData.getKeySplitKeyEncryptionKeyUri())
-                        .build())
-            .collect(ImmutableList.toImmutableList());
+    ImmutableList<KeyData> keyData = getKeyData(encryptionKey.getKeySplitDataList());
+    ImmutableList<KeyData> migrationKeyData =
+        getKeyData(encryptionKey.getMigrationKeySplitDataList());
 
     if (encryptionKey.getTtlTime() > Integer.MAX_VALUE) {
       throw new IllegalArgumentException(
@@ -112,8 +101,8 @@ public final class EncryptionKeyConverter {
             .setPublicKeyMaterial(encryptionKey.getPublicKeyMaterial())
             .setActivationTime(encryptionKey.getActivationTime())
             .setCreationTime(encryptionKey.getCreationTime())
-            .addAllKeyData(keyData);
-
+            .addAllKeyData(keyData)
+            .addAllMigrationKeyData(migrationKeyData);
     if (encryptionKey.hasExpirationTime()) {
       encryptionKeyBuilder.setExpirationTime(encryptionKey.getExpirationTime());
     }
@@ -133,5 +122,32 @@ public final class EncryptionKeyConverter {
     }
 
     return encryptionKeyBuilder.build();
+  }
+
+  /** Helper method to build KeySplitData lists while ignoring any private key material. */
+  private static ImmutableList<KeySplitData> getKeySplitData(List<KeyData> keyDataList) {
+    return keyDataList.stream()
+        .map(
+            keyData ->
+                KeySplitData.newBuilder()
+                    .setKeySplitKeyEncryptionKeyUri(keyData.getKeyEncryptionKeyUri())
+                    .setPublicKeySignature(keyData.getPublicKeySignature())
+                    .build())
+        .collect(ImmutableList.toImmutableList());
+  }
+
+  /**
+   * Helper method to build KeyData lists with only the public key signature and key encryption key
+   * uri.
+   */
+  private static ImmutableList<KeyData> getKeyData(List<KeySplitData> keySplitDataList) {
+    return keySplitDataList.stream()
+        .map(
+            keySplitData ->
+                KeyData.newBuilder()
+                    .setPublicKeySignature(keySplitData.getPublicKeySignature())
+                    .setKeyEncryptionKeyUri(keySplitData.getKeySplitKeyEncryptionKeyUri())
+                    .build())
+        .collect(ImmutableList.toImmutableList());
   }
 }

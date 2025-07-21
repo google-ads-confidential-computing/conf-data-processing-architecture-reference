@@ -68,4 +68,6 @@ message EncryptionKey {
   optional int32 ttl_time = 7;
   /** List of KeyData. */
   repeated KeyData key_data = 8;
+  /** List of migration KeyData. */
+  repeated KeyData migration_key_data = 11;
 }

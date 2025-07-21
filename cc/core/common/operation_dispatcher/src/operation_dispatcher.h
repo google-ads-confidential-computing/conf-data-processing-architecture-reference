@@ -19,6 +19,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <utility>
 
 #include "core/common/time_provider/src/time_provider.h"
 #include "core/interface/async_executor_interface.h"
@@ -37,6 +38,38 @@ static constexpr char kOperationDispatcher[] = "OperationDispatcher";
  */
 class OperationDispatcher {
  public:
+  // NOTE: We omit successes without retries on purpose due to the following
+  // reasons:
+  // * We expect the success without retries to be the norm
+  // * Given that this should be the most common scenario, we wouldn't want
+  //   to potentially compromise performance by invoking a callback on every
+  //   success.
+  // * The caller has other ways to determine when success without retries
+  // occur.
+  enum class RetryEvent {
+    kUnknown = 0,
+    // This event indicates that retries occurred, and eventually resulted in a
+    // success. Only raised on a retry outcome.
+    kSuccessAfterRetry,
+    // This event indicates that retries occurred, and eventually resulted in a
+    // failure. Only raised on a retry outcome.
+    kFailureAfterRetry,
+    // This event indicates a failure occurred without retries. Only raised on a
+    // retry outcome.
+    kNonRetriableFailure
+  };
+
+  // Struct representing a retry info event
+  struct RetryInformationEvent {
+    RetryInformationEvent(RetryEvent retry_event, size_t retry_count) {
+      this->retry_event = retry_event;
+      this->retry_count = retry_count;
+    }
+
+    RetryEvent retry_event;
+    size_t retry_count;
+  };
+
   /**
    * @brief Construct a new operation dispatcher object.
    *
@@ -48,6 +81,24 @@ class OperationDispatcher {
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
       RetryStrategy retry_strategy)
       : async_executor_(async_executor), retry_strategy_(retry_strategy) {}
+
+  /**
+   * @brief Construct a new operation dispatcher object.
+   *
+   * @param async_executor The async executor instance.
+   * @param retry_strategy The retry strategy for dispatch operations in case of
+   * Retry status code.
+   * @param retry_event_handler Optional function that gets invoked upon certain
+   * events in the retry process.
+   */
+  OperationDispatcher(
+      const std::shared_ptr<AsyncExecutorInterface>& async_executor,
+      RetryStrategy retry_strategy,
+      std::optional<std::function<void(const RetryInformationEvent)>>
+          retry_event_handler)
+      : OperationDispatcher(async_executor, retry_strategy) {
+    retry_event_handler_ = retry_event_handler;
+  }
 
   /**
    * @brief Dispatches an async_context object to the target component with a
@@ -65,10 +116,39 @@ class OperationDispatcher {
     auto original_callback = async_context.callback;
     async_context.callback = [this, dispatch_to_target_function,
                               original_callback](Context& async_context) {
-      if (async_context.result.status == ExecutionStatus::Retry) {
+      if (async_context.result.Retryable()) {
         async_context.retry_count++;
         DispatchWithRetry(async_context, dispatch_to_target_function);
         return;
+      }
+
+      // NOTE: We omit successes without retries on purpose due to the following
+      // reasons:
+      // * We expect the success without retries to be the norm
+      // * Given that this should be the most common scenario, we wouldn't want
+      //   to potentially compromise performance by invoking a callback on every
+      //   success.
+      // * The caller has other ways to determine when success without retries
+      // occur.
+      if (retry_event_handler_) {
+        if (async_context.result.Successful() &&
+            async_context.retry_count > 0) {
+          // Retry that resulted in a success.
+          (*retry_event_handler_)(std::move(RetryInformationEvent(
+              RetryEvent::kSuccessAfterRetry, async_context.retry_count)));
+        }
+        if (async_context.result.Failed()) {
+          if (async_context.retry_count > 0) {
+            // Retry that resulted in a failure - either exhausted retries or
+            // failed after at least one retry.
+            (*retry_event_handler_)(std::move(RetryInformationEvent(
+                RetryEvent::kFailureAfterRetry, async_context.retry_count)));
+          } else {
+            // Failure that wasn't retried.
+            (*retry_event_handler_)(std::move(RetryInformationEvent(
+                RetryEvent::kNonRetriableFailure, async_context.retry_count)));
+          }
+        }
       }
 
       original_callback(async_context);
@@ -229,5 +309,8 @@ class OperationDispatcher {
   const std::shared_ptr<AsyncExecutorInterface> async_executor_;
   /// The retry strategy for the dispatcher.
   RetryStrategy retry_strategy_;
+  /// Optional handler for retry events.
+  std::optional<std::function<void(const RetryInformationEvent)>>
+      retry_event_handler_;
 };
 }  // namespace google::scp::core::common

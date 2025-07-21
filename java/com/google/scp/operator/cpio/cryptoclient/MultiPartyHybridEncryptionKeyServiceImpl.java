@@ -399,6 +399,9 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
           return new KeyFetchException(e, ErrorReason.KEY_DECRYPTION_ERROR);
       }
     }
+    if (e.getCause() == null) {
+      return new KeyFetchException(e, ErrorReason.KEY_DECRYPTION_ERROR);
+    }
     return generateKeyFetchExceptionFromGrpcException(e.getCause());
   }
 }

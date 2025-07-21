@@ -87,7 +87,7 @@ public final class HttpKeyStorageClientTest {
     var response = buildCustomResponse(successResponse, OK.getHttpStatusCode());
     when(httpClient.execute(any(HttpUriRequest.class))).thenReturn(response);
 
-    keyStorageClient.createKey(getRequest(), "abc");
+    keyStorageClient.createKey(getRequest(), "abc", Optional.empty());
   }
 
   /** Test that a json payload is properly decoded */
@@ -99,7 +99,7 @@ public final class HttpKeyStorageClientTest {
     var response = buildCustomResponse(successResponse, OK.getHttpStatusCode());
     when(httpClient.execute(any(HttpUriRequest.class))).thenReturn(response);
 
-    EncryptionKey result = keyStorageClient.createKey(payload, "abc");
+    EncryptionKey result = keyStorageClient.createKey(payload, "abc", Optional.empty());
     // The top-level URI doesn't exist on the API model, so ignore it.
     var payloadNoUri = payload.toBuilder().clearKeyEncryptionKeyUri().clearSetName().build();
     assertThat(result).isEqualTo(payloadNoUri);
@@ -115,7 +115,7 @@ public final class HttpKeyStorageClientTest {
     var exception =
         assertThrows(
             KeyStorageServiceException.class,
-            () -> keyStorageClient.createKey(getRequest(), "abc"));
+            () -> keyStorageClient.createKey(getRequest(), "abc", Optional.empty()));
 
     assertThat(exception).hasCauseThat().isInstanceOf(InvalidProtocolBufferException.class);
   }
@@ -133,7 +133,7 @@ public final class HttpKeyStorageClientTest {
     var exception =
         assertThrows(
             KeyStorageServiceException.class,
-            () -> keyStorageClient.createKey(getRequest(), "abc"));
+            () -> keyStorageClient.createKey(getRequest(), "abc", Optional.empty()));
 
     assertThat(exception).hasCauseThat().isInstanceOf(ServiceException.class);
     ServiceException e = (ServiceException) exception.getCause();
@@ -148,7 +148,8 @@ public final class HttpKeyStorageClientTest {
     var argument = ArgumentCaptor.forClass(HttpPost.class);
     when(httpClient.execute(any(HttpPost.class))).thenReturn(response);
 
-    keyStorageClient.createKey(getRequest(), FakeDataKeyUtil.createDataKey(), "abc");
+    keyStorageClient.createKey(
+        getRequest(), FakeDataKeyUtil.createDataKey(), "abc", Optional.empty());
 
     verify(httpClient, times(1)).execute(argument.capture());
     assertThat(argument.getValue().getURI())
@@ -208,7 +209,7 @@ public final class HttpKeyStorageClientTest {
     var response = buildCustomResponse("{}", OK.getHttpStatusCode());
     when(httpClient.execute(any(HttpUriRequest.class))).thenReturn(response);
 
-    keyStorageClient.createKey(getRequest(), "foo");
+    keyStorageClient.createKey(getRequest(), "foo", Optional.empty());
     keyStorageClient.fetchDataKey();
 
     verify(httpClient, times(2)).execute(argument.capture());

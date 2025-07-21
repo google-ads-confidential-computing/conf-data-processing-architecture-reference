@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Google LLC
+ * Copyright 2022-2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 output "frontend_service_cloudfunction_url" {
-  value       = google_cloudfunctions2_function.frontend_service_cloudfunction.service_config[0].uri
+  value       = var.create_frontend_service_cloud_function ? google_cloudfunctions2_function.frontend_service_cloudfunction[0].service_config[0].uri : ""
   description = "The frontend service cloud function gen2 url."
 }
 
@@ -27,4 +27,15 @@ output "frontend_cloud_run_information" {
     }
   ])
   description = "A set of object containing the Cloud Run region and service name."
+}
+
+
+output "frontend_service_cloud_run_urls" {
+  value       = length(var.frontend_service_cloud_run_regions) > 0 ? [for region, cloud_run in module.cloud_run_fe : cloud_run.cloud_run_url] : []
+  description = "The frontend service Cloud Run URLs."
+}
+
+output "frontend_service_load_balancer_ip_address" {
+  value       = length(google_compute_global_address.cloud_run_fe_ip_address) > 0 ? google_compute_global_address.cloud_run_fe_ip_address[0].address : ""
+  description = "The external IP address of the entry-point load balancer for the FE service."
 }

@@ -152,7 +152,7 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
   @Test
   public void getKey_success() throws ServiceException {
     EncryptionKey expectedKey =
-        FakeEncryptionKey.createBuilderWithDefaults()
+        FakeEncryptionKey.createBuilderWithDefaults(false)
             // SpannerKeyDb returns times based off seconds
             .setExpirationTime(Instant.now().plus(7, ChronoUnit.DAYS).toEpochMilli())
             .setActivationTime(Instant.now().toEpochMilli())

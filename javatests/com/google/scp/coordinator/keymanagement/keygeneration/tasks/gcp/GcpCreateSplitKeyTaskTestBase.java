@@ -24,6 +24,7 @@ import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.D
 import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -41,11 +42,11 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annot
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBaseTest;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.KmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
-import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyStatusProto.EncryptionKeyStatus;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
@@ -56,6 +57,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.Optional;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -71,11 +73,12 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
   @Inject @KeyEncryptionKeyBaseUri protected String keyEncryptionKeyBaseUri;
   @Inject @KmsAeadClient KmsClient kmsClient;
   @Inject @PeerKmsAeadClient KmsClient peerKmsClient;
+  @Inject @MigrationPeerKmsAeadClient KmsClient migrationPeerKmsClient;
 
   // TODO: Refactor common test code to shared class
   @Test
   public void createSplitKey_success() throws Exception {
-    String setName = keyDb.DEFAULT_SET_NAME;
+    String setName = DEFAULT_SET_NAME;
     int keysToCreate = 1;
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
@@ -143,7 +146,8 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     assertThat(key.getTtlTime()).isIn(Range.closed(ttlInSec - 2, ttlInSec));
 
     verify(keyStorageClient, times(keysToCreate))
-        .createKey(encryptionKeyCaptor.capture(), encryptedKeySplitCaptor.capture());
+        .createKey(
+            encryptionKeyCaptor.capture(), encryptedKeySplitCaptor.capture(), eq(Optional.empty()));
 
     assertThat(encryptionKeyCaptor.getValue().getKeyId()).isEqualTo(key.getKeyId());
 
@@ -166,8 +170,9 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     ServiceException ex =
         assertThrows(
             ServiceException.class,
-            () -> task.createSplitKey(
-                DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
+            () ->
+                task.createSplitKey(
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
     assertThat(ex.getErrorCode()).isEqualTo(Code.INTERNAL);
@@ -181,7 +186,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
       throws ServiceException, KeyStorageServiceException {
     int keysToCreate = 5;
 
-    when(keyStorageClient.createKey(any(), any()))
+    when(keyStorageClient.createKey(any(), any(), any()))
         .thenCallRealMethod()
         .thenCallRealMethod()
         .thenThrow(new KeyStorageServiceException("Failure", new GeneralSecurityException()));
@@ -189,8 +194,9 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     ServiceException ex =
         assertThrows(
             ServiceException.class,
-            () -> task.createSplitKey(
-                DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
+            () ->
+                task.createSplitKey(
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(KeyStorageServiceException.class);
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
@@ -262,7 +268,8 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     assertThat(key.getTtlTime()).isEqualTo(0);
 
     verify(keyStorageClient, times(keysToCreate))
-        .createKey(encryptionKeyCaptor.capture(), encryptedKeySplitCaptor.capture());
+        .createKey(
+            encryptionKeyCaptor.capture(), encryptedKeySplitCaptor.capture(), eq(Optional.empty()));
 
     assertThat(encryptionKeyCaptor.getValue().getKeyId()).isEqualTo(key.getKeyId());
 
@@ -274,26 +281,23 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
             Base64.getDecoder().decode(key.getPublicKeyMaterial()));
 
     // Verify that the keys will not expire
-    assertThat(keyDb.getActiveKeys(keyDb.DEFAULT_SET_NAME, 1, Instant.now()).size()).isEqualTo(1);
+    assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, 1, Instant.now()).size()).isEqualTo(1);
     assertThat(
             keyDb
-                .getActiveKeys(keyDb.DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofHours(1)))
+                .getActiveKeys(DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofHours(1)))
+                .size())
+        .isEqualTo(1);
+    assertThat(
+            keyDb.getActiveKeys(DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofDays(1))).size())
+        .isEqualTo(1);
+    assertThat(
+            keyDb
+                .getActiveKeys(DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofDays(365)))
                 .size())
         .isEqualTo(1);
     assertThat(
             keyDb
-                .getActiveKeys(keyDb.DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofDays(1)))
-                .size())
-        .isEqualTo(1);
-    assertThat(
-            keyDb
-                .getActiveKeys(keyDb.DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofDays(365)))
-                .size())
-        .isEqualTo(1);
-    assertThat(
-            keyDb
-                .getActiveKeys(
-                    keyDb.DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofDays(36500)))
+                .getActiveKeys(DEFAULT_SET_NAME, 1, Instant.now().plus(Duration.ofDays(36500)))
                 .size())
         .isEqualTo(1);
   }
@@ -304,7 +308,8 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     var encryptedKeySplitCaptor = ArgumentCaptor.forClass(String.class);
 
     verify(keyStorageClient, atLeastOnce())
-        .createKey(encryptionKeyCaptor.capture(), encryptedKeySplitCaptor.capture());
+        .createKey(
+            encryptionKeyCaptor.capture(), encryptedKeySplitCaptor.capture(), eq(Optional.empty()));
 
     return Streams.zip(
             encryptionKeyCaptor.getAllValues().stream(),

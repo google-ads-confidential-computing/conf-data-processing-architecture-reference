@@ -22,6 +22,7 @@ java_library(
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
         "//java/external:gcp_cloud_function",
+        "//java/external:guava",
         "//java/external:guice",
     ],
 )

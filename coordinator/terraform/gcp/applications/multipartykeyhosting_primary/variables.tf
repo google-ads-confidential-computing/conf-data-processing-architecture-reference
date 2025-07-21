@@ -58,21 +58,6 @@ variable "key_generation_allow_stopping_for_update" {
   default     = false
 }
 
-variable "mpkhs_primary_package_bucket_location" {
-  description = "Location for multiparty keyhosting packages. Example: 'US'."
-  type        = string
-}
-
-variable "mpkhs_primary_package_bucket" {
-  description = "Location for multiparty keyhosting packages. Example: 'US'." #TODO
-  type        = string
-}
-
-variable "use_tf_created_bucket_for_binary" {
-  description = "To indicate using google storage created by terraform."
-  type        = bool
-}
-
 ################################################################################
 # Global Alarm Variables.
 ################################################################################
@@ -311,45 +296,12 @@ variable "public_key_service_subdomain" {
   type        = string
 }
 
-variable "encryption_key_service_subdomain" {
-  description = "Subdomain to use with parent_domain_name to designate the encryption key service."
-  type        = string
-}
-
-################################################################################
-# Cloud Function Variables.
-################################################################################
-
-variable "cloudfunction_timeout_seconds" {
-  description = "Number of seconds after which a function instance times out."
-  type        = number
-}
-
 ### Public Key Service
-
-variable "public_key_service_use_only_cr" {
-  description = "Flag to control launching adding Cloud Run Public Key Service to Load Balancer."
-  type        = bool
-  nullable    = false
-}
 
 variable "public_key_service_container_image_url" {
   description = "The full path (registry + tag) to the container image used to deploy Public Key Service."
   type        = string
   nullable    = false
-}
-
-variable "get_public_key_service_jar" {
-  description = <<-EOT
-          Get Public key service cloud function path. If not provided defaults to locally built jar file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
-      EOT
-  type        = string
-}
-
-variable "get_public_key_service_source_path" {
-  description = "GCS path to public Key Service source archive in the package bucket."
-  type        = string
 }
 
 variable "public_key_service_cr_regions" {
@@ -381,12 +333,6 @@ variable "public_key_service_min_instances" {
 variable "public_key_service_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
-}
-
-variable "publickeyservice_use_java21_runtime" {
-  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
-  type        = bool
-  nullable    = false
 }
 
 ### Private Key Service
@@ -423,15 +369,12 @@ variable "enable_private_key_service_cache" {
   type        = bool
 }
 
-### EKS
-variable "encryption_key_service_jar" {
-  description = <<-EOT
-          Encryption key service cloud function path. If not provided defaults to locally built jar file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_primary:all`.
-      EOT
-  type        = string
+variable "private_key_service_cache_refresh_in_minutes" {
+  description = "Frequency the private key service caches is refreshed."
+  type        = number
 }
 
+### EKS
 variable "encryption_key_service_cloudfunction_memory_mb" {
   description = "Memory size in MB for encryption key cloud function."
   type        = number

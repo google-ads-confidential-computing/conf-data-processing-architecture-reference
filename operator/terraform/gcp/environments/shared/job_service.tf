@@ -36,6 +36,7 @@ module "job_service" {
   spanner_database_deletion_protection = var.spanner_database_deletion_protection
 
   # Frontend Service
+  create_frontend_service_cloud_function                          = var.create_frontend_service_cloud_function
   operator_package_bucket_location                                = var.operator_package_bucket_location
   frontend_service_jar                                            = var.frontend_service_jar
   frontend_service_path                                           = var.frontend_service_path
@@ -86,6 +87,10 @@ module "job_service" {
   frontend_cloud_run_error_5xx_alarm_config      = var.frontend_cloud_run_error_5xx_alarm_config
   frontend_cloud_run_non_5xx_error_alarm_config  = var.frontend_cloud_run_non_5xx_error_alarm_config
   frontend_cloud_run_execution_time_alarm_config = var.frontend_cloud_run_execution_time_alarm_config
+
+  frontend_lb_error_5xx_alarm_config         = var.frontend_lb_error_5xx_alarm_config
+  frontend_lb_non_5xx_error_alarm_config     = var.frontend_lb_non_5xx_error_alarm_config
+  frontend_lb_request_latencies_alarm_config = var.frontend_lb_request_latencies_alarm_config
 
   # Worker
   instance_type                 = var.instance_type

@@ -63,7 +63,9 @@ resource "google_spanner_database" "metadatadb" {
     "ALTER TABLE JobMetadata ALTER COLUMN RequestReceivedAt set OPTIONS (allow_commit_timestamp = false)",
     "ALTER TABLE JobMetadata ALTER COLUMN RequestUpdatedAt set OPTIONS (allow_commit_timestamp = false)",
     "ALTER TABLE JobMetadata ALTER COLUMN RequestProcessingStartedAt set OPTIONS (allow_commit_timestamp = false)",
-    "ALTER TABLE AsgInstances ADD COLUMN TerminationReason STRING(64)"
+    "ALTER TABLE AsgInstances ADD COLUMN TerminationReason STRING(64)",
+    "ALTER TABLE JobMetadata ADD COLUMN TargetWorkgroup STRING(256)",
+    "ALTER TABLE AsgInstances ADD COLUMN InstanceGroupName STRING(256)"
   ]
 
   deletion_protection = var.spanner_database_deletion_protection

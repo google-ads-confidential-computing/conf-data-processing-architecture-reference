@@ -61,7 +61,7 @@ public final class FakeEncryptionKey {
     }
   }
 
-  public static EncryptionKey.Builder createBuilderWithDefaults() {
+  public static EncryptionKey.Builder createBuilderWithDefaults(boolean withMigration) {
     Random random = new Random();
     Instant now = Instant.now();
     EncryptionKeyType keyType =
@@ -70,11 +70,14 @@ public final class FakeEncryptionKey {
     // This is the URI for the owner of this EncryptionKey.
     // It must match to one of the URIs in the key split data.
     String encryptionKeyUri = UUID.randomUUID().toString();
+    String migrationEncryptionKeyUri = UUID.randomUUID().toString();
     EncryptionKey baseKey =
         setPublicKeys(EncryptionKey.newBuilder())
             .setKeyId(UUID.randomUUID().toString())
             .setJsonEncodedKeyset(UUID.randomUUID().toString())
+            .setMigrationJsonEncodedKeyset(withMigration ? UUID.randomUUID().toString() : "")
             .setKeyEncryptionKeyUri(encryptionKeyUri)
+            .setMigrationKeyEncryptionKeyUri(withMigration ? migrationEncryptionKeyUri : "")
             .setCreationTime(now.toEpochMilli())
             .setActivationTime(now.toEpochMilli())
             .setExpirationTime(now.plus(Duration.ofDays(7)).toEpochMilli())
@@ -85,8 +88,12 @@ public final class FakeEncryptionKey {
       EncryptionKey keyWithSignatures =
           KeySplitDataUtil.addKeySplitData(
               KeySplitDataUtil.addKeySplitData(
-                  baseKey, encryptionKeyUri, Optional.of(PUBLIC_KEY_SIGN)),
+                  baseKey,
+                  encryptionKeyUri,
+                  withMigration ? Optional.of(migrationEncryptionKeyUri) : Optional.empty(),
+                  Optional.of(PUBLIC_KEY_SIGN)),
               UUID.randomUUID().toString(),
+              withMigration ? Optional.of(migrationEncryptionKeyUri) : Optional.empty(),
               Optional.empty());
       return keyWithSignatures.toBuilder();
     } catch (GeneralSecurityException e) {
@@ -99,7 +106,11 @@ public final class FakeEncryptionKey {
    * active and expire in the future.
    */
   public static EncryptionKey create() {
-    return createBuilderWithDefaults().build();
+    return createBuilderWithDefaults(false).build();
+  }
+
+  public static EncryptionKey createWithMigration() {
+    return createBuilderWithDefaults(true).build();
   }
 
   /** Creates a key which actives and expires at the specified time. */
@@ -130,7 +141,7 @@ public final class FakeEncryptionKey {
   }
 
   public static EncryptionKey withKeyId(String keyId) {
-    return createBuilderWithDefaults().setKeyId(keyId).build();
+    return createBuilderWithDefaults(false).setKeyId(keyId).build();
   }
 
   private static EncryptionKey.Builder setPublicKeys(EncryptionKey.Builder encryptionKey) {

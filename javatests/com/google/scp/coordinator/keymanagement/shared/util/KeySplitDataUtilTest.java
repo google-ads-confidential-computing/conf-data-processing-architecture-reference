@@ -63,7 +63,8 @@ public final class KeySplitDataUtilTest {
         keysetHandle.getPublicKeysetHandle().getPrimitive(PublicKeyVerify.class);
 
     EncryptionKey finalKey =
-        KeySplitDataUtil.addKeySplitData(baseKey, "blah", Optional.of(publicKeySign));
+        KeySplitDataUtil.addKeySplitData(
+            baseKey, "blah", Optional.empty(), Optional.of(publicKeySign));
     // assumes that the new keysplitdata is added at the end of the list
     List<KeySplitData> fromOriginalKeySplitData =
         finalKey.getKeySplitDataList().subList(0, numKeySplitData);
@@ -89,7 +90,8 @@ public final class KeySplitDataUtilTest {
     EncryptionKey baseKey = FakeEncryptionKey.create().toBuilder().clearKeySplitData().build();
     int numKeySplitData = baseKey.getKeySplitDataList().size();
 
-    EncryptionKey finalKey = KeySplitDataUtil.addKeySplitData(baseKey, "blah", Optional.empty());
+    EncryptionKey finalKey =
+        KeySplitDataUtil.addKeySplitData(baseKey, "blah", Optional.empty(), Optional.empty());
     KeySplitData newKeySplitData = finalKey.getKeySplitData(0);
 
     assertThat(newKeySplitData.getKeySplitKeyEncryptionKeyUri()).isEqualTo("blah");
@@ -118,7 +120,7 @@ public final class KeySplitDataUtilTest {
       PublicKeySign publicKeySign = keysetHandle.getValue().getPrimitive(PublicKeySign.class);
       finalKey =
           KeySplitDataUtil.addKeySplitData(
-              finalKey, keysetHandle.getKey(), Optional.of(publicKeySign));
+              finalKey, keysetHandle.getKey(), Optional.empty(), Optional.of(publicKeySign));
     }
 
     // should throw if keys fail to verify
@@ -133,7 +135,8 @@ public final class KeySplitDataUtilTest {
     PublicKeyVerify publicKeyVerify =
         keysetHandle.getPublicKeysetHandle().getPrimitive(PublicKeyVerify.class);
 
-    EncryptionKey finalKey = KeySplitDataUtil.addKeySplitData(baseKey, "blah", Optional.empty());
+    EncryptionKey finalKey =
+        KeySplitDataUtil.addKeySplitData(baseKey, "blah", Optional.empty(), Optional.empty());
 
     GeneralSecurityException ex =
         assertThrows(

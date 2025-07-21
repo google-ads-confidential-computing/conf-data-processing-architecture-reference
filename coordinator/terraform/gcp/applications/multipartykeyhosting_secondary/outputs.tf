@@ -24,10 +24,6 @@ output "key_storage_cloud_run_url" {
   value = module.keystorageservice.key_storage_cloud_run_url
 }
 
-output "key_storage_cloudfunction_url" {
-  value = module.keystorageservice.key_storage_cloudfunction_url
-}
-
 output "key_storage_service_loadbalancer_ip" {
   value = module.keystorageservice.load_balancer_ip
 }

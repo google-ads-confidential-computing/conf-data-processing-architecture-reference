@@ -30,13 +30,18 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.DisableKeySetAcl;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient.KeyStorageServiceException;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.MigrationKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBase;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.SplitKeyGenerationTestEnv;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.SequenceKeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.KmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationKmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerCoordinatorKeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
@@ -45,7 +50,6 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.Encryption
 import com.google.scp.shared.api.exception.ServiceException;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -170,7 +174,10 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     task.createSplitKey(
         DEFAULT_SET_NAME,
         DEFAULT_TINK_TEMPLATE,
-        keysToCreate, expectedExpiryInDays, expectedTtlInDays, Instant.now());
+        keysToCreate,
+        expectedExpiryInDays,
+        expectedTtlInDays,
+        Instant.now());
 
     keys = sortKeysById();
     for (int i = 0; i < keysToCreate + 1; i++) {
@@ -184,7 +191,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     int keysToCreate = 3;
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
-    when(keyStorageClient.createKey(any(), any()))
+    when(keyStorageClient.createKey(any(), any(), any()))
         .thenCallRealMethod()
         .thenThrow(new KeyStorageServiceException("Failure", new GeneralSecurityException()))
         .thenCallRealMethod();
@@ -212,14 +219,15 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
   }
 
   private List<String> sortKeysById() throws Exception {
-    return keyDb.getAllKeys().stream().map(EncryptionKey::getKeyId)
-            .sorted(Comparator.comparing(keyIdFactory::decodeKeyIdFromString))
-            .collect(Collectors.toList());
+    return keyDb.getAllKeys().stream()
+        .map(EncryptionKey::getKeyId)
+        .sorted(Comparator.comparing(keyIdFactory::decodeKeyIdFromString))
+        .collect(Collectors.toList());
   }
 
   protected void insertKeyWithExpiration(Instant expirationTime) throws ServiceException {
     keyDb.createKey(
-        FakeEncryptionKey.createBuilderWithDefaults()
+        FakeEncryptionKey.createBuilderWithDefaults(false)
             .setKeyId(keyIdFactory.getNextKeyId(keyDb))
             .setExpirationTime(expirationTime.toEpochMilli())
             .build());
@@ -239,8 +247,22 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
 
     @Provides
     @TestScoped
+    @MigrationKmsAeadClient
+    public KmsClient provideMigrationKmsAeadClient() {
+      return spy(new FakeKmsClient());
+    }
+
+    @Provides
+    @TestScoped
     @PeerKmsAeadClient
     public KmsClient providePeerKmsAeadClient() {
+      return spy(new FakeKmsClient());
+    }
+
+    @Provides
+    @TestScoped
+    @MigrationPeerKmsAeadClient
+    public KmsClient provideMigrationPeerKmsAeadClient() {
       return spy(new FakeKmsClient());
     }
 
@@ -251,10 +273,15 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
       bind(String.class)
           .annotatedWith(PeerCoordinatorKeyEncryptionKeyBaseUri.class)
           .toInstance("fake-kms://$setName$-fake-id-b");
+      bind(String.class)
+          .annotatedWith(MigrationPeerCoordinatorKeyEncryptionKeyBaseUri.class)
+          .toInstance("");
       bind(Boolean.class).annotatedWith(DisableKeySetAcl.class).toInstance(false);
+      bind(Boolean.class).annotatedWith(PopulateMigrationKeyData.class).toInstance(false);
       bind(String.class)
           .annotatedWith(KeyEncryptionKeyBaseUri.class)
           .toInstance("fake-kms://$setName$-fake-id-a");
+      bind(String.class).annotatedWith(MigrationKeyEncryptionKeyBaseUri.class).toInstance("");
       bind(KeyIdFactory.class).toInstance(new SequenceKeyIdFactory());
     }
   }

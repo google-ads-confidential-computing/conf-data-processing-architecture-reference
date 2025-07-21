@@ -17,12 +17,15 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.common.cache;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -37,14 +40,14 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public class GetEncryptedKeyCacheTest {
+public class GetActiveEncryptionKeysCacheTest {
 
   private static final String KEY = "key";
   private static final LogMetricHelper LOG_METRIC_HELPER = new LogMetricHelper("test");
-  private static final EncryptionKey ENCRYPTION_KEY = EncryptionKey.newBuilder()
-      .setKeyId("keyId")
-      .setKeyType("keyType")
-      .build();
+  private static final EncryptionKey ENCRYPTION_KEY =
+      EncryptionKey.newBuilder().setKeyId("keyId").setKeyType("keyType").build();
+  private static final ImmutableList<EncryptionKey> ENCRYPTION_KEYS =
+      ImmutableList.of(ENCRYPTION_KEY);
   private static final ServiceException SERVICE_EXCEPTION =
       new ServiceException(Code.NOT_FOUND, "errorReason", "msg");
 
@@ -53,22 +56,20 @@ public class GetEncryptedKeyCacheTest {
   @Mock KeyDb mockKeyDb;
 
   @Test
-  public void readDbFails_cacheEnabledTest() throws Exception {
-    readDbFailsTest(true);
+  public void readDbFails_cacheDisabledTest() throws Exception {
+    when(mockKeyDb.getActiveKeys(anyString(), anyInt())).thenThrow(SERVICE_EXCEPTION);
+    var cache = new GetActiveEncryptionKeysCache(mockKeyDb, true, 1, LOG_METRIC_HELPER);
+    assertThrows(ServiceException.class, () -> cache.get(KEY));
   }
 
   @Test
-  public void readDbFails_cacheDisabledTest() throws Exception {
-    readDbFailsTest(false);
-  }
-
-  private void readDbFailsTest(boolean enabled) throws Exception {
-    when(mockKeyDb.getKey(anyString())).thenThrow(SERVICE_EXCEPTION);
-    var cache = new GetEncryptedKeyCache(mockKeyDb, enabled, LOG_METRIC_HELPER);
-    assertThrows(ServiceException.class, () -> cache.get(KEY));
-    assertThrows(ServiceException.class, () -> cache.get(KEY));
-    assertThrows(ServiceException.class, () -> cache.get(KEY));
-    verify(mockKeyDb, times(enabled ? 1 : 3)).getKey(anyString());
+  public void readCacheAfterRefreshTest() throws Exception {
+    when(mockKeyDb.getActiveKeys(anyString(), anyInt())).thenReturn(ENCRYPTION_KEYS);
+    var cache = new GetActiveEncryptionKeysCache(mockKeyDb, true, 1, SECONDS, LOG_METRIC_HELPER);
+    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEYS);
+    Thread.sleep(1000 * 3); // 3 seconds
+    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEYS);
+    verify(mockKeyDb, times(2)).getActiveKeys(anyString(), anyInt());
   }
 
   @Test
@@ -82,11 +83,11 @@ public class GetEncryptedKeyCacheTest {
   }
 
   public void readDbSucceedsTest(boolean enabled) throws Exception {
-    when(mockKeyDb.getKey(anyString())).thenReturn(ENCRYPTION_KEY);
-    var cache = new GetEncryptedKeyCache(mockKeyDb, enabled, LOG_METRIC_HELPER);
-    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEY);
-    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEY);
-    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEY);
-    verify(mockKeyDb, times(enabled ? 1 : 3)).getKey(anyString());
+    when(mockKeyDb.getActiveKeys(anyString(), anyInt())).thenReturn(ENCRYPTION_KEYS);
+    var cache = new GetActiveEncryptionKeysCache(mockKeyDb, enabled, 1, LOG_METRIC_HELPER);
+    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEYS);
+    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEYS);
+    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEYS);
+    verify(mockKeyDb, times(enabled ? 1 : 3)).getActiveKeys(anyString(), anyInt());
   }
 }

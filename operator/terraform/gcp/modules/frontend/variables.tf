@@ -183,6 +183,11 @@ variable "frontend_service_lb_outlier_detection_max_ejection_percent" {
 # Cloud Function Variables.
 ################################################################################
 
+variable "create_frontend_service_cloud_function" {
+  description = "Whether to create the FE cloud function."
+  type        = bool
+}
+
 variable "operator_package_bucket_name" {
   description = "Name of bucket containing cloud function jar."
   type        = string
@@ -337,7 +342,7 @@ variable "lb_5xx_threshold" {
 }
 
 variable "cloud_run_error_5xx_alarm_config" {
-  description = "The configuration for the 5xx error alarm."
+  description = "The configuration for the Cloud Run 5xx error alarm."
 
   type = object({
     enable_alarm    = bool   # Whether to enable this alarm
@@ -348,7 +353,7 @@ variable "cloud_run_error_5xx_alarm_config" {
 }
 
 variable "cloud_run_non_5xx_error_alarm_config" {
-  description = "The configuration for the non-5xx error (3xx-4xx) alarm."
+  description = "The configuration for the Cloud Run non-5xx error (3xx-4xx) alarm."
 
   type = object({
     enable_alarm    = bool   # Whether to enable this alarm
@@ -359,12 +364,45 @@ variable "cloud_run_non_5xx_error_alarm_config" {
 }
 
 variable "cloud_run_execution_time_alarm_config" {
-  description = "The configuration for the execution time alarm."
+  description = "The configuration for the Cloud Run execution time alarm."
 
   type = object({
     enable_alarm    = bool   # Whether to enable this alarm
     eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
     duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
     threshold_ms    = number # Execution times greater than this to send alarm. Example: 0.
+  })
+}
+
+variable "lb_error_5xx_alarm_config" {
+  description = "The configuration for the Load Balancer 5xx error alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    error_threshold = number # error count greater than this to send alarm. Example: 0.
+  })
+}
+
+variable "lb_non_5xx_error_alarm_config" {
+  description = "The configuration for the Load Balancer non-5xx error (3xx-4xx) alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    error_threshold = number # error count greater than this to send alarm. Example: 500.
+  })
+}
+
+variable "lb_request_latencies_alarm_config" {
+  description = "The configuration for the Load Balancer request latency alarm."
+
+  type = object({
+    enable_alarm    = bool   # Whether to enable this alarm
+    eval_period_sec = number # Amount of time (in seconds) for alarm evaluation. Example: '60'
+    duration_sec    = number # Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'
+    threshold_ms    = number # Request latencies greater than this to send alarm. Example: 0.
   })
 }

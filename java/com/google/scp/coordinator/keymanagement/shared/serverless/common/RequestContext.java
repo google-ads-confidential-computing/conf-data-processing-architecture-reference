@@ -27,6 +27,8 @@ public abstract class RequestContext {
   /* Returns the request method. */
   public abstract String getMethod();
 
+  public abstract Optional<String> getFirstHeader(String name);
+
   /* Returns the first query parameter found for the given parameter name. */
   public abstract Optional<String> getFirstQueryParameter(String name);
 }

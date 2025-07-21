@@ -24,11 +24,13 @@ import static com.google.scp.coordinator.keymanagement.shared.model.KeyGeneratio
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_TTL_IN_DAYS;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_URI;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.MIGRATION_PEER_COORDINATOR_KMS_KEY_BASE_URI;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.NUMBER_OF_KEYS_TO_CREATE;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_KMS_KEY_BASE_URI;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_KMS_KEY_URI;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_SERVICE_ACCOUNT;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_WIP_PROVIDER;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.POPULATE_MIGRATION_KEY_DATA;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.SPANNER_INSTANCE;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.SUBSCRIPTION_ID;
 
@@ -44,9 +46,11 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotat
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceBaseUrl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceCloudfunctionUrl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KmsKeyUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.MigrationPeerCoordinatorKmsKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorKmsKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorServiceAccount;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorWipProvider;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.Annotations.SubscriptionId;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.CreateSplitKeysPubSubListener;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubListener;
@@ -153,6 +157,7 @@ public final class KeyGenerationModule extends AbstractModule {
         .orElse(args.getKeyStorageServiceCloudfunctionUrl());
   }
 
+  // TODO: b/428770204 - This should be removed post migration.
   @Provides
   @DisableKeySetAcl
   Boolean providesDisableKeySetAcl(ParameterClient parameterClient)
@@ -161,14 +166,11 @@ public final class KeyGenerationModule extends AbstractModule {
   }
 
   @Provides
-  @Singleton
-  @PeerCoordinatorKmsKeyBaseUri
-  String providesPeerCoordinatorKmsKeyUri(
-      ParameterClient parameterClient, @DisableKeySetAcl Boolean disableKeySetAcl)
+  @PopulateMigrationKeyData
+  Boolean providesPopulateMigrationKeyData(ParameterClient parameterClient)
       throws ParameterClientException {
-    String kmsParam =
-        disableKeySetAcl ? PEER_COORDINATOR_KMS_KEY_URI : PEER_COORDINATOR_KMS_KEY_BASE_URI;
-    return parameterClient.getParameter(kmsParam).orElse(args.getPeerCoordinatorKmsKeyUri());
+    return Boolean.valueOf(
+        parameterClient.getParameter(POPULATE_MIGRATION_KEY_DATA).orElse("false"));
   }
 
   @Provides
@@ -176,6 +178,26 @@ public final class KeyGenerationModule extends AbstractModule {
   @KmsKeyUri
   String providesKmsKeyUri(ParameterClient parameterClient) throws ParameterClientException {
     return parameterClient.getParameter(KMS_KEY_URI).orElse(args.getKmsKeyUri());
+  }
+
+  @Provides
+  @Singleton
+  @PeerCoordinatorKmsKeyBaseUri
+  String providesPeerCoordinatorKmsKeyUri(
+      ParameterClient parameterClient, @DisableKeySetAcl Boolean disableKeySetAcl)
+      throws ParameterClientException {
+    // TODO: b/428770204 - Remove option of PEER_COORDINATOR_KMS_KEY_URI and disableKeySetAcl post migration.
+    String kmsParam =
+        disableKeySetAcl ? PEER_COORDINATOR_KMS_KEY_URI : PEER_COORDINATOR_KMS_KEY_BASE_URI;
+    return parameterClient.getParameter(kmsParam).orElse(args.getPeerCoordinatorKmsKeyUri());
+  }
+
+  @Provides
+  @Singleton
+  @MigrationPeerCoordinatorKmsKeyBaseUri
+  String providesMigrationPeerCoordinatorKmsKeyBaseUri(ParameterClient parameterClient)
+      throws ParameterClientException {
+    return parameterClient.getParameter(MIGRATION_PEER_COORDINATOR_KMS_KEY_BASE_URI).orElse("");
   }
 
   @Provides

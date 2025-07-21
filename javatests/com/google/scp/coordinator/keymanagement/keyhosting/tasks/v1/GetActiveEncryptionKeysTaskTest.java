@@ -85,6 +85,8 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
     // Then
     GetActiveEncryptionKeysResponse keys = verifyResponse(response);
     assertThat(keys.getKeysList()).hasSize(2);
+    assertThat(keys.getKeysList()).hasSize(2);
+    assertThat(keys.getKeysList()).hasSize(2);
   }
 
   @Test

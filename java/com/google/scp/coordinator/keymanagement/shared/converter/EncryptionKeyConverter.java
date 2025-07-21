@@ -22,7 +22,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.KeyDataProto.KeyData;
+import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
 import com.google.scp.shared.proto.ProtoUtil;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -48,7 +50,11 @@ public final class EncryptionKeyConverter {
     ImmutableList<KeyData> keyData =
         encryptionKey.getKeySplitDataList().isEmpty()
             ? getSinglePartyKeyData(encryptionKey)
-            : getSplitKeyData(encryptionKey);
+            : getSplitKeyData(encryptionKey, false);
+    ImmutableList<KeyData> migrationKeyData =
+        encryptionKey.getMigrationKeySplitDataList().isEmpty()
+            ? ImmutableList.of()
+            : getSplitKeyData(encryptionKey, true);
 
     var encryptionKeyBuilder =
         EncryptionKey.newBuilder()
@@ -60,7 +66,8 @@ public final class EncryptionKeyConverter {
             .setActivationTime(encryptionKey.getActivationTime())
             .setTtlTime(toIntExact(encryptionKey.getTtlTime()))
             .setSetName(encryptionKey.getSetName())
-            .addAllKeyData(keyData);
+            .addAllKeyData(keyData)
+            .addAllMigrationKeyData(migrationKeyData);
 
     Set<String> keyTypeValues = ProtoUtil.getValidEnumValues(EncryptionKeyType.class);
     if (keyTypeValues.contains(encryptionKey.getKeyType())) {
@@ -80,8 +87,21 @@ public final class EncryptionKeyConverter {
   private static ImmutableList<KeyData> getSplitKeyData(
       com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto
               .EncryptionKey
-          encryptionKey) {
-    return encryptionKey.getKeySplitDataList().stream()
+          encryptionKey,
+      Boolean wantMigrationKeyData) {
+    final List<KeySplitData> keySplitDataList =
+        wantMigrationKeyData
+            ? encryptionKey.getMigrationKeySplitDataList()
+            : encryptionKey.getKeySplitDataList();
+    final String keyEncryptionKeyUri =
+        wantMigrationKeyData
+            ? encryptionKey.getMigrationKeyEncryptionKeyUri()
+            : encryptionKey.getKeyEncryptionKeyUri();
+    final String jsonEncodedKeyset =
+        wantMigrationKeyData
+            ? encryptionKey.getMigrationJsonEncodedKeyset()
+            : encryptionKey.getJsonEncodedKeyset();
+    return keySplitDataList.stream()
         .map(
             keySplitData -> {
               var keyDataBuilder =
@@ -89,10 +109,8 @@ public final class EncryptionKeyConverter {
                       .setPublicKeySignature(keySplitData.getPublicKeySignature())
                       .setKeyEncryptionKeyUri(keySplitData.getKeySplitKeyEncryptionKeyUri());
               // Only populate key material for the key data owned by this coordinator.
-              if (encryptionKey
-                  .getKeyEncryptionKeyUri()
-                  .equals(keySplitData.getKeySplitKeyEncryptionKeyUri())) {
-                keyDataBuilder.setKeyMaterial(encryptionKey.getJsonEncodedKeyset());
+              if (keyEncryptionKeyUri.equals(keySplitData.getKeySplitKeyEncryptionKeyUri())) {
+                keyDataBuilder.setKeyMaterial(jsonEncodedKeyset);
               }
               return keyDataBuilder.build();
             })

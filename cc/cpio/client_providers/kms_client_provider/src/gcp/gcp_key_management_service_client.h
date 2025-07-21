@@ -38,6 +38,8 @@ class GcpKeyManagementServiceClient
   google::cloud::StatusOr<google::cloud::kms::v1::DecryptResponse> Decrypt(
       const google::cloud::kms::v1::DecryptRequest& request) noexcept override;
 
+  virtual ~GcpKeyManagementServiceClient() {}
+
  private:
   std::shared_ptr<google::cloud::kms::KeyManagementServiceClient>
       kms_client_shared_;

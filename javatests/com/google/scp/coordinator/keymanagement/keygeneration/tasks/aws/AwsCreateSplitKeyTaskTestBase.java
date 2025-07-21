@@ -25,6 +25,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,7 +44,6 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid
 import com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.keymanagement.testutils.FakeDataKeyUtil;
-import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyStatusProto.EncryptionKeyStatus;
@@ -52,7 +52,6 @@ import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 import com.google.scp.shared.crypto.tink.CloudAeadSelector;
 import java.security.GeneralSecurityException;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
@@ -150,7 +149,8 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
         .createKey(
             encryptionKeyCaptor.capture(),
             dataKeyCaptor.capture(),
-            encryptedKeySplitCaptor.capture());
+            encryptedKeySplitCaptor.capture(),
+            eq(Optional.empty()));
 
     assertThat(encryptionKeyCaptor.getValue().getKeyId()).isEqualTo(key.getKeyId());
     // DataKey should be able to decrypt the provided split.
@@ -171,7 +171,7 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
 
     // Assert 5 keys were created but only 1 data key was fetched.
     verify(keyStorageClient, times(1)).fetchDataKey();
-    verify(keyStorageClient, times(5)).createKey(any(), any(), any());
+    verify(keyStorageClient, times(5)).createKey(any(), any(), any(), any());
   }
 
   @Test
@@ -184,8 +184,9 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
     ServiceException ex =
         assertThrows(
             ServiceException.class,
-            () -> task.createSplitKey(
-                DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
+            () ->
+                task.createSplitKey(
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
     assertThat(ex.getErrorCode()).isEqualTo(Code.INTERNAL);
@@ -200,7 +201,7 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
       throws ServiceException, KeyStorageServiceException {
     int keysToCreate = 5;
 
-    when(keyStorageClient.createKey(any(), any()))
+    when(keyStorageClient.createKey(any(), any(), any()))
         .thenCallRealMethod()
         .thenCallRealMethod()
         .thenThrow(new KeyStorageServiceException("Failure", new GeneralSecurityException()));
@@ -208,8 +209,9 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
     ServiceException ex =
         assertThrows(
             ServiceException.class,
-            () -> task.createSplitKey(
-                DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
+            () ->
+                task.createSplitKey(
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(KeyStorageServiceException.class);
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
@@ -252,8 +254,9 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
     var ex =
         assertThrows(
             ServiceException.class,
-            () -> task.createSplitKey(
-                DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 10, 20, Instant.now()));
+            () ->
+                task.createSplitKey(
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 10, 20, Instant.now()));
     assertThat(ex.getCause()).hasMessageThat().contains("eep");
   }
 
@@ -267,7 +270,8 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
         .createKey(
             encryptionKeyCaptor.capture(),
             dataKeyCaptor.capture(),
-            encryptedKeySplitCaptor.capture());
+            encryptedKeySplitCaptor.capture(),
+            eq(Optional.empty()));
 
     ImmutableList.Builder<byte[]> splits = ImmutableList.builder();
     for (int i = 0; i < encryptionKeyCaptor.getAllValues().size(); i++) {

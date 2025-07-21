@@ -21,3 +21,8 @@ output "region" {
   description = "The region where the Cloud Run service is deployed."
   value       = google_cloud_run_v2_service.cloud_run_service.location
 }
+
+output "cloud_run_url" {
+  description = "The URL that can be used to invoke the Cloud Run service."
+  value       = google_cloud_run_v2_service.cloud_run_service.uri
+}

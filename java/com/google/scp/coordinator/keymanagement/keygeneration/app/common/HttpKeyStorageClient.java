@@ -24,8 +24,8 @@ import com.google.inject.Inject;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.CoordinatorBHttpClient;
-import com.google.scp.coordinator.keymanagement.shared.converter.DataKeyConverter;
 import com.google.scp.coordinator.keymanagement.keystorage.converters.EncryptionKeyConverter;
+import com.google.scp.coordinator.keymanagement.shared.converter.DataKeyConverter;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.CreateKeyRequestProto.CreateKeyRequest;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.DataKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.KeySplitEncryptionTypeProto.KeySplitEncryptionType;
@@ -83,7 +83,10 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
   }
 
   @Override
-  public EncryptionKey createKey(EncryptionKey encryptionKey, String encryptedKeySplit)
+  public EncryptionKey createKey(
+      EncryptionKey encryptionKey,
+      String encryptedKeySplit,
+      Optional<String> migrationEncryptedKeySplit)
       throws KeyStorageServiceException {
     var apiKey = EncryptionKeyConverter.toApiEncryptionKey(encryptionKey);
 
@@ -93,6 +96,7 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
             .setKey(apiKey)
             .setKeySplitEncryptionType(KeySplitEncryptionType.DIRECT)
             .setEncryptedKeySplit(encryptedKeySplit)
+            .setMigrationEncryptedKeySplit(migrationEncryptedKeySplit.orElse(""))
             .build();
 
     return executeCreateKeyRequest(createKeyRequest);
@@ -100,7 +104,10 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
 
   @Override
   public EncryptionKey createKey(
-      EncryptionKey encryptionKey, DataKey dataKey, String encryptedKeySplit)
+      EncryptionKey encryptionKey,
+      DataKey dataKey,
+      String encryptedKeySplit,
+      Optional<String> migrationEncryptedKeySplit)
       throws KeyStorageServiceException {
     var apiKey = EncryptionKeyConverter.toApiEncryptionKey(encryptionKey);
 
@@ -111,6 +118,7 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
             .setKeySplitEncryptionType(KeySplitEncryptionType.DATA_KEY)
             .setEncryptedKeySplit(encryptedKeySplit)
             .setEncryptedKeySplitDataKey(DataKeyConverter.INSTANCE.convert(dataKey))
+            .setMigrationEncryptedKeySplit(migrationEncryptedKeySplit.orElse(""))
             .build();
 
     return executeCreateKeyRequest(createKeyRequest);

@@ -474,7 +474,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
   }
 
   @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_OtherException() throws Exception {
+  public void getDecrypter_getAead_errorWithGrpcCode_OtherApiException() throws Exception {
     when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
     when(aeadServicePrimary.getAead(anyString()))
         .thenThrow(
@@ -490,6 +490,21 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
 
     assertEquals(ErrorReason.KEY_DECRYPTION_ERROR, exception.getReason());
+  }
+
+  @Test
+  public void getDecrypter_getAead_errorWithGrpcCode_OtherInnerException() throws Exception {
+    var innerEx = new RuntimeException("Arbitrary exception");
+    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
+    when(aeadServicePrimary.getAead(anyString())).thenThrow(new GeneralSecurityException(innerEx));
+
+    KeyFetchException exception =
+        assertThrows(
+            KeyFetchException.class,
+            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
+
+    assertEquals(ErrorReason.KEY_DECRYPTION_ERROR, exception.getReason());
+    assertEquals(innerEx, exception.getCause().getCause().getCause()); // three levels deep
   }
 
   @Test

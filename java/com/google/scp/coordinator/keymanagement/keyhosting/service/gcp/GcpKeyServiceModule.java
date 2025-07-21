@@ -18,6 +18,7 @@ package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
 import com.google.inject.AbstractModule;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheRefreshInMinutes;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
@@ -39,6 +40,7 @@ public final class GcpKeyServiceModule extends AbstractModule {
   private static final String PROJECT_ID_ENV_VAR = "PROJECT_ID";
   private static final String CACHE_CONTROL_MAXIMUM_ENV_VAR = "CACHE_CONTROL_MAXIMUM";
   private static final String ENABLE_CACHE_ENV_VAR = "ENABLE_CACHE";
+  private static final String CACHE_REFRESH_ENV_VAR = "CACHE_REFRESH_IN_MINUTES";
 
   /** Returns KeyLimit as Integer from environment variables. Default value of 5 */
   private Integer getKeyLimit() {
@@ -69,6 +71,14 @@ public final class GcpKeyServiceModule extends AbstractModule {
     return Boolean.valueOf(env.getOrDefault(ENABLE_CACHE_ENV_VAR, "false"));
   }
 
+  /**
+   * Returns ENABLE_CACHE value from environment variables. Default of false.
+   */
+  private static Integer getCacheRefreshInMinutes() {
+    Map<String, String> env = System.getenv();
+    return Integer.valueOf(env.getOrDefault(CACHE_REFRESH_ENV_VAR, "90"));
+  }
+
   @Override
   protected void configure() {
     Map<String, String> env = System.getenv();
@@ -83,6 +93,9 @@ public final class GcpKeyServiceModule extends AbstractModule {
     // Business layer bindings
     bind(Integer.class).annotatedWith(KeyLimit.class).toInstance(getKeyLimit());
     bind(Boolean.class).annotatedWith(EnableCache.class).toInstance(getEnableCache());
+    bind(Integer.class)
+        .annotatedWith(CacheRefreshInMinutes.class)
+        .toInstance(getCacheRefreshInMinutes());
 
     // Data layer bindings
     SpannerKeyDbConfig config =

@@ -36,3 +36,24 @@ java_test(
         "//java/external:protobuf_java_util",
     ],
 )
+
+java_test(
+    name = "GetActiveEncryptionKeysCacheTest",
+    srcs = [
+        "GetActiveEncryptionKeysCacheTest.java",
+    ],
+    deps = [
+        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
+        "//coordinator/protos/keymanagement/shared/backend:java_proto",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common/cache",
+        "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
+        "//java/com/google/scp/shared/api/exception",
+        "//java/com/google/scp/shared/api/model",
+        "//java/com/google/scp/shared/mapper",
+        "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:mockito",
+        "//java/external:protobuf_java_util",
+    ],
+)

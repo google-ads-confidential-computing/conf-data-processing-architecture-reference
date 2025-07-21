@@ -23,43 +23,53 @@ import com.google.common.collect.ImmutableMap;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.shared.api.exception.ServiceException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class KeyDbCache<K, V> {
-  static final ImmutableMap<String, String> READ_DB_MAP = ImmutableMap.of("readDb", "1");
-  static final ImmutableMap<String, String> READ_CACHE_MAP = ImmutableMap.of("cacheAttempt", "1");
+  private final Logger logger = LoggerFactory.getLogger(KeyDbCache.class);
+
+  private static final String PRIVATE_KEY_READ_DB = "privateKeyReadDb";
+  private static final String PRIVATE_KEY_READ_CACHE = "privateKeyReadCache";
 
   private final LoadingCache<K, V> keyCache;
   private final boolean enableCache;
   private final LogMetricHelper logMetricHelper;
+  private final ImmutableMap<String, String> labelMap;
 
   protected KeyDbCache(
-      CacheBuilder<Object, Object> cacheBuilder, boolean enableCache, LogMetricHelper logMetricHelper) {
+      CacheBuilder<Object, Object> cacheBuilder,
+      boolean enableCache,
+      String methodName,
+      LogMetricHelper logMetricHelper) {
     this.keyCache = cacheBuilder
         .build(
-            new CacheLoader<>() {
-              public V load(K key) throws ServiceException {
-                return getFromDb(key);
-              }
-            });
+            CacheLoader.asyncReloading(
+                new CacheLoader<>() {
+                  public V load(K key) throws ServiceException {
+                    return getFromDb(key);
+                  }
+                },
+                Executors.newSingleThreadExecutor()));
     this.enableCache = enableCache;
     this.logMetricHelper = logMetricHelper;
+    this.labelMap = ImmutableMap.of("methodName", methodName);
   }
 
   abstract V readDb(K key) throws ServiceException;
 
-  abstract String metricName();
-
   private V getFromDb(K key) throws ServiceException {
-    logMetricHelper.format(metricName(), READ_DB_MAP);
+    logger.info(logMetricHelper.format(PRIVATE_KEY_READ_DB, labelMap));
     return readDb(key);
   }
 
-  public V getKey(K key) throws ServiceException {
+  public V get(K key) throws ServiceException {
     if (!enableCache) {
       return readDb(key);
     }
     try {
-      logMetricHelper.format(metricName(), READ_CACHE_MAP);
+      logger.info(logMetricHelper.format(PRIVATE_KEY_READ_CACHE, labelMap));
       return keyCache.get(key);
     } catch (ExecutionException e) {
       if (e.getCause() instanceof ServiceException) {

@@ -20,6 +20,7 @@ pkg_filegroup(
     name = "modules_shared_pkg",
     srcs = [
         "//operator/terraform/gcp/modules/shared/cloud_run_alarms",
+        "//operator/terraform/gcp/modules/shared/cloud_run_lb_alarms",
         "//operator/terraform/gcp/modules/shared/cloudfunction_alarms",
     ],
     prefix = "modules/shared",

@@ -142,15 +142,33 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface DisableKeySetAcl {}
 
+  /** Binds the populate migration key data environment variable. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface PopulateMigrationKeyData {}
+
   /** Binds the kms key base uri environment variable. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface KmsKeyEncryptionKeyBaseUri {}
 
+  /** Binds the migration kms key base uri environment variable. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface MigrationKmsKeyEncryptionKeyBaseUri {}
+
   /** Binds the kms client for creating aeads. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface KmsAeadClient {}
+
+  /** Binds the migration kms client for creating aeads. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface MigrationKmsAeadClient {}
 }

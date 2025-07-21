@@ -65,7 +65,9 @@ class GcpKmsClientProvider : public KmsClientProviderInterface {
                 core::common::RetryStrategyType::Exponential,
                 kms_client_options->gcp_kms_client_retry_initial_interval
                     .count(),
-                kms_client_options->gcp_kms_client_retry_total_retries)) {}
+                kms_client_options->gcp_kms_client_retry_total_retries),
+            bind(&GcpKmsClientProvider::RetryInformationEventHandler, this,
+                 std::placeholders::_1)) {}
 
   core::ExecutionResult Init() noexcept override;
 
@@ -91,6 +93,10 @@ class GcpKmsClientProvider : public KmsClientProviderInterface {
                          cmrt::sdk::kms_service::v1::DecryptResponse>&
           decrypt_context) noexcept;
 
+  void RetryInformationEventHandler(
+      const core::common::OperationDispatcher::RetryInformationEvent
+          event) noexcept;
+
   const std::shared_ptr<core::AsyncExecutorInterface> io_async_executor_,
       cpu_async_executor_;
   std::shared_ptr<KmsClientOptions> kms_client_options_;
@@ -111,7 +117,7 @@ class GcpKmsFactory {
    * @brief Creates GcpKeyManagementServiceClientInterface.
    *
    * @param wip_provider WIP provider.
-   * @param service_account_to_impersonate servic account to impersonate.
+   * @param service_account_to_impersonate service account to impersonate.
    * @return
    * std::shared_ptr<GcpKeyManagementServiceClientInterface> the
    * creation result.
@@ -120,6 +126,8 @@ class GcpKmsFactory {
   CreateGcpKeyManagementServiceClient(
       const std::string& wip_provider,
       const std::string& service_account_to_impersonate) noexcept;
+
+  virtual ~GcpKmsFactory() {}
 
  private:
   /**

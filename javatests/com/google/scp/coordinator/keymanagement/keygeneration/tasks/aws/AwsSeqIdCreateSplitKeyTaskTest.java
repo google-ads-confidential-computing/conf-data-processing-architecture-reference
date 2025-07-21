@@ -44,7 +44,6 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.Encryption
 import com.google.scp.shared.api.exception.ServiceException;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -188,7 +187,7 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
     int keysToCreate = 3;
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
-    when(keyStorageClient.createKey(any(), any()))
+    when(keyStorageClient.createKey(any(), any(), any()))
         .thenCallRealMethod()
         .thenThrow(new KeyStorageServiceException("Failure", new GeneralSecurityException()))
         .thenCallRealMethod();
@@ -216,7 +215,8 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
   }
 
   private List<String> sortKeysById() throws Exception {
-    return keyDb.getAllKeys().stream().map(EncryptionKey::getKeyId)
+    return keyDb.getAllKeys().stream()
+        .map(EncryptionKey::getKeyId)
         .sorted(Comparator.comparing(keyIdFactory::decodeKeyIdFromString))
         .collect(Collectors.toList());
   }

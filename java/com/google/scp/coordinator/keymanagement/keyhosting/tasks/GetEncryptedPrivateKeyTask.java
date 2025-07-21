@@ -74,7 +74,7 @@ public class GetEncryptedPrivateKeyTask extends ApiTask {
   }
 
   private EncryptionKey getKey(String id) throws ServiceException {
-    var key = cache.getKey(id);
+    var key = cache.get(id);
     var nowMilli = Instant.now().toEpochMilli();
     var activationAgeInMillis = nowMilli - key.getActivationTime();
     var dayInMillis = TimeUnit.DAYS.toMillis(1);

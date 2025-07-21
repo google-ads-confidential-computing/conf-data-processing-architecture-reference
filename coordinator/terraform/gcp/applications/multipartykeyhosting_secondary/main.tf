@@ -35,13 +35,9 @@ provider "google" {
 }
 
 locals {
-  service_subdomain_suffix   = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
-  encryption_key_service_jar = var.encryption_key_service_jar != "" ? var.encryption_key_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/EncryptionKeyServiceHttpCloudFunction_deploy.jar"
-  key_storage_service_jar    = var.key_storage_service_jar != "" ? var.key_storage_service_jar : "${module.bazel.bazel_bin}/java/com/google/scp/coordinator/keymanagement/keystorage/service/gcp/KeyStorageServiceHttpCloudFunction_deploy.jar"
-  key_storage_domain         = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.key_storage_service_subdomain}.${var.parent_domain_name}"
-  private_key_domain         = "${var.private_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
-  package_bucket_prefix      = "${var.project_id}_${var.environment}"
-  package_bucket_name        = length("${local.package_bucket_prefix}_mpkhs_secondary_package_jars") <= 63 ? "${local.package_bucket_prefix}_mpkhs_secondary_package_jars" : "${local.package_bucket_prefix}_mpkhs_b_pkg"
+  service_subdomain_suffix = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
+  key_storage_domain       = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.key_storage_service_subdomain}.${var.parent_domain_name}"
+  private_key_domain       = "${var.private_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
   key_sets = flatten([
     for key_set in var.key_sets_config.key_sets : key_set.name
   ])
@@ -59,24 +55,12 @@ locals {
   }
 }
 
-module "bazel" {
-  source = "../../modules/bazel"
-}
-
 module "vpc" {
   source = "../../modules/vpc"
 
   environment = var.environment
   project_id  = var.project_id
   regions     = toset([var.primary_region, var.secondary_region])
-}
-
-# Storage bucket containing cloudfunction JARs
-resource "google_storage_bucket" "mpkhs_secondary_package_bucket" {
-  # GCS names are globally unique
-  name                        = local.package_bucket_name
-  location                    = var.mpkhs_secondary_package_bucket_location
-  uniform_bucket_level_access = true
 }
 
 module "keydb" {
@@ -108,18 +92,11 @@ module "keystorageservice" {
   populate_migration_key_data                     = var.populate_migration_key_data
   kms_key_base_uri                                = local.kms_key_base_uri
   migration_kms_key_base_uri                      = local.migration_kms_key_base_uri
-  package_bucket_name                             = var.use_tf_created_bucket_for_binary ? google_storage_bucket.mpkhs_secondary_package_bucket.name : var.mpkhs_secondary_package_bucket
-  load_balancer_name                              = "keystoragelb"
   spanner_database_name                           = module.keydb.keydb_name
   spanner_instance_name                           = module.keydb.keydb_instance_name
-  cloudfunction_timeout_seconds                   = var.cloudfunction_timeout_seconds
-  key_storage_cloudfunction_name                  = "key-storage-cloudfunction"
-  key_storage_service_jar                         = local.key_storage_service_jar
-  key_storage_service_source_path                 = var.key_storage_service_source_path
   key_storage_cloudfunction_memory                = var.key_storage_service_cloudfunction_memory_mb
   key_storage_service_cloudfunction_min_instances = var.key_storage_service_cloudfunction_min_instances
   key_storage_service_cloudfunction_max_instances = var.key_storage_service_cloudfunction_max_instances
-  use_java21_runtime                              = var.keystorageservice_use_java21_runtime
   source_container_image_url                      = var.key_storage_service_container_image_url
 
   # Domain Management
@@ -172,6 +149,7 @@ module "private_key_service" {
   spanner_instance_name      = module.keydb.keydb_instance_name
   spanner_staleness_read_sec = var.spanner_staleness_read_sec
   enable_cache               = var.enable_private_key_service_cache
+  cache_refresh_in_minutes   = var.private_key_service_cache_refresh_in_minutes
   key_sets_vending_config    = var.key_sets_vending_config
 
   # Alert settings

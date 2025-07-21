@@ -39,7 +39,23 @@ public class AwsRequestContext extends RequestContext {
     return event.getHttpMethod();
   }
 
+  public Optional<String> getFirstHeader(String name) {
+    // AWS API can return null if no headers exist.
+    Optional<String> headerValue =
+        Optional.ofNullable(event.getHeaders())
+            .flatMap(headers -> Optional.ofNullable(headers.get(name.toLowerCase())));
+    if (headerValue.isEmpty()) {
+      headerValue =
+          Optional.ofNullable(event.getMultiValueHeaders())
+              .flatMap(headers -> Optional.ofNullable(headers.get(name.toLowerCase())))
+              .flatMap(list -> list.stream().findFirst());
+    }
+    return headerValue;
+  }
+
   public Optional<String> getFirstQueryParameter(String name) {
-    return Optional.ofNullable(event.getQueryStringParameters().getOrDefault(name, null));
+    // AWS API can return null if no parameters exist.
+    return Optional.ofNullable(event.getQueryStringParameters())
+        .flatMap(parameters -> Optional.ofNullable(parameters.get(name)));
   }
 }

@@ -28,6 +28,9 @@ import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotati
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DisableKeySetAcl;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.MigrationKmsAeadClient;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.MigrationKmsKeyEncryptionKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.SignDataKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyTask;
@@ -49,10 +52,13 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
   private static final String SPANNER_ENDPOINT = "SPANNER_ENDPOINT";
   private static final String GCP_KMS_URI_ENV_VAR = "GCP_KMS_URI";
   private static final String GCP_KMS_BASE_URI_ENV_VAR = "GCP_KMS_BASE_URI";
+  private static final String MIGRATION_GCP_KMS_BASE_URI_ENV_VAR = "MIGRATION_GCP_KMS_BASE_URI";
+  private static final String POPULATE_MIGRATION_KEY_DATA_ENV_VAR = "POPULATE_MIGRATION_KEY_DATA";
   private static final String DISABLE_KEY_SET_ACL_ENV_VAR = "DISABLE_KEY_SET_ACL";
 
   private String getGcpKmsBaseUri() {
     Map<String, String> env = System.getenv();
+    // TODO: b/428770204 - Remove disableKeySetAcl check and GCP_KMS_URI_ENV_VAR after migration.
     boolean disableKeySetAcl =
         Boolean.parseBoolean(env.getOrDefault(DISABLE_KEY_SET_ACL_ENV_VAR, "true"));
     return disableKeySetAcl
@@ -60,7 +66,21 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
         : env.getOrDefault(GCP_KMS_BASE_URI_ENV_VAR, "unknown_gcp_uri");
   }
 
+  private String getMigrationGcpKmsBaseUri() {
+    Map<String, String> env = System.getenv();
+    return env.getOrDefault(MIGRATION_GCP_KMS_BASE_URI_ENV_VAR, "");
+  }
+
+  private Boolean getPopulateMigrationKeyData() {
+    Map<String, String> env = System.getenv();
+    return Boolean.valueOf(env.getOrDefault(POPULATE_MIGRATION_KEY_DATA_ENV_VAR, "false"));
+  }
+
   private KmsClient getKmsAeadClient() throws GeneralSecurityException {
+    return new GcpKmsClient().withDefaultCredentials();
+  }
+
+  private KmsClient getMigrationKmsAeadClient() throws GeneralSecurityException {
     return new GcpKmsClient().withDefaultCredentials();
   }
 
@@ -79,14 +99,23 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
     bind(String.class)
         .annotatedWith(KmsKeyEncryptionKeyBaseUri.class)
         .toInstance(getGcpKmsBaseUri());
+    bind(String.class)
+        .annotatedWith(MigrationKmsKeyEncryptionKeyBaseUri.class)
+        .toInstance(getMigrationGcpKmsBaseUri());
     bind(Boolean.class)
         .annotatedWith(DisableKeySetAcl.class)
         .toInstance(Boolean.valueOf(env.getOrDefault(DISABLE_KEY_SET_ACL_ENV_VAR, "true")));
+    bind(Boolean.class)
+        .annotatedWith(PopulateMigrationKeyData.class)
+        .toInstance(getPopulateMigrationKeyData());
 
     // TODO: refactor so that GCP does not need these. Placeholder values since they are not used
     bind(String.class).annotatedWith(CoordinatorKekUri.class).toInstance("");
     try {
       bind(KmsClient.class).annotatedWith(KmsAeadClient.class).toInstance(getKmsAeadClient());
+      bind(KmsClient.class)
+          .annotatedWith(MigrationKmsAeadClient.class)
+          .toInstance(getMigrationKmsAeadClient());
       // Bind a valid Aead to this placeholder value
       AeadConfig.register();
       bind(Aead.class)

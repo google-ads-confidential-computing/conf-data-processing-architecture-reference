@@ -52,29 +52,6 @@ variable "allowed_wip_service_accounts" {
 # Function Variables
 ################################################################################
 
-variable "key_storage_cloudfunction_name" {
-  type        = string
-  description = "Name of cloud function."
-}
-
-variable "package_bucket_name" {
-  description = "Name of bucket containing cloudfunction jar."
-  type        = string
-}
-
-variable "key_storage_service_jar" {
-  description = <<-EOT
-          Key storage service cloud function path. If not provided defaults to locally built jar file.
-        Build with `bazel build //coordinator/terraform/gcp/applications/multipartykeyhosting_secondary:all`.
-      EOT
-  type        = string
-}
-
-variable "key_storage_service_source_path" {
-  description = "GCS path to Key Storage Service source archive in the package bucket."
-  type        = string
-}
-
 variable "source_container_image_url" {
   description = "The URL for the container image to run on this service."
   type        = string
@@ -95,16 +72,6 @@ variable "key_storage_service_cloudfunction_max_instances" {
   type        = number
 }
 
-variable "cloudfunction_timeout_seconds" {
-  description = "Number of seconds after which a function instance times out."
-  type        = number
-}
-
-variable "load_balancer_name" {
-  description = "Name of the load balancer."
-  type        = string
-}
-
 variable "spanner_instance_name" {
   type        = string
   description = "Name of the KeyDb Spanner instance."
@@ -118,12 +85,6 @@ variable "spanner_database_name" {
 variable "key_encryption_key_id" {
   description = "KMS key used to decrypt private keys."
   type        = string
-}
-
-variable "use_java21_runtime" {
-  description = "Whether to use the Java 21 runtime for the cloud function. If false will use Java 11."
-  type        = bool
-  nullable    = false
 }
 
 ################################################################################

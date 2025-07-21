@@ -18,8 +18,6 @@ package com.google.scp.coordinator.keymanagement.keystorage.service.aws;
 
 import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DataKeyPublicKeySign;
 import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DataKeyPublicKeyVerify;
-import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DataKeySignatureAlgorithm;
-import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DataKeySignatureKeyId;
 import static com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.EncryptionKeySignatureKey;
 import static com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbRegion;
 import static com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbTableName;
@@ -71,25 +69,33 @@ public final class AwsKeyStorageServiceModule extends AbstractModule {
    * DataKeys sent to Coordinator A.
    */
   private static final String COORDINATOR_KEK_URI_ENV_VAR = "COORDINATOR_KEK_URI";
+
   /** Environment variable for specifying {@link DataKeySignatureKeyId}. */
   private static final String DATA_KEY_SIGNATURE_KEY_ID = "DATA_KEY_SIGNATURE_KEY_ID";
 
   private static final String DATA_KEY_SIGNATURE_ALGORITHM = "DATA_KEY_SIGNATURE_ALGORITHM";
+
   /** Environment variable for the table name. */
   private static final String KEYSTORE_TABLE_ENV_VAR = "KEYSTORE_TABLE_NAME";
+
   /** Environment variable for AWS region */
   private static final String AWS_REGION = "AWS_REGION";
+
   /** Environment variable for AWS KMS URI */
   private static final String AWS_KMS_URI = "AWS_KMS_URI";
+
   /** Environment variable containing endpoint override for DDB. Used for testing. */
   private static final String DDB_OVERRIDE_ENV_VAR = "DDB_ENDPOINT_OVERRIDE";
+
   /** Environment variable containing endpoint override for KMS. Used for testing. */
   private static final String KMS_OVERRIDE_ENV_VAR = "KMS_ENDPOINT_OVERRIDE";
+
   /**
    * Environment variable for specifying signature key for signing public key material. If empty,
    * does not sign.
    */
   private static final String ENCRYPTION_KEY_SIGNATURE_KEY_ID = "ENCRYPTION_KEY_SIGNATURE_KEY_ID";
+
   /**
    * Environment variable for specifying algorithm of ENCRYPTION_KEY_SIGNATURE_KEY_ID. Must be
    * present if ENCRYPTION_KEY_SIGNATURE_KEY_ID is not empty

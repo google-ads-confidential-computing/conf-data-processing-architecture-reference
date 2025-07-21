@@ -43,3 +43,18 @@ output "job_completion_notifications_service_account_email" {
   value       = module.job_service.job_completion_notifications_service_account_email
   description = "The email of the service account to run the job completion notification feature."
 }
+
+output "frontend_service_cloud_run_urls" {
+  value       = module.job_service.frontend_service_cloud_run_urls
+  description = "The URLs of the individual Cloud Runs that comprise the frontend service."
+}
+
+output "frontend_service_load_balancer_url" {
+  value       = module.job_service.frontend_service_load_balancer_url
+  description = "The URL that can be used to call the frontend service via the load balancer."
+}
+
+output "frontend_service_load_balancer_ip_address" {
+  value       = module.job_service.frontend_service_load_balancer_ip_address
+  description = "The external IP address of the entry-point load balancer for the FE service."
+}

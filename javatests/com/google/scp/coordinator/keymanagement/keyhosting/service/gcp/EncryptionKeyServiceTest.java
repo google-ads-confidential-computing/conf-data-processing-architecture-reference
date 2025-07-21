@@ -23,6 +23,7 @@ import static com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer
 import com.google.acai.Acai;
 import com.google.cloud.spanner.DatabaseClient;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
@@ -40,6 +41,8 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.Encryption
 import com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer;
 import com.google.scp.shared.testutils.gcp.SpannerEmulatorContainer;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
@@ -61,9 +64,15 @@ import org.testcontainers.containers.output.Slf4jLogConsumer;
 public final class EncryptionKeyServiceTest {
 
   private static final Logger logger = LoggerFactory.getLogger(EncryptionKeyServiceTest.class);
-  private static final EncryptionKey DEFAULT_SET_KEY = FakeEncryptionKey.create();
-  private static final EncryptionKey TEST_SET_KEY =
-      FakeEncryptionKey.create().toBuilder().setSetName("test-set").build();
+  private static final ImmutableList<EncryptionKey> TEST_KEYS =
+      ImmutableList.of(
+          createKey(null, -7),
+          createKey(null, -14),
+          createKey("test-set", -7),
+          createKey("test-set", -14),
+          createKey("test-set", -21),
+          createKey("test-set-2", 7),
+          createKey("test-set-2", -7));
 
   @Rule public final Acai acai = new Acai(TestModule.class);
 
@@ -73,46 +82,56 @@ public final class EncryptionKeyServiceTest {
 
   @Before
   public void setUp() throws Exception {
-    keyDb.createKey(DEFAULT_SET_KEY);
-    keyDb.createKey(TEST_SET_KEY);
+    keyDb.createKeys(TEST_KEYS);
     // Sleeping for 2s due to the read staleness configured below.
     Thread.sleep(2000);
   }
 
   @Test
   public void v1alphaGetEncryptionKey_existingKey_returnsExpected() throws Exception {
-    // Given
-    String endpoint = String.format("/v1alpha/encryptionKeys/%s", DEFAULT_SET_KEY.getKeyId());
+    getExistingKeyTest("v1alpha");
+  }
 
-    // When
+  @Test
+  public void v1betaGetEncryptionKey_existingKey_returnsExpected() throws Exception {
+    getExistingKeyTest("v1beta");
+  }
+
+  private void getExistingKeyTest(String version) throws Exception {
+    String endpoint =
+        String.format("/%s/encryptionKeys/%s", version, TEST_KEYS.getFirst().getKeyId());
     EncryptionKeyProto.EncryptionKey key = getEncryptionKey(endpoint);
-
-    // Then
-    assertThat(key.getName()).endsWith(DEFAULT_SET_KEY.getKeyId());
+    assertThat(key.getName()).endsWith(TEST_KEYS.getFirst().getKeyId());
   }
 
   @Test
   public void v1alphaGetEncryptionKey_nonExistingKey_returnsNotFound() throws Exception {
-    // Given
-    String endpoint = String.format("/v1alpha/encryptionKeys/%s", "non-existing-key");
+    getNonExistingKeyTest("v1alpha");
+  }
 
-    // When
+
+  @Test
+  public void v1betaGetEncryptionKey_nonExistingKey_returnsNotFound() throws Exception {
+    getNonExistingKeyTest("v1beta");
+  }
+
+  private void getNonExistingKeyTest(String version) throws Exception {
+    String endpoint = String.format("/%s/encryptionKeys/does-not-exist-key", version);
     HttpResponse response = getHttpResponse(endpoint);
-
-    // Then
     assertThat(response.getStatusLine().getStatusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
   }
 
   @Test
   public void v1alphaListRecentEncryptionKeys_happyPath_returnsExpected() throws Exception {
     // Given
-    String endpoint = "/v1alpha/encryptionKeys:recent?maxAgeSeconds=999";
+    var daysInSecs = Duration.ofDays(8).toSeconds();
+    String endpoint = "/v1alpha/encryptionKeys:recent?maxAgeSeconds=" + daysInSecs;
 
     // When
     ListRecentEncryptionKeysResponse keys = listRecentEncryptionKeys(endpoint);
 
     // Then
-    assertThat(keys.getKeysList()).isNotEmpty();
+    assertThat(keys.getKeysList()).hasSize(1);
   }
 
   @Test
@@ -130,79 +149,50 @@ public final class EncryptionKeyServiceTest {
   }
 
   @Test
-  public void v1betaGetEncryptionKey_existingKey_returnsExpected() throws Exception {
-    // Given
-    String endpoint = String.format("/v1beta/encryptionKeys/%s", DEFAULT_SET_KEY.getKeyId());
-
-    // When
-    EncryptionKeyProto.EncryptionKey key = getEncryptionKey(endpoint);
-
-    // Then
-    assertThat(key.getName()).endsWith(DEFAULT_SET_KEY.getKeyId());
-  }
-
-  @Test
-  public void v1betaGetEncryptionKey_nonExistingKey_returnsNotFound() throws Exception {
-    // Given
-    String endpoint = String.format("/v1beta/encryptionKeys/%s", "non-existing-key");
-
-    // When
-    HttpResponse response = getHttpResponse(endpoint);
-
-    // Then
-    assertThat(response.getStatusLine().getStatusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
-  }
-
-  @Test
-  public void v1betaListRecentEncryptionKeys_happyPath_returnsExpected() throws Exception {
-    // Given
-    String endpoint = "/v1beta/sets//encryptionKeys:recent?maxAgeSeconds=999";
-
-    // When
-    ListRecentEncryptionKeysResponse keys = listRecentEncryptionKeys(endpoint);
-
-    // Then
-    assertThat(keys.getKeysList()).isNotEmpty();
+  public void v1betaListRecentEncryptionKeys_emptySetName_returnsExpected() throws Exception {
+    listRecentEncryptionKeysTest("",Duration.ofDays(7), 0);
+    listRecentEncryptionKeysTest("", Duration.ofDays(8), 1);
+    listRecentEncryptionKeysTest("", Duration.ofDays(15), 2);
   }
 
   @Test
   public void v1betaListRecentEncryptionKeys_specificSetName_returnsExpected() throws Exception {
-    // Given
-    String endpoint = "/v1beta/sets/test-set/encryptionKeys:recent?maxAgeSeconds=999";
-
-    // When
-    ListRecentEncryptionKeysResponse keys = listRecentEncryptionKeys(endpoint);
-
-    // Then
-    assertThat(keys.getKeysList()).isNotEmpty();
+    listRecentEncryptionKeysTest("test-set", Duration.ofDays(7), 0);
+    listRecentEncryptionKeysTest("test-set", Duration.ofDays(8), 1);
+    listRecentEncryptionKeysTest("test-set", Duration.ofDays(15), 2);
+    listRecentEncryptionKeysTest("test-set", Duration.ofDays(22), 3);
   }
 
+  @Test
+  public void v1betaListRecentEncryptionKeys_setName2_returnsExpected() throws Exception {
+    listRecentEncryptionKeysTest("test-set-2", Duration.ofDays(1), 1);
+    listRecentEncryptionKeysTest("test-set-2", Duration.ofDays(8), 2);
+  }
 
   @Test
-  public void v1betaListRecentEncryptionKeys_staleness_returnsNothing() throws Exception {
-    EncryptionKey key = FakeEncryptionKey.create().toBuilder().setSetName("test-set-2").build();
-    keyDb.createKey(key);
+  public void v1betaListRecentEncryptionKeys_badKeySet_returnsNothing() throws Exception {
+    listRecentEncryptionKeysTest("does-not-exist-test-set", Duration.ofDays(25), 0);
+  }
 
-    // Given
-    String endpoint = "/v1beta/sets/test-set-2/encryptionKeys:recent?maxAgeSeconds=999";
-
-    // When
-    ListRecentEncryptionKeysResponse keys = listRecentEncryptionKeys(endpoint);
-
-    // Then
-    assertThat(keys.getKeysList()).isEmpty();
+  private void listRecentEncryptionKeysTest(
+      String setName, Duration expiry, int expectedSize) throws Exception {
+    var daysInSecs = expiry.toSeconds();
+    String endpoint =
+        String.format(
+            "/v1beta/sets/%s/encryptionKeys:recent?maxAgeSeconds=%s", setName, daysInSecs);
+    assertThat(listRecentEncryptionKeys(endpoint).getKeysList()).hasSize(expectedSize);
   }
 
   @Test
   public void v1betaGetActiveEncryptionKeys_specificSetName_returnsExpected() throws Exception {
     // Given
-    String endpoint = "/v1beta/sets/test-set/activeKeys";
+    String endpoint = "/v1beta/sets/test-set-2/activeKeys";
 
     // When
     GetActiveEncryptionKeysResponse keys = getActiveEncryptionKeys(endpoint);
 
     // Then
-    assertThat(keys.getKeysList()).isNotEmpty();
+    assertThat(keys.getKeysList()).hasSize(1);
   }
 
   @Test
@@ -282,11 +272,19 @@ public final class EncryptionKeyServiceTest {
                 // Prevent HTTP client library from stripping empty path params.
                 RequestConfig.custom().setNormalizeUri(false).build());
     try (CloseableHttpClient client = builder.build()) {
-      HttpResponse response =
+      return
           client.execute(
               new HttpGet(String.format("http://%s%s", container.getEmulatorEndpoint(), endpoint)));
-      return response;
     }
+  }
+
+  private static EncryptionKey createKey(String setName, int expiryPlusDays) {
+    var expirationEpochMilli = Instant.now().plus(Duration.ofDays(expiryPlusDays)).toEpochMilli();
+    var builder = FakeEncryptionKey.create().toBuilder();
+    if (setName != null) {
+      builder.setSetName(setName);
+    }
+    return builder.setExpirationTime(expirationEpochMilli).build();
   }
 
   private static final class TestModule extends AbstractModule {

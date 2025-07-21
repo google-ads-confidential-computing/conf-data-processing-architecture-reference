@@ -20,8 +20,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.GetActiveEncryptionKeysCache;
 import com.google.scp.coordinator.keymanagement.shared.converter.EncryptionKeyConverter;
-import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
@@ -33,22 +33,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class GetActiveEncryptionKeysTask extends ApiTask {
-  private final KeyDb keyDb;
+  private final GetActiveEncryptionKeysCache cache;
 
   @Inject
-  GetActiveEncryptionKeysTask(KeyDb keyDb, LogMetricHelper logMetricHelper) {
+  GetActiveEncryptionKeysTask(GetActiveEncryptionKeysCache cache, LogMetricHelper logMetricHelper) {
     super("GET",
         Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/activeKeys"),
         "GetActiveEncryptionKeys",
         "v1Beta",
         logMetricHelper);
-    this.keyDb = keyDb;
+    this.cache = cache;
   }
 
   @Override
   protected void execute(Matcher matcher, RequestContext request, ResponseContext response)
       throws ServiceException {
-    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(matcher.group("name"), 0);
+    ImmutableList<EncryptionKey> keys = cache.get(matcher.group("name"));
     response.setBody(
         GetActiveEncryptionKeysResponse.newBuilder()
             .addAllKeys(

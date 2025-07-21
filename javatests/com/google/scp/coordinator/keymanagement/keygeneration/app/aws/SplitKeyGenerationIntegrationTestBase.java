@@ -88,7 +88,7 @@ public abstract class SplitKeyGenerationIntegrationTestBase {
             .mapToObj(
                 unused -> {
                   try {
-                    return FakeEncryptionKey.createBuilderWithDefaults()
+                    return FakeEncryptionKey.createBuilderWithDefaults(false)
                         .setKeyId(sequenceKeyIdFactory.getNextKeyId(keyDbA))
                         .setExpirationTime(expirationTime.toEpochMilli())
                         .build();

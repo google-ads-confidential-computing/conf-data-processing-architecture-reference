@@ -113,6 +113,7 @@ module "operator_service" {
   worker_exporting_metrics_error_alarm = var.worker_exporting_metrics_error_alarm
 
   # Frontend Service
+  create_frontend_service_cloud_function                          = var.create_frontend_service_cloud_function
   operator_package_bucket_location                                = var.operator_package_bucket_location
   frontend_service_jar                                            = var.frontend_service_jar
   frontend_service_cloudfunction_num_cpus                         = var.frontend_service_cloudfunction_num_cpus
@@ -160,6 +161,14 @@ module "operator_service" {
   frontend_cloudfunction_max_execution_time_max = var.frontend_cloudfunction_max_execution_time_max
   frontend_lb_5xx_threshold                     = var.frontend_lb_5xx_threshold
   frontend_lb_max_latency_ms                    = var.frontend_lb_max_latency_ms
+
+  frontend_cloud_run_error_5xx_alarm_config      = var.frontend_cloud_run_error_5xx_alarm_config
+  frontend_cloud_run_non_5xx_error_alarm_config  = var.frontend_cloud_run_non_5xx_error_alarm_config
+  frontend_cloud_run_execution_time_alarm_config = var.frontend_cloud_run_execution_time_alarm_config
+
+  frontend_lb_error_5xx_alarm_config         = var.frontend_lb_error_5xx_alarm_config
+  frontend_lb_non_5xx_error_alarm_config     = var.frontend_lb_non_5xx_error_alarm_config
+  frontend_lb_request_latencies_alarm_config = var.frontend_lb_request_latencies_alarm_config
 
   # Parameters
   common_parameter_names                = var.common_parameter_names

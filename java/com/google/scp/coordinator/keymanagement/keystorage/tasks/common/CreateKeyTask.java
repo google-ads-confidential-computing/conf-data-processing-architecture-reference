@@ -31,7 +31,8 @@ public interface CreateKeyTask {
    * @param encryptedKeySplit The keysplit payload pre-encrypted with a well-known key URI belonging
    *     to the receiving coordinator. Added to the returned and stored EncryptionKey.
    */
-  EncryptionKey createKey(EncryptionKey encryptionKey, String encryptedKeySplit)
+  EncryptionKey createKey(
+      EncryptionKey encryptionKey, String encryptedKeySplit, String migrationEncryptedKeySplit)
       throws ServiceException;
 
   /**
@@ -44,6 +45,10 @@ public interface CreateKeyTask {
    * @param encryptedKeySplit The keysplit payload encrypted using {@code dataKey}. The keysplit is
    *     decrypted, re-encrypted, and added to the returned and stored EncryptionKey.
    */
-  EncryptionKey createKey(EncryptionKey encryptionKey, DataKey dataKey, String encryptedKeySplit)
+  EncryptionKey createKey(
+      EncryptionKey encryptionKey,
+      DataKey dataKey,
+      String encryptedKeySplit,
+      String migrationEncryptedKeySplit)
       throws ServiceException;
 }

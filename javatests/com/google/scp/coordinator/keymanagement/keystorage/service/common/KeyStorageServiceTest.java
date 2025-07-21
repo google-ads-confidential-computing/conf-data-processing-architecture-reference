@@ -71,7 +71,7 @@ public class KeyStorageServiceTest {
               keyDb.createKey(key);
               return keyDb.getKey(key.getKeyId());
             };
-    doAnswer(taskAnswer).when(mockCreateKeyTask).createKey(any(), any());
+    doAnswer(taskAnswer).when(mockCreateKeyTask).createKey(any(), any(), any());
 
     keyStorageService = new KeyStorageService(mockCreateKeyTask, mockGetDataKeyTask);
   }

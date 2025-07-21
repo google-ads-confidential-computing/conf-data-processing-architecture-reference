@@ -37,6 +37,8 @@ import java.util.Optional;
 public class FakeKeyStorageClient implements KeyStorageClient {
 
   public static final String KEK_URI = "aws-kms://arn:aws:kms:us-east-1:000000000000:key/b";
+  public static final String MIGRATION_KEK_URI =
+      "aws-kms://arn:aws:kms:us-east-1:000000000000:key/migration-b";
 
   private static final PublicKeySign PUBLIC_KEY_SIGN;
   public static final PublicKeyVerify PUBLIC_KEY_VERIFY;
@@ -56,10 +58,13 @@ public class FakeKeyStorageClient implements KeyStorageClient {
    * Returns the passed in EncryptionKey with an additional KeySplitData containing {@link #KEK_URI}
    * and {@link #SIGNATURE}.
    *
-   * <p>This method is safe to mock with {@code when(createKey(any(), any())}.
+   * <p>This method is safe to mock with {@code when(createKey(any(), any(), any())}.
    */
   @Override
-  public EncryptionKey createKey(EncryptionKey encryptionKey, String encryptedKeySplit)
+  public EncryptionKey createKey(
+      EncryptionKey encryptionKey,
+      String encryptedKeySplit,
+      Optional<String> migrationEncryptedKeySplit)
       throws KeyStorageServiceException {
     // Return early to prevent an exception being thrown when mocking. When invoked with generic
     // Mockito argument matchers for the purposes of stubbing, null is passed to this function.
@@ -68,7 +73,12 @@ public class FakeKeyStorageClient implements KeyStorageClient {
     }
 
     try {
-      return KeySplitDataUtil.addKeySplitData(encryptionKey, KEK_URI, Optional.of(PUBLIC_KEY_SIGN));
+      Optional<String> migrationKekUri =
+          migrationEncryptedKeySplit.isPresent()
+              ? Optional.of(MIGRATION_KEK_URI)
+              : Optional.empty();
+      return KeySplitDataUtil.addKeySplitData(
+          encryptionKey, KEK_URI, migrationKekUri, Optional.of(PUBLIC_KEY_SIGN));
     } catch (GeneralSecurityException e) {
       throw new KeyStorageServiceException("Encryption Key Signature Key error", e);
     }
@@ -76,10 +86,13 @@ public class FakeKeyStorageClient implements KeyStorageClient {
 
   @Override
   public EncryptionKey createKey(
-      EncryptionKey encryptionKey, DataKey dataKey, String encryptedKeySplit)
+      EncryptionKey encryptionKey,
+      DataKey dataKey,
+      String encryptedKeySplit,
+      Optional<String> migrationEncryptedKeySplit)
       throws KeyStorageServiceException {
     // Disregard data key.
-    return createKey(encryptionKey, encryptedKeySplit);
+    return createKey(encryptionKey, encryptedKeySplit, migrationEncryptedKeySplit);
   }
 
   /** Fetches a data key usable with {@link FakeDataKeyUtil}. */

@@ -67,7 +67,8 @@ public final class AwsCreateKeyTask implements CreateKeyTask {
 
   @Override
   @Deprecated
-  public EncryptionKey createKey(EncryptionKey encryptionKey, String receivedKeySplit)
+  public EncryptionKey createKey(
+      EncryptionKey encryptionKey, String receivedKeySplit, String migrationKeySplit)
       throws ServiceException {
     // DataKeys must be used to ensure that the incoming key was generated inside an enclave.
     throw new ServiceException(
@@ -76,9 +77,15 @@ public final class AwsCreateKeyTask implements CreateKeyTask {
         "Unsupported operation: incoming keys must be encrypted with a DataKey.");
   }
 
+  /**
+   * @param migrationKeySplit Unused in AWS. Migrations are not supported.
+   */
   @Override
   public EncryptionKey createKey(
-      EncryptionKey encryptionKey, DataKey dataKey, String receivedKeySplit)
+      EncryptionKey encryptionKey,
+      DataKey dataKey,
+      String receivedKeySplit,
+      String migrationKeySplit)
       throws ServiceException {
 
     signDataKeyTask.verifyDataKey(dataKey);
@@ -127,6 +134,7 @@ public final class AwsCreateKeyTask implements CreateKeyTask {
       throw new ServiceException(INVALID_ARGUMENT, SERVICE_ERROR.name(), e.getMessage(), e);
     }
   }
+
   /**
    * Returns a new EncryptionKey with the provided keysplit added to the top level. Also adds {@link
    * #keyEncryptionKeyUri} to the new encryption key to indicate how this key was encrypted.
@@ -142,7 +150,9 @@ public final class AwsCreateKeyTask implements CreateKeyTask {
             .setKeyEncryptionKeyUri(keyEncryptionKeyUri)
             .build();
     try {
-      return KeySplitDataUtil.addKeySplitData(localKey, keyEncryptionKeyUri, signatureKey);
+      // Migrations are not currently supported in AWS.
+      return KeySplitDataUtil.addKeySplitData(
+          localKey, keyEncryptionKeyUri, Optional.empty(), signatureKey);
     } catch (GeneralSecurityException e) {
       String msg = "Error generating public key signature";
       throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);

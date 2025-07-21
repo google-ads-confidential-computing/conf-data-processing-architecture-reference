@@ -87,8 +87,17 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       throws ServiceException {
     // Reuse same data key for key batch.
     var dataKey = fetchDataKey();
+    // Migrating KEKs on AWS is not currently supported.
+    boolean populateMigrationData = false;
     createSplitKeyBase(
-        setName, tinkTemplate, count, validityInDays, ttlInDays, activation, Optional.of(dataKey));
+        setName,
+        tinkTemplate,
+        count,
+        validityInDays,
+        ttlInDays,
+        activation,
+        Optional.of(dataKey),
+        populateMigrationData);
   }
 
   @Override
@@ -103,23 +112,47 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
     }
   }
 
+  /** Migrations are not supported in AWS. */
+  @Override
+  protected String encryptMigrationPeerCoordinatorSplit(
+      String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKey)
+      throws ServiceException {
+    return encryptPeerCoordinatorSplit(setName, keySplit, dataKey, publicKey);
+  }
+
   @Override
   protected Aead getAead(String kmsKeyEncryptionKeyUri) {
     return this.keyEncryptionKeyAead;
   }
 
-  /** Takes in setName and returns kmsKeyEncryptionKeyUri for the key set. */
+  @Override
+  /** Migrations in AWS are not supported. Returns the standard keyEncryptionKeyAead. */
+  protected Aead getMigrationAead(String migrationKmsKeyEncryptionKeyUri) {
+    return this.keyEncryptionKeyAead;
+  }
+
+  /** Takes in setName and returns the kmsKeyEncryptionKeyUri for the key set. */
   @Override
   protected String getKmsKeyEncryptionKeyUri(String setName) {
     return this.keyEncryptionKeyUri;
   }
 
+  /** Migrations in AWS are not supported. Returns the kmsKeyEncryptionKeyUri for the key set. */
+  @Override
+  protected String getMigrationKmsKeyEncryptionKeyUri(String setName) {
+    return this.keyEncryptionKeyUri;
+  }
+
   @Override
   protected EncryptionKey sendKeySplitToPeerCoordinator(
-      EncryptionKey unsignedCoordinatorBKey, String encryptedKeySplitB, Optional<DataKey> dataKey)
+      EncryptionKey unsignedCoordinatorBKey,
+      String encryptedKeySplitB,
+      Optional<String> migrationEncryptedKeySplitB,
+      Optional<DataKey> dataKey)
       throws ServiceException {
     try {
-      return keyStorageClient.createKey(unsignedCoordinatorBKey, dataKey.get(), encryptedKeySplitB);
+      return keyStorageClient.createKey(
+          unsignedCoordinatorBKey, dataKey.get(), encryptedKeySplitB, migrationEncryptedKeySplitB);
     } catch (KeyStorageServiceException e) {
       throw new ServiceException(
           Code.INVALID_ARGUMENT, "Key Storage Service failed to validate, sign, and store key", e);

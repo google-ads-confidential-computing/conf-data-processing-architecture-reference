@@ -40,21 +40,32 @@ public final class KeySplitDataUtil {
   private KeySplitDataUtil() {}
 
   /**
-   * Adds the a key split data containing the speicified encryption key uri and signature if
+   * Adds the a key split data containing the specified encryption key uri and signature if
    * signature key is provided. Naively appends to the list, without consideration for possible
    * duplicates.
    */
   public static EncryptionKey addKeySplitData(
-      EncryptionKey encryptionKey, String keyEncryptionKeyUri, Optional<PublicKeySign> signatureKey)
+      EncryptionKey encryptionKey,
+      String keyEncryptionKeyUri,
+      Optional<String> migrationKeyEncryptionKeyUri,
+      Optional<PublicKeySign> signatureKey)
       throws GeneralSecurityException {
     ImmutableList<KeySplitData> keySplitDataList =
         ImmutableList.<KeySplitData>builder()
             .addAll(encryptionKey.getKeySplitDataList())
             .add(buildKeySplitData(encryptionKey, keyEncryptionKeyUri, signatureKey))
             .build();
+    ImmutableList.Builder<KeySplitData> migrationKeySplitDataList = ImmutableList.builder();
+    if (migrationKeyEncryptionKeyUri.isPresent()) {
+      migrationKeySplitDataList
+          .addAll(encryptionKey.getMigrationKeySplitDataList())
+          .add(buildKeySplitData(encryptionKey, migrationKeyEncryptionKeyUri.get(), signatureKey));
+    }
     return encryptionKey.toBuilder()
         .clearKeySplitData()
         .addAllKeySplitData(keySplitDataList)
+        .clearMigrationKeySplitData()
+        .addAllMigrationKeySplitData(migrationKeySplitDataList.build())
         .build();
   }
 

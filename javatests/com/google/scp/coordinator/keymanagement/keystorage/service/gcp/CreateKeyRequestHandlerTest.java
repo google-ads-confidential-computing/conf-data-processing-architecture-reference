@@ -66,13 +66,16 @@ public final class CreateKeyRequestHandlerTest {
   private BufferedWriter writer;
   private CreateKeyRequestHandler requestHandler;
   private KmsClient kmsClient;
+  private KmsClient migrationKmsClient;
 
   @Before
   public void before() throws IOException {
     kmsClient = new FakeKmsClient();
+    migrationKmsClient = new FakeKmsClient();
     KeyStorageService keyStorageService =
         new KeyStorageService(
-            new GcpCreateKeyTask(keyDb, kmsClient, "fake-kms://$setName$_fake_key_b"),
+            new GcpCreateKeyTask(
+                keyDb, kmsClient, "fake-kms://$setName$_fake_key_b", migrationKmsClient, "", false),
             getDataKeyTask);
     requestHandler = new CreateKeyRequestHandler(keyStorageService);
     writer = new BufferedWriter(new StringWriter());
@@ -101,7 +104,8 @@ public final class CreateKeyRequestHandlerTest {
     String creationTime = "0";
     String expirationTime = "0";
     String testKeyData =
-        "{\"publicKeySignature\": \"a\", \"keyEncryptionKeyUri\": \"fake-kms://_fake_key_b\", \"keyMaterial\": \"c\"}";
+        "{\"publicKeySignature\": \"a\", \"keyEncryptionKeyUri\": \"fake-kms://_fake_key_b\","
+            + " \"keyMaterial\": \"c\"}";
     String keyData = "[" + testKeyData + "," + testKeyData + "]";
     String jsonRequest =
         "{\"keyId\":\""

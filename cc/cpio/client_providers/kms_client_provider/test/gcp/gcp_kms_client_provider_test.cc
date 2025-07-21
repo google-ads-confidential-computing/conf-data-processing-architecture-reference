@@ -20,12 +20,14 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 #include "core/async_executor/src/async_executor.h"
 #include "core/common/operation_dispatcher/src/error_codes.h"
 #include "core/interface/async_context.h"
 #include "core/test/utils/conditional_wait.h"
+#include "core/test/utils/logging_utils.h"
 #include "core/test/utils/scp_test_base.h"
 #include "core/utils/src/base64.h"
 #include "cpio/client_providers/kms_client_provider/mock/gcp/mock_gcp_key_management_service_client.h"
@@ -56,6 +58,7 @@ using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_KEY_ARN_NOT_FOUND;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
+using google::scp::core::test::TestLoggingUtils;
 using google::scp::core::test::WaitUntil;
 using google::scp::core::utils::Base64Encode;
 using google::scp::cpio::client_providers::mock::
@@ -88,6 +91,8 @@ class MockGcpKmsFactory : public GcpKmsFactory {
   MOCK_METHOD(shared_ptr<GcpKeyManagementServiceClientInterface>,
               CreateGcpKeyManagementServiceClient,
               (const string&, const string&), (noexcept, override));
+
+  virtual ~MockGcpKmsFactory() {}
 };
 
 class GcpKmsClientProviderTest
@@ -106,10 +111,12 @@ class GcpKmsClientProviderTest
     EXPECT_SUCCESS(client->Init());
     EXPECT_SUCCESS(client->Run());
 
-    return move(client);
+    return client;
   }
 
   void SetUp() override {
+    TestLoggingUtils::EnableLogOutputToConsole();
+
     auto options = make_shared<KmsClientOptions>();
     options->enable_gcp_kms_client_cache = false;
     options->enable_gcp_kms_client_retries = true;
@@ -326,9 +333,8 @@ TEST_F(GcpKmsClientProviderTest, MultiThreadSuccessToDecryptWithCache) {
       .WillRepeatedly(Return(mock_gcp_key_management_service_client_));
   vector<thread> threads;
   for (auto i = 0; i < 10; ++i) {
-    threads.push_back(thread([this, &client]() {
-      DecryptSuccessfully(client.get(), kWipProvider);
-    }));
+    threads.push_back(thread(
+        [&client]() { DecryptSuccessfully(client.get(), kWipProvider); }));
   }
 
   for (auto& thread : threads) {
@@ -358,7 +364,7 @@ TEST_F(GcpKmsClientProviderTest, MultiThreadDifferentWipWithCache) {
       .WillRepeatedly(Return(mock_gcp_key_management_service_client_));
   vector<thread> threads;
   for (auto i = 0; i < 10; ++i) {
-    threads.push_back(thread([this, i, wip_2, &client]() {
+    threads.push_back(thread([i, wip_2, &client]() {
       if (i > 4) {
         DecryptSuccessfully(client.get(), kWipProvider);
       } else {

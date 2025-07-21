@@ -47,7 +47,9 @@ locals {
 
   create_multiple_cloud_run_frontends = length(var.frontend_service_cloud_run_regions) > 0
 
-  lb_fe_https_custom_audience = (var.frontend_service_lb_domain != null && var.frontend_service_lb_domain != "") ? "https://${var.frontend_service_lb_domain}" : ""
+  create_cloud_run_lb = (var.frontend_service_lb_domain != null && var.frontend_service_lb_domain != "") && local.create_multiple_cloud_run_frontends
+
+  lb_fe_https_custom_audience = local.create_cloud_run_lb ? "https://${var.frontend_service_lb_domain}" : ""
 }
 
 resource "google_service_account" "frontend_service_account" {
@@ -73,7 +75,14 @@ resource "google_storage_bucket_object" "frontend_service_package_bucket_object"
   source = local.cloudfunction_package_zip
 }
 
+moved {
+  from = google_cloudfunctions2_function.frontend_service_cloudfunction
+  to   = google_cloudfunctions2_function.frontend_service_cloudfunction[0]
+}
+
 resource "google_cloudfunctions2_function" "frontend_service_cloudfunction" {
+  count = var.create_frontend_service_cloud_function ? 1 : 0
+
   name     = "${var.environment}-${var.region}-frontend-service"
   location = var.region
 
@@ -136,7 +145,7 @@ module "cloud_run_fe" {
 
 # Reserve IP address for FE LB.
 resource "google_compute_global_address" "cloud_run_fe_ip_address" {
-  count = local.create_multiple_cloud_run_frontends ? 1 : 0
+  count = local.create_cloud_run_lb ? 1 : 0
 
   project = var.project_id
   name    = "${var.environment}-fe-lb-ip-addr"
@@ -144,7 +153,7 @@ resource "google_compute_global_address" "cloud_run_fe_ip_address" {
 
 # Map custom URL to LB IP address
 module "fe_service_dns_a_records" {
-  count = local.create_multiple_cloud_run_frontends ? 1 : 0
+  count = local.create_cloud_run_lb ? 1 : 0
 
   source = "../domain_a_records"
 
@@ -158,7 +167,7 @@ module "fe_service_dns_a_records" {
 }
 
 module "cloud_run_fe_load_balancer" {
-  count = local.create_multiple_cloud_run_frontends ? 1 : 0
+  count = local.create_cloud_run_lb ? 1 : 0
 
   source      = "../cloud_run_load_balancer"
   project     = var.project_id

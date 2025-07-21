@@ -72,6 +72,7 @@ public class EncryptionKeyConverterTest {
             .setCreationTime(0L)
             .setActivationTime(1L)
             .addAllKeyData(ImmutableList.of())
+            .addAllMigrationKeyData(ImmutableList.of())
             .build();
 
     com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
@@ -83,6 +84,9 @@ public class EncryptionKeyConverterTest {
     assertThat(result.getActivationTime()).isEqualTo(keyStorageKey.getActivationTime());
     assertThat(result.hasTtlTime()).isFalse();
     assertThat(result.hasExpirationTime()).isFalse();
+    assertThat(result.getKeySplitDataList().size()).isEqualTo(0);
+    assertThat(result.getMigrationKeySplitDataList().size()).isEqualTo(0);
+    assertThat(result.getMigrationKeyEncryptionKeyUri()).isEqualTo("");
   }
 
   @Test
@@ -97,6 +101,7 @@ public class EncryptionKeyConverterTest {
             .setCreationTime(0L)
             .setExpirationTime(0L)
             .addAllKeyData(ImmutableList.of())
+            .addAllMigrationKeyData(ImmutableList.of())
             .build();
 
     IllegalArgumentException ex =
@@ -110,7 +115,7 @@ public class EncryptionKeyConverterTest {
   @Test
   public void toApiEncryptionKey_noPrivateKeyMaterial() {
     EncryptionKey encryptionKey =
-        EncryptionKeyConverter.toApiEncryptionKey(FakeEncryptionKey.create());
+        EncryptionKeyConverter.toApiEncryptionKey(FakeEncryptionKey.createWithMigration());
     // {@link FakeEncryptionKey} should always give a non-empty list of {@code keyData} so that this
     // test is meaningful.  If this assertion fails, it means we should fix {@code
     // FakeEncryptionKey.create} to provide more representative test data.
@@ -118,7 +123,12 @@ public class EncryptionKeyConverterTest {
     boolean privateKeyMaterialEmpty =
         encryptionKey.getKeyDataList().stream()
             .allMatch(keyData -> keyData.getKeyMaterial().isEmpty());
+    assertThat(encryptionKey.getMigrationKeyDataList()).isNotEmpty();
+    boolean migrationKeyMaterialEmpty =
+        encryptionKey.getMigrationKeyDataList().stream()
+            .allMatch(keyData -> keyData.getKeyMaterial().isEmpty());
     assertThat(privateKeyMaterialEmpty).isTrue();
+    assertThat(migrationKeyMaterialEmpty).isTrue();
   }
 
   @Test

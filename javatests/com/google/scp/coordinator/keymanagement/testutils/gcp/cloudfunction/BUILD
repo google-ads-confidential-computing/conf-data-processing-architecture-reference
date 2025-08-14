@@ -20,7 +20,7 @@ java_library(
     name = "cloudfunction",
     srcs = glob(["*.java"]),
     runtime_deps = [
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:EncryptionKeyService_deploy.jar",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PrivateKeyService_deploy.jar",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PublicKeyService_deploy.jar",
         "//java/external:gcp_function_invoker",
         "//javatests/com/google/scp/coordinator/keymanagement/keystorage/service/gcp/testing:LocalKeyStorageServiceHttpCloudFunctionDeploy",

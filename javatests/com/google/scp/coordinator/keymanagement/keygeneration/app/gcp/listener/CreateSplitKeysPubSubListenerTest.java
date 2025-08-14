@@ -50,9 +50,6 @@ public final class CreateSplitKeysPubSubListenerTest {
 
   @Test
   public void start_success() throws ServiceException {
-    int numberOfKeysToCreate = 5;
-    int validityInDays = 8;
-    int ttlInDays = 365;
     PubsubMessage message =
         PubsubMessage.newBuilder().setData(ByteString.copyFromUtf8("generateSplitKeys")).build();
 
@@ -66,13 +63,7 @@ public final class CreateSplitKeysPubSubListenerTest {
 
     CreateSplitKeysPubSubListener listener =
         new CreateSplitKeysPubSubListener(
-            config,
-            mockSplitKeysTask,
-            PROJECT_ID,
-            SUBSCRIPTION_ID,
-            numberOfKeysToCreate,
-            validityInDays,
-            ttlInDays);
+            config, mockSplitKeysTask, PROJECT_ID, SUBSCRIPTION_ID);
     listener.start();
 
     verify(mockSplitKeysTask).execute();

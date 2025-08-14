@@ -20,13 +20,16 @@ import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTest
 import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.CACHE_CONTROL_MAX;
 
 import com.google.acai.TestScoped;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheRefreshInMinutes;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.DisableActivationTime;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 
@@ -51,5 +54,8 @@ public final class InMemoryTestEnv extends AbstractModule {
     bind(Integer.class).annotatedWith(CacheRefreshInMinutes.class).toInstance(90);
     bind(Long.class).annotatedWith(CacheControlMaximum.class).toInstance(CACHE_CONTROL_MAX);
     bind(Boolean.class).annotatedWith(DisableActivationTime.class).toInstance(false);
+    bind(new TypeLiteral<ImmutableSet<String>>() {})
+        .annotatedWith(KeySetsVendingConfigAllowedMigrators.class)
+        .toInstance(ImmutableSet.of());
   }
 }

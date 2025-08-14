@@ -17,6 +17,7 @@
 package com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
 import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.KEY_LIMIT;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
@@ -54,7 +55,6 @@ public class GcpCreateKeyTaskTest {
   private static final String KEK_URI = "gcp-kms://kek-uri";
   private static final String MIGRATION_KEK_URI = "gcp-kms://migration-kek-uri";
   private static final String KEK_BASE_URI = "gcp-kms://$setName$-kek-uri";
-  private static final String MIGRATION_KEK_BASE_URI = "gcp-kms://$setName$-migration-kek-uri";
   private static final String TEST_PUBLIC_KEY = "test private key split";
   private static final String TEST_PRIVATE_KEY = "test public key";
   private static Aead TEST_AEAD;
@@ -77,8 +77,18 @@ public class GcpCreateKeyTaskTest {
     TEST_AEAD = KeysetHandle.generateNew(KeyTemplates.get("AES128_GCM")).getPrimitive(Aead.class);
   }
 
+  @Test
+  public void createKey_success() throws Exception {
+    createKey_success_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
+  }
+
+  @Test
+  public void createKey_disableKeySetAcl_success() throws Exception {
+    createKey_success_base(KEK_URI, KEK_URI);
+  }
+
   public void createKey_success_base(String keyEncryptionKeyUri, String baseUrl)
-      throws ServiceException, GeneralSecurityException {
+      throws Exception {
     String publicKey = "123456";
     String privateKeySplit = "privateKeySplit";
     var encryptedPrivateKeySplit =
@@ -101,7 +111,7 @@ public class GcpCreateKeyTaskTest {
     taskWithMock.createKey(key, encryptedPrivateKeySplit, "");
 
     com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
-        resultPublic = keyDb.getActiveKeys(KEY_LIMIT).get(0);
+        resultPublic = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT).getFirst();
     com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
         resultPrivate = keyDb.getKey(keyId);
     assertThat(resultPublic.getKeyId()).isEqualTo(keyId);
@@ -116,10 +126,21 @@ public class GcpCreateKeyTaskTest {
     assertThat(resultPrivate.getCreationTime()).isEqualTo(creationTime);
     assertThat(resultPrivate.getKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
     assertThat(resultPrivate.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
-        .isEqualTo(key.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri());
+        .isEqualTo(key.getKeySplitDataList().getFirst().getKeySplitKeyEncryptionKeyUri());
     // Test data has 2 keysplitdata items, so the new one would be after
     assertThat(resultPrivate.getKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(keyEncryptionKeyUri);
+  }
+
+  @Test
+  public void createKey_successOverwrite() throws ServiceException, GeneralSecurityException {
+    this.createKey_successOverwrite_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
+  }
+
+  @Test
+  public void createKey_successOverwrite_disableKeySetAcl()
+      throws ServiceException, GeneralSecurityException {
+    this.createKey_successOverwrite_base(KEK_URI, KEK_URI);
   }
 
   public void createKey_successOverwrite_base(String keyEncryptionKeyUri, String baseUrl)
@@ -159,6 +180,17 @@ public class GcpCreateKeyTaskTest {
         .isEqualTo("67890".getBytes());
     assertThat(result.getCreationTime()).isEqualTo(creationTime);
     assertThat(result.getExpirationTime()).isEqualTo(key2.getExpirationTime());
+  }
+
+  @Test
+  public void createKey_with_migration_success() throws ServiceException, GeneralSecurityException {
+    this.createKey_success_with_migration_base("");
+  }
+
+  @Test
+  public void createKey_with_migration_and_set_name_success()
+      throws ServiceException, GeneralSecurityException {
+    this.createKey_success_with_migration_base("testSet");
   }
 
   public void createKey_success_with_migration_base(String setName)
@@ -203,7 +235,7 @@ public class GcpCreateKeyTaskTest {
     if (setName.isEmpty()) {
       com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto
               .EncryptionKey
-          resultPublic = keyDb.getActiveKeys(KEY_LIMIT).getFirst();
+          resultPublic = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT).getFirst();
       assertThat(resultPublic.getKeyId()).isEqualTo(keyId);
       assertThat(resultPublic.getPublicKey()).isEqualTo(key.getPublicKey());
       assertThat(resultPublic.getCreationTime()).isEqualTo(creationTime);
@@ -226,14 +258,24 @@ public class GcpCreateKeyTaskTest {
     assertThat(resultPrivate.getMigrationKeyEncryptionKeyUri())
         .isEqualTo(migrationKeyEncryptionKeyUri);
     assertThat(resultPrivate.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
-        .isEqualTo(key.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri());
+        .isEqualTo(key.getKeySplitDataList().getFirst().getKeySplitKeyEncryptionKeyUri());
     assertThat(resultPrivate.getMigrationKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
-        .isEqualTo(key.getMigrationKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri());
+        .isEqualTo(key.getMigrationKeySplitDataList().getFirst().getKeySplitKeyEncryptionKeyUri());
     // Test data has 2 keysplitdata items, so the new one would be after
     assertThat(resultPrivate.getKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(keyEncryptionKeyUri);
     assertThat(resultPrivate.getMigrationKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(migrationKeyEncryptionKeyUri);
+  }
+
+  @Test
+  public void createKey_missing_migration_success() throws Exception {
+    this.createKey_success_with_missing_migration_data_base("");
+  }
+
+  @Test
+  public void createKey_with_set_name_missing_migration_success() throws Exception {
+    this.createKey_success_with_missing_migration_data_base("testSet");
   }
 
   public void createKey_success_with_missing_migration_data_base(String setName)
@@ -278,7 +320,7 @@ public class GcpCreateKeyTaskTest {
     if (setName.isEmpty()) {
       com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto
           .EncryptionKey
-          resultPublic = keyDb.getActiveKeys(KEY_LIMIT).getFirst();
+          resultPublic = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT).getFirst();
       assertThat(resultPublic.getKeyId()).isEqualTo(keyId);
       assertThat(resultPublic.getPublicKey()).isEqualTo(key.getPublicKey());
       assertThat(resultPublic.getCreationTime()).isEqualTo(creationTime);
@@ -295,7 +337,7 @@ public class GcpCreateKeyTaskTest {
     assertThat(resultPrivate.getCreationTime()).isEqualTo(creationTime);
     assertThat(resultPrivate.getKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
     assertThat(resultPrivate.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
-        .isEqualTo(key.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri());
+        .isEqualTo(key.getKeySplitDataList().getFirst().getKeySplitKeyEncryptionKeyUri());
     // Test data has 2 keysplitdata items, so the new one would be after
     assertThat(resultPrivate.getKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(keyEncryptionKeyUri);
@@ -309,51 +351,7 @@ public class GcpCreateKeyTaskTest {
   }
 
   @Test
-  public void createKey_with_migration_success() throws ServiceException, GeneralSecurityException {
-    this.createKey_success_with_migration_base("");
-  }
-
-  @Test
-  public void createKey_with_migration_and_set_name_success()
-      throws ServiceException, GeneralSecurityException {
-    this.createKey_success_with_migration_base("testSet");
-  }
-
-  @Test
-  public void createKey_missing_migration_success() throws ServiceException, GeneralSecurityException {
-    this.createKey_success_with_missing_migration_data_base("");
-  }
-
-  @Test
-  public void createKey_with_set_name_missing_migration_success()
-      throws ServiceException, GeneralSecurityException {
-    this.createKey_success_with_missing_migration_data_base("testSet");
-  }
-
-  @Test
-  public void createKey_success() throws ServiceException, GeneralSecurityException {
-    this.createKey_success_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
-  }
-
-  @Test
-  public void createKey_disableKeySetAcl_success()
-      throws ServiceException, GeneralSecurityException {
-    this.createKey_success_base(KEK_URI, KEK_URI);
-  }
-
-  @Test
-  public void createKey_successOverwrite() throws ServiceException, GeneralSecurityException {
-    this.createKey_successOverwrite_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
-  }
-
-  @Test
-  public void createKey_successOverwrite_disableKeySetAcl()
-      throws ServiceException, GeneralSecurityException {
-    this.createKey_successOverwrite_base(KEK_URI, KEK_URI);
-  }
-
-  @Test
-  public void createKey_databaseException() throws GeneralSecurityException {
+  public void createKey_databaseException() {
     CreateKeyTask taskWithMock =
         new GcpCreateKeyTask(
             keyDb, kmsClient, KEK_URI, migrationKmsClient, migrationKeyEncryptionKeyUri, false);
@@ -377,7 +375,7 @@ public class GcpCreateKeyTaskTest {
   }
 
   @Test
-  public void createKey_validationException() throws ServiceException, GeneralSecurityException {
+  public void createKey_validationException() throws ServiceException {
     com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask taskWithMock =
         new GcpCreateKeyTask(
             keyDb, kmsClient, KEK_URI, migrationKmsClient, migrationKeyEncryptionKeyUri, false);
@@ -394,12 +392,11 @@ public class GcpCreateKeyTaskTest {
 
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
     assertThat(ex.getErrorCode()).isEqualTo(Code.INVALID_ARGUMENT);
-    assertThat(keyDb.getActiveKeys(5).size()).isEqualTo(0);
+    assertThat(keyDb.getActiveKeys("", 5).size()).isEqualTo(0);
   }
 
   @Test
-  public void createKey_missingPrivateKeyException()
-      throws ServiceException, GeneralSecurityException {
+  public void createKey_missingPrivateKeyException() throws ServiceException {
     CreateKeyTask taskWithMock =
         new GcpCreateKeyTask(
             keyDb, kmsClient, KEK_URI, migrationKmsClient, migrationKeyEncryptionKeyUri, false);
@@ -414,7 +411,17 @@ public class GcpCreateKeyTaskTest {
         assertThrows(ServiceException.class, () -> taskWithMock.createKey(key, "", ""));
 
     assertThat(ex.getErrorCode()).isEqualTo(Code.INVALID_ARGUMENT);
-    assertThat(keyDb.getActiveKeys(5).size()).isEqualTo(0);
+    assertThat(keyDb.getActiveKeys("", 5).size()).isEqualTo(0);
+  }
+
+  @Test
+  public void createKey_happyInput_createsExpected() throws Exception {
+    createKey_happyInput_createsExpected_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
+  }
+
+  @Test
+  public void createKey_happyInput_createsExpected_disableKeySetAcl() throws Exception {
+    createKey_happyInput_createsExpected_base(KEK_URI, KEK_URI);
   }
 
   public void createKey_happyInput_createsExpected_base(String keyEncryptionKeyUri, String baseUrl)
@@ -439,18 +446,6 @@ public class GcpCreateKeyTaskTest {
     var storedPrivateKey =
         decodeAndDecryptWithAead(storedKey.getJsonEncodedKeyset(), keyEncryptionKeyUri);
     assertThat(storedPrivateKey).isEqualTo(TEST_PRIVATE_KEY.getBytes());
-  }
-
-  @Test
-  public void createKey_happyInput_createsExpected()
-      throws ServiceException, GeneralSecurityException {
-    this.createKey_successOverwrite_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
-  }
-
-  @Test
-  public void createKey_happyInput_createsExpected_disableKeySetAcl()
-      throws ServiceException, GeneralSecurityException {
-    this.createKey_successOverwrite_base(KEK_URI, KEK_URI);
   }
 
   @Test

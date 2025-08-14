@@ -49,12 +49,12 @@ public class FakeKmsClient implements KmsClient {
   }
 
   @Override
-  public KmsClient withCredentials(String credentialPath) throws GeneralSecurityException {
+  public KmsClient withCredentials(String credentialPath) {
     return this;
   }
 
   @Override
-  public KmsClient withDefaultCredentials() throws GeneralSecurityException {
+  public KmsClient withDefaultCredentials() {
     return this;
   }
 

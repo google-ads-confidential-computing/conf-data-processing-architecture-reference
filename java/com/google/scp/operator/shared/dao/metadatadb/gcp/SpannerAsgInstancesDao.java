@@ -16,6 +16,7 @@
 
 package com.google.scp.operator.shared.dao.metadatadb.gcp;
 
+import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.SpannerAsgInstancesTableColumn.INSTANCE_GROUP_NAME;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.SpannerAsgInstancesTableColumn.INSTANCE_NAME;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.SpannerAsgInstancesTableColumn.REQUEST_TIME;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.SpannerAsgInstancesTableColumn.STATUS;
@@ -93,7 +94,7 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
   }
 
   @Override
-  public List<AsgInstance> getAsgInstancesByStatus(String status) throws AsgInstanceDaoException {
+  public List<AsgInstance> listAsgInstances(String status) throws AsgInstanceDaoException {
     List<AsgInstance> asgInstances = new ArrayList();
 
     try {
@@ -103,6 +104,55 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
               .bind("status")
               .to(status)
               .build();
+      try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
+        while (resultSet.next()) {
+          asgInstances.add(convertResultSetToAsgInstance(resultSet));
+        }
+      }
+      return asgInstances;
+    } catch (SpannerException e) {
+      throw new AsgInstanceDaoException(e);
+    }
+  }
+
+  @Override
+  public List<AsgInstance> listAsgInstances(String status, String instanceGroup)
+      throws AsgInstanceDaoException {
+    List<AsgInstance> asgInstances = new ArrayList();
+
+    try {
+      Statement statement;
+      if (instanceGroup == null) {
+        statement =
+            Statement.newBuilder(
+                    "SELECT * FROM "
+                        + TABLE_NAME
+                        + " WHERE "
+                        + STATUS.label
+                        + " = @status"
+                        + " AND "
+                        + INSTANCE_GROUP_NAME.label
+                        + " IS NULL")
+                .bind("status")
+                .to(status)
+                .build();
+      } else {
+        statement =
+            Statement.newBuilder(
+                    "SELECT * FROM "
+                        + TABLE_NAME
+                        + " WHERE "
+                        + STATUS.label
+                        + " = @status"
+                        + " AND "
+                        + INSTANCE_GROUP_NAME.label
+                        + " = @instanceGroup")
+                .bind("status")
+                .to(status)
+                .bind("instanceGroup")
+                .to(instanceGroup)
+                .build();
+      }
       try (ResultSet resultSet = dbClient.singleUse().executeQuery(statement)) {
         while (resultSet.next()) {
           asgInstances.add(convertResultSetToAsgInstance(resultSet));
@@ -141,6 +191,11 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
                   .to(
                       asgInstance.hasTerminationReason()
                           ? asgInstance.getTerminationReason().toString()
+                          : null)
+                  .set(INSTANCE_GROUP_NAME.label)
+                  .to(
+                      asgInstance.hasInstanceGroupName()
+                          ? asgInstance.getInstanceGroupName()
                           : null)
                   .build());
       dbClient.write(inserts);
@@ -184,6 +239,11 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
                                 asgInstance.hasTerminationReason()
                                     ? asgInstance.getTerminationReason().toString()
                                     : null)
+                            .set(INSTANCE_GROUP_NAME.label)
+                            .to(
+                                asgInstance.hasInstanceGroupName()
+                                    ? asgInstance.getInstanceGroupName()
+                                    : null)
                             .build());
                 logger.debug("Buffering spanner updates: " + updates);
                 transaction.buffer(updates);
@@ -221,6 +281,10 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
           InstanceTerminationReason.valueOf(resultSet.getString(TERMINATION_REASON.label)));
     }
 
+    if (!resultSet.isNull(INSTANCE_GROUP_NAME.label)) {
+      asgInstanceBuilder.setInstanceGroupName(resultSet.getString(INSTANCE_GROUP_NAME.label));
+    }
+
     return asgInstanceBuilder.build();
   }
 
@@ -231,7 +295,8 @@ public class SpannerAsgInstancesDao implements AsgInstancesDao {
     REQUEST_TIME("RequestTime"),
     TERMINATION_TIME("TerminationTime"),
     TTL("Ttl"),
-    TERMINATION_REASON("TerminationReason");
+    TERMINATION_REASON("TerminationReason"),
+    INSTANCE_GROUP_NAME("InstanceGroupName");
 
     /** Value of a {@code SpannerAsgInstancesTableColumn} constant. */
     public final String label;

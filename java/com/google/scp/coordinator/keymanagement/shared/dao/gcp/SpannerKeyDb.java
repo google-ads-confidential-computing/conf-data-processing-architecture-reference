@@ -124,6 +124,10 @@ public final class SpannerKeyDb implements KeyDb {
             .bind("setName")
             .to(setName)
             .build();
+    return retrieveKeys(statement);
+  }
+
+  private ImmutableList<EncryptionKey> retrieveKeys(Statement statement) throws ServiceException {
     ImmutableList.Builder<EncryptionKey> keysBuilder = ImmutableList.builder();
     try (var readContext = dbClient.singleUse(stalenessBound)) {
       var resultSet = readContext.executeQuery(statement);
@@ -138,6 +142,27 @@ public final class SpannerKeyDb implements KeyDb {
   public ImmutableList<EncryptionKey> getAllKeys() throws ServiceException {
     throw new ServiceException(
         NOT_FOUND, UNSUPPORTED_OPERATION.name(), "Unsupported operation in Spanner");
+  }
+
+  @Override
+  public ImmutableList<EncryptionKey> listAllKeysForSetName(String setName)
+      throws ServiceException {
+    Statement statement =
+        Statement.newBuilder(
+                "SELECT * FROM "
+                    + TABLE_NAME
+                    + " WHERE "
+                    // Filter keys with matching set name, if it's the default set, includes keys
+                    // with null set name.
+                    + " SetName = @setName OR (@setName = @defaultSetName AND SetName IS NULL)"
+                    + " ORDER BY "
+                    + NATURAL_ORDERING)
+            .bind("defaultSetName")
+            .to(DEFAULT_SET_NAME)
+            .bind("setName")
+            .to(setName)
+            .build();
+    return retrieveKeys(statement);
   }
 
   @Override
@@ -205,7 +230,7 @@ public final class SpannerKeyDb implements KeyDb {
       throw new ServiceException(
           INTERNAL, DATASTORE_ERROR.name(), "Multiple keys found with keyId " + keyId);
     }
-    return keys.get(0);
+    return keys.getFirst();
   }
 
   @Override
@@ -378,7 +403,7 @@ public final class SpannerKeyDb implements KeyDb {
     }
   }
 
-  private static long toEpochMilliSeconds(Timestamp timestamp) throws ServiceException {
+  private static long toEpochMilliSeconds(Timestamp timestamp) {
     Instant instant = Instant.ofEpochSecond(timestamp.getSeconds(), timestamp.getNanos());
     return instant.toEpochMilli();
   }

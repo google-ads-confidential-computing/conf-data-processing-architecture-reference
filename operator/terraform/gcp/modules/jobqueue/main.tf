@@ -14,16 +14,21 @@
  * limitations under the License.
  */
 
+locals {
+  resource_prefix = var.workgroup == null ? var.environment : "${var.environment}-${var.workgroup}"
+}
 resource "google_pubsub_topic" "job_queue_topic" {
-  name = "${var.environment}-JobQueue"
+  name = "${local.resource_prefix}-JobQueue"
 
   labels = {
-    environment = var.environment
+    environment = var.environment,
+    workgroup   = var.workgroup,
+    type        = "scp-jobqueue"
   }
 }
 
 resource "google_pubsub_subscription" "job_queue_sub" {
-  name  = "${var.environment}-JobQueueSub"
+  name  = "${local.resource_prefix}-JobQueueSub"
   topic = google_pubsub_topic.job_queue_topic.name
 
   ack_deadline_seconds = 600
@@ -34,6 +39,7 @@ resource "google_pubsub_subscription" "job_queue_sub" {
   }
 
   labels = {
-    environment = var.environment
+    environment = var.environment,
+    workgroup   = var.workgroup
   }
 }

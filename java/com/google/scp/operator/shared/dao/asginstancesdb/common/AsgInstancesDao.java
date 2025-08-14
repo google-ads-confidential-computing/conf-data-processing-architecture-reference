@@ -39,7 +39,19 @@ public interface AsgInstancesDao {
    * @param status the instance termination status to query for
    * @throws AsgInstanceDaoException for other failures to read
    */
-  List<AsgInstance> getAsgInstancesByStatus(String status) throws AsgInstanceDaoException;
+  List<AsgInstance> listAsgInstances(String status) throws AsgInstanceDaoException;
+
+  /**
+   * Retrieves information on a specific autoscaling instance with a particular status. Empty list
+   * is returned if no records exist.
+   *
+   * @param status the instance termination status to query for
+   * @param instanceGroup the instance group to query for. Null value will query for records with
+   *     instanceGroup set to null.
+   * @throws AsgInstanceDaoException for other failures to read
+   */
+  List<AsgInstance> listAsgInstances(String status, String instanceGroup)
+      throws AsgInstanceDaoException;
 
   /**
    * Inserts a terminated instance entry, if the instance already exists, it will update the record.

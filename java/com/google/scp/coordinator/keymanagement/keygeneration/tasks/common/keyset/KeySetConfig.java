@@ -30,10 +30,25 @@ public abstract class KeySetConfig {
    * @param count the number of keys created for each rotation.
    * @param validityInDays the validity of the keys in number of days.
    * @param ttlInDays the TTL of the keys in number of days.
+   * @param createMaxDaysAhead number of days ahead allowed to create next active set
+   * @param overlapPeriodDays used to create overlapping keys
    */
   public static KeySetConfig create(
-      String name, String tinkTemplate, int count, int validityInDays, int ttlInDays) {
-    return new AutoValue_KeySetConfig(name, tinkTemplate, count, validityInDays, ttlInDays);
+      String name,
+      String tinkTemplate,
+      int count,
+      int validityInDays,
+      int ttlInDays,
+      int createMaxDaysAhead,
+      int overlapPeriodDays) {
+    return new AutoValue_KeySetConfig(
+        name,
+        tinkTemplate,
+        count,
+        validityInDays,
+        ttlInDays,
+        createMaxDaysAhead,
+        overlapPeriodDays);
   }
 
   /* Returns the name of the key set. */
@@ -50,4 +65,10 @@ public abstract class KeySetConfig {
 
   /* Returns the TTL of the keys in number of days. */
   public abstract int getTtlInDays();
+
+  /* Returns the TTL of the keys in number of days. */
+  public abstract int getCreateMaxDaysAhead();
+
+  /* Returns number of days active keys can overlap. */
+  public abstract int getOverlapPeriodDays();
 }

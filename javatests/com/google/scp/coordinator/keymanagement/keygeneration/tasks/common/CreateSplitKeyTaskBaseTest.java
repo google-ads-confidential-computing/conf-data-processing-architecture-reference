@@ -16,10 +16,13 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
 import static com.google.scp.shared.util.KeySplitUtil.reconstructXorKeysetHandle;
+import static java.lang.Integer.MAX_VALUE;
+import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,9 +33,13 @@ import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.Mac;
 import com.google.inject.Inject;
 import com.google.protobuf.ByteString;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient.KeyStorageServiceException;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KmsKeyAead;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
+import com.google.scp.shared.api.exception.ServiceException;
+import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
@@ -45,7 +52,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
   @Inject protected InMemoryKeyDb keyDb;
   @Inject @KmsKeyAead protected Aead keyEncryptionKeyAead;
 
-  public void create_differentTinkTemplates_successfullyReconstructExpectedPrimitives(Aead aead)
+  protected void create_differentTinkTemplates_successfullyReconstructExpectedPrimitives(Aead aead)
       throws Exception {
     // Given
     ImmutableList<Entry<String, Class<?>>> expectedPrimitives =
@@ -86,13 +93,13 @@ public abstract class CreateSplitKeyTaskBaseTest {
   @Test
   public void create_noKeys_createsActiveKeysAndPendingActiveForEach() throws Exception {
     // Given
-    assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE)).isEmpty();
+    assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
 
     // When
     task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365);
 
     // Then
-    assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE)).hasSize(5);
+    assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(5);
     assertThat(task.keyDb.getAllKeys()).hasSize(10);
   }
 
@@ -100,38 +107,42 @@ public abstract class CreateSplitKeyTaskBaseTest {
   public void create_onlyOneButNotEnough_createsOnlyMissingKey() throws Exception {
     // Given
     task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 7, 365);
-    assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE)).hasSize(1);
+    assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(1);
     assertThat(task.keyDb.getAllKeys()).hasSize(2);
 
     // When
     task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365);
 
     // Then
-    assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE)).hasSize(5);
+    assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(5);
     assertThat(task.keyDb.getAllKeys()).hasSize(10);
   }
 
   @Test
   public void create_noKeys_createsKeysWithOneDayBuffer() throws Exception {
     // Given
-    assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE)).isEmpty();
+    assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
 
     // When
     task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365);
 
     // Then
-    EncryptionKey key = task.keyDb.getActiveKeys(Integer.MAX_VALUE).get(0);
+    EncryptionKey key = task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE).get(0);
     Instant expiration = Instant.ofEpochMilli(key.getExpirationTime());
     Instant refreshWindowBeforeExpiration =
         expiration.minus(CreateSplitKeyTaskBase.KEY_REFRESH_WINDOW);
     Instant refreshWindowAndSecondBeforeExpiration =
         refreshWindowBeforeExpiration.minus(1, ChronoUnit.SECONDS);
 
-    assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE, refreshWindowAndSecondBeforeExpiration))
+    assertThat(
+        task.keyDb.getActiveKeys(
+            DEFAULT_SET_NAME,
+            MAX_VALUE,
+            refreshWindowAndSecondBeforeExpiration))
         .hasSize(5);
-    assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE, refreshWindowBeforeExpiration))
+    assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE, refreshWindowBeforeExpiration))
         .hasSize(10);
-    assertThat(task.keyDb.getActiveKeys(Integer.MAX_VALUE, expiration)).hasSize(5);
+    assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE, expiration)).hasSize(5);
   }
 
   @Test
@@ -140,8 +151,8 @@ public abstract class CreateSplitKeyTaskBaseTest {
     String setName1 = "set-name-1";
     String setName2 = "set-name-2";
 
-    assertThat(task.keyDb.getActiveKeys(setName1, Integer.MAX_VALUE)).isEmpty();
-    assertThat(task.keyDb.getActiveKeys(setName2, Integer.MAX_VALUE)).isEmpty();
+    assertThat(task.keyDb.getActiveKeys(setName1, MAX_VALUE)).isEmpty();
+    assertThat(task.keyDb.getActiveKeys(setName2, MAX_VALUE)).isEmpty();
 
     // When
     task.create(setName1, "DHKEM_X25519_HKDF_SHA256_HKDF_SHA256_CHACHA20_POLY1305_RAW", 5, 7, 365);
@@ -160,5 +171,28 @@ public abstract class CreateSplitKeyTaskBaseTest {
         .hasSize(10);
   }
 
+  /** Ensure that even if we fail after two attempted generations, we store two keys */
+  @Test
+  public void createSplitKey_keyGenerationInterrupted() throws Exception {
+    int keysToCreate = 5;
+
+    when(getKeyStorageClient().createKey(any(), any(), any()))
+        .thenCallRealMethod()
+        .thenCallRealMethod()
+        .thenThrow(new KeyStorageServiceException("Failure", new GeneralSecurityException()));
+
+    ServiceException ex =
+        assertThrows(
+            ServiceException.class,
+            () ->
+                task.createSplitKey(
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
+
+    assertThat(ex).hasCauseThat().isInstanceOf(KeyStorageServiceException.class);
+    ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
+    assertThat(keys).hasSize(3);
+  }
+
+  protected abstract KeyStorageClient getKeyStorageClient();
   protected abstract ImmutableList<byte[]> capturePeerSplits() throws Exception;
 }

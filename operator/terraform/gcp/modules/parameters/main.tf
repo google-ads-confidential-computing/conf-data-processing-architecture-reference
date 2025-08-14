@@ -13,9 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+locals {
+  env_workgroup_name = var.workgroup == null ? var.environment : "${var.environment}-${var.workgroup}"
+}
 
 resource "google_secret_manager_secret" "worker_parameter" {
-  secret_id = format("scp-%s-%s", var.environment, var.parameter_name)
+  secret_id = format("scp-%s-%s", local.env_workgroup_name, var.parameter_name)
   replication {
     auto {
     }

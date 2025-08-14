@@ -17,6 +17,7 @@
 module "base_worker" {
   source                        = "../base_worker"
   environment                   = var.environment
+  workgroup                     = var.workgroup
   project_id                    = var.project_id
   network                       = var.network
   subnet_id                     = var.subnet_id
@@ -34,7 +35,7 @@ module "base_worker" {
   worker_instance_disk_type    = var.worker_instance_disk_type
   worker_instance_disk_size_gb = var.worker_instance_disk_size_gb
 
-  user_provided_worker_sa_email = var.user_provided_worker_sa_email
+  worker_service_account_email = var.worker_service_account_email
 
   # Instance Metadata
   worker_logging_enabled           = var.worker_logging_enabled
@@ -57,14 +58,24 @@ module "base_worker" {
 }
 
 module "java_custom_monitoring" {
-  source                        = "../../java_custom_monitoring"
-  count                         = var.java_custom_metrics_alarms_enabled ? 1 : 0
-  environment                   = var.environment
-  vm_instance_group_name        = var.vm_instance_group_name
-  alarm_duration_sec            = var.alarm_duration_sec
-  alarm_eval_period_sec         = var.alarm_eval_period_sec
-  notification_channel_id       = var.notification_channel_id
-  java_job_validations_to_alert = var.java_job_validations_to_alert
-  enable_new_metrics            = var.enable_new_metrics
-  enable_legacy_metrics         = var.enable_legacy_metrics
+  source                               = "../../java_custom_monitoring"
+  count                                = var.java_custom_metrics_alarms_enabled ? 1 : 0
+  environment                          = var.environment
+  workgroup                            = var.workgroup
+  vm_instance_group_name               = var.vm_instance_group_name
+  vm_instance_group_base_instance_name = var.vm_instance_group_base_instance_name
+  alarm_duration_sec                   = var.alarm_duration_sec
+  alarm_eval_period_sec                = var.alarm_eval_period_sec
+  notification_channel_id              = var.notification_channel_id
+  java_job_validations_to_alert        = var.java_job_validations_to_alert
+  enable_new_metrics                   = var.enable_new_metrics
+  enable_legacy_metrics                = var.enable_legacy_metrics
+
+  legacy_jobclient_job_validation_failure_metric_type = var.legacy_jobclient_job_validation_failure_metric_type
+  legacy_jobclient_error_metric_type                  = var.legacy_jobclient_error_metric_type
+  legacy_worker_error_metric_type                     = var.legacy_worker_error_metric_type
+  new_jobclient_job_validation_failure_metric_type    = var.new_jobclient_job_validation_failure_metric_type
+  new_jobclient_error_metric_type                     = var.new_jobclient_error_metric_type
+  new_worker_error_metric_type                        = var.new_worker_error_metric_type
+
 }

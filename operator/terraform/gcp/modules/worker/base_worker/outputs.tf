@@ -15,7 +15,7 @@
  */
 
 output "worker_service_account_email" {
-  value       = local.worker_service_account_email
+  value       = var.worker_service_account_email
   description = "The worker service account email to provide to coordinator."
 }
 

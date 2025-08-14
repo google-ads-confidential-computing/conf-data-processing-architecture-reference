@@ -1,7 +1,9 @@
 package com.google.scp.e2e.shared;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.KEY_LIMIT;
+import static java.lang.Integer.MAX_VALUE;
 import static org.mockito.Mockito.mock;
 
 import com.google.acai.AfterTest;
@@ -25,6 +27,7 @@ import com.google.scp.coordinator.keymanagement.keystorage.service.aws.testing.K
 import com.google.scp.coordinator.keymanagement.keystorage.service.aws.testing.LocalKeyStorageServiceModule;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbTableName;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDb;
+import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.aws.Annotations.CoordinatorAEncryptionKeySignatureAlgorithm;
 import com.google.scp.coordinator.keymanagement.testutils.aws.Annotations.CoordinatorAEncryptionKeySignatureKeyId;
 import com.google.scp.coordinator.keymanagement.testutils.aws.Annotations.CoordinatorAKeyDbTableName;
@@ -147,9 +150,7 @@ public final class MultiCoordinatorTestEnv extends AbstractModule {
 
   @Override
   public void configure() {
-    if (repoNameOverride.isPresent()) {
-      bind(RepoUtil.class).toInstance(new RepoUtil(repoNameOverride.get()));
-    }
+    repoNameOverride.ifPresent(s -> bind(RepoUtil.class).toInstance(new RepoUtil(s)));
     bind(Integer.class).annotatedWith(KeyLimit.class).toInstance(KEY_LIMIT);
     bind(AwsSessionCredentialsProvider.class)
         .annotatedWith(CoordinatorACredentialsProvider.class)
@@ -197,7 +198,7 @@ public final class MultiCoordinatorTestEnv extends AbstractModule {
       splitKeyQueueHelper.triggerKeyGeneration();
       splitKeyQueueHelper.waitForEmptyQueue();
       checkState(
-          keyDb.getActiveKeys(Integer.MAX_VALUE).size()
+          keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE).size()
               == SplitKeyGenerationArgsLocalStackProvider.KEY_COUNT,
           "Key generation must successfully generate active keys.");
     }

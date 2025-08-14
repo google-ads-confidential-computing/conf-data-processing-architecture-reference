@@ -28,3 +28,8 @@ output "autoscaler_cloudfunction_name" {
   value       = google_cloudfunctions2_function.worker_scale_in_cloudfunction.name
   description = "The name of the worker scale in cloud function."
 }
+
+output "worker_managed_instance_group_base_instance_name" {
+  value       = google_compute_region_instance_group_manager.worker_instance_group.base_instance_name
+  description = "The worker managed instance group base instance name."
+}

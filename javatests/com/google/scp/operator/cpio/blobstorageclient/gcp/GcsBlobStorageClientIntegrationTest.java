@@ -23,6 +23,7 @@ import static org.junit.Assert.assertThrows;
 import com.google.acai.Acai;
 import com.google.cloud.storage.BucketInfo;
 import com.google.cloud.storage.Storage;
+import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -33,6 +34,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import com.google.scp.operator.cpio.blobstorageclient.ErrorReason;
+import com.google.scp.operator.cpio.blobstorageclient.model.BlobMetadata;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import com.google.scp.shared.testutils.gcp.LocalGcsContainerTestModule;
@@ -116,7 +118,96 @@ public final class GcsBlobStorageClientIntegrationTest {
                 DataLocation.ofBlobStoreDataLocation(
                     BlobStoreDataLocation.create(bucketName, "NonExistentKey"))));
     assertThat(exception.getReason()).isEqualTo(ErrorReason.BLOB_NOT_FOUND);
+  }
 
+  @Test
+  public void getBlobMetadata_returnsCorrectMetadata()
+      throws BlobStorageClientException, IOException {
+    String bucketName = GCP_BUCKET + "3";
+    String keyName = "metadataKey";
+    gcsStorage.create(BucketInfo.newBuilder(bucketName).build());
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(bucketName, keyName));
+    gcsBlobStorageClient.putBlob(location, file.toPath());
+
+    BlobMetadata metadata = gcsBlobStorageClient.getBlobMetadata(location);
+
+    assertThat(metadata.dataLocation().blobStoreDataLocation().bucket()).isEqualTo(bucketName);
+    assertThat(metadata.dataLocation().blobStoreDataLocation().key()).isEqualTo(keyName);
+    assertThat(metadata.size()).isEqualTo(file.length());
+  }
+
+  @Test
+  public void getBlobMetadata_exceptionOnMissingObject() {
+    String bucketName = GCP_BUCKET + "4";
+    gcsStorage.create(BucketInfo.newBuilder(bucketName).build());
+
+    BlobStorageClientException exception =
+        assertThrows(
+            BlobStorageClientException.class,
+            () ->
+                gcsBlobStorageClient.getBlobMetadata(
+                    DataLocation.ofBlobStoreDataLocation(
+                        BlobStoreDataLocation.create(bucketName, "NonExistentKey"))));
+    assertThat(exception.getReason()).isEqualTo(ErrorReason.BLOB_NOT_FOUND);
+  }
+
+  @Test
+  public void listBlobMetadata_withPrefix_returnsMatchingMetadata()
+      throws BlobStorageClientException, IOException {
+    String bucketName = GCP_BUCKET + "7";
+    gcsStorage.create(BucketInfo.newBuilder(bucketName).build());
+    String prefix = "reports/2025/";
+    String key1 = prefix + "report1.csv";
+    String key2 = prefix + "report2.csv";
+    String otherKey = "other/report.csv";
+
+    gcsBlobStorageClient.putBlob(
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(bucketName, key1)),
+        file.toPath());
+    gcsBlobStorageClient.putBlob(
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(bucketName, key2)),
+        file.toPath());
+    gcsBlobStorageClient.putBlob(
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(bucketName, otherKey)),
+        file.toPath());
+
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(bucketName, prefix));
+    ImmutableList<BlobMetadata> listedBlobs = gcsBlobStorageClient.listBlobMetadata(location);
+
+    assertThat(listedBlobs)
+        .containsExactly(
+            BlobMetadata.builder()
+                .setDataLocation(
+                    DataLocation.ofBlobStoreDataLocation(
+                        BlobStoreDataLocation.create(bucketName, key1)))
+                .setSize(file.length())
+                .build(),
+            BlobMetadata.builder()
+                .setDataLocation(
+                    DataLocation.ofBlobStoreDataLocation(
+                        BlobStoreDataLocation.create(bucketName, key2)))
+                .setSize(file.length())
+                .build());
+  }
+
+  @Test
+  public void listBlobMetadata_withNonMatchingPrefix_returnsEmptyList()
+      throws BlobStorageClientException, IOException {
+    String bucketName = GCP_BUCKET + "8";
+    gcsStorage.create(BucketInfo.newBuilder(bucketName).build());
+    String key = "reports/2025/report1.csv";
+    gcsBlobStorageClient.putBlob(
+        DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(bucketName, key)),
+        file.toPath());
+
+    DataLocation location =
+        DataLocation.ofBlobStoreDataLocation(
+            BlobStoreDataLocation.create(bucketName, "non-matching-prefix/"));
+    ImmutableList<BlobMetadata> listedBlobs = gcsBlobStorageClient.listBlobMetadata(location);
+
+    assertThat(listedBlobs).isEmpty();
   }
 
   /** The main guice module used for this test. */

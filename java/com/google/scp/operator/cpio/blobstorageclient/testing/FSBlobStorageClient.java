@@ -18,6 +18,7 @@ package com.google.scp.operator.cpio.blobstorageclient.testing;
 
 import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
+import com.google.scp.operator.cpio.blobstorageclient.model.BlobMetadata;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import java.io.IOException;
@@ -131,6 +132,28 @@ public class FSBlobStorageClient implements BlobStorageClient {
   public void deleteBlob(DataLocation location, Optional<String> accountIdentity)
       throws BlobStorageClientException {
     deleteBlob(location);
+  }
+
+
+  @Override
+  public BlobMetadata getBlobMetadata(DataLocation location) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public BlobMetadata getBlobMetadata(DataLocation location, Optional<String> accountIdentity) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ImmutableList<BlobMetadata> listBlobMetadata(DataLocation location) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ImmutableList<BlobMetadata> listBlobMetadata(
+      DataLocation location, Optional<String> accountIdentity) {
+    throw new UnsupportedOperationException();
   }
 
   public synchronized Path getLastWrittenFile() {

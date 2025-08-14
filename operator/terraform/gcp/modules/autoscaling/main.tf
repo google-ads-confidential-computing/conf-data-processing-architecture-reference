@@ -22,6 +22,7 @@ locals {
   # Reformatted here from a potentially long string of integer value to a hex
   # that's 1-6 characters long.
   worker_instance_group_suffix = format("%x", parseint(substr(null_resource.worker_template_mig_replace_trigger.id, 0, 7), 10))
+  resource_prefix              = var.workgroup == null ? var.environment : "${var.environment}-${var.workgroup}"
 }
 
 resource "null_resource" "worker_template_mig_replace_trigger" {
@@ -44,9 +45,9 @@ resource "null_resource" "worker_template_mig_replace_trigger" {
 }
 
 resource "google_compute_region_instance_group_manager" "worker_instance_group" {
-  name               = "${var.environment}-worker-mig-${local.worker_instance_group_suffix}"
+  name               = "${local.resource_prefix}-worker-mig-${local.worker_instance_group_suffix}"
   description        = "The managed instance group for SCP worker instances."
-  base_instance_name = "${var.environment}-worker"
+  base_instance_name = "${local.resource_prefix}-worker"
 
   region = var.region
 
@@ -72,7 +73,7 @@ resource "google_compute_region_instance_group_manager" "worker_instance_group" 
 resource "google_compute_region_autoscaler" "worker_autoscaler" {
   provider = google-beta
 
-  name    = "${var.environment}-worker-autoscaler"
+  name    = "${local.resource_prefix}-worker-autoscaler"
   project = var.project_id
   region  = var.region
   target  = google_compute_region_instance_group_manager.worker_instance_group.id

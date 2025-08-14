@@ -43,8 +43,36 @@ locals {
   ])
 
   service_domain_to_address_map = {
-    (local.public_key_domain) : module.public_key_service_load_balancer.loadbalancer_ip,
+    (local.public_key_domain) : module.public_key_service.loadbalancer_ip,
     (local.private_key_domain) : module.private_key_service.loadbalancer_ip
+  }
+
+  kms_key_base_uri = "gcp-kms://${module.keygenerationservice.key_ring_id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
+  migration_kms_key_base_uri = (var.location_new_key_ring == null
+    ? local.kms_key_base_uri
+    : "gcp-kms://${module.key_management_service[0].kms_key_ring.id}/cryptoKeys/${var.environment}_$setName$_kms_key"
+  )
+  migration_peer_coordinator_kms_key_base_uri = (var.migration_peer_coordinator_kms_key_base_uri == null
+    ? var.peer_coordinator_kms_key_base_uri
+    : var.migration_peer_coordinator_kms_key_base_uri
+  )
+}
+
+resource "null_resource" "has_valid_migration_configuration" {
+  # Ensures that if it is desired to populate the migration key data, that
+  # all necessary information from a new key set is provided.
+  lifecycle {
+    precondition {
+      condition = !var.populate_migration_key_data || (
+        local.migration_peer_coordinator_kms_key_base_uri != var.peer_coordinator_kms_key_base_uri
+        && local.migration_kms_key_base_uri != local.kms_key_base_uri
+      )
+      error_message = <<EOF
+Variable populate_migration_key_data is set to true, but the required migration
+data is not available. To enable migration, provide values for
+'location_new_key_ring' and 'migration_peer_coordinator_kms_key_base_uri'.
+EOF
+    }
   }
 }
 
@@ -148,54 +176,14 @@ module "key_management_service" {
   key_sets              = local.key_sets
 }
 
-module "public_key_service_dashboard" {
-  source = "../../modules/public_key_service"
-
-  environment         = var.environment
-  project_id          = var.project_id
-  service_name_suffix = "public-ks-cr"
-
-  cloud_function_ids = module.public_key_service.cloud_run_ids
-  load_balancer_name = module.public_key_service_load_balancer.loadbalancer_name
-
-  # Alerts
-  alarms_enabled                = var.alarms_enabled
-  alarm_eval_period_sec         = var.public_key_service_alarm_eval_period_sec
-  alarm_duration_sec            = var.public_key_service_alarm_duration_sec
-  empty_key_set_error_threshold = var.public_key_service_empty_key_set_error_threshold
-  general_error_threshold       = var.public_key_service_general_error_threshold
-  alerts_severity_overrides     = var.alert_severity_overrides
+moved {
+  from = module.public_key_service_dashboard
+  to   = module.public_key_service.module.dashboard
 }
 
-module "public_key_service_load_balancer" {
-  source = "../../modules/load_balancer"
-
-  environment     = var.environment
-  project_id      = var.project_id
-  service_id      = "get-public-key"
-  ssl_cert_id     = "public-key"
-  monitoring_name = "Public Key Service"
-
-  cloud_run_ids = module.public_key_service.cloud_run_ids
-
-  enable_cdn                    = var.enable_public_key_service_cdn
-  cdn_default_ttl_seconds       = var.public_key_service_cdn_default_ttl_seconds
-  cdn_max_ttl_seconds           = var.public_key_service_cdn_max_ttl_seconds
-  cdn_serve_while_stale_seconds = var.public_key_service_cdn_serve_while_stale_seconds
-
-  regions_to_exclude_from_lb = var.public_key_service_regions_to_exclude_from_lb
-
-  # Custom url/domain
-  managed_domain = local.public_key_domain
-
-  # Alert settings
-  alarms_enabled           = var.alarms_enabled
-  alarm_eval_period_sec    = var.public_key_service_alarm_eval_period_sec
-  alarm_duration_sec       = var.public_key_service_alarm_duration_sec
-  alert_severity_overrides = var.alert_severity_overrides
-  lb_max_latency_ms        = var.public_key_service_lb_max_latency_ms
-  lb_5xx_threshold         = var.public_key_service_lb_5xx_threshold
-  lb_5xx_ratio_threshold   = var.public_key_service_lb_5xx_ratio_threshold
+moved {
+  from = module.public_key_service_load_balancer
+  to   = module.public_key_service.module.load_balancer
 }
 
 module "public_key_service" {
@@ -219,11 +207,24 @@ module "public_key_service" {
   spanner_database_name = module.keydb.keydb_name
   spanner_instance_name = module.keydb.keydb_instance_name
 
+  # Load Balancer
+  managed_domain                = local.public_key_domain
+  regions_to_exclude_from_lb    = var.public_key_service_regions_to_exclude_from_lb
+  enable_cdn                    = var.enable_public_key_service_cdn
+  cdn_default_ttl_seconds       = var.public_key_service_cdn_default_ttl_seconds
+  cdn_max_ttl_seconds           = var.public_key_service_cdn_max_ttl_seconds
+  cdn_serve_while_stale_seconds = var.public_key_service_cdn_serve_while_stale_seconds
+
   # Alert
-  alarms_enabled           = var.alarms_enabled
-  alarm_eval_period_sec    = var.public_key_service_alarm_eval_period_sec
-  alarm_duration_sec       = var.public_key_service_alarm_duration_sec
-  alert_severity_overrides = var.alert_severity_overrides
+  alarms_enabled                = var.alarms_enabled
+  alarm_eval_period_sec         = var.public_key_service_alarm_eval_period_sec
+  alarm_duration_sec            = var.public_key_service_alarm_duration_sec
+  alert_severity_overrides      = var.alert_severity_overrides
+  empty_key_set_error_threshold = var.public_key_service_empty_key_set_error_threshold
+  general_error_threshold       = var.public_key_service_general_error_threshold
+  lb_max_latency_ms             = var.public_key_service_lb_max_latency_ms
+  lb_5xx_threshold              = var.public_key_service_lb_5xx_threshold
+  lb_5xx_ratio_threshold        = var.public_key_service_lb_5xx_ratio_threshold
 
   cloud_run_5xx_threshold                   = var.public_key_service_5xx_threshold
   cloud_run_max_execution_time_max          = var.public_key_service_max_execution_time_max
@@ -247,9 +248,9 @@ module "private_key_service" {
 
   # Cloud Run settings
   cpu_count          = var.private_key_service_cloud_run_cpu_count
-  memory_mb          = var.encryption_key_service_cloudfunction_memory_mb
+  memory_mb          = var.private_key_service_cloudfunction_memory_mb
   concurrency        = var.private_key_service_cloud_run_concurrency
-  max_instance_count = var.encryption_key_service_cloudfunction_max_instances
+  max_instance_count = var.private_key_service_cloudfunction_max_instances
   min_instance_count = var.encryption_key_service_cloudfunction_min_instances
 
   # Spanner and access configs
@@ -262,19 +263,19 @@ module "private_key_service" {
 
   # Alert settings
   alarms_enabled           = var.alarms_enabled
-  alarm_eval_period_sec    = var.encryptionkeyservice_alarm_eval_period_sec
-  alarm_duration_sec       = var.encryptionkeyservice_alarm_duration_sec
+  alarm_eval_period_sec    = var.private_key_service_alarm_eval_period_sec
+  alarm_duration_sec       = var.private_key_service_alarm_duration_sec
   alert_severity_overrides = var.alert_severity_overrides
 
   get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
 
-  cloud_run_5xx_threshold                   = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  cloud_run_alert_on_memory_usage_threshold = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold
-  cloud_run_max_execution_time_max          = var.encryptionkeyservice_cloudfunction_max_execution_time_max
+  cloud_run_5xx_threshold                   = var.private_key_service_cloudfunction_5xx_threshold
+  cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloudfunction_alert_on_memory_usage_threshold
+  cloud_run_max_execution_time_max          = var.private_key_service_cloudfunction_max_execution_time_max
 
-  lb_5xx_threshold       = var.encryptionkeyservice_lb_5xx_threshold
-  lb_5xx_ratio_threshold = var.encryptionkeyservice_lb_5xx_ratio_threshold
-  lb_max_latency_ms      = var.encryptionkeyservice_lb_max_latency_ms
+  lb_5xx_threshold       = var.private_key_service_lb_5xx_threshold
+  lb_5xx_ratio_threshold = var.private_key_service_lb_5xx_ratio_threshold
+  lb_max_latency_ms      = var.private_key_service_lb_max_latency_ms
 }
 
 module "domain_a_records" {
@@ -393,13 +394,6 @@ module "key_sets_config" {
   parameter_value = jsonencode(var.key_sets_config)
 }
 
-module "populate_migration_key_data" {
-  source          = "../../modules/parameters"
-  environment     = var.environment
-  parameter_name  = "POPULATE_MIGRATION_KEY_DATA"
-  parameter_value = var.populate_migration_key_data
-}
-
 # TODO: b/428770204 - Remove this flag post migration.
 module "disable_key_set_acl" {
   source          = "../../modules/parameters"
@@ -413,16 +407,7 @@ module "kms_key_ring_uri" {
   source          = "../../modules/parameters"
   environment     = var.environment
   parameter_name  = "KMS_KEY_BASE_URI"
-  parameter_value = "gcp-kms://${module.keygenerationservice.key_ring_id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
-}
-
-module "migration_kms_key_ring_uri" {
-  source         = "../../modules/parameters"
-  environment    = var.environment
-  parameter_name = "MIGRATION_KMS_KEY_BASE_URI"
-  parameter_value = (var.location_new_key_ring == null || !var.populate_migration_key_data
-    ? "gcp-kms://${module.keygenerationservice.key_ring_id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
-  : "gcp-kms://${module.key_management_service[0].kms_key_ring.id}/cryptoKeys/${var.environment}_$setName$_key")
+  parameter_value = local.kms_key_base_uri
 }
 
 module "peer_coordinator_kms_key_ring_uri" {
@@ -432,11 +417,23 @@ module "peer_coordinator_kms_key_ring_uri" {
   parameter_value = var.peer_coordinator_kms_key_base_uri
 }
 
+module "populate_migration_key_data" {
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = "POPULATE_MIGRATION_KEY_DATA"
+  parameter_value = var.populate_migration_key_data
+}
+
+module "migration_kms_key_ring_uri" {
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = "MIGRATION_KMS_KEY_BASE_URI"
+  parameter_value = local.migration_kms_key_base_uri
+}
+
 module "migration_peer_coordinator_kms_key_ring_uri" {
-  source         = "../../modules/parameters"
-  environment    = var.environment
-  parameter_name = "MIGRATION_PEER_COORDINATOR_KMS_KEY_BASE_URI"
-  parameter_value = (var.migration_peer_coordinator_kms_key_base_uri == null || !var.populate_migration_key_data
-    ? var.peer_coordinator_kms_key_base_uri
-  : var.migration_peer_coordinator_kms_key_base_uri)
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = "MIGRATION_PEER_COORDINATOR_KMS_KEY_BASE_URI"
+  parameter_value = local.migration_peer_coordinator_kms_key_base_uri
 }

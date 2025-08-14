@@ -22,6 +22,7 @@ import static com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyD
 import static com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDb.KEY_TYPE;
 import static com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDb.STATUS;
 import static com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDb.TTL_TIME;
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.DYNAMO_KEY_TABLE_NAME;
 import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.KEY_LIMIT;
 import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.encryptionKeyAttributeMap;
@@ -83,7 +84,7 @@ public class DynamoKeyDbTest extends KeyDbBaseTest {
   public void getActiveKeys_atLimitCount() throws ServiceException {
     IntStream.range(0, 10).forEach(unused -> putItemRandomValues(dynamoDbClient));
 
-    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(KEY_LIMIT);
+    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
 
     assertThat(keys).isNotEmpty();
     assertThat(keys).hasSize(KEY_LIMIT);
@@ -93,7 +94,7 @@ public class DynamoKeyDbTest extends KeyDbBaseTest {
   public void getActiveKeys_whenGreaterThanLimitCount() throws ServiceException {
     IntStream.range(0, 13).forEach(unused -> putItemRandomValues(dynamoDbClient));
 
-    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(KEY_LIMIT);
+    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
 
     assertThat(keys).isNotEmpty();
     assertThat(keys).hasSize(KEY_LIMIT);
@@ -103,7 +104,7 @@ public class DynamoKeyDbTest extends KeyDbBaseTest {
   public void getActiveKeys_whenLessThanLimitCount() throws ServiceException {
     IntStream.range(0, 3).forEach(unused -> putItemRandomValues(dynamoDbClient));
 
-    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(KEY_LIMIT);
+    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
 
     assertThat(keys).isNotEmpty();
     assertThat(keys).hasSize(3);
@@ -111,7 +112,7 @@ public class DynamoKeyDbTest extends KeyDbBaseTest {
 
   @Test
   public void getActiveKeys_whenEmpty() throws ServiceException {
-    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(KEY_LIMIT);
+    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
 
     assertThat(keys).isEmpty();
   }
@@ -121,7 +122,7 @@ public class DynamoKeyDbTest extends KeyDbBaseTest {
     EncryptionKey testKey =
         FakeEncryptionKey.create().toBuilder().setStatus(EncryptionKeyStatus.INACTIVE).build();
     putItem(dynamoDbClient, testKey);
-    List<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(KEY_LIMIT);
+    List<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
 
     assertThat(keys).isEmpty();
   }
@@ -130,7 +131,7 @@ public class DynamoKeyDbTest extends KeyDbBaseTest {
   public void getActiveKeys_expiredKeysAreFiltered() throws ServiceException {
     putItemWithExpirationTime(dynamoDbClient, now().minus(7, DAYS));
 
-    List<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(KEY_LIMIT);
+    List<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
 
     assertThat(keys).isEmpty();
   }
@@ -142,7 +143,7 @@ public class DynamoKeyDbTest extends KeyDbBaseTest {
       putItemWithExpirationTime(dynamoDbClient, now().plus(i + 1, DAYS));
     }
 
-    List<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(10);
+    List<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(DEFAULT_SET_NAME, 10);
 
     assertThat(keys).isNotEmpty();
     assertThat(keys).hasSize(10);
@@ -283,11 +284,11 @@ public class DynamoKeyDbTest extends KeyDbBaseTest {
             .build();
 
     dynamoKeyDb.createKey(expectedKey);
-    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(KEY_LIMIT);
+    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
 
     assertThat(keys).isNotEmpty();
     assertThat(keys).hasSize(1);
-    assertThat(keys.get(0).getPublicKey()).isEqualTo(expectedKey.getPublicKey());
+    assertThat(keys.getFirst().getPublicKey()).isEqualTo(expectedKey.getPublicKey());
   }
 
   @Test
@@ -302,12 +303,12 @@ public class DynamoKeyDbTest extends KeyDbBaseTest {
             .build();
 
     dynamoKeyDb.createKey(expectedKey);
-    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(KEY_LIMIT);
+    ImmutableList<EncryptionKey> keys = dynamoKeyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
 
     assertThat(keys).isNotEmpty();
     assertThat(keys).hasSize(1);
 
-    EncryptionKey key = keys.get(0);
+    EncryptionKey key = keys.getFirst();
     // EncryptionKeyStatus default is ACTIVE
     assertThat(key.getStatus()).isEqualTo(EncryptionKeyStatus.ACTIVE);
 

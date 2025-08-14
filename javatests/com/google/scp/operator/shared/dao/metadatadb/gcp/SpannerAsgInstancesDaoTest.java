@@ -117,17 +117,49 @@ public final class SpannerAsgInstancesDaoTest {
             .setStatus(InstanceStatus.TERMINATED)
             .build());
 
+    assertThat(spannerAsgInstancesDao.listAsgInstances(InstanceStatus.TERMINATED.toString()).size())
+        .isGreaterThan(2);
+  }
+
+  /** Test inserting asg instance and query for it based on status and null instance group. */
+  @Test
+  public void getAsgInstancesByStatus_insertAndListInstancesWithStatusAndNullInstanceGroup()
+      throws Exception {
+    spannerAsgInstancesDao.upsertAsgInstance(asgInstance);
+
     assertThat(
             spannerAsgInstancesDao
-                .getAsgInstancesByStatus(InstanceStatus.TERMINATED.toString())
+                .listAsgInstances(InstanceStatus.TERMINATING_WAIT.toString(), null)
                 .size())
-        .isGreaterThan(2);
+        .isGreaterThan(1);
+  }
+
+  /** Test inserting asg instance and query for it based on status and instance group. */
+  @Test
+  public void getAsgInstancesByStatus_insertAndListInstancesWithStatusAndInstanceGroup()
+      throws Exception {
+    spannerAsgInstancesDao.upsertAsgInstance(
+        AsgInstance.newBuilder()
+            .setInstanceName("456")
+            .setStatus(InstanceStatus.TERMINATING_WAIT)
+            .setRequestTime(ProtoUtil.toProtoTimestamp(Instant.parse("2020-01-01T00:00:00Z")))
+            .setTerminationTime(ProtoUtil.toProtoTimestamp(Instant.parse("2020-01-01T00:00:00Z")))
+            .setTtl(ProtoUtil.toProtoTimestamp(Instant.parse("2025-01-01T00:00:00Z")).getSeconds())
+            .setTerminationReason(TERMINATION_REASON_UNKNOWN)
+            .setInstanceGroupName("fake-group")
+            .build());
+
+    assertThat(
+            spannerAsgInstancesDao
+                .listAsgInstances(InstanceStatus.TERMINATING_WAIT.toString(), null)
+                .size())
+        .isGreaterThan(1);
   }
 
   /** Test that we get an empty list when querying instances for status when there are none. */
   @Test
   public void getAsgInstancesByStatus_returnEmptyListForNoResult() throws Exception {
-    assertThat(spannerAsgInstancesDao.getAsgInstancesByStatus("FakeStatus")).isEmpty();
+    assertThat(spannerAsgInstancesDao.listAsgInstances("FakeStatus")).isEmpty();
   }
 
   /** Test updating an Asg Instance status. */

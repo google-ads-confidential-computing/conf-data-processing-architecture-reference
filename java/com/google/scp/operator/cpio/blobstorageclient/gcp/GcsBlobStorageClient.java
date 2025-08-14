@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.ErrorReason;
+import com.google.scp.operator.cpio.blobstorageclient.model.BlobMetadata;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import java.io.IOException;
@@ -123,6 +124,62 @@ public final class GcsBlobStorageClient implements BlobStorageClient {
         .map(Blob::getBlobId)
         .map(BlobId::getName)
         .collect(ImmutableList.toImmutableList());
+  }
+
+  @Override
+  public BlobMetadata getBlobMetadata(DataLocation location) throws BlobStorageClientException {
+    return getBlobMetadata(location, Optional.empty());
+  }
+
+  @Override
+  public BlobMetadata getBlobMetadata(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException {
+    try (Storage storageClient = createGcsClient(accountIdentity, Scope.READ_ONLY)) {
+      BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
+      Blob blob = storageClient.get(BlobId.of(blobLocation.bucket(), blobLocation.key()));
+      if (blob == null) {
+        String errorMessage =
+            String.format(
+                "Blob not found. Bucket: %s Key: %s", blobLocation.bucket(), blobLocation.key());
+        throw new BlobStorageClientException(errorMessage, ErrorReason.BLOB_NOT_FOUND);
+      }
+      return BlobMetadata.builder()
+          .setDataLocation(location)
+          .setSize(blob.getSize())
+          .build();
+    } catch (BlobStorageClientException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new BlobStorageClientException(e);
+    }
+  }
+
+  @Override
+  public ImmutableList<BlobMetadata> listBlobMetadata(DataLocation location)
+      throws BlobStorageClientException {
+    return listBlobMetadata(location, Optional.empty());
+  }
+
+  @Override
+  public ImmutableList<BlobMetadata> listBlobMetadata(
+      DataLocation location, Optional<String> accountIdentity) throws BlobStorageClientException {
+    try (Storage storageClient = createGcsClient(accountIdentity, Scope.READ_ONLY)) {
+      BlobStoreDataLocation blobLocation = location.blobStoreDataLocation();
+      Page<Blob> blobs =
+          storageClient.list(blobLocation.bucket(), BlobListOption.prefix(blobLocation.key()));
+      return StreamSupport.stream(blobs.iterateAll().spliterator(), /* parallel= */ false)
+          .map(
+              blob ->
+                  BlobMetadata.builder()
+                      .setDataLocation(
+                          DataLocation.ofBlobStoreDataLocation(
+                              BlobStoreDataLocation.create(blob.getBucket(), blob.getName())))
+                      .setSize(blob.getSize())
+                      .build())
+          .collect(ImmutableList.toImmutableList());
+    } catch (Exception e) {
+      throw new BlobStorageClientException(e);
+    }
   }
 
   private Storage createGcsClient(Optional<String> accountIdentity, Scope scope)

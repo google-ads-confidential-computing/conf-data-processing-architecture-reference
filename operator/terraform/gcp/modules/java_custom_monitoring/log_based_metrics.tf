@@ -54,9 +54,9 @@ locals {
 resource "google_logging_metric" "worker_count_metrics" {
   for_each = local.worker_count_metrics
 
-  name        = "${var.environment}/${each.key}"
+  name        = var.workgroup == null ? "${var.environment}/${each.key}" : "${var.environment}/${var.workgroup}/${each.key}"
   description = each.value.description
-  filter      = "resource.type=\"gce_instance\" AND jsonPayload._HOSTNAME=~\"${var.environment}-worker\" AND jsonPayload.MESSAGE=~\"${each.value.text_filter}\""
+  filter      = "resource.type=\"gce_instance\" AND jsonPayload._HOSTNAME=~\"${var.vm_instance_group_base_instance_name}\" AND jsonPayload.MESSAGE=~\"${each.value.text_filter}\""
 
   metric_descriptor {
     metric_kind = "DELTA"
@@ -67,9 +67,9 @@ resource "google_logging_metric" "worker_count_metrics" {
 resource "google_logging_metric" "worker_linear_distribution_metrics" {
   for_each = local.worker_linear_distribution_metrics
 
-  name        = "${var.environment}/${each.key}"
+  name        = var.workgroup == null ? "${var.environment}/${each.key}" : "${var.environment}/${var.workgroup}/${each.key}"
   description = each.value.description
-  filter      = "resource.type=\"gce_instance\" AND jsonPayload._HOSTNAME=~\"${var.environment}-worker\" AND jsonPayload.MESSAGE=~\"${each.value.text_filter}\""
+  filter      = "resource.type=\"gce_instance\" AND jsonPayload._HOSTNAME=~\"${var.vm_instance_group_base_instance_name}\" AND jsonPayload.MESSAGE=~\"${each.value.text_filter}\""
 
   metric_descriptor {
     metric_kind = "DELTA"

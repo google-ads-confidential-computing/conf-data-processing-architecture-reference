@@ -16,6 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.app.gcp;
 
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.CREATE_MAX_DAYS_AHEAD;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.DISABLE_KEY_SET_ACL;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEYS_VALIDITY_IN_DAYS;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_DB_NAME;
@@ -24,10 +25,7 @@ import static com.google.scp.coordinator.keymanagement.shared.model.KeyGeneratio
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_TTL_IN_DAYS;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_URI;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.MIGRATION_PEER_COORDINATOR_KMS_KEY_BASE_URI;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.NUMBER_OF_KEYS_TO_CREATE;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_KMS_KEY_BASE_URI;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_KMS_KEY_URI;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_SERVICE_ACCOUNT;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_WIP_PROVIDER;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.POPULATE_MIGRATION_KEY_DATA;
@@ -39,6 +37,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.clients.configclient.gcp.GcpCoordinatorClientConfigModule;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.DisableKeySetAcl;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationCreateMaxDaysAhead;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationKeyCount;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationTtlInDays;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationValidityInDays;
@@ -46,8 +45,7 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotat
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceBaseUrl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceCloudfunctionUrl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KmsKeyUri;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.MigrationPeerCoordinatorKmsKeyBaseUri;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorKmsKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorKmsKeyBaseUriArg;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorServiceAccount;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorWipProvider;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PopulateMigrationKeyData;
@@ -76,6 +74,8 @@ import java.util.Optional;
 
 /** Module for Key Generation Application. */
 public final class KeyGenerationModule extends AbstractModule {
+
+  private static final int DEFAULT_CREATE_MAX_DAYS_AHEAD = 365;
 
   private final KeyGenerationArgs args;
 
@@ -121,6 +121,17 @@ public final class KeyGenerationModule extends AbstractModule {
         .getParameter(KEY_TTL_IN_DAYS)
         .map(Integer::valueOf)
         .orElseGet(args::getTtlInDays);
+  }
+
+  @Provides
+  @Singleton
+  @KeyGenerationCreateMaxDaysAhead
+  Integer provideKeyGenerationCreateMaxDaysAhead(ParameterClient parameterClient)
+      throws ParameterClientException {
+    return parameterClient
+        .getParameter(CREATE_MAX_DAYS_AHEAD)
+        .map(Integer::valueOf)
+        .orElse(DEFAULT_CREATE_MAX_DAYS_AHEAD);
   }
 
   @Provides
@@ -182,22 +193,9 @@ public final class KeyGenerationModule extends AbstractModule {
 
   @Provides
   @Singleton
-  @PeerCoordinatorKmsKeyBaseUri
-  String providesPeerCoordinatorKmsKeyUri(
-      ParameterClient parameterClient, @DisableKeySetAcl Boolean disableKeySetAcl)
-      throws ParameterClientException {
-    // TODO: b/428770204 - Remove option of PEER_COORDINATOR_KMS_KEY_URI and disableKeySetAcl post migration.
-    String kmsParam =
-        disableKeySetAcl ? PEER_COORDINATOR_KMS_KEY_URI : PEER_COORDINATOR_KMS_KEY_BASE_URI;
-    return parameterClient.getParameter(kmsParam).orElse(args.getPeerCoordinatorKmsKeyUri());
-  }
-
-  @Provides
-  @Singleton
-  @MigrationPeerCoordinatorKmsKeyBaseUri
-  String providesMigrationPeerCoordinatorKmsKeyBaseUri(ParameterClient parameterClient)
-      throws ParameterClientException {
-    return parameterClient.getParameter(MIGRATION_PEER_COORDINATOR_KMS_KEY_BASE_URI).orElse("");
+  @PeerCoordinatorKmsKeyBaseUriArg
+  String providesPeerCoordinatorKmsKeyUriArg() {
+    return args.getPeerCoordinatorKmsKeyUri();
   }
 
   @Provides

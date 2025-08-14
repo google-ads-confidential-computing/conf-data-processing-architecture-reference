@@ -19,8 +19,11 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.GetActiveEncryptionKeysCache;
+import com.google.scp.coordinator.keymanagement.keyhosting.tasks.KeyMigrationVendingUtil;
 import com.google.scp.coordinator.keymanagement.shared.converter.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
@@ -34,15 +37,23 @@ import java.util.regex.Pattern;
 
 public class GetActiveEncryptionKeysTask extends ApiTask {
   private final GetActiveEncryptionKeysCache cache;
+  private final ImmutableSet<String> allowedMigrators;
+  private final LogMetricHelper logMetricHelper;
 
   @Inject
-  GetActiveEncryptionKeysTask(GetActiveEncryptionKeysCache cache, LogMetricHelper logMetricHelper) {
-    super("GET",
+  GetActiveEncryptionKeysTask(
+      GetActiveEncryptionKeysCache cache,
+      LogMetricHelper logMetricHelper,
+      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators) {
+    super(
+        "GET",
         Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/activeKeys"),
         "GetActiveEncryptionKeys",
         "v1Beta",
         logMetricHelper);
     this.cache = cache;
+    this.allowedMigrators = allowedMigrators;
+    this.logMetricHelper = logMetricHelper;
   }
 
   @Override
@@ -53,6 +64,10 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
         GetActiveEncryptionKeysResponse.newBuilder()
             .addAllKeys(
                 keys.stream()
+                    .map(
+                        key ->
+                            KeyMigrationVendingUtil.vendAccordingToConfig(
+                                key, request, allowedMigrators, logMetricHelper))
                     .map(EncryptionKeyConverter::toApiEncryptionKey)
                     .collect(toImmutableList())));
   }

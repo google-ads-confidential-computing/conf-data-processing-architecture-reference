@@ -63,6 +63,10 @@ abstract class KeySetsConfig {
 
     abstract Optional<String> tinkTemplate();
 
+    abstract Optional<Integer> createMaxDaysAhead();
+
+    abstract Optional<Integer> overlapPeriodDays();
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     @AutoValue.Builder
     abstract static class Builder {
@@ -90,6 +94,20 @@ abstract class KeySetsConfig {
       }
 
       abstract Builder ttlInDays(Optional<Integer> ttlInDays);
+
+      @JsonProperty("create_max_days_ahead")
+      Builder createMaxDaysAhead(Integer createMaxDaysAhead) {
+        return createMaxDaysAhead(Optional.ofNullable(createMaxDaysAhead));
+      }
+
+      abstract Builder createMaxDaysAhead(Optional<Integer> createMaxDaysAhead);
+
+      @JsonProperty("overlap_period_days")
+      Builder overlapPeriodDays(Integer overlapPeriodDays) {
+        return overlapPeriodDays(Optional.ofNullable(overlapPeriodDays));
+      }
+
+      abstract Builder overlapPeriodDays(Optional<Integer> overlapPeriodDays);
 
       @JsonProperty("tink_template")
       Builder tinkTemplate(String tinkTemplate) {

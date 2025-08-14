@@ -32,11 +32,20 @@ public final class KeySetConfigTest {
     int count = 1111;
     int validityInDays = 2222;
     int ttlInDays = 3333;
+    int maxDaysAhead = 999;
+    int overlapPeriodDays = 44;
     String tinkTemplate = "test template";
 
     // When
     KeySetConfig config =
-        KeySetConfig.create(setName, tinkTemplate, count, validityInDays, ttlInDays);
+        KeySetConfig.create(
+            setName,
+            tinkTemplate,
+            count,
+            validityInDays,
+            ttlInDays,
+            maxDaysAhead,
+            overlapPeriodDays);
 
     // Then
     assertThat(config.getName()).isEqualTo(setName);
@@ -44,5 +53,7 @@ public final class KeySetConfigTest {
     assertThat(config.getValidityInDays()).isEqualTo(validityInDays);
     assertThat(config.getTtlInDays()).isEqualTo(ttlInDays);
     assertThat(config.getTinkTemplate()).isEqualTo(tinkTemplate);
+    assertThat(config.getCreateMaxDaysAhead()).isEqualTo(maxDaysAhead);
+    assertThat(config.getOverlapPeriodDays()).isEqualTo(overlapPeriodDays);
   }
 }

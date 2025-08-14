@@ -37,8 +37,7 @@ public class EncryptionKeyConverterTest {
     String encryptionKeyUri = UUID.randomUUID().toString();
     ImmutableList<KeySplitData> keySplitData =
         ImmutableList.of(
-            FakeEncryptionKey.createKeySplitData(
-                EncryptionKeyType.SINGLE_PARTY_HYBRID_KEY, encryptionKeyUri));
+            FakeEncryptionKey.createKeySplitData(encryptionKeyUri));
     var storageKey =
         FakeEncryptionKey.create().toBuilder()
             .setKeyEncryptionKeyUri(encryptionKeyUri)
@@ -51,7 +50,7 @@ public class EncryptionKeyConverterTest {
 
     assertThat(encryptionKey.getKeyDataList().size()).isEqualTo(1);
     // Only the key data with the URI matching the key owner should have its key material populated.
-    assertThat(encryptionKey.getKeyDataList().get(0).getKeyMaterial())
+    assertThat(encryptionKey.getKeyDataList().getFirst().getKeyMaterial())
         .isEqualTo(storageKey.getJsonEncodedKeyset());
   }
 
@@ -70,7 +69,7 @@ public class EncryptionKeyConverterTest {
 
     assertThat(encryptionKey.getKeyDataList().size()).isEqualTo(1);
     // Only the key data with the URI matching the key owner should have its key material populated.
-    assertThat(encryptionKey.getKeyDataList().get(0).getKeyMaterial())
+    assertThat(encryptionKey.getKeyDataList().getFirst().getKeyMaterial())
         .isEqualTo(storageKey.getJsonEncodedKeyset());
   }
 
@@ -79,10 +78,8 @@ public class EncryptionKeyConverterTest {
     String encryptionKeyUri = UUID.randomUUID().toString();
     ImmutableList<KeySplitData> keySplitData =
         ImmutableList.of(
-            FakeEncryptionKey.createKeySplitData(
-                EncryptionKeyType.MULTI_PARTY_HYBRID_EVEN_KEYSPLIT, encryptionKeyUri),
-            FakeEncryptionKey.createKeySplitData(
-                EncryptionKeyType.MULTI_PARTY_HYBRID_EVEN_KEYSPLIT, UUID.randomUUID().toString()));
+            FakeEncryptionKey.createKeySplitData(encryptionKeyUri),
+            FakeEncryptionKey.createKeySplitData(UUID.randomUUID().toString()));
     var storageKey =
         FakeEncryptionKey.create().toBuilder()
             .setKeyEncryptionKeyUri(encryptionKeyUri)
@@ -102,19 +99,16 @@ public class EncryptionKeyConverterTest {
                     keyData.getKeyEncryptionKeyUri().equals(storageKey.getKeyEncryptionKeyUri()))
             .collect(ImmutableList.toImmutableList());
     assertThat(keyDatasWithMatchingUri.size()).isEqualTo(1);
-    assertThat(keyDatasWithMatchingUri.get(0).getKeyMaterial())
+    assertThat(keyDatasWithMatchingUri.getFirst().getKeyMaterial())
         .isEqualTo(storageKey.getJsonEncodedKeyset());
   }
 
   @Test
   public void toApiEncryptionKey_noMatchingEncryptionUri() {
-    String encryptionKeyUri = UUID.randomUUID().toString();
     ImmutableList<KeySplitData> keySplitData =
         ImmutableList.of(
-            FakeEncryptionKey.createKeySplitData(
-                EncryptionKeyType.MULTI_PARTY_HYBRID_EVEN_KEYSPLIT, UUID.randomUUID().toString()),
-            FakeEncryptionKey.createKeySplitData(
-                EncryptionKeyType.MULTI_PARTY_HYBRID_EVEN_KEYSPLIT, UUID.randomUUID().toString()));
+            FakeEncryptionKey.createKeySplitData(UUID.randomUUID().toString()),
+            FakeEncryptionKey.createKeySplitData(UUID.randomUUID().toString()));
     var storageKey =
         FakeEncryptionKey.create().toBuilder()
             .setKeyEncryptionKeyUri("123")
@@ -183,10 +177,8 @@ public class EncryptionKeyConverterTest {
 
     ImmutableList<KeySplitData> keySplitData =
         ImmutableList.of(
-            FakeEncryptionKey.createKeySplitData(
-                EncryptionKeyType.MULTI_PARTY_HYBRID_EVEN_KEYSPLIT, encryptionKeyUri),
-            FakeEncryptionKey.createKeySplitData(
-                EncryptionKeyType.MULTI_PARTY_HYBRID_EVEN_KEYSPLIT, encryptionKeyUri));
+            FakeEncryptionKey.createKeySplitData(encryptionKeyUri),
+            FakeEncryptionKey.createKeySplitData(encryptionKeyUri));
 
     var storageKey =
         FakeEncryptionKey.create().toBuilder()

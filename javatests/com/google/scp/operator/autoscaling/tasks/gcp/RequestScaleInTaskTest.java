@@ -79,6 +79,8 @@ public final class RequestScaleInTaskTest {
             .setInstanceTemplate(instanceTemplate)
             .build();
     remainingInstances = new HashMap<>();
+
+    when(instanceManagementClient.getManagedInstanceGroupName()).thenReturn("fake-group");
   }
 
   @Test

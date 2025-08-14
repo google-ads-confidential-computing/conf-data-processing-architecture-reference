@@ -19,6 +19,7 @@ package com.google.scp.operator.cpio.blobstorageclient;
 import static com.google.scp.operator.cpio.blobstorageclient.ErrorReason.UNSPECIFIED_ERROR;
 
 import com.google.common.collect.ImmutableList;
+import com.google.scp.operator.cpio.blobstorageclient.model.BlobMetadata;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import java.io.InputStream;
@@ -42,7 +43,7 @@ public interface BlobStorageClient {
    *
    * @param location The data location of the blob to retrieve.
    * @param accountIdentity The identity to use to make the request. Instance default credentials
-   *     will use if accountIdentity is empty.
+   *     will be use if accountIdentity is empty.
    * @return An {@code InputStream} with the blob contents.
    * @throws BlobStorageClientException
    */
@@ -64,7 +65,7 @@ public interface BlobStorageClient {
    * @param location The data location of the blob to be uploaded.
    * @param filePath the file path for the blob to be uploaded.
    * @param accountIdentity The identity to use to make the request. Instance default credentials
-   *     will use if accountIdentity is empty.
+   *     will be use if accountIdentity is empty.
    * @throws BlobStorageClientException
    */
   void putBlob(DataLocation location, Path filePath, Optional<String> accountIdentity)
@@ -83,7 +84,7 @@ public interface BlobStorageClient {
    *
    * @param location The data location of the blob to be deleted.
    * @param accountIdentity The identity to use to make the request. Instance default credentials
-   *     will use if accountIdentity is empty.
+   *     will be use if accountIdentity is empty.
    * @throws BlobStorageClientException
    */
   void deleteBlob(DataLocation location, Optional<String> accountIdentity)
@@ -104,12 +105,60 @@ public interface BlobStorageClient {
    *
    * @param location The data location of the blobs to list.
    * @param accountIdentity The identity to use to make the request. Instance default credentials
-   *     will use if accountIdentity is empty.
+   *     will be use if accountIdentity is empty.
    * @throws BlobStorageClientException
    * @return An {@code ImmutableList<String>} of keys that correspond to blobs in the bucket.
    */
   ImmutableList<String> listBlobs(DataLocation location, Optional<String> accountIdentity)
       throws BlobStorageClientException;
+
+  /**
+   * Blocking call to retrieve metadata for a blob object from the storage provider.
+   *
+   * @param location The data location of the blob to retrieve.
+   * @return An {@code BlobMetadata} with the blob metadata.
+   * @throws BlobStorageClientException
+   */
+  BlobMetadata getBlobMetadata(DataLocation location) throws BlobStorageClientException;
+
+  /**
+   * Blocking call to retrieve metadata for a blob object from the storage provider using account
+   * identity.
+   *
+   * @param location The data location of the blob to retrieve.
+   * @param accountIdentity The identity to use to make the request. Instance default credentials
+   *     will be use if accountIdentity is empty.
+   * @return An {@code BlobMetadata} with the blob metadata.
+   * @throws BlobStorageClientException
+   */
+  BlobMetadata getBlobMetadata(DataLocation location, Optional<String> accountIdentity)
+      throws BlobStorageClientException;
+
+  /**
+   * Blocking call to list metadata of blobs in a data location from the storage provider, which
+   * handles pagination.
+   *
+   * @param location The data location of the blobs to list.
+   * @return An {@code ImmutableList<String>} of {@code BlobMetadata} that correspond to blobs in
+   *     the data location.
+   * @throws BlobStorageClientException
+   */
+  ImmutableList<BlobMetadata> listBlobMetadata(DataLocation location)
+      throws BlobStorageClientException;
+
+  /**
+   * Blocking call to list metadata of blobs in a data location from the storage provider, which
+   * handles pagination, using account identity.
+   *
+   * @param location The data location of the blobs to list.
+   * @param accountIdentity The identity to use to make the request. Instance default credentials
+   *     will be use if accountIdentity is empty.
+   * @return An {@code ImmutableList<String>} of {@code BlobMetadata} that correspond to blobs in
+   *     the data location.
+   * @throws BlobStorageClientException
+   */
+  ImmutableList<BlobMetadata> listBlobMetadata(
+      DataLocation location, Optional<String> accountIdentity) throws BlobStorageClientException;
 
   /** Returns a data location of the bucket/path. */
   static DataLocation getDataLocation(String bucket, String prefix) {

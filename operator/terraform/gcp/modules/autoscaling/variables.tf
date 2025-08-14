@@ -28,6 +28,11 @@ variable "environment" {
   type        = string
 }
 
+variable "workgroup" {
+  description = "Workgroup name to associate resources."
+  type        = string
+}
+
 variable "region" {
   description = "Region where resources will be created."
   type        = string
@@ -96,7 +101,7 @@ variable "worker_scale_in_jar" {
 
 variable "worker_scale_in_zip" {
   description = <<-EOT
-    Optional. Path to the zip file for lambda function under bucket
+    Optional. Path to the zip file for cloud function under bucket
     operator_package_bucket_name.
     If this path is missing, the terraform will use path in worker_scale_in_jar,
     archive the jar in zip file and upload to the bucket.

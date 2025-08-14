@@ -16,6 +16,7 @@
 
 locals {
   asg_instance_group_name = google_compute_region_instance_group_manager.worker_instance_group.name
+  env_workgroup_name      = var.workgroup == null ? var.environment : "${var.environment} ${var.workgroup}"
 }
 
 module "autoscaling_cloudfunction_alarms" {
@@ -25,7 +26,7 @@ module "autoscaling_cloudfunction_alarms" {
   environment             = var.environment
   notification_channel_id = var.notification_channel_id
   function_name           = google_cloudfunctions2_function.worker_scale_in_cloudfunction.name
-  service_prefix          = "${var.environment} Autoscaling Cloud Function"
+  service_prefix          = "${local.env_workgroup_name} Autoscaling Cloud Function"
 
   eval_period_sec           = var.cloudfunction_alarm_eval_period_sec
   error_5xx_threshold       = var.cloudfunction_5xx_threshold
@@ -36,7 +37,7 @@ module "autoscaling_cloudfunction_alarms" {
 
 resource "google_monitoring_alert_policy" "autoscaling_max_instances_alarm" {
   count        = var.alarms_enabled ? 1 : 0
-  display_name = "${var.environment} Autoscaling Instance Count Too High"
+  display_name = "${local.env_workgroup_name} Autoscaling Instance Count Too High"
   combiner     = "OR"
   conditions {
     display_name = "Autoscaling Instance Count"

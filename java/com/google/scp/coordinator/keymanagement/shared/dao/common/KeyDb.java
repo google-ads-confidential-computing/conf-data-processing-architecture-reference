@@ -32,17 +32,6 @@ public interface KeyDb {
   String DEFAULT_SET_NAME = "";
 
   /**
-   * Returns active keys up to given keyLimit. Keys are sorted by expiration time in descending
-   * order.
-   *
-   * @deprecated Use {@link #getActiveKeys(String, int)} and specify set name.
-   */
-  @Deprecated
-  default ImmutableList<EncryptionKey> getActiveKeys(int keyLimit) throws ServiceException {
-    return getActiveKeys(DEFAULT_SET_NAME, keyLimit);
-  }
-
-  /**
    * Returns keys that are active at a specific {@code instant} up to given {@code keyLimit}. Keys
    * are sorted by expiration time in descending order.
    *
@@ -90,6 +79,9 @@ public interface KeyDb {
 
   /** Returns all keys in the database without explicit ordering */
   ImmutableList<EncryptionKey> getAllKeys() throws ServiceException;
+
+  /** Returns all keys for a given setName in the database */
+  ImmutableList<EncryptionKey> listAllKeysForSetName(String setName) throws ServiceException;
 
   /**
    * Returns all the keys of a specified maximum age based on their creation timestamp.

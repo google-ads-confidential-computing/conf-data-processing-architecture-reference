@@ -53,9 +53,9 @@ java_test(
 )
 
 java_test(
-    name = "EncryptionKeyServiceIntegrationTest",
+    name = "PrivateKeyServiceIntegrationTest",
     srcs = [
-        "EncryptionKeyServiceIntegrationTest.java",
+        "PrivateKeyServiceIntegrationTest.java",
     ],
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
@@ -122,12 +122,12 @@ java_test(
 )
 
 java_test(
-    name = "EncryptionKeyServiceTest",
+    name = "PrivateKeyServiceTest",
     srcs = [
-        "EncryptionKeyServiceTest.java",
+        "PrivateKeyServiceTest.java",
     ],
     runtime_deps = [
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:EncryptionKeyService_deploy.jar",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PrivateKeyService_deploy.jar",
     ],
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",

@@ -17,9 +17,6 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener;
 
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationKeyCount;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationTtlInDays;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationValidityInDays;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.Annotations.SubscriptionId;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.ActuateKeySetTask;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -35,18 +32,14 @@ public final class CreateSplitKeysPubSubListener extends PubSubListener {
       PubSubListenerConfig config,
       ActuateKeySetTask task,
       @GcpProjectId String projectId,
-      @SubscriptionId String subscriptionId,
-      @KeyGenerationKeyCount Integer numberOfKeysToCreate,
-      @KeyGenerationValidityInDays Integer keysValidityInDays,
-      @KeyGenerationTtlInDays Integer ttlInDays) {
-    super(config, projectId, subscriptionId, numberOfKeysToCreate, keysValidityInDays, ttlInDays);
+      @SubscriptionId String subscriptionId) {
+    super(config, projectId, subscriptionId);
     this.task = task;
   }
 
   /** Executes task that will generate split keys (if needed) after Pub/Sub message is received. */
   @Override
-  protected void createKeys(int numberOfKeysToCreate, int keysValidityInDays, int ttlInDays)
-      throws ServiceException {
+  protected void createKeys() throws ServiceException {
     task.execute();
   }
 }

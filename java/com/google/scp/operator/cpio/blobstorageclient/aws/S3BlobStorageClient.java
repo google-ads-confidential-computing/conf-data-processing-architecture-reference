@@ -21,6 +21,7 @@ import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.PartialRequestBufferSize;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3UsePartialRequests;
+import com.google.scp.operator.cpio.blobstorageclient.model.BlobMetadata;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import java.io.InputStream;
@@ -42,6 +43,8 @@ import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 public final class S3BlobStorageClient implements BlobStorageClient {
   private static String ACCOUNT_IDENTITY_NOT_SUPPORTED_MESSAGE =
       "Use of account identity is currently not supported for S3BlobStorageClient.";
+  private static String BLOB_METADATA_NOT_SUPPORTED_MESSAGE =
+      "Blob metadata APIs are currently not supported for S3BlobStorageClient.";
 
   private final S3Client client;
   // Indicate whether to use http partial request in getBlob function.
@@ -156,5 +159,26 @@ public final class S3BlobStorageClient implements BlobStorageClient {
   public ImmutableList<String> listBlobs(DataLocation location, Optional<String> accountIdentity)
       throws BlobStorageClientException {
     throw new UnsupportedOperationException(ACCOUNT_IDENTITY_NOT_SUPPORTED_MESSAGE);
+  }
+
+  @Override
+  public BlobMetadata getBlobMetadata(DataLocation location) {
+    throw new UnsupportedOperationException(BLOB_METADATA_NOT_SUPPORTED_MESSAGE);
+  }
+
+  @Override
+  public BlobMetadata getBlobMetadata(DataLocation location, Optional<String> accountIdentity) {
+    throw new UnsupportedOperationException(BLOB_METADATA_NOT_SUPPORTED_MESSAGE);
+  }
+
+  @Override
+  public ImmutableList<BlobMetadata> listBlobMetadata(DataLocation location) {
+    throw new UnsupportedOperationException(BLOB_METADATA_NOT_SUPPORTED_MESSAGE);
+  }
+
+  @Override
+  public ImmutableList<BlobMetadata> listBlobMetadata(
+      DataLocation location, Optional<String> accountIdentity) {
+    throw new UnsupportedOperationException(BLOB_METADATA_NOT_SUPPORTED_MESSAGE);
   }
 }

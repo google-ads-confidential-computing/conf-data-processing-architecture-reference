@@ -48,6 +48,12 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface KeyGenerationTtlInDays {}
 
+  /** How many days ahead are we allowed to create a key */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface KeyGenerationCreateMaxDaysAhead {}
+
   /** Base URL (e.g. `https://foo.com/v1`) where the key storage service is located. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
@@ -88,13 +94,7 @@ public final class Annotations {
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface PeerCoordinatorKmsKeyBaseUri {}
-
-  /** Uri of KMS migration key for peer coordinator */
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface MigrationPeerCoordinatorKmsKeyBaseUri {}
+  public @interface PeerCoordinatorKmsKeyBaseUriArg {}
 
   /** Service account of peer coordinator */
   @BindingAnnotation

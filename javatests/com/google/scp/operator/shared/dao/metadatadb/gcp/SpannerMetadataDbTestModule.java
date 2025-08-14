@@ -69,7 +69,11 @@ public final class SpannerMetadataDbTestModule extends AbstractModule {
               + " (allow_commit_timestamp = false)",
           "ALTER TABLE "
               + SpannerAsgInstancesDao.TABLE_NAME
-              + " ADD COLUMN TerminationReason STRING(64)");
+              + " ADD COLUMN TerminationReason STRING(64)",
+          "ALTER TABLE JobMetadata ADD COLUMN TargetWorkgroup STRING(256)",
+          "ALTER TABLE "
+              + SpannerAsgInstancesDao.TABLE_NAME
+              + " ADD COLUMN InstanceGroupName STRING(256)");
 
   @Provides
   @Singleton

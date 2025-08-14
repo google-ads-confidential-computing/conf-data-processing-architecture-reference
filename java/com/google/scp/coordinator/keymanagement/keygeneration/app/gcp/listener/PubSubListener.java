@@ -41,42 +41,27 @@ public abstract class PubSubListener {
 
   private final String projectId;
   private final String subscriptionId;
-  private final int numberOfKeysToCreate;
-  private final int keysValidityInDays;
-  private final int ttlInDays;
 
   private TransportChannelProvider channelProvider = null; // Only used for testing
   private CredentialsProvider credentialsProvider = null; // Only used for testing
   private int timeoutInSeconds = -1; // Only used for testing
 
-  public PubSubListener(
-      PubSubListenerConfig config,
-      String projectId,
-      String subscriptionId,
-      int numberOfKeysToCreate,
-      int keysValidityInDays,
-      int ttlInDays) {
+  protected PubSubListener(PubSubListenerConfig config, String projectId, String subscriptionId) {
     this.projectId = projectId;
     this.subscriptionId = subscriptionId;
-    this.numberOfKeysToCreate = numberOfKeysToCreate;
-    this.keysValidityInDays = keysValidityInDays;
-    this.ttlInDays = ttlInDays;
-    config.endpointUrl().ifPresent(endpoint -> setTransportChannelAndCredentials(endpoint));
+    config.endpointUrl().ifPresent(this::setTransportChannelAndCredentials);
     config.timeoutInSeconds().ifPresent(timeout -> timeoutInSeconds = timeout);
   }
 
   /** Executes task that will generate keys (if needed) after pubsub message is received. */
-  protected abstract void createKeys(
-      int numberOfKeysToCreate, int keysValidityInDays, int ttlInDays) throws ServiceException;
+  protected abstract void createKeys() throws ServiceException;
 
   /** Sets up subscriber for given subscriptionId. Creates keys when message is received. */
   public void start() {
     ProjectSubscriptionName subscriptionName =
         ProjectSubscriptionName.of(projectId, subscriptionId);
 
-    MessageReceiver receiver =
-        getMessageReceiver(numberOfKeysToCreate, keysValidityInDays, ttlInDays);
-
+    MessageReceiver receiver = getMessageReceiver();
     Subscriber subscriber = getSubscriber(subscriptionName, receiver);
 
     // Start the subscriber.
@@ -106,8 +91,7 @@ public abstract class PubSubListener {
     return builder.build();
   }
 
-  private MessageReceiver getMessageReceiver(
-      int numberOfKeysToCreate, int keysValidityInDays, int ttlInDays) {
+  private MessageReceiver getMessageReceiver() {
     return (PubsubMessage message, AckReplyConsumer consumer) -> {
       // Handle incoming message, then ack the received message.
       logger.info(
@@ -116,7 +100,7 @@ public abstract class PubSubListener {
               + "Data: "
               + message.getData().toStringUtf8());
       try {
-        createKeys(numberOfKeysToCreate, keysValidityInDays, ttlInDays);
+        createKeys();
         logger.info(
             "Task has been invoked. Send ack for message with Id: " + message.getMessageId());
         consumer.ack();

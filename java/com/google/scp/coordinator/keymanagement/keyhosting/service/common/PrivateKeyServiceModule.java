@@ -27,7 +27,7 @@ import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask
 import java.util.List;
 
 /* Guice module that configures the base URL and the API tasks for the Encryption Key Service. */
-public class EncryptionKeyServiceModule extends AbstractModule {
+public class PrivateKeyServiceModule extends AbstractModule {
 
   @ProvidesIntoMap
   @StringMapKey("/v1alpha")

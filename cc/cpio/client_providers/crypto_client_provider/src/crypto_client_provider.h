@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2022-2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include <string>
 #include <unordered_map>
 
+#include <tink/aead.h>
 #include <tink/hybrid/internal/hpke_context.h>
 #include <tink/hybrid_decrypt.h>
 #include <tink/hybrid_encrypt.h>
@@ -111,6 +112,24 @@ class CryptoClientProvider : public CryptoClientInterface {
   GetHybridDecryptPrimitive(const std::string& key) noexcept;
   core::ExecutionResultOr<std::shared_ptr<::crypto::tink::Mac>> GetMacPrimitive(
       const std::string& key) noexcept;
+  core::ExecutionResultOr<std::shared_ptr<::crypto::tink::Aead>>
+  GetAeadPrimitive(const std::string& key, bool base64_decode) noexcept;
+
+  core::ExecutionResultOr<std::string> AeadEncryptSyncWithRawSecret(
+      const cmrt::sdk::crypto_service::v1::AeadEncryptRequest&
+          request) noexcept;
+  core::ExecutionResultOr<std::string>
+  AeadEncryptSyncWithBinaryTinkKeysetSecret(
+      const cmrt::sdk::crypto_service::v1::AeadEncryptRequest&
+          request) noexcept;
+
+  core::ExecutionResultOr<std::string> AeadDecryptSyncWithRawSecret(
+      const cmrt::sdk::crypto_service::v1::AeadDecryptRequest&
+          request) noexcept;
+  core::ExecutionResultOr<std::string>
+  AeadDecryptSyncWithBinaryTinkKeysetSecret(
+      const cmrt::sdk::crypto_service::v1::AeadDecryptRequest&
+          request) noexcept;
 
   std::unique_ptr<scp::core::common::AutoExpiryConcurrentMap<
       std::string, std::shared_ptr<::crypto::tink::HybridEncrypt>>>
@@ -121,5 +140,8 @@ class CryptoClientProvider : public CryptoClientInterface {
   std::unique_ptr<scp::core::common::AutoExpiryConcurrentMap<
       std::string, std::shared_ptr<::crypto::tink::Mac>>>
       mac_primitive_cache_;
+  std::unique_ptr<scp::core::common::AutoExpiryConcurrentMap<
+      std::string, std::shared_ptr<::crypto::tink::Aead>>>
+      aead_primitive_cache_;
 };
 }  // namespace google::scp::cpio::client_providers

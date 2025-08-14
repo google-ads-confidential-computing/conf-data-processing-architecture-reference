@@ -42,16 +42,33 @@ locals {
     for key_set in var.key_sets_config.key_sets : key_set.name
   ])
 
-  # TODO: b/428770204 - Update kms base uri to the migration uri post migration
-  kms_key_base_uri = "gcp-kms://${google_kms_key_ring.key_encryption_ring.id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
-  migration_kms_key_base_uri = (var.location_new_key_ring == null || !var.populate_migration_key_data
-    ? local.kms_key_base_uri
-    : "gcp-kms://${module.key_management_service[0].kms_key_ring.id}/cryptoKeys/${var.environment}_$setName$_key"
-  )
-
   service_domain_to_address_map = {
     (local.key_storage_domain) : module.keystorageservice.load_balancer_ip,
     (local.private_key_domain) : module.private_key_service.loadbalancer_ip
+  }
+
+  # TODO: b/428770204 - Update kms base uri to the migration uri post migration
+  kms_key_base_uri = "gcp-kms://${google_kms_key_ring.key_encryption_ring.id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
+  migration_kms_key_base_uri = (var.location_new_key_ring == null
+    ? local.kms_key_base_uri
+    : "gcp-kms://${module.key_management_service[0].kms_key_ring.id}/cryptoKeys/${var.environment}_$setName$_kms_key"
+  )
+}
+
+resource "null_resource" "has_valid_migration_configuration" {
+  # Ensures that if it is desired to populate the migration key data, that
+  # all necessary information from a new key set is provided.
+  lifecycle {
+    precondition {
+      condition = !var.populate_migration_key_data || (
+        local.migration_kms_key_base_uri != local.kms_key_base_uri
+      )
+      error_message = <<EOF
+Variable populate_migration_key_data is set to true, but the required migration
+data is not available. To enable migration, provide a value for
+'location_new_key_ring'.
+EOF
+    }
   }
 }
 
@@ -139,9 +156,9 @@ module "private_key_service" {
 
   # Cloud Run settings
   cpu_count          = var.private_key_service_cloud_run_cpu_count
-  memory_mb          = var.encryption_key_service_cloudfunction_memory_mb
+  memory_mb          = var.private_key_service_cloudfunction_memory_mb
   concurrency        = var.private_key_service_cloud_run_concurrency
-  max_instance_count = var.encryption_key_service_cloudfunction_max_instances
+  max_instance_count = var.private_key_service_cloudfunction_max_instances
   min_instance_count = var.encryption_key_service_cloudfunction_min_instances
 
   # Spanner and access configs
@@ -154,19 +171,19 @@ module "private_key_service" {
 
   # Alert settings
   alarms_enabled           = var.alarms_enabled
-  alarm_eval_period_sec    = var.encryptionkeyservice_alarm_eval_period_sec
-  alarm_duration_sec       = var.encryptionkeyservice_alarm_duration_sec
+  alarm_eval_period_sec    = var.private_key_service_alarm_eval_period_sec
+  alarm_duration_sec       = var.private_key_service_alarm_duration_sec
   alert_severity_overrides = var.alert_severity_overrides
 
   get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
 
-  cloud_run_5xx_threshold                   = var.encryptionkeyservice_cloudfunction_5xx_threshold
-  cloud_run_alert_on_memory_usage_threshold = var.encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold
-  cloud_run_max_execution_time_max          = var.encryptionkeyservice_cloudfunction_max_execution_time_max
+  cloud_run_5xx_threshold                   = var.private_key_service_cloudfunction_5xx_threshold
+  cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloudfunction_alert_on_memory_usage_threshold
+  cloud_run_max_execution_time_max          = var.private_key_service_cloudfunction_max_execution_time_max
 
-  lb_5xx_threshold       = var.encryptionkeyservice_lb_5xx_threshold
-  lb_5xx_ratio_threshold = var.encryptionkeyservice_lb_5xx_ratio_threshold
-  lb_max_latency_ms      = var.encryptionkeyservice_lb_max_latency_ms
+  lb_5xx_threshold       = var.private_key_service_lb_5xx_threshold
+  lb_5xx_ratio_threshold = var.private_key_service_lb_5xx_ratio_threshold
+  lb_max_latency_ms      = var.private_key_service_lb_max_latency_ms
 }
 
 module "domain_a_records" {

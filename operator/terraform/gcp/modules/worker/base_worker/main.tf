@@ -15,15 +15,8 @@
  */
 
 locals {
-  worker_service_account_email = var.user_provided_worker_sa_email == "" ? google_service_account.worker_service_account[0].email : var.user_provided_worker_sa_email
-  input_disk_image             = var.instance_disk_image != null && var.instance_disk_image != ""
-}
-
-resource "google_service_account" "worker_service_account" {
-  count = var.user_provided_worker_sa_email == "" ? 1 : 0
-  # Service account id has a 30 character limit
-  account_id   = "${var.environment}-worker"
-  display_name = "Worker Service Account"
+  input_disk_image = var.instance_disk_image != null && var.instance_disk_image != ""
+  resource_prefix  = var.workgroup == null ? var.environment : "${var.environment}-${var.workgroup}"
 }
 
 data "google_compute_image" "tee_image" {
@@ -40,7 +33,7 @@ resource "null_resource" "worker_instance_replace_trigger" {
 
 resource "google_compute_instance_template" "worker_instance_template" {
 
-  name_prefix = "${var.environment}-worker-template"
+  name_prefix = "${local.resource_prefix}-worker-template"
   # See #on-host-maintenance-migrate in this file when changing this value.
   machine_type = var.instance_type
   # See #on-host-maintenance-migrate in this file when changing this value.
@@ -48,7 +41,7 @@ resource "google_compute_instance_template" "worker_instance_template" {
 
   disk {
     boot         = true
-    device_name  = "${var.environment}-worker"
+    device_name  = "${local.resource_prefix}-worker"
     source_image = local.input_disk_image ? var.instance_disk_image : data.google_compute_image.tee_image[0].self_link
     disk_type    = var.worker_instance_disk_type
     disk_size_gb = var.worker_instance_disk_size_gb
@@ -64,6 +57,7 @@ resource "google_compute_instance_template" "worker_instance_template" {
     google-logging-enabled           = var.worker_logging_enabled,
     google-monitoring-enabled        = var.worker_monitoring_enabled,
     scp-environment                  = var.environment,
+    scp-workgroup                    = var.workgroup,
     tee-image-reference              = var.worker_image,
     tee-signed-image-repos           = var.worker_image_signature_repos,
     tee-restart-policy               = var.worker_restart_policy,
@@ -74,7 +68,7 @@ resource "google_compute_instance_template" "worker_instance_template" {
 
   service_account {
     # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.
-    email  = local.worker_service_account_email
+    email  = var.worker_service_account_email
     scopes = ["cloud-platform"]
   }
 
@@ -113,7 +107,9 @@ resource "google_compute_instance_template" "worker_instance_template" {
   ])
 
   labels = {
-    environment = var.environment
+    environment = var.environment,
+    workgroup   = var.workgroup,
+    type        = "scp-worker"
   }
 
   # Create before destroy since template is being used by worker instance group
@@ -125,59 +121,9 @@ resource "google_compute_instance_template" "worker_instance_template" {
   }
 }
 
-# JobMetadata read/write permissions
-resource "google_spanner_database_iam_member" "worker_jobmetadatadb_iam" {
-  instance = var.metadatadb_instance_name
-  database = var.metadatadb_name
-  role     = "roles/spanner.databaseUser"
-  member   = "serviceAccount:${local.worker_service_account_email}"
-}
-
 # JobQueue read/write permissions
 resource "google_pubsub_subscription_iam_member" "worker_jobqueue_iam" {
   role         = "roles/pubsub.subscriber"
-  member       = "serviceAccount:${local.worker_service_account_email}"
+  member       = "serviceAccount:${var.worker_service_account_email}"
   subscription = var.job_queue_sub
-}
-
-resource "google_project_iam_member" "worker_storage_iam" {
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_secretmanager_iam" {
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_logging_iam" {
-  role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_monitoring_iam" {
-  role    = "roles/monitoring.editor"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_instance_group_iam" {
-  role    = "roles/compute.networkAdmin"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_workload_user_iam" {
-  role    = "roles/confidentialcomputing.workloadUser"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
-}
-
-resource "google_project_iam_member" "worker_pubsub_publisher_iam" {
-  role    = "roles/pubsub.publisher"
-  member  = "serviceAccount:${local.worker_service_account_email}"
-  project = var.project_id
 }

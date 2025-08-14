@@ -17,6 +17,7 @@ package com.google.scp.coordinator.keymanagement.shared.dao.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.shared.api.model.Code.ALREADY_EXISTS;
 import static org.junit.Assert.assertThrows;
 
@@ -90,15 +91,14 @@ public abstract class KeyDbBaseTest {
 
     db.createKey(fakeEncryptionKey());
     db.createKey(fakeEncryptionKey(nonDefaultName));
-    db.createKey(fakeEncryptionKey(KeyDb.DEFAULT_SET_NAME));
+    db.createKey(fakeEncryptionKey(DEFAULT_SET_NAME));
     db.createKey(fakeEncryptionKey());
     db.createKey(fakeEncryptionKey(nonDefaultName));
-    db.createKey(fakeEncryptionKey(KeyDb.DEFAULT_SET_NAME));
-    db.createKey(fakeEncryptionKey(KeyDb.DEFAULT_SET_NAME));
+    db.createKey(fakeEncryptionKey(DEFAULT_SET_NAME));
+    db.createKey(fakeEncryptionKey(DEFAULT_SET_NAME));
 
     // When/Then
-    assertThat(db.getActiveKeys(Integer.MAX_VALUE)).hasSize(5);
-    assertThat(db.getActiveKeys(KeyDb.DEFAULT_SET_NAME, Integer.MAX_VALUE)).hasSize(5);
+    assertThat(db.getActiveKeys(DEFAULT_SET_NAME, Integer.MAX_VALUE)).hasSize(5);
     assertThat(db.getActiveKeys(nonDefaultName, Integer.MAX_VALUE)).hasSize(2);
   }
 
@@ -115,7 +115,7 @@ public abstract class KeyDbBaseTest {
         ImmutableList.of(asymmetricKey, asymmetricKey2, nonAsymmetricKey1, nonAsymmetricKey2));
 
     // When
-    ImmutableList<EncryptionKey> keys = db.getActiveKeysWithPublicKey(KeyDb.DEFAULT_SET_NAME, 100);
+    ImmutableList<EncryptionKey> keys = db.getActiveKeysWithPublicKey(DEFAULT_SET_NAME, 100);
 
     // Then
     ImmutableList<String> ids =
@@ -180,22 +180,26 @@ public abstract class KeyDbBaseTest {
     // When
     ImmutableList<EncryptionKey> keys0 =
         db.listRecentKeys(
+                DEFAULT_SET_NAME,
                 Duration.between(Instant.ofEpochMilli(k0.getCreationTime()), Instant.now())
                     .plusMillis(latencyToleranceMs))
             .collect(toImmutableList());
     ImmutableList<EncryptionKey> keys1 =
         db.listRecentKeys(
+                DEFAULT_SET_NAME,
                 Duration.between(Instant.ofEpochMilli(k1.getCreationTime()), Instant.now())
                     .plusMillis(latencyToleranceMs))
             .collect(toImmutableList());
     ImmutableList<EncryptionKey> keys2 =
         db.listRecentKeys(
+                DEFAULT_SET_NAME,
                 Duration.between(Instant.ofEpochMilli(k2.getCreationTime()), Instant.now())
                     .plusMillis(latencyToleranceMs))
             .collect(toImmutableList());
 
     // Then
-    assertThat(db.listRecentKeys(Duration.ZERO).collect(toImmutableList())).isEmpty();
+    assertThat(db.listRecentKeys(DEFAULT_SET_NAME, Duration.ZERO)
+        .collect(toImmutableList())).isEmpty();
     assertThat(keys0).hasSize(3);
     assertThat(keys1).hasSize(2);
     assertThat(keys2).hasSize(1);
@@ -212,16 +216,14 @@ public abstract class KeyDbBaseTest {
 
     db.createKey(fakeEncryptionKey());
     db.createKey(fakeEncryptionKey(nonDefaultName));
-    db.createKey(fakeEncryptionKey(KeyDb.DEFAULT_SET_NAME));
+    db.createKey(fakeEncryptionKey(DEFAULT_SET_NAME));
     db.createKey(fakeEncryptionKey());
     db.createKey(fakeEncryptionKey(nonDefaultName));
-    db.createKey(fakeEncryptionKey(KeyDb.DEFAULT_SET_NAME));
-    db.createKey(fakeEncryptionKey(KeyDb.DEFAULT_SET_NAME));
+    db.createKey(fakeEncryptionKey(DEFAULT_SET_NAME));
+    db.createKey(fakeEncryptionKey(DEFAULT_SET_NAME));
 
     // When/Then
-    assertThat(db.listRecentKeys(Duration.ofSeconds(999)).toArray()).hasLength(5);
-    assertThat(db.listRecentKeys(KeyDb.DEFAULT_SET_NAME, Duration.ofSeconds(999)).toArray())
-        .hasLength(5);
+    assertThat(db.listRecentKeys(DEFAULT_SET_NAME, Duration.ofSeconds(999)).toArray()).hasLength(5);
     assertThat(db.listRecentKeys(nonDefaultName, Duration.ofSeconds(999)).toArray()).hasLength(2);
   }
 

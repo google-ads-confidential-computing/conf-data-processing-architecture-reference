@@ -17,25 +17,32 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyset.KeySetConfig;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyset.KeySetManager;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.shared.api.exception.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/* This class actuates the state and the keys of the key set against the key sets configurtaion.  */
+/* This class actuates the state and the keys of the key set against the key set's configuration.  */
 public final class ActuateKeySetTask {
 
   private static final Logger logger = LoggerFactory.getLogger(ActuateKeySetTask.class);
 
   private final KeySetManager keySetManager;
   private final CreateSplitKeyTask createSplitKeyTask;
+  private final LogMetricHelper logMetricHelper;
 
   @Inject
-  public ActuateKeySetTask(KeySetManager keySetManager, CreateSplitKeyTask createSplitKeyTask) {
+  public ActuateKeySetTask(
+      KeySetManager keySetManager,
+      CreateSplitKeyTask createSplitKeyTask,
+      LogMetricHelper logMetricHelper) {
     this.keySetManager = keySetManager;
     this.createSplitKeyTask = createSplitKeyTask;
+    this.logMetricHelper = logMetricHelper;
   }
 
   /** Executes the task. */
@@ -52,13 +59,17 @@ public final class ActuateKeySetTask {
             config.getValidityInDays(),
             config.getTtlInDays());
       } catch (Exception exception) {
-        // TODO(b/375651558) Record to a log-based metric here. Consider a
-        // general error that can be reused.
         if (exception instanceof InterruptedException) {
           Thread.currentThread().interrupt();
         }
-        logger.error("Key set {} actuation failed.", config.getName(), exception);
+        logger.error(format(config.getName(), exception.toString()));
+        logger.error("Key set '{}' actuation failed.", config.getName(), exception);
       }
     }
+  }
+
+  private String format(String setName, String errorReason) {
+    return logMetricHelper.format(
+        "key_generation/error", ImmutableMap.of("setName", setName, "errorReason", errorReason));
   }
 }

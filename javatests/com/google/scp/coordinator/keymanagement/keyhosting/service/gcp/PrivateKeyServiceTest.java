@@ -61,9 +61,9 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 
 @RunWith(JUnit4.class)
-public final class EncryptionKeyServiceTest {
+public final class PrivateKeyServiceTest {
 
-  private static final Logger logger = LoggerFactory.getLogger(EncryptionKeyServiceTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(PrivateKeyServiceTest.class);
   private static final ImmutableList<EncryptionKey> TEST_KEYS =
       ImmutableList.of(
           createKey(null, -7),
@@ -309,9 +309,9 @@ public final class EncryptionKeyServiceTest {
                       "SPANNER_DATABASE", keyDbConfig.spannerDbName(),
                       "PROJECT_ID", keyDbConfig.gcpProjectId(),
                       "READ_STALENESS_SEC", "2")),
-              "EncryptionKeyService_deploy.jar",
+              "PrivateKeyService_deploy.jar",
               "java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/",
-              "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.EncryptionKeyService");
+              "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PrivateKeyService");
       container.followOutput(new Slf4jLogConsumer(logger).withSeparateOutputStreams());
       return container;
     }

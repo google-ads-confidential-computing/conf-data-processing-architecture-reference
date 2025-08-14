@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verify;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyset.KeySetConfig;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyset.KeySetManager;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -46,13 +47,13 @@ public final class ActuateKeySetTaskTest {
     // Given
     doReturn(
             ImmutableList.of(
-                KeySetConfig.create("set-name-1", "test-template-1", 1, 2, 3),
-                KeySetConfig.create("set-name-2", "test-template-2", 4, 5, 6)))
+                KeySetConfig.create("set-name-1", "test-template-1", 1, 2, 3, 20, 5),
+                KeySetConfig.create("set-name-2", "test-template-2", 4, 5, 6, 30, 1)))
         .when(keySetManager)
         .getConfigs();
 
     // When
-    new ActuateKeySetTask(keySetManager, createSplitKeyTask).execute();
+    new ActuateKeySetTask(keySetManager, createSplitKeyTask, new LogMetricHelper("test")).execute();
 
     // Then
     verify(createSplitKeyTask, times(1)).create("set-name-1", "test-template-1", 1, 2, 3);
@@ -64,9 +65,9 @@ public final class ActuateKeySetTaskTest {
     // Given
     doReturn(
             ImmutableList.of(
-                KeySetConfig.create("set-name-1", "test-template-1", 1, 2, 3),
-                KeySetConfig.create("set-name-2", "test-template-2", 4, 5, 6),
-                KeySetConfig.create("set-name-3", "test-template-3", 7, 8, 9)))
+                KeySetConfig.create("set-name-1", "test-template-1", 1, 2, 3, 10, 2),
+                KeySetConfig.create("set-name-2", "test-template-2", 4, 5, 6, 20, 1),
+                KeySetConfig.create("set-name-3", "test-template-3", 7, 8, 9, 30, 9)))
         .when(keySetManager)
         .getConfigs();
 
@@ -75,7 +76,7 @@ public final class ActuateKeySetTaskTest {
         .create("set-name-2", "test-template-2", 4, 5, 6);
 
     // When
-    new ActuateKeySetTask(keySetManager, createSplitKeyTask).execute();
+    new ActuateKeySetTask(keySetManager, createSplitKeyTask, new LogMetricHelper("test")).execute();
 
     // Then
     verify(createSplitKeyTask, times(1)).create("set-name-1", "test-template-1", 1, 2, 3);

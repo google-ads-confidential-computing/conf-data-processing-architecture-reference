@@ -29,6 +29,7 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
+        "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/crypto/tink",
         "//java/com/google/scp/shared/util",
         "//java/external:acai",
@@ -57,6 +58,7 @@ java_test(
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common/keyset",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/external:guava",
         "//java/external:mockito",
     ],

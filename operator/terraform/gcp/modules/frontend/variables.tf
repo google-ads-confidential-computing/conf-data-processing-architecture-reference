@@ -200,7 +200,7 @@ variable "frontend_service_jar" {
 
 variable "frontend_service_zip" {
   description = <<-EOT
-    Optional. Path to the zip file for lambda function under bucket
+    Optional. Path to the zip file for cloud function under bucket
     operator_package_bucket_name.
     If this path is missing, the terraform will use path in frontend_service_jar,
     archive the jar in zip file and upload to the bucket.

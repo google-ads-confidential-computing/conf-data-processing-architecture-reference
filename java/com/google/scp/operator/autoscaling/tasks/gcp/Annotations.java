@@ -32,4 +32,10 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface TerminationWaitTimeout {}
+
+  /** Whether the workgroup feature is enabled for the autoscaling instance group. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface WorkgroupFeatureEnabled {}
 }

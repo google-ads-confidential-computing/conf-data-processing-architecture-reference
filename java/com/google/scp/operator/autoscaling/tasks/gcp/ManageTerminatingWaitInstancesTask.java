@@ -18,6 +18,7 @@ package com.google.scp.operator.autoscaling.tasks.gcp;
 
 import com.google.inject.Inject;
 import com.google.scp.operator.autoscaling.tasks.gcp.Annotations.TerminationWaitTimeout;
+import com.google.scp.operator.autoscaling.tasks.gcp.Annotations.WorkgroupFeatureEnabled;
 import com.google.scp.operator.protos.shared.backend.asginstance.AsgInstanceProto.AsgInstance;
 import com.google.scp.operator.protos.shared.backend.asginstance.InstanceStatusProto.InstanceStatus;
 import com.google.scp.operator.shared.dao.asginstancesdb.common.AsgInstancesDao;
@@ -45,6 +46,7 @@ public class ManageTerminatingWaitInstancesTask {
   private final GcpInstanceManagementClient instanceManagementClient;
   private final AsgInstancesDao asgInstancesDao;
   private final Integer terminationWaitTimeout;
+  private final Boolean workgroupFeatureEnabled;
 
   private final Logger logger = LoggerFactory.getLogger(ManageTerminatingWaitInstancesTask.class);
 
@@ -53,10 +55,12 @@ public class ManageTerminatingWaitInstancesTask {
   public ManageTerminatingWaitInstancesTask(
       AsgInstancesDao asgInstancesDao,
       GcpInstanceManagementClient instanceManagementClient,
-      @TerminationWaitTimeout Integer terminationWaitTimeout) {
+      @TerminationWaitTimeout Integer terminationWaitTimeout,
+      @WorkgroupFeatureEnabled Boolean workgroupFeatureEnabled) {
     this.asgInstancesDao = asgInstancesDao;
     this.instanceManagementClient = instanceManagementClient;
     this.terminationWaitTimeout = terminationWaitTimeout;
+    this.workgroupFeatureEnabled = workgroupFeatureEnabled;
   }
 
   /**
@@ -69,9 +73,19 @@ public class ManageTerminatingWaitInstancesTask {
   public Map<String, List<GcpComputeInstance>> manageInstances() throws ServiceException {
 
     try {
-      // Get all compute instances in TERMINATING_WAIT STATE
+      // Get all compute instances in TERMINATING_WAIT state
       List<AsgInstance> terminatingWaitInstances =
-          asgInstancesDao.getAsgInstancesByStatus(InstanceStatus.TERMINATING_WAIT.toString());
+          asgInstancesDao.listAsgInstances(
+              InstanceStatus.TERMINATING_WAIT.toString(),
+              instanceManagementClient.getManagedInstanceGroupName());
+      // For backwards compatibility, add rows without InstanceGroupName populated for legacy worker
+      if (!workgroupFeatureEnabled) {
+        terminatingWaitInstances.addAll(
+            asgInstancesDao.listAsgInstances(InstanceStatus.TERMINATING_WAIT.toString(), null));
+        logger.info(
+            "Number of instances in TERMINATING_WAIT state without InstanceGroupName: "
+                + terminatingWaitInstances.size());
+      }
       logger.info(
           "Number of instances in TERMINATING_WAIT state: " + terminatingWaitInstances.size());
 

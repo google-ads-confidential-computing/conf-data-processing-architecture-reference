@@ -28,6 +28,7 @@ import java.util.Optional;
 public class FakeAsgInstancesDao implements AsgInstancesDao {
 
   private Optional<AsgInstance> asgInstanceToReturn;
+  private Optional<AsgInstance> asgInstanceToReturnWithInstanceGroupName;
   private String lastInstanceNameLookedUp;
   private AsgInstance lastInstanceInserted;
   private AsgInstance lastInstanceUpdated;
@@ -50,7 +51,7 @@ public class FakeAsgInstancesDao implements AsgInstancesDao {
   }
 
   @Override
-  public List<AsgInstance> getAsgInstancesByStatus(String status) throws AsgInstanceDaoException {
+  public List<AsgInstance> listAsgInstances(String status) throws AsgInstanceDaoException {
     if (shouldThrowAsgInstancesDaoException) {
       throw new AsgInstanceDaoException(
           new IllegalStateException("Was set to throw (shouldThrowAsgInstancesDaoException)"));
@@ -59,6 +60,28 @@ public class FakeAsgInstancesDao implements AsgInstancesDao {
     List<AsgInstance> asgInstanceList = new ArrayList<>();
     if (asgInstanceToReturn.isPresent()) {
       asgInstanceList.add(asgInstanceToReturn.get());
+    }
+
+    return asgInstanceList;
+  }
+
+  @Override
+  public List<AsgInstance> listAsgInstances(String status, String instanceGroup)
+      throws AsgInstanceDaoException {
+    if (shouldThrowAsgInstancesDaoException) {
+      throw new AsgInstanceDaoException(
+          new IllegalStateException("Was set to throw (shouldThrowAsgInstancesDaoException)"));
+    }
+
+    System.out.println("querying for status: " + status + " instance group: " + instanceGroup);
+    List<AsgInstance> asgInstanceList = new ArrayList<>();
+    if (instanceGroup == null && asgInstanceToReturn.isPresent()) {
+      asgInstanceList.add(asgInstanceToReturn.get());
+    } else if (instanceGroup != null
+        && asgInstanceToReturnWithInstanceGroupName.isPresent()
+        && instanceGroup
+            == asgInstanceToReturnWithInstanceGroupName.get().getInstanceGroupName().toString()) {
+      asgInstanceList.add(asgInstanceToReturnWithInstanceGroupName.get());
     }
 
     return asgInstanceList;
@@ -93,6 +116,11 @@ public class FakeAsgInstancesDao implements AsgInstancesDao {
     this.asgInstanceToReturn = asgInstanceToReturn;
   }
 
+  /** Set the instance group name to check for when instance group filter provided. */
+  public void setAsgInstanceToReturnWithInstanceGroupName(Optional<AsgInstance> instanceGroupName) {
+    this.asgInstanceToReturnWithInstanceGroupName = instanceGroupName;
+  }
+
   /** Get the most recent asg instance that was inserted. */
   public AsgInstance getLastInstanceInserted() {
     return lastInstanceInserted;
@@ -119,6 +147,7 @@ public class FakeAsgInstancesDao implements AsgInstancesDao {
   /** Sets all internal fields to their default values. */
   public void reset() {
     asgInstanceToReturn = Optional.empty();
+    asgInstanceToReturnWithInstanceGroupName = Optional.empty();
     lastInstanceNameLookedUp = null;
     lastInstanceInserted = null;
     lastInstanceUpdated = null;

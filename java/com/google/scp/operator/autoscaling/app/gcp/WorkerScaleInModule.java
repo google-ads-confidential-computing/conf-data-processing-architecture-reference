@@ -22,6 +22,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.operator.autoscaling.tasks.gcp.Annotations.TerminationWaitTimeout;
+import com.google.scp.operator.autoscaling.tasks.gcp.Annotations.WorkgroupFeatureEnabled;
 import com.google.scp.operator.autoscaling.tasks.gcp.GcpInstanceManagementConfig;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerAsgInstancesDao.AsgInstancesDbSpannerTtlDays;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbConfig;
@@ -41,6 +42,7 @@ public final class WorkerScaleInModule extends AbstractModule {
   private static final String REGION = "REGION";
   private static final String TERMINATION_WAIT_TIMEOUT = "TERMINATION_WAIT_TIMEOUT";
   private static final String ASG_INSTANCES_TTL_ENV_VAR = "ASG_INSTANCES_TTL";
+  private static final String WORKGROUP_FEATURE_ENABLED = "WORKGROUP_FEATURE_ENABLED";
 
   Map<String, String> env = System.getenv();
 
@@ -89,6 +91,13 @@ public final class WorkerScaleInModule extends AbstractModule {
   @Singleton
   public Clock provideClock() {
     return Clock.systemUTC();
+  }
+
+  /** Whether the workgroup feature is enabled for the autoscaling instance group. */
+  @Provides
+  @WorkgroupFeatureEnabled
+  public Boolean getWorkgroupFeatureEnabled() {
+    return Boolean.parseBoolean(env.getOrDefault(WORKGROUP_FEATURE_ENABLED, "false"));
   }
 
   @Override

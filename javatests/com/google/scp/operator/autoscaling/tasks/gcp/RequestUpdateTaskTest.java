@@ -79,6 +79,8 @@ public class RequestUpdateTaskTest {
             .setInstanceTemplate(instanceTemplate)
             .build();
     remainingInstances = new HashMap<>();
+
+    when(instanceManagementClient.getManagedInstanceGroupName()).thenReturn("fake-group");
   }
 
   @Test
@@ -106,7 +108,8 @@ public class RequestUpdateTaskTest {
         new RequestUpdateTask(instanceManagementClient, fakeAsgInstancesDao, clock, ttlDays);
     remainingInstances.put(instanceZone, Collections.singletonList(instance));
 
-    when(instanceManagementClient.getCurrentInstanceTemplate()).thenReturn("test-template123456789");
+    when(instanceManagementClient.getCurrentInstanceTemplate())
+        .thenReturn("test-template123456789");
     requestUpdateTask.requestUpdate(remainingInstances);
 
     assertNull(fakeAsgInstancesDao.getLastInstanceInserted());
@@ -132,7 +135,8 @@ public class RequestUpdateTaskTest {
         zoneB,
         Collections.singletonList(createZonalGcpComputeInstance(zoneB, "non-matching-template")));
 
-    when(instanceManagementClient.getCurrentInstanceTemplate()).thenReturn("test-template123456789");
+    when(instanceManagementClient.getCurrentInstanceTemplate())
+        .thenReturn("test-template123456789");
     Map<String, List<GcpComputeInstance>> remainingZonesToInstances =
         requestUpdateTask.requestUpdate(remainingInstances);
 

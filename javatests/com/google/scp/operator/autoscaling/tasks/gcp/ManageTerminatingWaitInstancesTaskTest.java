@@ -76,17 +76,21 @@ public final class ManageTerminatingWaitInstancesTaskTest {
             .setInstanceTemplate(instanceTemplate)
             .build();
     instanceList = new ArrayList<>();
+
+    when(instanceManagementClient.getManagedInstanceGroupName()).thenReturn("fake-group");
   }
 
   @Test
   public void testManageInstances_nothingToDelete() throws Exception {
     when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
+
     manageTerminatingWaitInstancesTask =
-        new ManageTerminatingWaitInstancesTask(fakeAsgInstancesDao, instanceManagementClient, 5);
+        new ManageTerminatingWaitInstancesTask(
+            fakeAsgInstancesDao, instanceManagementClient, 5, false);
 
     manageTerminatingWaitInstancesTask.manageInstances();
     verify(instanceManagementClient, never()).deleteInstances(anySet());
-    assertThat(fakeAsgInstancesDao.getAsgInstancesByStatus(TERMINATING_WAIT.name())).isEmpty();
+    assertThat(fakeAsgInstancesDao.listAsgInstances(TERMINATING_WAIT.name())).isEmpty();
   }
 
   @Test
@@ -102,7 +106,8 @@ public final class ManageTerminatingWaitInstancesTaskTest {
     when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
     doNothing().when(instanceManagementClient).deleteInstances(anySet());
     manageTerminatingWaitInstancesTask =
-        new ManageTerminatingWaitInstancesTask(fakeAsgInstancesDao, instanceManagementClient, 5);
+        new ManageTerminatingWaitInstancesTask(
+            fakeAsgInstancesDao, instanceManagementClient, 5, false);
 
     manageTerminatingWaitInstancesTask.manageInstances();
     verify(instanceManagementClient, times(1)).deleteInstances(anySet());
@@ -120,7 +125,8 @@ public final class ManageTerminatingWaitInstancesTaskTest {
     fakeAsgInstancesDao.setAsgInstanceToReturn(Optional.of(asgInstance));
     when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
     manageTerminatingWaitInstancesTask =
-        new ManageTerminatingWaitInstancesTask(fakeAsgInstancesDao, instanceManagementClient, 5);
+        new ManageTerminatingWaitInstancesTask(
+            fakeAsgInstancesDao, instanceManagementClient, 5, false);
 
     manageTerminatingWaitInstancesTask.manageInstances();
     verify(instanceManagementClient, never()).deleteInstances(anySet());
@@ -132,13 +138,70 @@ public final class ManageTerminatingWaitInstancesTaskTest {
     instanceList.add(instance);
     when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
     manageTerminatingWaitInstancesTask =
-        new ManageTerminatingWaitInstancesTask(fakeAsgInstancesDao, instanceManagementClient, 5);
+        new ManageTerminatingWaitInstancesTask(
+            fakeAsgInstancesDao, instanceManagementClient, 5, false);
 
     Map<String, List<GcpComputeInstance>> remainingInstanceMap =
         manageTerminatingWaitInstancesTask.manageInstances();
     verify(instanceManagementClient, never()).deleteInstances(anySet());
-    assertThat(fakeAsgInstancesDao.getAsgInstancesByStatus(TERMINATING_WAIT.name())).isEmpty();
+    assertThat(fakeAsgInstancesDao.listAsgInstances(TERMINATING_WAIT.name())).isEmpty();
     assertThat(remainingInstanceMap.get("us-central1-b").get(0)).isEqualTo(instance);
+  }
+
+  @Test
+  public void testManageInstances_nothingToDeleteWorkgroup() throws Exception {
+    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
+    manageTerminatingWaitInstancesTask =
+        new ManageTerminatingWaitInstancesTask(
+            fakeAsgInstancesDao, instanceManagementClient, 5, true);
+
+    manageTerminatingWaitInstancesTask.manageInstances();
+    verify(instanceManagementClient, never()).deleteInstances(anySet());
+    assertThat(fakeAsgInstancesDao.listAsgInstances(TERMINATING_WAIT.name())).isEmpty();
+  }
+
+  @Test
+  public void testManageInstances_deleteOverdueInstancesWithInstanceGroup() throws Exception {
+    AsgInstance asgInstance =
+        AsgInstance.newBuilder()
+            .setRequestTime(Timestamp.newBuilder().setSeconds(0).build())
+            .setInstanceName(instanceName)
+            .setStatus(InstanceStatus.TERMINATING_WAIT)
+            .setInstanceGroupName("fake-group")
+            .build();
+    fakeAsgInstancesDao.setAsgInstanceToReturnWithInstanceGroupName(Optional.of(asgInstance));
+    instanceList.add(instance);
+    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
+    doNothing().when(instanceManagementClient).deleteInstances(anySet());
+    manageTerminatingWaitInstancesTask =
+        new ManageTerminatingWaitInstancesTask(
+            fakeAsgInstancesDao, instanceManagementClient, 5, false);
+
+    manageTerminatingWaitInstancesTask.manageInstances();
+    verify(instanceManagementClient, times(1)).deleteInstances(anySet());
+    assertEquals(TERMINATED, fakeAsgInstancesDao.getLastInstanceUpdated().getStatus());
+  }
+
+  @Test
+  public void testManageInstances_deleteOverdueInstancesWithWorkgroup() throws Exception {
+    AsgInstance asgInstance =
+        AsgInstance.newBuilder()
+            .setRequestTime(Timestamp.newBuilder().setSeconds(0).build())
+            .setInstanceName(instanceName)
+            .setStatus(InstanceStatus.TERMINATING_WAIT)
+            .setInstanceGroupName("fake-group")
+            .build();
+    fakeAsgInstancesDao.setAsgInstanceToReturnWithInstanceGroupName(Optional.of(asgInstance));
+    instanceList.add(instance);
+    when(instanceManagementClient.listActiveInstanceGroupInstances()).thenReturn(instanceList);
+    doNothing().when(instanceManagementClient).deleteInstances(anySet());
+    manageTerminatingWaitInstancesTask =
+        new ManageTerminatingWaitInstancesTask(
+            fakeAsgInstancesDao, instanceManagementClient, 5, true);
+
+    manageTerminatingWaitInstancesTask.manageInstances();
+    verify(instanceManagementClient, times(1)).deleteInstances(anySet());
+    assertEquals(TERMINATED, fakeAsgInstancesDao.getLastInstanceUpdated().getStatus());
   }
 
   static class TestEnv extends AbstractModule {

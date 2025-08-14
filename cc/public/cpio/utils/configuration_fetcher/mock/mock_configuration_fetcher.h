@@ -28,10 +28,11 @@
 #include "public/cpio/utils/configuration_fetcher/interface/configuration_fetcher_interface.h"
 
 namespace google::scp::cpio {
-class MockConfigurationFetcher
-    : public testing::NiceMock<ConfigurationFetcherInterface> {
+
+// There is a default alias below for a NiceMock of this class.
+class MockConfigurationFetcherTmpl : public ConfigurationFetcherInterface {
  public:
-  MockConfigurationFetcher() {
+  MockConfigurationFetcherTmpl() {
     ON_CALL(*this, Init)
         .WillByDefault(testing::Return(core::SuccessExecutionResult()));
     ON_CALL(*this, Run)
@@ -324,4 +325,8 @@ class MockConfigurationFetcher
               ((core::AsyncContext<GetConfigurationRequest, std::string>)),
               (noexcept, override));
 };
+
+using MockConfigurationFetcher =
+    testing::NiceMock<MockConfigurationFetcherTmpl>;
+
 }  // namespace google::scp::cpio

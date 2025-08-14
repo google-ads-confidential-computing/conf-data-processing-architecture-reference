@@ -23,6 +23,11 @@ variable "environment" {
   description = "Environment where this service is deployed (e.g. dev, prod)."
 }
 
+variable "workgroup" {
+  description = "Workgroup name to associate resources."
+  type        = string
+}
+
 ################################################################################
 # Alarm Variables.
 ################################################################################

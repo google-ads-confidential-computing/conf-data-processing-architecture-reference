@@ -42,13 +42,13 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface DisableActivationTime {}
 
-  /** Binds enable cache value to control server-side caching.  */
+  /** Binds enable cache value to control server-side caching. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface EnableCache {}
 
-  /** Binds cache refresh time in minutes.  */
+  /** Binds cache refresh time in minutes. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
@@ -59,4 +59,13 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface KeyLimit {}
+
+  /**
+   * Binds allowed migrators from a Key Sets Vending Config to control server-side key migration
+   * vending.
+   */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface KeySetsVendingConfigAllowedMigrators {}
 }

@@ -17,6 +17,7 @@
 module "base_worker" {
   source                        = "../base_worker"
   environment                   = var.environment
+  workgroup                     = null
   project_id                    = var.project_id
   network                       = var.network
   subnet_id                     = var.subnet_id
@@ -34,7 +35,7 @@ module "base_worker" {
   worker_instance_disk_type    = var.worker_instance_disk_type
   worker_instance_disk_size_gb = var.worker_instance_disk_size_gb
 
-  user_provided_worker_sa_email = var.user_provided_worker_sa_email
+  worker_service_account_email = var.worker_service_account_email
 
   # Instance Metadata
   worker_logging_enabled           = var.worker_logging_enabled

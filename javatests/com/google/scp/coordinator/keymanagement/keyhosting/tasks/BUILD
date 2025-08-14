@@ -58,6 +58,8 @@ java_test(
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common/cache",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
@@ -68,7 +70,9 @@ java_test(
         "//java/com/google/scp/shared/api/model",
         "//java/external:acai",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
+        "//java/external:jackson_databind",
         "//java/external:mockito",
         "//java/external:protobuf_java_util",
         "//javatests/com/google/scp/coordinator/keymanagement/shared/serverless/common:ApiTaskTestBase",
@@ -98,6 +102,31 @@ java_test(
         "//java/external:mockito",
         "//java/external:protobuf_java_util",
         "//javatests/com/google/scp/coordinator/keymanagement/shared/serverless/common:ApiTaskTestBase",
+        "//javatests/com/google/scp/coordinator/keymanagement/testutils",
+    ],
+)
+
+java_test(
+    name = "KeyMigrationVendingUtilTest",
+    srcs = [
+        "KeyMigrationVendingUtilTest.java",
+    ],
+    # TODO(b/358102551) Works around non-hermetic sandbox issue until upgrade
+    # to Bazel 7+ or incompatible_sandbox_hermetic_tmp can be reliably applied.
+    tags = ["no-sandbox"],
+    deps = [
+        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
+        "//coordinator/protos/keymanagement/shared/backend:java_proto",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
+        "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
+        "//java/com/google/scp/shared/api/exception",
+        "//java/external:acai",
+        "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:mockito",
+        "//java/external:protobuf_java_util",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
     ],
 )

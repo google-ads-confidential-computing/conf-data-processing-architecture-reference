@@ -109,13 +109,13 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
     return startContainerAndConnectToSpannerWithEnvs(
         spannerEmulatorContainer,
         envVariables,
-        "EncryptionKeyService_deploy.jar",
+        "PrivateKeyService_deploy.jar",
         "java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/",
-        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.EncryptionKeyService");
+        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PrivateKeyService");
   }
 
   /**
-   * Starts and provides a container for Encryption Key Cloud Function Integration tests. Note: This
+   * Starts and provides a container for Private Key Cloud Function Integration tests. Note: This
    * is for Coordinator B.
    */
   @Provides
@@ -127,9 +127,9 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
     return startContainerAndConnectToSpannerWithEnvs(
         spannerEmulatorContainer,
         envVariables,
-        "EncryptionKeyService_deploy.jar",
+        "PrivateKeyService_deploy.jar",
         "java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/",
-        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.EncryptionKeyService");
+        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PrivateKeyService");
   }
 
   /** Starts and provides a container for Key Storage Cloud Function Integration tests. */

@@ -1,4 +1,4 @@
-// Copyright 2022 Google LLC
+// Copyright 2022-2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -106,6 +106,13 @@ DEFINE_ERROR_CODE(SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_ENCRYPTION_ALGORITHM,
                   SC_CRYPTO_CLIENT_PROVIDER, 0x0018,
                   "Encryption algorithm not supported.",
                   HttpStatusCode::BAD_REQUEST)
+DEFINE_ERROR_CODE(SC_CRYPTO_CLIENT_PROVIDER_ERROR_CREATING_AEAD_PRIMITIVE,
+                  SC_CRYPTO_CLIENT_PROVIDER, 0x0019,
+                  "Failure creating Aead primitive.",
+                  HttpStatusCode::BAD_REQUEST)
+DEFINE_ERROR_CODE(SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_AEAD_KEY_TYPE,
+                  SC_CRYPTO_CLIENT_PROVIDER, 0x001A,
+                  "Aead key type not supported.", HttpStatusCode::BAD_REQUEST)
 
 MAP_TO_PUBLIC_ERROR_CODE(
     SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_ENCRYPTION_ALGORITHM,
@@ -158,4 +165,9 @@ MAP_TO_PUBLIC_ERROR_CODE(SC_CRYPTO_CLIENT_PROVIDER_PARSE_HPKE_PUBLIC_KEY_FAILED,
 MAP_TO_PUBLIC_ERROR_CODE(
     SC_CRYPTO_CLIENT_PROVIDER_PARSE_STREAMING_AEAD_KEY_FAILED,
     SC_CPIO_INVALID_ARGUMENT)
+MAP_TO_PUBLIC_ERROR_CODE(
+    SC_CRYPTO_CLIENT_PROVIDER_ERROR_CREATING_AEAD_PRIMITIVE,
+    SC_CPIO_INTERNAL_ERROR)
+MAP_TO_PUBLIC_ERROR_CODE(SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_AEAD_KEY_TYPE,
+                         SC_CPIO_INVALID_ARGUMENT)
 }  // namespace google::scp::core::errors

@@ -375,7 +375,7 @@ variable "private_key_service_cache_refresh_in_minutes" {
 }
 
 ### EKS
-variable "encryption_key_service_cloudfunction_memory_mb" {
+variable "private_key_service_cloudfunction_memory_mb" {
   description = "Memory size in MB for encryption key cloud function."
   type        = number
 }
@@ -385,7 +385,7 @@ variable "encryption_key_service_cloudfunction_min_instances" {
   type        = number
 }
 
-variable "encryption_key_service_cloudfunction_max_instances" {
+variable "private_key_service_cloudfunction_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
 }
@@ -477,42 +477,42 @@ variable "public_key_service_general_error_threshold" {
 # Encryption Key Service Alarm Variables.
 ################################################################################
 
-variable "encryptionkeyservice_alarm_eval_period_sec" {
+variable "private_key_service_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
   type        = string
 }
 
-variable "encryptionkeyservice_cloudfunction_max_execution_time_max" {
+variable "private_key_service_cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number
 }
 
-variable "encryptionkeyservice_cloudfunction_5xx_threshold" {
+variable "private_key_service_cloudfunction_5xx_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "encryptionkeyservice_cloudfunction_alert_on_memory_usage_threshold" {
+variable "private_key_service_cloudfunction_alert_on_memory_usage_threshold" {
   description = "Memory usage of the Cloud Function should be higher than this value to alert."
   type        = number
 }
 
-variable "encryptionkeyservice_lb_max_latency_ms" {
+variable "private_key_service_lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
   type        = string
 }
 
-variable "encryptionkeyservice_lb_5xx_threshold" {
+variable "private_key_service_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "encryptionkeyservice_lb_5xx_ratio_threshold" {
+variable "private_key_service_lb_5xx_ratio_threshold" {
   description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "encryptionkeyservice_alarm_duration_sec" {
+variable "private_key_service_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
 }
@@ -552,6 +552,22 @@ variable "alert_severity_overrides" {
   type        = map(string)
 }
 
+
+
+variable "disable_key_set_acl" {
+  description = "Controls whether to generate keys enforcing key set level acl."
+  type        = string
+}
+
+variable "peer_coordinator_kms_key_base_uri" {
+  description = "Kms key base url from peer coordinator."
+  type        = string
+}
+
+################################################################################
+# Migration Variables.
+################################################################################
+
 variable "populate_migration_key_data" {
   description = <<EOT
   Controls whether to populate the migration columns when generating keys.
@@ -566,32 +582,16 @@ variable "key_sets_vending_config" {
   description = <<EOT
   Configuration for controlling key set vending.
 
-  Note: Any key sets without configurations set will by default serve the default key data columns for all callers.
-
   Attributes:
-    key_sets                                   (list) - The list of individual key set configuration, one for each unique key set.
-    key_sets[].name                            (string) - The unique set name for the key set, the value should be a valid URL path segment (e.g. ^[a-zA-Z0-9\\-\\._~]+$).
-    key_sets[].callers_using_migration_data    (list(string)) - The list of callers allowed to consume from the migration columns in the KeySet Db.
+    allowed_migrators (list(string)) - The list of individual key set and/or caller emails allowed to consume migration key data.
   EOT
   type = object({
-    key_sets = list(object({
-      name                         = string
-      callers_using_migration_data = list(string)
-    }))
+    allowed_migrators = list(string)
   })
-}
-
-variable "disable_key_set_acl" {
-  description = "Controls whether to generate keys enforcing key set level acl."
-  type        = string
-}
-
-variable "peer_coordinator_kms_key_base_uri" {
-  description = "Kms key base url from peer coordinator."
-  type        = string
 }
 
 variable "migration_peer_coordinator_kms_key_base_uri" {
   description = "Migration kms key base url from peer coordinator."
   type        = string
+  nullable    = true
 }

@@ -163,6 +163,16 @@ module "jobqueue" {
   max_undelivered_message_age_sec = var.jobqueue_max_undelivered_message_age_sec
 }
 
+module "worker_service_account" {
+  source = "../../modules/worker/worker_service_account"
+
+  environment                   = var.environment
+  project_id                    = var.project_id
+  metadatadb_instance_name      = module.jobdatabase.instance_name
+  metadatadb_name               = module.jobdatabase.database_name
+  user_provided_worker_sa_email = var.user_provided_worker_sa_email
+}
+
 module "worker" {
   source                        = "../../modules/worker/cc_worker"
   environment                   = var.environment
@@ -183,7 +193,7 @@ module "worker" {
   worker_instance_disk_type    = var.worker_instance_disk_type
   worker_instance_disk_size_gb = var.worker_instance_disk_size_gb
 
-  user_provided_worker_sa_email = var.user_provided_worker_sa_email
+  worker_service_account_email = module.worker_service_account.worker_service_account_email
 
   # Instance Metadata
   worker_logging_enabled           = var.worker_logging_enabled
@@ -223,6 +233,7 @@ module "worker" {
 module "autoscaling" {
   source                  = "../../modules/autoscaling"
   environment             = var.environment
+  workgroup               = null
   project_id              = var.project_id
   region                  = var.region
   subnet_id               = module.vpc.worker_subnet_ids[var.region]

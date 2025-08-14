@@ -55,7 +55,7 @@ import org.junit.runners.JUnit4;
 
 /** Integration tests for GCP encryption key service cloud function */
 @RunWith(JUnit4.class)
-public final class EncryptionKeyServiceIntegrationTest {
+public final class PrivateKeyServiceIntegrationTest {
   @Rule public Acai acai = new Acai(GcpMultiCoordinatorTestEnvModule.class);
 
   private static final HttpClient client = HttpClient.newHttpClient();

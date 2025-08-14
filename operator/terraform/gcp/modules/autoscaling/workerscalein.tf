@@ -29,13 +29,13 @@ data "archive_file" "worker_scale_in_archive" {
 resource "google_storage_bucket_object" "worker_scale_in_package_bucket_object" {
   count = var.worker_scale_in_zip == "" ? 1 : 0
   # Need hash in name so cloudfunction knows to redeploy when code changes
-  name   = "${var.environment}_${local.cloudfunction_name_suffix}_${data.archive_file.worker_scale_in_archive[0].output_md5}"
+  name   = "${local.resource_prefix}_${local.cloudfunction_name_suffix}_${data.archive_file.worker_scale_in_archive[0].output_md5}"
   bucket = var.operator_package_bucket_name
   source = local.cloudfunction_package_zip
 }
 
 resource "google_cloudfunctions2_function" "worker_scale_in_cloudfunction" {
-  name     = "${var.environment}-${var.region}-worker-scale-in"
+  name     = "${local.resource_prefix}-${var.region}-worker-scale-in"
   location = var.region
 
   build_config {
@@ -66,16 +66,19 @@ resource "google_cloudfunctions2_function" "worker_scale_in_cloudfunction" {
       MANAGED_INSTANCE_GROUP_NAME = google_compute_region_instance_group_manager.worker_instance_group.name
       TERMINATION_WAIT_TIMEOUT    = var.termination_wait_timeout_sec
       ASG_INSTANCES_TTL           = var.asg_instances_table_ttl_days
+      WORKGROUP_FEATURE_ENABLED   = var.workgroup != null ? "true" : "false"
     }
   }
 
   labels = {
     environment = var.environment
+    workgroup   = var.workgroup
+    type        = "scp-workerscalein"
   }
 }
 
 resource "google_cloud_scheduler_job" "worker_scale_in_scheduler" {
-  name        = "${var.environment}-scale-in-sched"
+  name        = "${local.resource_prefix}-scale-in-sched"
   description = "The worker scale-in scheduler."
   schedule    = var.worker_scale_in_cron
 

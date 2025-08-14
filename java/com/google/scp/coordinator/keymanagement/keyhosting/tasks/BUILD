@@ -31,8 +31,10 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
+        "//java/com/google/scp/shared/gcp/util:json_util",
         "//java/external:guava",
         "//java/external:guice",
+        "//java/external:jackson_databind",
         "//java/external:slf4j",
     ],
 )

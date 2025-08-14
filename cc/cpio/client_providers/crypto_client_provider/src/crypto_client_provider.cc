@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2022-2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@
 #include <utility>
 
 #include <tink/aead.h>
+#include <tink/aead_config.h>
 #include <tink/binary_keyset_reader.h>
 #include <tink/cleartext_keyset_handle.h>
 #include <tink/hybrid/hpke_config.h>
@@ -66,10 +67,12 @@
 
 using absl::HexStringToBytes;
 using crypto::tink::Aead;
+using crypto::tink::AeadConfig;
 using crypto::tink::AesCtrHmacStreamingKeyManager;
 using crypto::tink::AesGcmHkdfStreamingKeyManager;
 using crypto::tink::BinaryKeysetReader;
 using crypto::tink::CleartextKeysetHandle;
+using crypto::tink::ConfigGlobalRegistry;
 using crypto::tink::HybridConfig;
 using crypto::tink::HybridDecrypt;
 using crypto::tink::HybridEncrypt;
@@ -95,6 +98,7 @@ using google::cmrt::sdk::crypto_service::v1::AeadDecryptRequest;
 using google::cmrt::sdk::crypto_service::v1::AeadDecryptResponse;
 using google::cmrt::sdk::crypto_service::v1::AeadEncryptRequest;
 using google::cmrt::sdk::crypto_service::v1::AeadEncryptResponse;
+using google::cmrt::sdk::crypto_service::v1::AeadKey;
 using google::cmrt::sdk::crypto_service::v1::ComputeMacRequest;
 using google::cmrt::sdk::crypto_service::v1::ComputeMacResponse;
 using google::cmrt::sdk::crypto_service::v1::HashType;
@@ -119,6 +123,7 @@ using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::PublicPrivateKeyPairId;
+using google::scp::core::StatusCode;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::AutoExpiryConcurrentMap;
 using google::scp::core::common::kZeroUuid;
@@ -136,6 +141,8 @@ using google::scp::core::errors::
 using google::scp::core::errors::SC_CRYPTO_CLIENT_PROVIDER_CREATE_AEAD_FAILED;
 using google::scp::core::errors::
     SC_CRYPTO_CLIENT_PROVIDER_CREATE_HPKE_CONTEXT_FAILED;
+using google::scp::core::errors::
+    SC_CRYPTO_CLIENT_PROVIDER_ERROR_CREATING_AEAD_PRIMITIVE;
 using google::scp::core::errors::SC_CRYPTO_CLIENT_PROVIDER_HPKE_DECRYPT_FAILED;
 using google::scp::core::errors::SC_CRYPTO_CLIENT_PROVIDER_HPKE_ENCRYPT_FAILED;
 using google::scp::core::errors::SC_CRYPTO_CLIENT_PROVIDER_INVALID_KEYSET_SIZE;
@@ -157,6 +164,8 @@ using google::scp::core::errors::SC_CRYPTO_CLIENT_PROVIDER_SECRET_EXPORT_FAILED;
 using google::scp::core::errors::
     SC_CRYPTO_CLIENT_PROVIDER_SPLIT_CIPHERTEXT_FAILED;
 using google::scp::core::errors::
+    SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_AEAD_KEY_TYPE;
+using google::scp::core::errors::
     SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_ENCRYPTION_ALGORITHM;
 using google::scp::core::utils::Base64Decode;
 using std::bind;
@@ -165,9 +174,9 @@ using std::isxdigit;
 using std::make_shared;
 using std::make_unique;
 using std::map;
-using std::move;
 using std::mt19937;
 using std::ostream;
+using std::pair;
 using std::random_device;
 using std::shared_ptr;
 using std::string;
@@ -349,6 +358,8 @@ ExecutionResultOr<unique_ptr<KeysetReader>> CreateBinaryKeysetReader(
 
 ExecutionResultOr<unique_ptr<Keyset>> CreateKeyset(const string& key) {
   auto keyset_reader_or = CreateBinaryKeysetReader(key);
+  RETURN_IF_FAILURE(keyset_reader_or.result());
+
   auto keyset_or = (*keyset_reader_or)->Read();
   if (!keyset_or.ok()) {
     auto execution_result =
@@ -358,7 +369,7 @@ ExecutionResultOr<unique_ptr<Keyset>> CreateKeyset(const string& key) {
               keyset_or.status().ToString().c_str());
     return execution_result;
   }
-  auto keyset = move(*keyset_or);
+  auto keyset = std::move(*keyset_or);
   if (keyset->key_size() != 1) {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_INVALID_KEYSET_SIZE);
@@ -370,19 +381,25 @@ ExecutionResultOr<unique_ptr<Keyset>> CreateKeyset(const string& key) {
 }
 
 ExecutionResultOr<unique_ptr<KeysetHandle>> CreateKeysetHandle(
-    const string& key) {
-  auto decoded_key_or = Base64Decode(key);
-  if (!decoded_key_or.Successful()) {
-    SCP_ERROR(kCryptoClientProvider, kZeroUuid, decoded_key_or.result(),
-              "Decoding failed with error.");
-    return decoded_key_or.result();
-  }
-  string decoded_key = decoded_key_or.release();
+    const string& key, bool base64_decode = true) {
+  string decoded_key = "";
 
-  auto keyset_reader_or = CreateBinaryKeysetReader(decoded_key);
+  if (base64_decode) {
+    auto decoded_key_or = Base64Decode(key);
+    if (!decoded_key_or.Successful()) {
+      SCP_ERROR(kCryptoClientProvider, kZeroUuid, decoded_key_or.result(),
+                "Decoding failed with error.");
+      return decoded_key_or.result();
+    }
+    decoded_key = decoded_key_or.release();
+  }
+
+  auto keyset_reader_or = base64_decode ? CreateBinaryKeysetReader(decoded_key)
+                                        : CreateBinaryKeysetReader(key);
   RETURN_IF_FAILURE(keyset_reader_or.result());
 
-  auto keyset_handle = CleartextKeysetHandle::Read(move(*keyset_reader_or));
+  auto keyset_handle =
+      CleartextKeysetHandle::Read(std::move(*keyset_reader_or));
   if (!keyset_handle.ok()) {
     auto execution_result = FailureExecutionResult(
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_KEYSET_HANDLE);
@@ -421,6 +438,12 @@ CryptoClientProvider::CryptoClientProvider(
             true /* extend_entry_lifetime_on_access */,
             true /* block_entry_while_eviction */, on_garbage_collection_func,
             async_executor);
+    aead_primitive_cache_ =
+        make_unique<AutoExpiryConcurrentMap<string, shared_ptr<Aead>>>(
+            kPrimitiveWithCacheLifetimeSeconds,
+            true /* extend_entry_lifetime_on_access */,
+            true /* block_entry_while_eviction */, on_garbage_collection_func,
+            async_executor);
   }
 }
 
@@ -454,6 +477,15 @@ ExecutionResult CryptoClientProvider::Init() noexcept {
               register_result.ToString().c_str());
     return execution_result;
   }
+  register_result = AeadConfig::Register();
+  if (!register_result.ok()) {
+    auto execution_result = FailureExecutionResult(
+        SC_CRYPTO_CLIENT_PROVIDER_CANNOT_REGISTER_TINK_CONFIG);
+    SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
+              "Register AEAD config with error %s.",
+              register_result.ToString().c_str());
+    return execution_result;
+  }
 
   if (hybrid_encrypt_primitive_cache_) {
     RETURN_AND_LOG_IF_FAILURE(
@@ -469,6 +501,11 @@ ExecutionResult CryptoClientProvider::Init() noexcept {
     RETURN_AND_LOG_IF_FAILURE(mac_primitive_cache_->Init(),
                               kCryptoClientProvider, kZeroUuid,
                               "Failed to init mac_primitive_cache_.");
+  }
+  if (aead_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(aead_primitive_cache_->Init(),
+                              kCryptoClientProvider, kZeroUuid,
+                              "Failed to init aead_primitive_cache_.");
   }
   return SuccessExecutionResult();
 }
@@ -490,6 +527,11 @@ ExecutionResult CryptoClientProvider::Run() noexcept {
                               kCryptoClientProvider, kZeroUuid,
                               "Failed to run mac_primitive_cache_.");
   }
+  if (aead_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(aead_primitive_cache_->Run(),
+                              kCryptoClientProvider, kZeroUuid,
+                              "Failed to run aead_primitive_cache_.");
+  }
   return SuccessExecutionResult();
 }
 
@@ -508,6 +550,11 @@ ExecutionResult CryptoClientProvider::Stop() noexcept {
     RETURN_AND_LOG_IF_FAILURE(mac_primitive_cache_->Stop(),
                               kCryptoClientProvider, kZeroUuid,
                               "Failed to stop mac_primitive_cache_.");
+  }
+  if (aead_primitive_cache_) {
+    RETURN_AND_LOG_IF_FAILURE(aead_primitive_cache_->Stop(),
+                              kCryptoClientProvider, kZeroUuid,
+                              "Failed to stop aead_primitive_cache_.");
   }
   return SuccessExecutionResult();
 }
@@ -528,7 +575,8 @@ CryptoClientProvider::GetHybridEncryptPrimitive(const string& key) noexcept {
     return keyset_handle_or.result();
   }
 
-  auto primitive_or = (*keyset_handle_or)->GetPrimitive<HybridEncrypt>();
+  auto primitive_or =
+      (*keyset_handle_or)->GetPrimitive<HybridEncrypt>(ConfigGlobalRegistry());
   if (!primitive_or.ok()) {
     auto execution_result = FailureExecutionResult(
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_TINK_PRIMITIVE);
@@ -539,12 +587,12 @@ CryptoClientProvider::GetHybridEncryptPrimitive(const string& key) noexcept {
   }
 
   if (!hybrid_encrypt_primitive_cache_) {
-    return move(*primitive_or);
+    return std::move(*primitive_or);
   }
 
-  std::pair<std::string, std::shared_ptr<HybridEncrypt>> primitive_pair;
+  pair<string, shared_ptr<HybridEncrypt>> primitive_pair;
   primitive_pair.first = key;
-  primitive_pair.second = move(*primitive_or);
+  primitive_pair.second = std::move(*primitive_or);
   hybrid_encrypt_primitive_cache_->Insert(primitive_pair, primitive_found);
   return primitive_pair.second;
 }
@@ -695,7 +743,8 @@ CryptoClientProvider::GetHybridDecryptPrimitive(const string& key) noexcept {
     return keyset_handle_or.result();
   }
 
-  auto primitive_or = (*keyset_handle_or)->GetPrimitive<HybridDecrypt>();
+  auto primitive_or =
+      (*keyset_handle_or)->GetPrimitive<HybridDecrypt>(ConfigGlobalRegistry());
   if (!primitive_or.ok()) {
     auto execution_result = FailureExecutionResult(
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_TINK_PRIMITIVE);
@@ -706,12 +755,12 @@ CryptoClientProvider::GetHybridDecryptPrimitive(const string& key) noexcept {
   }
 
   if (!hybrid_decrypt_primitive_cache_) {
-    return move(*primitive_or);
+    return std::move(*primitive_or);
   }
 
-  std::pair<std::string, std::shared_ptr<HybridDecrypt>> primitive_pair;
+  pair<string, shared_ptr<HybridDecrypt>> primitive_pair;
   primitive_pair.first = key;
-  primitive_pair.second = move(*primitive_or);
+  primitive_pair.second = std::move(*primitive_or);
   hybrid_decrypt_primitive_cache_->Insert(primitive_pair, primitive_found);
   return primitive_pair.second;
 }
@@ -861,36 +910,167 @@ ExecutionResultOr<HpkeDecryptResponse> CryptoClientProvider::HpkeDecryptSync(
   return response;
 }
 
-ExecutionResultOr<AeadEncryptResponse> CryptoClientProvider::AeadEncryptSync(
+ExecutionResultOr<shared_ptr<Aead>> CryptoClientProvider::GetAeadPrimitive(
+    const string& key, bool base64_decode) noexcept {
+  shared_ptr<Aead> primitive_found;
+  if (aead_primitive_cache_ &&
+      aead_primitive_cache_->Find(key, primitive_found).Successful()) {
+    return primitive_found;
+  }
+
+  auto keyset_handle_or = CreateKeysetHandle(key, base64_decode);
+  RETURN_AND_LOG_IF_FAILURE(keyset_handle_or.result(), kCryptoClientProvider,
+                            kZeroUuid, "Failed to create keyset handle.");
+
+  absl::StatusOr<std::unique_ptr<Aead>> aead_or =
+      (*keyset_handle_or)->GetPrimitive<Aead>(ConfigGlobalRegistry());
+  if (!aead_or.ok()) {
+    auto execution_result = FailureExecutionResult(
+        SC_CRYPTO_CLIENT_PROVIDER_ERROR_CREATING_AEAD_PRIMITIVE);
+    SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
+              "Failed to get AEAD primitive from keyset handle %s.",
+              aead_or.status().ToString().c_str());
+    return execution_result;
+  }
+
+  if (!aead_primitive_cache_) {
+    return std::move(*aead_or);
+  }
+
+  pair<string, shared_ptr<Aead>> primitive_pair;
+  primitive_pair.first = key;
+  primitive_pair.second = std::move(*aead_or);
+  aead_primitive_cache_->Insert(primitive_pair, primitive_found);
+  return primitive_pair.second;
+}
+
+static ExecutionResultOr<string> AeadStatusOrToExecutionResultOr(
+    StatusOr<string> text_or, StatusCode return_failure_code) {
+  if (!text_or.ok()) {
+    auto execution_result = FailureExecutionResult(return_failure_code);
+    SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
+              "Aead failed with error %s.",
+              text_or.status().ToString().c_str());
+    return execution_result;
+  }
+
+  return std::move(*text_or);
+}
+
+/**
+ * @brief Should only be called if either request.key().raw_key() or
+ * request.secret() is present - request.key().raw_key() takes precedence if
+ * present.
+ *
+ * @param request The encrypt request.
+ * @return ExecutionResultOr<string> containing the encrypted payload.
+ */
+ExecutionResultOr<string> CryptoClientProvider::AeadEncryptSyncWithRawSecret(
     const AeadEncryptRequest& request) noexcept {
-  SecretData key = SecretDataFromStringView(request.secret());
-  auto cipher = AesGcmBoringSsl::New(key);
-  if (!cipher.ok()) {
+  SecretData key = SecretDataFromStringView(
+      (request.has_key() && request.key().has_raw_key())
+          ? request.key().raw_key()
+          : request.secret());
+  auto cipher_or = AesGcmBoringSsl::New(key);
+  if (!cipher_or.ok()) {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_CREATE_AEAD_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Aead encryption failed with error %s.",
-              cipher.status().ToString().c_str());
+              cipher_or.status().ToString().c_str());
     return execution_result;
   }
-  auto ciphertext =
-      (*cipher)->Encrypt(request.payload(), request.shared_info());
-  if (!ciphertext.ok()) {
-    auto execution_result =
-        FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_AEAD_ENCRYPT_FAILED);
-    SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
-              "Aead encryption failed with error %s.",
-              ciphertext.status().ToString().c_str());
-    return execution_result;
+  auto ciphertext_or =
+      (*cipher_or)->Encrypt(request.payload(), request.shared_info());
+
+  return AeadStatusOrToExecutionResultOr(
+      ciphertext_or,
+      SC_CRYPTO_CLIENT_PROVIDER_AEAD_ENCRYPT_FAILED /*return_failure_code*/);
+}
+
+/**
+ * @brief Should be called when either request.key().binary_tink_keyset() or
+ * request.key().b64_binary_tink_keyset() is present.
+ *
+ * @param request The encrypt request.
+ * @return ExecutionResultOr<string> containing the encrypted payload.
+ */
+ExecutionResultOr<string>
+CryptoClientProvider::AeadEncryptSyncWithBinaryTinkKeysetSecret(
+    const AeadEncryptRequest& request) noexcept {
+  // Validate that only the expected parameters are passed
+  if (!(request.has_key() && (request.key().has_binary_tink_keyset() ||
+                              request.key().has_base64_binary_tink_keyset()))) {
+    auto execution_result = FailureExecutionResult(
+        SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_AEAD_KEY_TYPE);
+    RETURN_AND_LOG_IF_FAILURE(
+        execution_result, kCryptoClientProvider, kZeroUuid,
+        "The provided Aead key type is not supported in this context.");
   }
+
+  auto aead_or =
+      request.key().has_binary_tink_keyset()
+          ? GetAeadPrimitive(request.key().binary_tink_keyset(),
+                             false /*base64_decode*/)
+          : GetAeadPrimitive(request.key().base64_binary_tink_keyset(),
+                             true /*base64_decode*/);
+  RETURN_IF_FAILURE(aead_or.result());
+
+  StatusOr<string> ciphertext_or =
+      (*aead_or)->Encrypt(request.payload(), request.shared_info());
+
+  return AeadStatusOrToExecutionResultOr(
+      ciphertext_or,
+      SC_CRYPTO_CLIENT_PROVIDER_AEAD_ENCRYPT_FAILED /*return_failure_code*/);
+}
+
+ExecutionResultOr<AeadEncryptResponse> CryptoClientProvider::AeadEncryptSync(
+    const AeadEncryptRequest& request) noexcept {
+  AeadKey::KeyCase key_type = AeadKey::KeyCase::kRawKey;
+  if (request.has_key()) {
+    key_type = request.key().key_case();
+  }
+
+  ExecutionResultOr<string> ciphertext_or;
+
+  switch (key_type) {
+    case AeadKey::KeyCase::kRawKey:
+      ciphertext_or = AeadEncryptSyncWithRawSecret(request);
+      break;
+    case AeadKey::KeyCase::kBinaryTinkKeyset:
+    case AeadKey::KeyCase::kBase64BinaryTinkKeyset:
+      ciphertext_or = AeadEncryptSyncWithBinaryTinkKeysetSecret(request);
+      break;
+    default:
+      auto execution_result = FailureExecutionResult(
+          SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_AEAD_KEY_TYPE);
+      SCP_ERROR(
+          kCryptoClientProvider, kZeroUuid, execution_result,
+          "The Aead key type requested is not supported %s.",
+          AeadKey::descriptor()->FindFieldByNumber(key_type)->name().c_str());
+      return execution_result;
+  }
+
+  RETURN_IF_FAILURE(ciphertext_or.result());
+
   AeadEncryptResponse response;
-  response.mutable_encrypted_data()->set_ciphertext((*ciphertext));
+  response.mutable_encrypted_data()->set_ciphertext((*ciphertext_or));
   return response;
 }
 
-ExecutionResultOr<AeadDecryptResponse> CryptoClientProvider::AeadDecryptSync(
+/**
+ * @brief Should only be called if either request.key().raw_key() or
+ * request.secret() is present - request.key().raw_key() takes precedence if
+ * present.
+ *
+ * @param request The decrypt request.
+ * @return ExecutionResultOr<string> containing the decrypted payload.
+ */
+ExecutionResultOr<string> CryptoClientProvider::AeadDecryptSyncWithRawSecret(
     const AeadDecryptRequest& request) noexcept {
-  SecretData key = SecretDataFromStringView(request.secret());
+  SecretData key = (request.has_key() && request.key().has_raw_key())
+                       ? SecretDataFromStringView(request.key().raw_key())
+                       : SecretDataFromStringView(request.secret());
   auto cipher = AesGcmBoringSsl::New(key);
   if (!cipher.ok()) {
     auto execution_result =
@@ -900,18 +1080,87 @@ ExecutionResultOr<AeadDecryptResponse> CryptoClientProvider::AeadDecryptSync(
               cipher.status().ToString().c_str());
     return execution_result;
   }
-  auto payload = (*cipher)->Decrypt(request.encrypted_data().ciphertext(),
-                                    request.shared_info());
-  if (!payload.ok()) {
+  auto payload_or = (*cipher)->Decrypt(request.encrypted_data().ciphertext(),
+                                       request.shared_info());
+  if (!payload_or.ok()) {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_AEAD_DECRYPT_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Aead decryption failed with error %s.",
-              payload.status().ToString().c_str());
+              payload_or.status().ToString().c_str());
     return execution_result;
   }
+
+  return std::move(*payload_or);
+}
+
+/**
+ * @brief Should be called when either request.key().binary_tink_keyset() or
+ * request.key().b64_binary_tink_keyset() is present.
+ *
+ * @param request The decrypt request.
+ * @return ExecutionResultOr<string> containing the decrypted payload.
+ */
+ExecutionResultOr<string>
+CryptoClientProvider::AeadDecryptSyncWithBinaryTinkKeysetSecret(
+    const AeadDecryptRequest& request) noexcept {
+  // Validate that only the expected parameters are passed
+  if (!(request.has_key() && (request.key().has_binary_tink_keyset() ||
+                              request.key().has_base64_binary_tink_keyset()))) {
+    auto execution_result = FailureExecutionResult(
+        SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_AEAD_KEY_TYPE);
+    RETURN_AND_LOG_IF_FAILURE(
+        execution_result, kCryptoClientProvider, kZeroUuid,
+        "The provided Aead key type is not supported in this context.");
+  }
+
+  auto aead_or =
+      request.key().has_binary_tink_keyset()
+          ? GetAeadPrimitive(request.key().binary_tink_keyset(),
+                             false /*base64_decode*/)
+          : GetAeadPrimitive(request.key().base64_binary_tink_keyset(),
+                             true /*base64_decode*/);
+  RETURN_IF_FAILURE(aead_or.result());
+
+  StatusOr<string> payload_or = (*aead_or)->Decrypt(
+      request.encrypted_data().ciphertext(), request.shared_info());
+
+  return AeadStatusOrToExecutionResultOr(
+      payload_or,
+      SC_CRYPTO_CLIENT_PROVIDER_AEAD_DECRYPT_FAILED /*return_failure_code*/);
+}
+
+ExecutionResultOr<AeadDecryptResponse> CryptoClientProvider::AeadDecryptSync(
+    const AeadDecryptRequest& request) noexcept {
+  AeadKey::KeyCase key_type = AeadKey::KeyCase::kRawKey;
+  if (request.has_key()) {
+    key_type = request.key().key_case();
+  }
+
+  ExecutionResultOr<string> payload_or;
+
+  switch (key_type) {
+    case AeadKey::KeyCase::kRawKey:
+      payload_or = AeadDecryptSyncWithRawSecret(request);
+      break;
+    case AeadKey::KeyCase::kBinaryTinkKeyset:
+    case AeadKey::KeyCase::kBase64BinaryTinkKeyset:
+      payload_or = AeadDecryptSyncWithBinaryTinkKeysetSecret(request);
+      break;
+    default:
+      auto execution_result = FailureExecutionResult(
+          SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_AEAD_KEY_TYPE);
+      SCP_ERROR(
+          kCryptoClientProvider, kZeroUuid, execution_result,
+          "The Aead key type requested is not supported %s.",
+          AeadKey::descriptor()->FindFieldByNumber(key_type)->name().c_str());
+      return execution_result;
+  }
+
+  RETURN_IF_FAILURE(payload_or.result());
+
   AeadDecryptResponse response;
-  response.set_payload((*payload));
+  response.set_payload(*payload_or);
   return response;
 }
 
@@ -973,7 +1222,7 @@ ExecutionResultOr<unique_ptr<StreamingAead>> CreateSaead(
                 streaming_result.status().ToString().c_str());
       return execution_result;
     }
-    return move(streaming_result.value());
+    return std::move(streaming_result.value());
   } else if (saead_params.has_aes_gcm_hkdf_key()) {
     AesGcmHkdfStreamingKey key;
     auto proto_key = saead_params.aes_gcm_hkdf_key();
@@ -1025,7 +1274,7 @@ ExecutionResultOr<unique_ptr<StreamingAead>> CreateSaead(
                 streaming_result.status().ToString().c_str());
       return execution_result;
     }
-    return move(streaming_result.value());
+    return std::move(streaming_result.value());
   } else {
     auto execution_result =
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_SAEAD_CONFIG_MISSING);
@@ -1040,14 +1289,14 @@ CryptoClientProvider::AeadEncryptStreamSync(
     const google::scp::cpio::AeadEncryptStreamRequest& request) noexcept {
   auto result = CreateSaead(request.saead_params);
   RETURN_IF_FAILURE(result.result());
-  unique_ptr<StreamingAead> saead = move(result.value());
+  unique_ptr<StreamingAead> saead = std::move(result.value());
 
   std::unique_ptr<OutputStream> ct_destination(
       absl::make_unique<OstreamOutputStream>(
-          make_unique<ostream>(move(request.ciphertext_stream->rdbuf()))));
+          make_unique<ostream>(std::move(request.ciphertext_stream->rdbuf()))));
   // Encrypt the plaintext.
   auto enc_stream_result = saead->NewEncryptingStream(
-      move(ct_destination), request.saead_params.shared_info());
+      std::move(ct_destination), request.saead_params.shared_info());
   if (!enc_stream_result.ok()) {
     auto execution_result = FailureExecutionResult(
         core::errors::
@@ -1057,7 +1306,7 @@ CryptoClientProvider::AeadEncryptStreamSync(
               enc_stream_result.status().ToString().c_str());
     return execution_result;
   }
-  return move(enc_stream_result.value());
+  return std::move(enc_stream_result.value());
 }
 
 ExecutionResultOr<unique_ptr<InputStream>>
@@ -1065,14 +1314,14 @@ CryptoClientProvider::AeadDecryptStreamSync(
     const google::scp::cpio::AeadDecryptStreamRequest& request) noexcept {
   auto result = CreateSaead(request.saead_params);
   RETURN_IF_FAILURE(result.result());
-  unique_ptr<StreamingAead> saead = move(result.value());
+  unique_ptr<StreamingAead> saead = std::move(result.value());
 
   // Prepare ciphertext source stream.
   unique_ptr<InputStream> ct_source(make_unique<IstreamInputStream>(
-      make_unique<istream>(move(request.ciphertext_stream->rdbuf()))));
+      make_unique<istream>(std::move(request.ciphertext_stream->rdbuf()))));
   // Decrypt the ciphertext.
   auto dec_stream_result = saead->NewDecryptingStream(
-      move(ct_source), request.saead_params.shared_info());
+      std::move(ct_source), request.saead_params.shared_info());
   if (!dec_stream_result.ok()) {
     auto execution_result = FailureExecutionResult(
         core::errors::
@@ -1082,7 +1331,7 @@ CryptoClientProvider::AeadDecryptStreamSync(
               dec_stream_result.status().ToString().c_str());
     return execution_result;
   }
-  return move(dec_stream_result.value());
+  return std::move(dec_stream_result.value());
 }
 
 ExecutionResultOr<shared_ptr<Mac>> CryptoClientProvider::GetMacPrimitive(
@@ -1100,7 +1349,8 @@ ExecutionResultOr<shared_ptr<Mac>> CryptoClientProvider::GetMacPrimitive(
     return keyset_handle_or.result();
   }
 
-  auto primitive_or = (*keyset_handle_or)->GetPrimitive<Mac>();
+  auto primitive_or =
+      (*keyset_handle_or)->GetPrimitive<Mac>(ConfigGlobalRegistry());
   if (!primitive_or.ok()) {
     auto execution_result = FailureExecutionResult(
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_TINK_PRIMITIVE);
@@ -1111,12 +1361,12 @@ ExecutionResultOr<shared_ptr<Mac>> CryptoClientProvider::GetMacPrimitive(
   }
 
   if (!mac_primitive_cache_) {
-    return move(*primitive_or);
+    return std::move(*primitive_or);
   }
 
-  std::pair<std::string, std::shared_ptr<Mac>> primitive_pair;
+  pair<string, shared_ptr<Mac>> primitive_pair;
   primitive_pair.first = key;
-  primitive_pair.second = move(*primitive_or);
+  primitive_pair.second = std::move(*primitive_or);
   mac_primitive_cache_->Insert(primitive_pair, primitive_found);
   return primitive_pair.second;
 }

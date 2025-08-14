@@ -21,6 +21,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -40,6 +41,9 @@ public abstract class ApiTaskTestBase {
     // Given
     doReturn("GET").when(request).getMethod();
     doReturn("/test-base/wrong").when(request).getPath();
+    doReturn(Optional.of("key-service-caller-email@google.com"))
+        .when(request)
+        .getFirstHeader("email");
 
     // When
     boolean success = task.tryService("/test-base", request, response);

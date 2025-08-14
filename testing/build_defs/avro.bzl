@@ -54,7 +54,7 @@ generate_avro = rule(
             mandatory = True,
         ),
         "_simulation": attr.label(
-            default = Label("//java/com/google/scp/simulation:SimluationRunner"),
+            default = Label("//java/com/google/scp/simulation:SimulationRunner"),
             executable = True,
             cfg = "target",
         ),

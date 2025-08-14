@@ -13,7 +13,7 @@
 # limitations under the License.
 
 output "get_public_key_loadbalancer_ip" {
-  value = module.public_key_service_load_balancer.loadbalancer_ip
+  value = module.public_key_service.loadbalancer_ip
 }
 
 output "public_key_base_url" {
@@ -42,4 +42,16 @@ output "allowed_operators_wipp_names" {
     for provider in module.key_set_acl_kek_pool :
     provider.workload_identity_pool_provider_name
   ]
+}
+
+output "kms_key_base_uri" {
+  value = local.kms_key_base_uri
+}
+
+output "migration_kms_key_base_uri" {
+  value = local.migration_kms_key_base_uri
+}
+
+output "migration_peer_coordinator_kms_key_base_uri" {
+  value = local.migration_peer_coordinator_kms_key_base_uri
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 Google LLC
+// Copyright 2022-2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -81,7 +81,8 @@ message HpkeParams {
 message AesGcmHkdfStreamingKey {
   oneof key {
     // It is the base64 encoded binary form
-    // of google::crypto::tink::Keyset for google::crypto::tink::AesGcmHkdfStreamingKey.
+    // of google::crypto::tink::Keyset for
+    // google::crypto::tink::AesGcmHkdfStreamingKey.
     bytes tink_key_binary = 1;
     AesGcmHkdfStreamingRawKeyWithParams raw_key_with_params = 2;
   }
@@ -89,7 +90,7 @@ message AesGcmHkdfStreamingKey {
 
 // Mapped from tink AesGcmHkdfStreamingKey proto.
 message AesGcmHkdfStreamingRawKeyWithParams {
-  uint32 version = 1; // version of the key
+  uint32 version = 1;  // version of the key
   AesGcmHkdfStreamingParams params = 2;
   // The main key, aka. "ikm", input key material and encoded by base64.
   // AES128_GCM_HKDF_1MB is recommended for the key type.
@@ -98,7 +99,8 @@ message AesGcmHkdfStreamingRawKeyWithParams {
 
 // Mapped from tink AesGcmHkdfStreamingParams proto.
 message AesGcmHkdfStreamingParams {
-  uint32 ciphertext_segment_size = 1; // segment size for streaming encryption/decryption
+  uint32 ciphertext_segment_size =
+      1;  // segment size for streaming encryption/decryption
   uint32 derived_key_size = 2;  // size of AES-GCM keys derived for each segment
   HashType hkdf_hash_type = 3;  // Hash type for hkdf encrypt/decrypt
 }
@@ -107,7 +109,8 @@ message AesGcmHkdfStreamingParams {
 message AesCtrHmacStreamingKey {
   oneof key {
     // It is the base64 encoded binary form
-    // of google::crypto::tink::Keyset for google::crypto::tink::AesCtrHmacStreamingKey.
+    // of google::crypto::tink::Keyset for
+    // google::crypto::tink::AesCtrHmacStreamingKey.
     bytes tink_key_binary = 1;
     AesCtrHmacStreamingRawKeyWithParams raw_key_with_params = 2;
   }
@@ -115,7 +118,7 @@ message AesCtrHmacStreamingKey {
 
 // Mapped from tink AesCtrHmacStreamingKey proto.
 message AesCtrHmacStreamingRawKeyWithParams {
-  uint32 version = 1; // version of the key
+  uint32 version = 1;  // version of the key
   AesCtrHmacStreamingParams params = 2;
   // The main key, aka. "ikm", input key material and encoded by base64.
   // AES128_GCM_HKDF_1MB is recommended for the key type.
@@ -124,7 +127,8 @@ message AesCtrHmacStreamingRawKeyWithParams {
 
 // Mapped from tink AesCtrHmacStreamingParams proto.
 message AesCtrHmacStreamingParams {
-  uint32 ciphertext_segment_size = 1; // segment size for streaming encryption/decryption
+  uint32 ciphertext_segment_size =
+      1;  // segment size for streaming encryption/decryption
   uint32 derived_key_size = 2;  // size of AES-CTR keys derived for each segment
   HashType hkdf_hash_type = 3;  // hash function for key derivation via HKDF
   HmacParams hmac_params = 4;   // params for authentication tags
@@ -132,8 +136,8 @@ message AesCtrHmacStreamingParams {
 
 //  Mapped from tink HmacParams proto.
 message HmacParams {
-  HashType hash = 1;  // hash type for hmac
-  uint32 tag_size = 2; // size of tag in hmac
+  HashType hash = 1;    // hash type for hmac
+  uint32 tag_size = 2;  // size of tag in hmac
 }
 
 // The length of exposed secret.
@@ -145,10 +149,10 @@ enum SecretLength {
 
 // The raw key with params.
 message RawKeyWithParams {
-    // It is based64 encoded raw key.
-    bytes raw_key = 1;
-    // Reqired. HPKE parameters.
-    HpkeParams hpke_params = 2;
+  // It is based64 encoded raw key.
+  bytes raw_key = 1;
+  // Reqired. HPKE parameters.
+  HpkeParams hpke_params = 2;
 }
 
 // All data needed for HpkeEncrypt.
@@ -240,14 +244,30 @@ message HpkeDecryptResponse {
   bytes secret = 3;
 }
 
+message AeadKey {
+  // Which type of key to use for encryption or decryption.
+  oneof key {
+    bytes raw_key = 1;  // Raw key material. Only supports AES-GCM algorithm.
+                        // Not base64 encoded.
+    bytes binary_tink_keyset =
+        2;  // Binary protobuf tink keyset. Not base64 encoded.
+    bytes base64_binary_tink_keyset =
+        3;  // Base64 encoded binary protobuf tink keyset.
+  }
+}
+
 // All data needed for AeadEncrypt.
 message AeadEncryptRequest {
   // Data to be encrypted.
   bytes payload = 1;
-  // Secret to generate Aead.
-  bytes secret = 2;
+  // Secret (key) to generate Aead. This field should not be used in new use
+  // cases. The same as AeadKey.raw_key.
+  bytes secret = 2 [deprecated = true];
   // App generated associated data.
   string shared_info = 3;
+
+  // Use this field to specify the key to use for encryption.
+  optional AeadKey key = 4;
 }
 
 // Encrypted data for Aead. Do not put data which should not be sent over wire
@@ -269,10 +289,14 @@ message AeadEncryptResponse {
 message AeadDecryptRequest {
   // Encrypted data.
   AeadEncryptedData encrypted_data = 1;
-  // Secret to generate Aead.
-  bytes secret = 2;
+  // Secret (key) to generate Aead. This field should not be used in new use
+  // cases. The same as AeadKey.raw_key.
+  bytes secret = 2 [deprecated = true];
   // App generated associated data.
   string shared_info = 3;
+
+  // Use this field to specify the key to use for decryption.
+  optional AeadKey key = 4;
 }
 
 // Result from AeadDecrypt.
@@ -288,7 +312,7 @@ message ComputeMacRequest {
   // MAC will be computed on this data
   bytes data = 1;
   // Key will be used to authenticate the MAC algorithm.
-  // It should be the base64 encoded binary form of 
+  // It should be the base64 encoded binary form of
   // google::crypto::tink::Keyset for google::crypto::tink::HmacKey
   bytes key = 2;
 }

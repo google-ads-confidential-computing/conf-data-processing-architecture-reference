@@ -115,6 +115,7 @@ public class RequestScaleInTask {
                   .setRequestTime(ProtoUtil.toProtoTimestamp(Instant.now()))
                   .setTtl(now.plus(ttlDays, ChronoUnit.DAYS).getEpochSecond())
                   .setTerminationReason(InstanceTerminationReason.SCALE_IN)
+                  .setInstanceGroupName(instanceManagementClient.getManagedInstanceGroupName())
                   .build();
           logger.info("Adding instance " + instance + " for termination due to a scale-in.");
           asgInstancesDao.upsertAsgInstance(instanceToTerminate);

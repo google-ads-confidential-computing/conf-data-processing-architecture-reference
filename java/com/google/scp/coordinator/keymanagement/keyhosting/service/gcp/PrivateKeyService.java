@@ -17,15 +17,15 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
 import com.google.inject.Provides;
-import com.google.scp.coordinator.keymanagement.keyhosting.service.common.EncryptionKeyServiceModule;
+import com.google.scp.coordinator.keymanagement.keyhosting.service.common.PrivateKeyServiceModule;
 import com.google.scp.coordinator.keymanagement.shared.serverless.gcp.GcpServerlessFunction;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 
 /** Encryption Key Service GCP Serverless Function. */
-public class EncryptionKeyService extends GcpServerlessFunction {
+public class PrivateKeyService extends GcpServerlessFunction {
   @Override
   protected void configure() {
-    install(new EncryptionKeyServiceModule());
+    install(new PrivateKeyServiceModule());
     install(new GcpKeyServiceModule());
   }
 

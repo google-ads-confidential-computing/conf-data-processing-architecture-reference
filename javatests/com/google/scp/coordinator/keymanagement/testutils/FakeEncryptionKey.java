@@ -17,6 +17,7 @@
 package com.google.scp.coordinator.keymanagement.testutils;
 
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleartext;
+import static java.time.temporal.ChronoUnit.DAYS;
 
 import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.PublicKeySign;
@@ -122,6 +123,15 @@ public final class FakeEncryptionKey {
         .build();
   }
 
+  /** Creates a key which actives and expires at the specified time. */
+  public static EncryptionKey withAllTimesSet(Instant creationTime) {
+    return create().toBuilder()
+        .setCreationTime(creationTime.toEpochMilli())
+        .setActivationTime(creationTime.plus(5, DAYS).toEpochMilli())
+        .setExpirationTime(creationTime.plus(50, DAYS).toEpochMilli())
+        .build();
+  }
+
   /** Creates a key which expires at the specified time. */
   public static EncryptionKey withExpirationTime(Instant expirationTime) {
     return create().toBuilder().setExpirationTime(expirationTime.toEpochMilli()).build();
@@ -132,8 +142,7 @@ public final class FakeEncryptionKey {
     return create().toBuilder().setCreationTime(creationTime.toEpochMilli()).build();
   }
 
-  public static KeySplitData createKeySplitData(
-      EncryptionKeyType keyType, String encryptionKeyUri) {
+  public static KeySplitData createKeySplitData(String encryptionKeyUri) {
     return KeySplitData.newBuilder()
         .setKeySplitKeyEncryptionKeyUri(encryptionKeyUri)
         .setPublicKeySignature(UUID.randomUUID().toString())

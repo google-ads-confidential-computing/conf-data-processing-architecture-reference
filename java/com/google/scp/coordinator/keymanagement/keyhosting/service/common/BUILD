@@ -21,7 +21,7 @@ java_library(
     srcs = glob(
         ["*.java"],
         exclude = [
-            "EncryptionKeyServiceModule.java",
+            "PrivateKeyServiceModule.java",
             "PublicKeyServiceModule.java",
         ],
     ),
@@ -63,8 +63,8 @@ java_library(
 )
 
 java_library(
-    name = "encryption_key_service",
-    srcs = ["EncryptionKeyServiceModule.java"],
+    name = "private_key_service",
+    srcs = ["PrivateKeyServiceModule.java"],
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",

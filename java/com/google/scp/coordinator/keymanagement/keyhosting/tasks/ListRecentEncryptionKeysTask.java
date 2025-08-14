@@ -18,7 +18,9 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
 import com.google.scp.coordinator.keymanagement.shared.converter.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
@@ -43,15 +45,23 @@ public final class ListRecentEncryptionKeysTask extends ApiTask {
   private static final String MAX_AGE_SECONDS_PARAM_NAME = "maxAgeSeconds";
 
   private final KeyDb keyDb;
+  private final ImmutableSet<String> allowedMigrators;
+  private final LogMetricHelper logMetricHelper;
 
   @Inject
-  public ListRecentEncryptionKeysTask(KeyDb keyDb, LogMetricHelper logMetricHelper) {
-    super("GET",
+  public ListRecentEncryptionKeysTask(
+      KeyDb keyDb,
+      LogMetricHelper logMetricHelper,
+      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators) {
+    super(
+        "GET",
         Pattern.compile("/encryptionKeys:recent"),
         "ListRecentEncryptionKeys",
         "v1Alpha",
         logMetricHelper);
     this.keyDb = keyDb;
+    this.allowedMigrators = allowedMigrators;
+    this.logMetricHelper = logMetricHelper;
   }
 
   @Override
@@ -61,7 +71,12 @@ public final class ListRecentEncryptionKeysTask extends ApiTask {
     response.setBody(
         ListRecentEncryptionKeysResponse.newBuilder()
             .addAllKeys(
-                keys.map(EncryptionKeyConverter::toApiEncryptionKey).collect(toImmutableList())));
+                keys.map(
+                        key ->
+                            KeyMigrationVendingUtil.vendAccordingToConfig(
+                                key, request, allowedMigrators, logMetricHelper))
+                    .map(EncryptionKeyConverter::toApiEncryptionKey)
+                    .collect(toImmutableList())));
   }
 
   private static int getMaxAgeSeconds(RequestContext request) throws ServiceException {

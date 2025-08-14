@@ -17,6 +17,7 @@
 package com.google.scp.coordinator.keymanagement.shared.dao.testing;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
 import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.KEY_LIMIT;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
@@ -54,7 +55,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
     InMemoryKeyDb keyDb = new InMemoryKeyDb();
     IntStream.range(0, 5).forEach(unused -> createRandomKey(keyDb));
 
-    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(KEY_LIMIT);
+    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
 
     assertThat(keys).hasSize(5);
   }
@@ -64,7 +65,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
     InMemoryKeyDb keyDb = new InMemoryKeyDb();
     keyDb.setServiceException(new ServiceException(INTERNAL, SERVICE_ERROR.name(), "error"));
 
-    assertThrows(ServiceException.class, () -> keyDb.getActiveKeys(KEY_LIMIT));
+    assertThrows(ServiceException.class, () -> keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT));
   }
 
   @Test
@@ -74,7 +75,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
     keyDb.setServiceException(new ServiceException(INTERNAL, SERVICE_ERROR.name(), "error"));
     keyDb.reset();
 
-    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(KEY_LIMIT);
+    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
 
     assertThat(keys).isEmpty();
   }
@@ -152,7 +153,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
 
     IntStream.range(0, 10).forEach(unused -> createRandomKey(keyDb));
 
-    assertThat(keyDb.getActiveKeys(5).size()).isEqualTo(5);
+    assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, 5).size()).isEqualTo(5);
     assertThat(keyDb.getAllKeys().size()).isEqualTo(10);
   }
 

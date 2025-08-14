@@ -111,6 +111,14 @@ public final class InMemoryKeyDb implements KeyDb {
   }
 
   @Override
+  public ImmutableList<EncryptionKey> listAllKeysForSetName(String setName)
+      throws ServiceException {
+    return getAllKeys().stream()
+        .filter(k -> k.getSetName().equals(setName))
+        .collect(toImmutableList());
+  }
+
+  @Override
   public Stream<EncryptionKey> listRecentKeys(String setName, Duration maxAge)
       throws ServiceException {
     long maxCreationMilli = Instant.now().minus(maxAge).toEpochMilli();

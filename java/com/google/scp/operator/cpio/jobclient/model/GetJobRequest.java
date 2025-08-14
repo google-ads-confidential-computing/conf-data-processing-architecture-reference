@@ -37,12 +37,21 @@ public abstract class GetJobRequest {
   @Nullable
   public abstract Optional<Function<Job, String>> getJobCompletionNotificationTopicIdFunc();
 
+  /**
+   * Returns the function used to get the workgroup to allocate the job.
+   */
+  @Nullable
+  public abstract Optional<Function<Job, WorkgroupAllocationFuncResponse>> getWorkgroupAllocationFunc();
+
   /** Builder class for the {@code GetJobRequest} class. */
   @AutoValue.Builder
   public abstract static class Builder {
 
     /** Set the function used to get job completion notification topic id for the job. */
     public abstract Builder setJobCompletionNotificationTopicIdFunc(Function<Job, String> func);
+
+    /** Set the function used to get workgroup to allocate the job. */
+    public abstract Builder setWorkgroupAllocationFunc(Function<Job, WorkgroupAllocationFuncResponse> func);
 
     /** Returns a new instance of the {@code GetJobRequest} class from the builder. */
     public abstract GetJobRequest build();

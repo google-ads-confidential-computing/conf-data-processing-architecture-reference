@@ -72,22 +72,25 @@ public class RequestUpdateTask {
     logger.info("Current instance group template: " + instanceTemplate);
     Map<String, List<GcpComputeInstance>> filteredZoneToRemainingInstances = new HashMap<>();
     List<String> instancesToUpdate = new ArrayList<>();
-    zoneToRemainingInstances
-        .forEach((zone, zoneInstances) -> {
+    zoneToRemainingInstances.forEach(
+        (zone, zoneInstances) -> {
           List<GcpComputeInstance> filteredZoneInstances = new ArrayList<>();
-          zoneInstances
-              .forEach(
-                  instance -> {
-                    if (instance.getInstanceTemplate().equals(instanceTemplate)) {
-                      filteredZoneInstances.add(instance);
-                    } else {
-                      instancesToUpdate.add(instance.getInstanceId());
-                      logger.info(
-                          "UPDATE REQUIRED: " + instance.getInstanceId() + " using template "
-                              + instance.getInstanceTemplate() + ". Update required to template "
-                              + instanceTemplate + ".");
-                    }
-                  });
+          zoneInstances.forEach(
+              instance -> {
+                if (instance.getInstanceTemplate().equals(instanceTemplate)) {
+                  filteredZoneInstances.add(instance);
+                } else {
+                  instancesToUpdate.add(instance.getInstanceId());
+                  logger.info(
+                      "UPDATE REQUIRED: "
+                          + instance.getInstanceId()
+                          + " using template "
+                          + instance.getInstanceTemplate()
+                          + ". Update required to template "
+                          + instanceTemplate
+                          + ".");
+                }
+              });
           if (!filteredZoneInstances.isEmpty()) {
             filteredZoneToRemainingInstances.put(zone, filteredZoneInstances);
           }
@@ -104,6 +107,7 @@ public class RequestUpdateTask {
                 .setRequestTime(ProtoUtil.toProtoTimestamp(Instant.now()))
                 .setTtl(now.plus(ttlDays, ChronoUnit.DAYS).getEpochSecond())
                 .setTerminationReason(InstanceTerminationReason.UPDATE)
+                .setInstanceGroupName(instanceManagementClient.getManagedInstanceGroupName())
                 .build();
         logger.info("Adding instance " + instance + " for termination due to an update.");
         asgInstancesDao.upsertAsgInstance(instanceToTerminate);

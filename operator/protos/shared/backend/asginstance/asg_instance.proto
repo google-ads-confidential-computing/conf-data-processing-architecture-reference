@@ -46,4 +46,7 @@ message AsgInstance {
 
   // The instance termination reason.
   optional google.scp.operators.protos.shared.backend.asginstance.InstanceTerminationReason termination_reason = 7;
+
+  // The compute instance group name.
+  optional string instance_group_name = 8;
 }

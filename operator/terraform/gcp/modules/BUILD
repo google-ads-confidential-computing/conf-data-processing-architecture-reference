@@ -27,6 +27,8 @@ pkg_filegroup(
         "//operator/terraform/gcp/modules/domain_a_records",
         "//operator/terraform/gcp/modules/frontend",
         "//operator/terraform/gcp/modules/java_custom_monitoring",
+        "//operator/terraform/gcp/modules/java_global_custom_monitoring",
+        "//operator/terraform/gcp/modules/java_workgroup",
         "//operator/terraform/gcp/modules/jobqueue",
         "//operator/terraform/gcp/modules/metadatadb",
         "//operator/terraform/gcp/modules/notifications",
@@ -37,6 +39,7 @@ pkg_filegroup(
         "//operator/terraform/gcp/modules/vpc",
         "//operator/terraform/gcp/modules/worker/base_worker",
         "//operator/terraform/gcp/modules/worker/java_worker",
+        "//operator/terraform/gcp/modules/worker/worker_service_account",
     ],
     prefix = "modules",
 )
@@ -62,6 +65,7 @@ pkg_filegroup(
         "//operator/terraform/gcp/modules/vpc",
         "//operator/terraform/gcp/modules/worker/base_worker",
         "//operator/terraform/gcp/modules/worker/cc_worker",
+        "//operator/terraform/gcp/modules/worker/worker_service_account",
     ],
     prefix = "modules",
 )

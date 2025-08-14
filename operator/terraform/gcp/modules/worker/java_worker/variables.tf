@@ -23,6 +23,11 @@ variable "environment" {
   type        = string
 }
 
+variable "workgroup" {
+  description = "Workgroup name to associate resources."
+  type        = string
+}
+
 variable "project_id" {
   description = "project id"
   type        = string
@@ -147,8 +152,8 @@ variable "job_queue_topic" {
   type        = string
 }
 
-variable "user_provided_worker_sa_email" {
-  description = "User provided service account email for worker."
+variable "worker_service_account_email" {
+  description = "The worker service account email used by worker instances."
   type        = string
 }
 
@@ -173,6 +178,11 @@ variable "autoscaler_name" {
 
 variable "vm_instance_group_name" {
   description = "Name for the instance group for the worker VM."
+  type        = string
+}
+
+variable "vm_instance_group_base_instance_name" {
+  description = "Base instance name for the worker instance group."
   type        = string
 }
 
@@ -217,4 +227,34 @@ variable "enable_new_metrics" {
 variable "enable_legacy_metrics" {
   description = "When true, disable legacy metrics created before enable remote metric aggregation"
   type        = bool
+}
+
+variable "legacy_jobclient_job_validation_failure_metric_type" {
+  description = "The metric for legacy JobClient job validation failures."
+  type        = string
+}
+
+variable "legacy_jobclient_error_metric_type" {
+  description = "The metric for legacy JobClient errors."
+  type        = string
+}
+
+variable "legacy_worker_error_metric_type" {
+  description = "The metric for legacy worker errors."
+  type        = string
+}
+
+variable "new_jobclient_job_validation_failure_metric_type" {
+  description = "The metric for legacy JobClient job validation failures."
+  type        = string
+}
+
+variable "new_jobclient_error_metric_type" {
+  description = "The metric for legacy JobClient errors."
+  type        = string
+}
+
+variable "new_worker_error_metric_type" {
+  description = "The metric for legacy worker errors."
+  type        = string
 }

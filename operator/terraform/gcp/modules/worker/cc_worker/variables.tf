@@ -147,8 +147,8 @@ variable "job_queue_topic" {
   type        = string
 }
 
-variable "user_provided_worker_sa_email" {
-  description = "User provided service account email for worker."
+variable "worker_service_account_email" {
+  description = "The worker service account email used by worker instances."
   type        = string
 }
 

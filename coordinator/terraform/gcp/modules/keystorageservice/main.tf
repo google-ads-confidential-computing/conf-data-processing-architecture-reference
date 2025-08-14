@@ -21,6 +21,11 @@ terraform {
   }
 }
 
+locals {
+  service_id          = "key-ss-service"
+  service_name_suffix = "key-ss-cr"
+}
+
 resource "google_service_account" "key_storage_service_account" {
   # Service account id has a 30 character limit
   account_id   = "${var.environment}-keystorageuser"
@@ -34,7 +39,7 @@ module "cloud_run" {
   project             = var.project_id
   region              = var.region
   description         = "Key Storage Service Cloud Run"
-  service_name_suffix = "key-ss-cr"
+  service_name_suffix = local.service_name_suffix
   service_domain      = var.key_storage_domain
 
   # Access variables
@@ -88,7 +93,7 @@ module "load_balancer" {
 
   environment     = var.environment
   project_id      = var.project_id
-  service_id      = "key-ss-service"
+  service_id      = local.service_id
   ssl_cert_id     = "key-ss"
   monitoring_name = "Key Storage Service"
 
@@ -136,9 +141,11 @@ resource "google_kms_crypto_key_iam_member" "kms_iam_policy" {
   member        = "serviceAccount:${google_service_account.key_storage_service_account.email}"
 }
 
-module "keystorageservice_monitoring_dashboard" {
-  source        = "../shared/cloudfunction_dashboards"
-  environment   = var.environment
-  service_name  = "Key Storage"
-  function_name = module.cloud_run.name
+module "service_monitoring_dashboard" {
+  source                           = "../shared/service_dashboards"
+  environment                      = var.environment
+  service_name                     = "Key Storage Service"
+  load_balancer_url_map_name_regex = ".*${local.service_id}-loadbalancer"
+  service_name_regex               = ".*${local.service_name_suffix}"
+  log_based_metric_service_name    = "key_storage_service"
 }

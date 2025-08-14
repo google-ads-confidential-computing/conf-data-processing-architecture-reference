@@ -28,7 +28,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -36,7 +35,7 @@ import com.google.common.collect.Range;
 import com.google.crypto.tink.PublicKeySign;
 import com.google.crypto.tink.PublicKeyVerify;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient.KeyStorageServiceException;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.testing.FakeKeyStorageClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBaseTest;
@@ -195,29 +194,6 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
     verify(keyEncryptionKeyAead, times(1)).encrypt(any(), any());
   }
 
-  /** Ensure that even if we fail after two attempted generations, we store two keys */
-  @Test
-  public void createSplitKey_keyGenerationInterrupted()
-      throws ServiceException, KeyStorageServiceException {
-    int keysToCreate = 5;
-
-    when(keyStorageClient.createKey(any(), any(), any()))
-        .thenCallRealMethod()
-        .thenCallRealMethod()
-        .thenThrow(new KeyStorageServiceException("Failure", new GeneralSecurityException()));
-
-    ServiceException ex =
-        assertThrows(
-            ServiceException.class,
-            () ->
-                task.createSplitKey(
-                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
-
-    assertThat(ex).hasCauseThat().isInstanceOf(KeyStorageServiceException.class);
-    ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
-    assertThat(keys).hasSize(3);
-  }
-
   /** Tests that no signature is created if no signature key is provided */
   @Test
   public void createSplitKey_noSignature() throws Exception {
@@ -258,6 +234,11 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
                 task.createSplitKey(
                     DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 10, 20, Instant.now()));
     assertThat(ex.getCause()).hasMessageThat().contains("eep");
+  }
+
+  @Override
+  protected KeyStorageClient getKeyStorageClient() {
+    return keyStorageClient;
   }
 
   @Override

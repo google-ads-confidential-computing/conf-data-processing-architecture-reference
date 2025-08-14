@@ -139,7 +139,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     insertKeyWithKeyId(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
     List<String> keys = sortKeysById();
     // Make sure keys are created correctly
-    assertThat(keys.get(0)).isEqualTo(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
+    assertThat(keys.getFirst()).isEqualTo(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
 
@@ -223,14 +223,6 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         .map(EncryptionKey::getKeyId)
         .sorted(Comparator.comparing(keyIdFactory::decodeKeyIdFromString))
         .collect(Collectors.toList());
-  }
-
-  protected void insertKeyWithExpiration(Instant expirationTime) throws ServiceException {
-    keyDb.createKey(
-        FakeEncryptionKey.createBuilderWithDefaults(false)
-            .setKeyId(keyIdFactory.getNextKeyId(keyDb))
-            .setExpirationTime(expirationTime.toEpochMilli())
-            .build());
   }
 
   private void insertKeyWithKeyId(String keyId) throws ServiceException {

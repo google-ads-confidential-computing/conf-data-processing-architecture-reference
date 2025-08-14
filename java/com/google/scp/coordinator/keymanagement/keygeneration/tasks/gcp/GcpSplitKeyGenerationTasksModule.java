@@ -19,6 +19,9 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_BASE_URI;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_URI;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.MIGRATION_KMS_KEY_BASE_URI;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.MIGRATION_PEER_COORDINATOR_KMS_KEY_BASE_URI;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_KMS_KEY_BASE_URI;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_KMS_KEY_URI;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.crypto.tink.KmsClient;
@@ -30,8 +33,7 @@ import com.google.scp.coordinator.clients.configclient.gcp.Annotations.PeerCoord
 import com.google.scp.coordinator.clients.configclient.gcp.GcpCoordinatorClientConfig;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.DisableKeySetAcl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KmsKeyUri;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.MigrationPeerCoordinatorKmsKeyBaseUri;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorKmsKeyBaseUri;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorKmsKeyBaseUriArg;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorServiceAccount;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorWipProvider;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyBaseUri;
@@ -79,17 +81,23 @@ public final class GcpSplitKeyGenerationTasksModule extends AbstractModule {
   @Singleton
   @PeerCoordinatorKeyEncryptionKeyBaseUri
   String providesPeerCoordinatorKeyEncryptionKeyBaseUri(
-      @PeerCoordinatorKmsKeyBaseUri String peerCoordinatorKmsKeyBaseUri) {
-    return peerCoordinatorKmsKeyBaseUri;
+      ParameterClient parameterClient,
+      @PeerCoordinatorKmsKeyBaseUriArg String peerCoordinatorKmsKeyBaseUriArg,
+      @DisableKeySetAcl boolean disableKeySetAcl)
+      throws ParameterClientException {
+    // TODO: b/428770204 - Remove option of PEER_COORDINATOR_KMS_KEY_URI and disableKeySetAcl post
+    // migration.
+    String kmsParam =
+        disableKeySetAcl ? PEER_COORDINATOR_KMS_KEY_URI : PEER_COORDINATOR_KMS_KEY_BASE_URI;
+    return parameterClient.getParameter(kmsParam).orElse(peerCoordinatorKmsKeyBaseUriArg);
   }
 
   @Provides
   @Singleton
   @MigrationPeerCoordinatorKeyEncryptionKeyBaseUri
-  String providesMigrationPeerCoordinatorKeyEncryptionKeyBaseUri(
-      @MigrationPeerCoordinatorKmsKeyBaseUri
-          String migrationPeerCoordinatorKmsKeyBaseUri) {
-    return migrationPeerCoordinatorKmsKeyBaseUri;
+  String providesMigrationPeerCoordinatorKeyEncryptionKeyBaseUri(ParameterClient parameterClient)
+      throws ParameterClientException {
+    return parameterClient.getParameter(MIGRATION_PEER_COORDINATOR_KMS_KEY_BASE_URI).orElse("");
   }
 
   @Provides

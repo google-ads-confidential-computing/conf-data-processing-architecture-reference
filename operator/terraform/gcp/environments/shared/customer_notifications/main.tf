@@ -47,6 +47,7 @@ module "parameter_customer_topic_id_1" {
   count           = var.enable_job_completion_notifications_per_job ? 1 : 0
   source          = "../../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "CUSTOMER_TOPIC_ID_1"
   parameter_value = module.notifications_customer_topic_1[0].notifications_pubsub_topic_id
 }
@@ -55,6 +56,7 @@ module "parameter_customer_topic_id_2" {
   count           = var.enable_job_completion_notifications_per_job ? 1 : 0
   source          = "../../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "CUSTOMER_TOPIC_ID_2"
   parameter_value = module.notifications_customer_topic_2[0].notifications_pubsub_topic_id
 }

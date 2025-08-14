@@ -96,7 +96,13 @@ public class DynamoAsgInstancesDb implements AsgInstancesDao {
 
   /** No-op not needed in AWS autoscaling implementation. */
   @Override
-  public List<AsgInstance> getAsgInstancesByStatus(String status) {
+  public List<AsgInstance> listAsgInstances(String status) {
+    throw new UnsupportedOperationException("Getting AsgInstances by status is not supported.");
+  }
+
+  /** No-op not needed in AWS autoscaling implementation. */
+  @Override
+  public List<AsgInstance> listAsgInstances(String status, String instanceGroup) {
     throw new UnsupportedOperationException("Getting AsgInstances by status is not supported.");
   }
 

@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheRefreshInMinutes;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
@@ -30,12 +31,13 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.Encryption
 import com.google.scp.shared.api.exception.ServiceException;
 import java.util.concurrent.TimeUnit;
 
+@Singleton
 public class GetActiveEncryptionKeysCache extends KeyDbCache<String, ImmutableList<EncryptionKey>> {
 
   private final KeyDb keyDb;
 
   @Inject
-  protected GetActiveEncryptionKeysCache(
+  public GetActiveEncryptionKeysCache(
       KeyDb keyDb,
       @EnableCache Boolean enableCache,
       @CacheRefreshInMinutes Integer cacheRefresh,

@@ -16,16 +16,21 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.GetEncryptedKeyCache;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 
 /** Performs the lookup for a specific private key. */
-public final class GetEncryptedPrivateKeyTask extends com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetEncryptedPrivateKeyTask {
+public final class GetEncryptedPrivateKeyTask
+    extends com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetEncryptedPrivateKeyTask {
 
   @Inject
-  public GetEncryptedPrivateKeyTask(GetEncryptedKeyCache cache, LogMetricHelper logMetricHelper) {
-    super(cache, logMetricHelper, "v1Beta");
+  public GetEncryptedPrivateKeyTask(
+      GetEncryptedKeyCache cache,
+      LogMetricHelper logMetricHelper,
+      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators) {
+    super(cache, logMetricHelper, "v1Beta", allowedMigrators);
   }
-
 }

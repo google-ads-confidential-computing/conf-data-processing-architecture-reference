@@ -19,6 +19,8 @@ package com.google.scp.coordinator.keymanagement.keygeneration.app.aws;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.keygeneration.app.aws.testing.SplitKeyGenerationArgsLocalStackProvider.KEY_COUNT;
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
+import static java.lang.Integer.MAX_VALUE;
 
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.aws.testing.SplitKeyGenerationStarter;
@@ -65,8 +67,8 @@ public abstract class SplitKeyGenerationIntegrationTestBase {
     splitKeyQueueHelper.waitForEmptyQueue();
 
     // Then
-    assertThat(keyDbA.getActiveKeys(Integer.MAX_VALUE)).hasSize(KEY_COUNT);
-    assertThat(keyDbB.getActiveKeys(Integer.MAX_VALUE)).hasSize(KEY_COUNT);
+    assertThat(keyDbA.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(KEY_COUNT);
+    assertThat(keyDbB.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(KEY_COUNT);
 
     assertThat(getPendingActiveKeys(keyDbA)).hasSize(KEY_COUNT);
     assertThat(getPendingActiveKeys(keyDbB)).hasSize(KEY_COUNT);
@@ -108,14 +110,18 @@ public abstract class SplitKeyGenerationIntegrationTestBase {
     splitKeyQueueHelper.waitForEmptyQueue();
 
     // Then
-    assertThat(keyDbA.getActiveKeys(Integer.MAX_VALUE)).hasSize(KEY_COUNT);
-    assertThat(keyDbB.getActiveKeys(Integer.MAX_VALUE)).hasSize(KEY_COUNT);
+    assertThat(keyDbA.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(KEY_COUNT);
+    assertThat(keyDbB.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(KEY_COUNT);
 
     // Check when active keys expire, there are enough replacement keys.
-    for (var key : keyDbA.getActiveKeys(Integer.MAX_VALUE)) {
-      assertThat(keyDbA.getActiveKeys(KEY_COUNT, Instant.ofEpochMilli(key.getExpirationTime())))
+    for (var key : keyDbA.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)) {
+      assertThat(
+          keyDbA.getActiveKeys(
+              DEFAULT_SET_NAME, KEY_COUNT, Instant.ofEpochMilli(key.getExpirationTime())))
           .hasSize(KEY_COUNT);
-      assertThat(keyDbB.getActiveKeys(KEY_COUNT, Instant.ofEpochMilli(key.getExpirationTime())))
+      assertThat(
+          keyDbB.getActiveKeys(
+              DEFAULT_SET_NAME, KEY_COUNT, Instant.ofEpochMilli(key.getExpirationTime())))
           .hasSize(KEY_COUNT);
     }
   }

@@ -27,7 +27,11 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
+        "//java/com/google/scp/shared/gcp/util:json_util",
+        "//java/external:guava",
         "//java/external:guice",
+        "//java/external:jackson_databind",
+        "//java/external:slf4j",
     ],
 )
 
@@ -109,17 +113,17 @@ container_image(
     ],
 )
 
-# Encryption Key Service
+# Private Key Service
 java_library(
-    name = "encryption_key_service",
+    name = "private_key_service",
     srcs = [
-        "EncryptionKeyService.java",
+        "PrivateKeyService.java",
     ],
     deps = [
         ":GcpKeyServiceModule",
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common:encryption_key_service",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common:private_key_service",
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/external:aws_lambda_java_core",
@@ -131,53 +135,53 @@ java_library(
 )
 
 java_binary(
-    name = "EncryptionKeyServiceHttpCloudFunction",
+    name = "PrivateKeyServiceHttpCloudFunction",
     runtime_deps = [
-        ":encryption_key_service",
+        ":private_key_service",
     ],
 )
 
 alias(
-    name = "EncryptionKeyServiceHttpCloudFunctionDeploy",
-    actual = ":EncryptionKeyServiceHttpCloudFunction_deploy.jar",
+    name = "PrivateKeyServiceHttpCloudFunctionDeploy",
+    actual = ":PrivateKeyServiceHttpCloudFunction_deploy.jar",
 )
 
 pkg_zip(
-    name = "EncryptionKeyServiceHttpCloudFunctionDeploy_zip",
+    name = "PrivateKeyServiceHttpCloudFunctionDeploy_zip",
     srcs = [
-        ":EncryptionKeyServiceHttpCloudFunction_deploy.jar",
+        ":PrivateKeyServiceHttpCloudFunction_deploy.jar",
     ],
 )
 
 java_binary(
-    name = "EncryptionKeyService",
+    name = "PrivateKeyService",
     main_class = "com.google.cloud.functions.invoker.runner.Invoker",
     runtime_deps = [
-        ":encryption_key_service",
+        ":private_key_service",
         "//java/external:gcp_function_invoker",
     ],
 )
 
 ## EKS Cloud Run
 pkg_tar(
-    name = "encryption_key_service_cloud_function_tar",
-    srcs = [":EncryptionKeyServiceHttpCloudFunctionDeploy"],
+    name = "private_key_service_cloud_function_tar",
+    srcs = [":PrivateKeyServiceHttpCloudFunctionDeploy"],
 )
 
 container_image(
-    name = "EncryptionKeyServiceRuntimeContainer",
+    name = "PrivateKeyServiceRuntimeContainer",
     base = "@java_base_21//image",
     cmd = [
         "./processed_java-function-invoker-1.3.1.jar",
         "--classpath",
-        "./EncryptionKeyServiceHttpCloudFunction_deploy.jar",
+        "./PrivateKeyServiceHttpCloudFunction_deploy.jar",
         "--target",
-        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.EncryptionKeyService",
+        "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PrivateKeyService",
     ],
     files = [],
     tags = ["manual"],
     tars = [
         ":function_invoker_tar",
-        ":encryption_key_service_cloud_function_tar",
+        ":private_key_service_cloud_function_tar",
     ],
 )

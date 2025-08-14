@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
+locals {
+  env_workgroup_name = var.workgroup == null ? var.environment : "${var.environment} ${var.workgroup}"
+}
+
 resource "google_monitoring_dashboard" "worker_dashboard" {
   dashboard_json = jsonencode(
     {
-      "displayName" : "${var.environment} Worker Dashboard",
+      "displayName" : "${local.env_workgroup_name} Worker Dashboard",
       "gridLayout" : {
         "columns" : "2",
         "widgets" : [
@@ -477,7 +481,7 @@ resource "google_monitoring_dashboard" "worker_dashboard" {
                         "alignmentPeriod" : "60s",
                         "perSeriesAligner" : "ALIGN_MEAN"
                       },
-                      "filter" : "metric.type=\"compute.googleapis.com/guest/memory/bytes_used\" resource.type=\"gce_instance\" metric.label.\"state\"=\"used\" metadata.user_labels.\"environment\"=\"${var.environment}\""
+                      "filter" : "metric.type=\"compute.googleapis.com/guest/memory/bytes_used\" resource.type=\"gce_instance\" metric.label.\"state\"=\"used\" metadata.system_labels.\"instance_group\"=\"${var.vm_instance_group_name}\""
                     }
                   }
                 }

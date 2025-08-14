@@ -23,6 +23,7 @@ import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagemen
 import static com.google.scp.shared.api.model.Code.ALREADY_EXISTS;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
+import static com.google.scp.shared.api.model.Code.UNIMPLEMENTED;
 import static java.lang.Math.min;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.numberValue;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.stringValue;
@@ -288,6 +289,12 @@ public final class DynamoKeyDb implements KeyDb {
         | InvalidEncryptionKeyStatusException exception) {
       throw logAndReturnException(exception);
     }
+  }
+
+  @Override
+  public ImmutableList<EncryptionKey> listAllKeysForSetName(String setName)
+      throws ServiceException {
+    throw new ServiceException(UNIMPLEMENTED, UNIMPLEMENTED.name(), "Not implemented for AWS");
   }
 
   @Override

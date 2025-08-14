@@ -16,6 +16,8 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
+import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
+
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.shared.api.exception.ServiceException;
 import java.time.Duration;
@@ -36,7 +38,7 @@ public final class KeyGenerationUtil {
       throws ServiceException {
     var refreshIfBefore = Instant.now().plus(keyRefreshWindow);
     return (int)
-        keyDb.getActiveKeys(maxKeys).stream()
+        keyDb.getActiveKeys(DEFAULT_SET_NAME, maxKeys).stream()
             .filter(key -> key.getExpirationTime() > refreshIfBefore.toEpochMilli())
             .count();
   }

@@ -134,6 +134,7 @@ module "metadatadb" {
 module "jobqueue" {
   source      = "../../modules/jobqueue"
   environment = var.environment
+  workgroup   = null
 
   alarms_enabled                  = var.alarms_enabled
   notification_channel_id         = local.notification_channel_id
@@ -144,6 +145,7 @@ module "jobqueue" {
 module "metadata_db_instance_id" {
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "JOB_SPANNER_INSTANCE_ID"
   parameter_value = module.metadatadb.metadatadb_instance_name
 }
@@ -151,6 +153,7 @@ module "metadata_db_instance_id" {
 module "metadata_db_name" {
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "JOB_SPANNER_DB_NAME"
   parameter_value = module.metadatadb.metadatadb_name
 }
@@ -158,6 +161,7 @@ module "metadata_db_name" {
 module "job_queue_topic_id" {
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "JOB_PUBSUB_TOPIC_ID"
   parameter_value = module.jobqueue.jobqueue_pubsub_topic_name
 }
@@ -165,6 +169,7 @@ module "job_queue_topic_id" {
 module "job_queue_subscription_id" {
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "JOB_PUBSUB_SUBSCRIPTION_ID"
   parameter_value = module.jobqueue.jobqueue_pubsub_sub_name
 }
@@ -172,6 +177,7 @@ module "job_queue_subscription_id" {
 module "max_job_processing_time" {
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "MAX_JOB_PROCESSING_TIME_SECONDS"
   parameter_value = var.max_job_processing_time
 }
@@ -179,6 +185,7 @@ module "max_job_processing_time" {
 module "max_job_num_attempts" {
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "MAX_JOB_NUM_ATTEMPTS"
   parameter_value = var.max_job_num_attempts
 }
@@ -186,6 +193,7 @@ module "max_job_num_attempts" {
 module "worker_managed_instance_group_name" {
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "WORKER_MANAGED_INSTANCE_GROUP_NAME"
   parameter_value = module.autoscaling.worker_managed_instance_group_name
 }
@@ -194,6 +202,7 @@ module "notifications_topic_id" {
   count           = var.enable_job_completion_notifications ? 1 : 0
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "NOTIFICATIONS_TOPIC_ID"
   parameter_value = module.notifications[0].notifications_pubsub_topic_id
 }
@@ -201,6 +210,7 @@ module "notifications_topic_id" {
 module "enable_remote_metric_aggregation" {
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "ENABLE_REMOTE_METRIC_AGGREGATION"
   parameter_value = var.enable_remote_metric_aggregation
 }
@@ -208,6 +218,7 @@ module "enable_remote_metric_aggregation" {
 module "enable_legacy_metrics" {
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "ENABLE_LEGACY_METRICS"
   parameter_value = var.enable_legacy_metrics
 }
@@ -215,6 +226,7 @@ module "enable_legacy_metrics" {
 module "metric_exporter_interval_in_millis" {
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "METRIC_EXPORTER_INTERVAL_IN_MILLIS"
   parameter_value = var.metric_exporter_interval_in_millis
 }
@@ -223,6 +235,7 @@ module "opentelemetry_collector_address" {
   count          = var.enable_remote_metric_aggregation ? 1 : 0
   source         = "../../modules/parameters"
   environment    = var.environment
+  workgroup      = null
   parameter_name = "OPENTELEMETRY_COLLECTOR_ADDRESS"
   parameter_value = format("%s.%s.%s:%s",
   var.environment, var.collector_domain_name, var.collector_dns_name, var.collector_service_port)
@@ -360,9 +373,20 @@ module "frontend" {
   lb_request_latencies_alarm_config = var.frontend_lb_request_latencies_alarm_config
 }
 
+module "worker_service_account" {
+  source = "../../modules/worker/worker_service_account"
+
+  environment                   = var.environment
+  project_id                    = var.project_id
+  metadatadb_instance_name      = module.metadatadb.metadatadb_instance_name
+  metadatadb_name               = module.metadatadb.metadatadb_name
+  user_provided_worker_sa_email = var.user_provided_worker_sa_email
+}
+
 module "worker" {
   source                        = "../../modules/worker/java_worker"
   environment                   = var.environment
+  workgroup                     = null
   project_id                    = var.project_id
   network                       = module.vpc.network
   subnet_id                     = module.vpc.worker_subnet_ids[var.region]
@@ -380,7 +404,7 @@ module "worker" {
   worker_instance_disk_type    = var.worker_instance_disk_type
   worker_instance_disk_size_gb = var.worker_instance_disk_size_gb
 
-  user_provided_worker_sa_email = var.user_provided_worker_sa_email
+  worker_service_account_email = module.worker_service_account.worker_service_account_email
 
   # Instance Metadata
   worker_logging_enabled           = var.worker_logging_enabled
@@ -392,10 +416,12 @@ module "worker" {
   worker_restart_policy            = var.worker_restart_policy
   allowed_operator_service_account = var.allowed_operator_service_account
 
-  autoscaler_cloudfunction_name = module.autoscaling.autoscaler_cloudfunction_name
-  autoscaler_name               = module.autoscaling.autoscaler_name
-  vm_instance_group_name        = module.autoscaling.worker_managed_instance_group_name
+  autoscaler_cloudfunction_name        = module.autoscaling.autoscaler_cloudfunction_name
+  autoscaler_name                      = module.autoscaling.autoscaler_name
+  vm_instance_group_name               = module.autoscaling.worker_managed_instance_group_name
+  vm_instance_group_base_instance_name = module.autoscaling.worker_managed_instance_group_base_instance_name
 
+  # Metrics / Alarming
   alarms_enabled                     = var.alarms_enabled
   java_custom_metrics_alarms_enabled = var.alarms_enabled
   alarm_duration_sec                 = var.worker_alarm_duration_sec
@@ -405,6 +431,13 @@ module "worker" {
   enable_new_metrics                 = var.enable_remote_metric_aggregation
   enable_legacy_metrics              = var.enable_legacy_metrics
 
+  legacy_jobclient_job_validation_failure_metric_type = var.alarms_enabled ? module.java_global_custom_monitoring[0].legacy_jobclient_job_validation_failure_metric_type : ""
+  legacy_jobclient_error_metric_type                  = var.alarms_enabled ? module.java_global_custom_monitoring[0].legacy_jobclient_error_metric_type : ""
+  legacy_worker_error_metric_type                     = var.alarms_enabled ? module.java_global_custom_monitoring[0].legacy_worker_error_metric_type : ""
+  new_jobclient_job_validation_failure_metric_type    = var.alarms_enabled ? module.java_global_custom_monitoring[0].new_jobclient_job_validation_failure_metric_type : ""
+  new_jobclient_error_metric_type                     = var.alarms_enabled ? module.java_global_custom_monitoring[0].new_jobclient_error_metric_type : ""
+  new_worker_error_metric_type                        = var.alarms_enabled ? module.java_global_custom_monitoring[0].new_worker_error_metric_type : ""
+
   # Make sure the otel collector is running before creating the server instances.
   depends_on = [module.opentelemetry_collector]
 }
@@ -412,6 +445,7 @@ module "worker" {
 module "autoscaling" {
   source                  = "../../modules/autoscaling"
   environment             = var.environment
+  workgroup               = null
   project_id              = var.project_id
   region                  = var.region
   subnet_id               = module.vpc.worker_subnet_ids[var.region]
@@ -424,7 +458,7 @@ module "autoscaling" {
   jobqueue_subscription_name          = module.jobqueue.jobqueue_pubsub_sub_name
   autoscaling_jobs_per_instance       = var.autoscaling_jobs_per_instance
   autoscaling_cloudfunction_memory_mb = var.autoscaling_cloudfunction_memory_mb
-  worker_service_account              = module.worker.worker_service_account_email
+  worker_service_account              = module.worker_service_account.worker_service_account_email
   termination_wait_timeout_sec        = var.termination_wait_timeout_sec
   worker_scale_in_cron                = var.worker_scale_in_cron
 
@@ -450,6 +484,14 @@ module "autoscaling" {
   use_java21_runtime = var.autoscaling_cloudfunction_use_java21_runtime
 }
 
+module "java_global_custom_monitoring" {
+  source                = "../../modules/java_global_custom_monitoring"
+  count                 = var.alarms_enabled ? 1 : 0
+  environment           = var.environment
+  enable_new_metrics    = var.enable_remote_metric_aggregation
+  enable_legacy_metrics = var.enable_legacy_metrics
+}
+
 module "notifications" {
   count  = var.enable_job_completion_notifications ? 1 : 0
   source = "../../modules/notifications"
@@ -470,6 +512,7 @@ module "job_completion_notifications_internal_topic_id" {
   count           = var.enable_job_completion_notifications || var.enable_job_completion_notifications_per_job ? 1 : 0
   source          = "../../modules/parameters"
   environment     = var.environment
+  workgroup       = null
   parameter_name  = "JOB_COMPLETION_NOTIFICATIONS_TOPIC_ID"
   parameter_value = module.job_completion_notifications[0].notifications_pubsub_topic_id
 }
@@ -509,4 +552,34 @@ resource "google_pubsub_topic_iam_member" "job_completion_notifications_cloud_fu
   role   = "roles/pubsub.publisher"
   member = "serviceAccount:${module.job_completion_notifications_cloud_function[0].pubsub_triggered_service_account_email}"
   topic  = module.notifications[0].notifications_pubsub_topic_id
+}
+
+moved {
+  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric[0]
+}
+
+moved {
+  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_metric[0]
+}
+
+moved {
+  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_metric[0]
+}
+
+moved {
+  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_counter_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_counter_metric[0]
+}
+
+moved {
+  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_counter_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_counter_metric[0]
+}
+
+moved {
+  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_new_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_new_metric[0]
 }

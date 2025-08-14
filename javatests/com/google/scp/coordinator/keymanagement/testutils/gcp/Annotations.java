@@ -32,12 +32,6 @@ public final class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface PublicKeyCloudFunctionContainer {}
 
-  /** Container for Private Key Cloud Function Integration tests */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface PrivateKeyCloudFunctionContainer {}
-
   /** Container for Encryption Key Cloud Function Integration tests */
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})

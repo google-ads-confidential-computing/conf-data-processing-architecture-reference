@@ -1,4 +1,4 @@
-// Copyright 2022 Google LLC
+// Copyright 2022-2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 #include <tink/hybrid/hybrid_key_templates.h>
 #include <tink/hybrid/internal/hpke_context.h>
 #include <tink/input_stream.h>
+#include <tink/keyset_manager.h>
 #include <tink/mac/mac_key_templates.h>
 #include <tink/output_stream.h>
 #include <tink/streaming_aead.h>
@@ -62,6 +63,7 @@ using crypto::tink::CleartextKeysetHandle;
 using crypto::tink::HybridKeyTemplates;
 using crypto::tink::InputStream;
 using crypto::tink::KeysetHandle;
+using crypto::tink::KeysetManager;
 using crypto::tink::MacKeyTemplates;
 using crypto::tink::OutputStream;
 using crypto::tink::subtle::AesCtrHmacStreaming;
@@ -75,6 +77,7 @@ using google::cmrt::sdk::crypto_service::v1::AeadDecryptRequest;
 using google::cmrt::sdk::crypto_service::v1::AeadDecryptResponse;
 using google::cmrt::sdk::crypto_service::v1::AeadEncryptRequest;
 using google::cmrt::sdk::crypto_service::v1::AeadEncryptResponse;
+using google::cmrt::sdk::crypto_service::v1::AeadKey;
 using google::cmrt::sdk::crypto_service::v1::ComputeMacRequest;
 using google::cmrt::sdk::crypto_service::v1::ComputeMacResponse;
 using google::cmrt::sdk::crypto_service::v1::HashType;
@@ -104,6 +107,7 @@ using google::scp::core::ExecutionStatus;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::errors::SC_CORE_UTILS_INVALID_BASE64_ENCODING_LENGTH;
+using google::scp::core::errors::SC_CORE_UTILS_INVALID_INPUT;
 using google::scp::core::errors::
     SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_KEYSET_HANDLE;
 using google::scp::core::errors::SC_CRYPTO_CLIENT_PROVIDER_CREATE_AEAD_FAILED;
@@ -121,6 +125,7 @@ using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::ScpTestBase;
 using google::scp::core::test::WaitUntil;
+using google::scp::core::utils::Base64Decode;
 using google::scp::core::utils::Base64Encode;
 using google::scp::cpio::AeadDecryptStreamRequest;
 using std::atomic;
@@ -160,6 +165,21 @@ constexpr char kDecryptedPrivateKeyForAes128Gcm[] =
 constexpr char kDecryptedPrivateKeyForP256[] =
     "f3ce7fdae57e1a310d87f1ebbde6f328be0a99cdbcadf4d6589cf29de4b8ffd2";
 
+// Base 64 encoded binary porotobuf tink keyset
+// XChaCha20Poly1305 symmetric key.
+constexpr char kBase64BinaryTinkKeysetSecret[] =
+    "CIS9ikkSbgpjCjt0eXBlLmdvb2dsZWFwaXMuY29tL2dvb2dsZS5jcnlwdG8udGluay5YQ2hhQ2"
+    "hhMjBQb2x5MTMwNUtleRIiGiAsTlpY+TZlLsdJ4wvW1XV//"
+    "fdOZaXXjjSrbZJKiCoAUhgBEAEYhL2KSSAB";
+
+static string InternalHexStringToBytes(string_view hex_string) {
+  string byte_string;
+  if (!HexStringToBytes(hex_string, &byte_string)) {
+    return "INVALID_HEX_STRING";
+  }
+  return byte_string;
+}
+
 class CryptoClientProviderTest : public ScpTestBase {
  protected:
   void SetUp() override {
@@ -174,34 +194,46 @@ class CryptoClientProviderTest : public ScpTestBase {
     EXPECT_SUCCESS(client_without_cache_->Init());
     EXPECT_SUCCESS(client_without_cache_->Run());
 
-    auto keyset_handle_1_or = KeysetHandle::GenerateNew(
+    auto keyset_manager_or = KeysetManager::New(
         HybridKeyTemplates::HpkeX25519HkdfSha256ChaCha20Poly1305Raw());
+    ASSERT_TRUE(keyset_manager_or.ok());
+
+    auto keyset_handle_1 = (*keyset_manager_or)->GetKeysetHandle();
     HpkeX25519HkdfSha256ChaCha20Poly1305Raw_encoded_tink_private_key =
-        EncodeKeyset(keyset_handle_1_or->get());
+        EncodeKeyset(keyset_handle_1.get());
     HpkeX25519HkdfSha256ChaCha20Poly1305Raw_encoded_tink_public_key =
-        WrapHpkePublicKey(keyset_handle_1_or->get());
+        WrapHpkePublicKey(keyset_handle_1.get());
 
-    auto keyset_handle_2_or = KeysetHandle::GenerateNew(
+    keyset_manager_or = KeysetManager::New(
         HybridKeyTemplates::HpkeX25519HkdfSha256Aes256GcmRaw());
+    ASSERT_TRUE(keyset_manager_or.ok());
+
+    auto keyset_handle_2 = (*keyset_manager_or)->GetKeysetHandle();
     HpkeX25519HkdfSha256Aes256GcmRaw_encoded_tink_private_key =
-        EncodeKeyset(keyset_handle_2_or->get());
+        EncodeKeyset(keyset_handle_2.get());
     HpkeX25519HkdfSha256Aes256GcmRaw_encoded_tink_public_key =
-        WrapHpkePublicKey(keyset_handle_2_or->get());
+        WrapHpkePublicKey(keyset_handle_2.get());
 
-    auto keyset_handle_3_or = KeysetHandle::GenerateNew(
+    keyset_manager_or = KeysetManager::New(
         HybridKeyTemplates::HpkeX25519HkdfSha256Aes128GcmRaw());
-    HpkeX25519HkdfSha256Aes128GcmRaw_encoded_tink_private_key =
-        EncodeKeyset(keyset_handle_3_or->get());
-    HpkeX25519HkdfSha256Aes128GcmRaw_encoded_tink_public_key =
-        WrapHpkePublicKey(keyset_handle_3_or->get());
+    ASSERT_TRUE(keyset_manager_or.ok());
 
-    auto keyset_handle_4_or = KeysetHandle::GenerateNew(
+    auto keyset_handle_3 = (*keyset_manager_or)->GetKeysetHandle();
+    HpkeX25519HkdfSha256Aes128GcmRaw_encoded_tink_private_key =
+        EncodeKeyset(keyset_handle_3.get());
+    HpkeX25519HkdfSha256Aes128GcmRaw_encoded_tink_public_key =
+        WrapHpkePublicKey(keyset_handle_3.get());
+
+    keyset_manager_or = KeysetManager::New(
         HybridKeyTemplates::
             EciesP256HkdfHmacSha256Aes128GcmCompressedWithoutPrefix());
+    ASSERT_TRUE(keyset_manager_or.ok());
+
+    auto keyset_handle_4 = (*keyset_manager_or)->GetKeysetHandle();
     EciesP256HkdfHmacSha256Aes128GcmRaw_encoded_tink_private_key =
-        EncodeKeyset(keyset_handle_4_or->get());
+        EncodeKeyset(keyset_handle_4.get());
     EciesP256HkdfHmacSha256Aes128GcmRaw_encoded_tink_public_key =
-        WrapHpkePublicKey(keyset_handle_4_or->get(), true);
+        WrapHpkePublicKey(keyset_handle_4.get(), true);
   }
 
   string WrapHpkePublicKey(KeysetHandle* keyset_handle,
@@ -270,6 +302,8 @@ class CryptoClientProviderTest : public ScpTestBase {
       case crypto::tink::HpkeAead::AES_128_GCM:
         encoded_key = HpkeX25519HkdfSha256Aes128GcmRaw_encoded_tink_public_key;
         break;
+      default:
+        throw std::runtime_error("Invalid Aead.");
     }
     return encoded_key;
   }
@@ -320,6 +354,8 @@ class CryptoClientProviderTest : public ScpTestBase {
       case crypto::tink::HpkeAead::AES_128_GCM:
         encoded_key = HpkeX25519HkdfSha256Aes128GcmRaw_encoded_tink_private_key;
         break;
+      default:
+        throw std::runtime_error("Invalid Aead.");
     }
     return encoded_key;
   }
@@ -345,9 +381,11 @@ class CryptoClientProviderTest : public ScpTestBase {
     hpke_public_key.mutable_params()->set_kdf(kdf);
     hpke_public_key.mutable_params()->set_aead(aead);
     if (kem == crypto::tink::HpkeKem::DHKEM_P256_HKDF_SHA256) {
-      hpke_public_key.set_public_key(HexStringToBytes(kPublicKeyForP256));
+      hpke_public_key.set_public_key(
+          InternalHexStringToBytes(kPublicKeyForP256));
     } else {
-      hpke_public_key.set_public_key(HexStringToBytes(kPublicKeyForChacha20));
+      hpke_public_key.set_public_key(
+          InternalHexStringToBytes(kPublicKeyForChacha20));
     }
     Keyset key;
     key.set_primary_key_id(123);
@@ -389,20 +427,20 @@ class CryptoClientProviderTest : public ScpTestBase {
 
     if (kem == crypto::tink::HpkeKem::DHKEM_P256_HKDF_SHA256) {
       hpke_private_key.mutable_public_key()->set_public_key(
-          HexStringToBytes(kPublicKeyForP256));
+          InternalHexStringToBytes(kPublicKeyForP256));
       hpke_private_key.set_private_key(
-          HexStringToBytes(kDecryptedPrivateKeyForP256));
+          InternalHexStringToBytes(kDecryptedPrivateKeyForP256));
     } else {
       if (aead == crypto::tink::HpkeAead::AES_128_GCM) {
         hpke_private_key.mutable_public_key()->set_public_key(
-            HexStringToBytes(kPublicKeyForAes128Gcm));
+            InternalHexStringToBytes(kPublicKeyForAes128Gcm));
         hpke_private_key.set_private_key(
-            HexStringToBytes(kDecryptedPrivateKeyForAes128Gcm));
+            InternalHexStringToBytes(kDecryptedPrivateKeyForAes128Gcm));
       } else {
         hpke_private_key.mutable_public_key()->set_public_key(
-            HexStringToBytes(kPublicKeyForChacha20));
+            InternalHexStringToBytes(kPublicKeyForChacha20));
         hpke_private_key.set_private_key(
-            HexStringToBytes(kDecryptedPrivateKeyForChacha20));
+            InternalHexStringToBytes(kDecryptedPrivateKeyForChacha20));
       }
     }
 
@@ -449,19 +487,15 @@ class CryptoClientProviderTest : public ScpTestBase {
       if (encoded_public_key.empty()) {
         if (hpke_params_from_request.aead() == HpkeAead::AES_128_GCM) {
           request.mutable_raw_key_with_params()->set_raw_key(
-              Base64Escape(HexStringToBytes(kPublicKeyForAes128Gcm)));
+              Base64Escape(InternalHexStringToBytes(kPublicKeyForAes128Gcm)));
         } else {
           request.mutable_raw_key_with_params()->set_raw_key(
-              Base64Escape(HexStringToBytes(kPublicKeyForChacha20)));
+              Base64Escape(InternalHexStringToBytes(kPublicKeyForChacha20)));
         }
       } else {
         request.mutable_raw_key_with_params()->set_raw_key(encoded_public_key);
       }
     } else {
-      crypto::tink::HpkeAead aead =
-          hpke_params_from_request.aead() == HpkeAead::AES_128_GCM
-              ? crypto::tink::HpkeAead::AES_128_GCM
-              : crypto::tink::HpkeAead::CHACHA20_POLY1305;
       if (encoded_public_key.empty()) {
         string encoded_key = GetEncodedPublicKey(
             ToTinkHpkeKem(hpke_params_from_request.kem()),
@@ -496,7 +530,7 @@ class CryptoClientProviderTest : public ScpTestBase {
       const ExecutionResult& expected_result = SuccessExecutionResult()) {
     if (expected_result.Successful()) {
       EXPECT_SUCCESS(response_or.result());
-      auto response = move(*response_or);
+      auto response = std::move(*response_or);
       if (is_bidirectional) {
         EXPECT_FALSE(response.secret().empty());
       } else {
@@ -522,24 +556,19 @@ class CryptoClientProviderTest : public ScpTestBase {
       request.mutable_raw_key_with_params()->mutable_hpke_params()->set_kdf(
           HpkeKdf::HKDF_SHA256);
       if (hpke_params_from_request.aead() == HpkeAead::AES_128_GCM) {
-        auto encoded_key =
-            *Base64Encode(HexStringToBytes(kDecryptedPrivateKeyForAes128Gcm));
+        auto encoded_key = *Base64Encode(
+            InternalHexStringToBytes(kDecryptedPrivateKeyForAes128Gcm));
         request.mutable_raw_key_with_params()->set_raw_key(encoded_key);
         request.mutable_raw_key_with_params()->mutable_hpke_params()->set_aead(
             HpkeAead::AES_128_GCM);
       } else {
-        auto encoded_key =
-            *Base64Encode(HexStringToBytes(kDecryptedPrivateKeyForChacha20));
+        auto encoded_key = *Base64Encode(
+            InternalHexStringToBytes(kDecryptedPrivateKeyForChacha20));
         request.mutable_raw_key_with_params()->set_raw_key(encoded_key);
         request.mutable_raw_key_with_params()->mutable_hpke_params()->set_aead(
             HpkeAead::CHACHA20_POLY1305);
       }
     } else {
-      crypto::tink::HpkeAead aead =
-          hpke_params_from_request.aead() == HpkeAead::AES_128_GCM
-              ? crypto::tink::HpkeAead::AES_128_GCM
-              : crypto::tink::HpkeAead::CHACHA20_POLY1305;
-
       string encoded_private_key;
       if (decrypt_private_key_result.Successful()) {
         encoded_private_key = GetEncodedPrivateKey(
@@ -580,7 +609,7 @@ class CryptoClientProviderTest : public ScpTestBase {
       const ExecutionResult& expected_result = SuccessExecutionResult()) {
     if (expected_result.Successful()) {
       EXPECT_SUCCESS(response_or.result());
-      auto response = move(*response_or);
+      auto response = std::move(*response_or);
       EXPECT_EQ(response.payload(), kPayload);
       EXPECT_EQ(response.secret(), secret);
     } else {
@@ -592,7 +621,15 @@ class CryptoClientProviderTest : public ScpTestBase {
     AeadEncryptRequest request;
     request.set_shared_info(string(kSharedInfo));
     request.set_payload(string(kPayload));
-    request.set_secret(HexStringToBytes(secret));
+    request.set_secret(InternalHexStringToBytes(secret));
+    return request;
+  }
+
+  AeadEncryptRequest CreateAeadEncryptRequest(AeadKey& key) {
+    AeadEncryptRequest request;
+    request.set_shared_info(string(kSharedInfo));
+    request.set_payload(string(kPayload));
+    request.mutable_key()->CopyFrom(key);
     return request;
   }
 
@@ -600,8 +637,17 @@ class CryptoClientProviderTest : public ScpTestBase {
                                               string_view ciphertext) {
     AeadDecryptRequest request;
     request.set_shared_info(string(kSharedInfo));
-    request.set_secret(HexStringToBytes(secret));
+    request.set_secret(InternalHexStringToBytes(secret));
     request.mutable_encrypted_data()->set_ciphertext(string(ciphertext));
+    return request;
+  }
+
+  AeadDecryptRequest CreateAeadDecryptRequest(AeadKey& key,
+                                              string_view ciphertext) {
+    AeadDecryptRequest request;
+    request.set_shared_info(string(kSharedInfo));
+    request.mutable_encrypted_data()->set_ciphertext(string(ciphertext));
+    request.mutable_key()->CopyFrom(key);
     return request;
   }
 
@@ -714,7 +760,7 @@ TEST_F(CryptoClientProviderTest, HpkeDecryptFailedWithoutKey) {
 TEST_F(CryptoClientProviderTest, MultipleHpkeEncryptAndDecryptSuccess) {
   vector<thread> threads;
   for (auto i = 0; i < 10; ++i) {
-    threads.push_back(thread([this, i]() {
+    threads.push_back(thread([this]() {
       auto encrypt_request = CreateHpkeEncryptRequest(
           false /*is_bidirectional*/, false /*is_raw_key*/);
       auto encrypt_response_or = client_->HpkeEncryptSync(encrypt_request);
@@ -738,7 +784,7 @@ TEST_F(CryptoClientProviderTest,
        ClientWithoutCacheMultipleHpkeEncryptAndDecryptSuccess) {
   vector<thread> threads;
   for (auto i = 0; i < 10; ++i) {
-    threads.push_back(thread([this, i]() {
+    threads.push_back(thread([this]() {
       auto encrypt_request = CreateHpkeEncryptRequest(
           false /*is_bidirectional*/, false /*is_raw_key*/);
       auto encrypt_response_or =
@@ -954,6 +1000,21 @@ TEST_F(CryptoClientProviderTest, AeadEncryptAndDecryptSuccessFor128Secret) {
   EXPECT_EQ(decrypt_response_or->payload(), kPayload);
 }
 
+TEST_F(CryptoClientProviderTest,
+       AeadEncryptAndDecryptSuccessFor128SecretViaAeadKey) {
+  AeadKey aead_key;
+  aead_key.set_raw_key(InternalHexStringToBytes(kSecret128));
+  auto encrypt_request = CreateAeadEncryptRequest(aead_key);
+  auto encrypt_response_or = client_->AeadEncryptSync(encrypt_request);
+  EXPECT_SUCCESS(encrypt_response_or.result());
+
+  auto ciphertext = encrypt_response_or->encrypted_data().ciphertext();
+  auto decrypt_request = CreateAeadDecryptRequest(aead_key, ciphertext);
+  auto decrypt_response_or = client_->AeadDecryptSync(decrypt_request);
+  EXPECT_SUCCESS(decrypt_response_or.result());
+  EXPECT_EQ(decrypt_response_or->payload(), kPayload);
+}
+
 TEST_F(CryptoClientProviderTest, AeadEncryptAndDecryptSuccessFor256Secret) {
   auto encrypt_request = CreateAeadEncryptRequest(kSecret256);
   auto encrypt_response_or = client_->AeadEncryptSync(encrypt_request);
@@ -964,6 +1025,183 @@ TEST_F(CryptoClientProviderTest, AeadEncryptAndDecryptSuccessFor256Secret) {
   auto decrypt_response_or = client_->AeadDecryptSync(decrypt_request);
   EXPECT_SUCCESS(decrypt_response_or.result());
   EXPECT_EQ(decrypt_response_or->payload(), kPayload);
+}
+
+TEST_F(CryptoClientProviderTest,
+       AeadEncryptAndDecryptSuccessFor256SecretViaAeadKey) {
+  AeadKey aead_key;
+  aead_key.set_raw_key(InternalHexStringToBytes(kSecret256));
+  auto encrypt_request = CreateAeadEncryptRequest(aead_key);
+
+  auto encrypt_response_or = client_->AeadEncryptSync(encrypt_request);
+  EXPECT_SUCCESS(encrypt_response_or.result());
+
+  auto ciphertext = encrypt_response_or->encrypted_data().ciphertext();
+  auto decrypt_request = CreateAeadDecryptRequest(aead_key, ciphertext);
+  auto decrypt_response_or = client_->AeadDecryptSync(decrypt_request);
+  EXPECT_SUCCESS(decrypt_response_or.result());
+  EXPECT_EQ(decrypt_response_or->payload(), kPayload);
+}
+
+TEST_F(CryptoClientProviderTest,
+       AeadEncryptAndDecryptSuccessForBase64TinkKeyset) {
+  // Exercise cache
+  for (int i = 0; i < 2; i++) {
+    AeadKey aead_key;
+    aead_key.set_base64_binary_tink_keyset(kBase64BinaryTinkKeysetSecret);
+    auto encrypt_request = CreateAeadEncryptRequest(aead_key);
+    auto encrypt_response_or = client_->AeadEncryptSync(encrypt_request);
+    EXPECT_SUCCESS(encrypt_response_or.result());
+
+    auto ciphertext = encrypt_response_or->encrypted_data().ciphertext();
+    auto decrypt_request = CreateAeadDecryptRequest(aead_key, ciphertext);
+    auto decrypt_response_or = client_->AeadDecryptSync(decrypt_request);
+    EXPECT_SUCCESS(decrypt_response_or.result());
+    EXPECT_EQ(decrypt_response_or->payload(), kPayload);
+  }
+}
+
+TEST_F(CryptoClientProviderTest,
+       AeadEncryptAndDecryptSuccessForBase64TinkKeysetWithoutCache) {
+  AeadKey aead_key;
+  aead_key.set_base64_binary_tink_keyset(kBase64BinaryTinkKeysetSecret);
+  auto encrypt_request = CreateAeadEncryptRequest(aead_key);
+  auto encrypt_response_or =
+      client_without_cache_->AeadEncryptSync(encrypt_request);
+  EXPECT_SUCCESS(encrypt_response_or.result());
+
+  auto ciphertext = encrypt_response_or->encrypted_data().ciphertext();
+  auto decrypt_request = CreateAeadDecryptRequest(aead_key, ciphertext);
+  auto decrypt_response_or =
+      client_without_cache_->AeadDecryptSync(decrypt_request);
+  EXPECT_SUCCESS(decrypt_response_or.result());
+  EXPECT_EQ(decrypt_response_or->payload(), kPayload);
+}
+
+TEST_F(CryptoClientProviderTest, AeadEncryptInvalidSecretForBase64TinkKeyset) {
+  // Using a non-base64 encoded secret
+  auto secret = "NOT_B-64";
+  AeadKey aead_key;
+  aead_key.set_base64_binary_tink_keyset(secret);
+
+  auto encrypt_request = CreateAeadEncryptRequest(aead_key);
+  auto encrypt_response_or = client_->AeadEncryptSync(encrypt_request);
+  EXPECT_THAT(encrypt_response_or.result(),
+              ResultIs(FailureExecutionResult(SC_CORE_UTILS_INVALID_INPUT)));
+}
+
+TEST_F(CryptoClientProviderTest,
+       AeadEncryptInvalidTinkSecretForBase64TinkKeyset) {
+  // Using a base64 string - not the expected binary tink keyset
+  auto secret_or = Base64Encode("NOT_A_BINARY_TINK_KEYSET");
+  EXPECT_SUCCESS(secret_or.result());
+  AeadKey aead_key;
+  aead_key.set_base64_binary_tink_keyset(*secret_or);
+
+  auto encrypt_request = CreateAeadEncryptRequest(aead_key);
+  auto encrypt_response_or = client_->AeadEncryptSync(encrypt_request);
+  EXPECT_THAT(encrypt_response_or.result(),
+              ResultIs(FailureExecutionResult(
+                  SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_KEYSET_HANDLE)));
+}
+
+TEST_F(CryptoClientProviderTest, AeadDecryptInvalidSecretForBase64TinkKeyset) {
+  // Using a non-base64 encoded secret
+  auto secret = "NOT_B-64";
+  AeadKey aead_key;
+  aead_key.set_base64_binary_tink_keyset(secret);
+
+  auto ciphertext = "";
+  auto decrypt_request = CreateAeadDecryptRequest(aead_key, ciphertext);
+  auto decrypt_response_or = client_->AeadDecryptSync(decrypt_request);
+
+  EXPECT_THAT(decrypt_response_or.result(),
+              ResultIs(FailureExecutionResult(SC_CORE_UTILS_INVALID_INPUT)));
+}
+
+TEST_F(CryptoClientProviderTest,
+       AeadDecryptInvalidTinkSecretForBase64TinkKeyset) {
+  // Using a base64 string - not the expected binary tink keyset
+  auto secret_or = Base64Encode("NOT_A_BINARY_TINK_KEYSET");
+  EXPECT_SUCCESS(secret_or.result());
+  AeadKey aead_key;
+  aead_key.set_base64_binary_tink_keyset(*secret_or);
+
+  auto ciphertext = "";
+  auto decrypt_request = CreateAeadDecryptRequest(aead_key, ciphertext);
+  auto decrypt_response_or = client_->AeadDecryptSync(decrypt_request);
+
+  EXPECT_THAT(decrypt_response_or.result(),
+              ResultIs(FailureExecutionResult(
+                  SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_KEYSET_HANDLE)));
+}
+
+TEST_F(CryptoClientProviderTest, AeadEncryptAndDecryptSuccessForTinkKeyset) {
+  // Exercise cache
+  for (int i = 0; i < 2; i++) {
+    auto secret_or = Base64Decode(kBase64BinaryTinkKeysetSecret);
+    EXPECT_SUCCESS(secret_or.result());
+    AeadKey aead_key;
+    aead_key.set_binary_tink_keyset(*secret_or);
+
+    auto encrypt_request = CreateAeadEncryptRequest(aead_key);
+    auto encrypt_response_or = client_->AeadEncryptSync(encrypt_request);
+    EXPECT_SUCCESS(encrypt_response_or.result());
+
+    auto ciphertext = encrypt_response_or->encrypted_data().ciphertext();
+    auto decrypt_request = CreateAeadDecryptRequest(aead_key, ciphertext);
+    auto decrypt_response_or = client_->AeadDecryptSync(decrypt_request);
+    EXPECT_SUCCESS(decrypt_response_or.result());
+    EXPECT_EQ(decrypt_response_or->payload(), kPayload);
+  }
+}
+
+TEST_F(CryptoClientProviderTest,
+       AeadEncryptAndDecryptSuccessForTinkKeysetWithoutCache) {
+  auto secret_or = Base64Decode(kBase64BinaryTinkKeysetSecret);
+  EXPECT_SUCCESS(secret_or.result());
+  AeadKey aead_key;
+  aead_key.set_binary_tink_keyset(*secret_or);
+
+  auto encrypt_request = CreateAeadEncryptRequest(aead_key);
+  auto encrypt_response_or =
+      client_without_cache_->AeadEncryptSync(encrypt_request);
+  EXPECT_SUCCESS(encrypt_response_or.result());
+
+  auto ciphertext = encrypt_response_or->encrypted_data().ciphertext();
+  auto decrypt_request = CreateAeadDecryptRequest(aead_key, ciphertext);
+  auto decrypt_response_or =
+      client_without_cache_->AeadDecryptSync(decrypt_request);
+  EXPECT_SUCCESS(decrypt_response_or.result());
+  EXPECT_EQ(decrypt_response_or->payload(), kPayload);
+}
+
+TEST_F(CryptoClientProviderTest, AeadEncryptInvalidSecretForTinkKeyset) {
+  // Using an invalid binary tink keyset
+  auto secret = "NOT_BINARY_TINK_KEYSET";
+  AeadKey aead_key;
+  aead_key.set_binary_tink_keyset(secret);
+
+  auto encrypt_request = CreateAeadEncryptRequest(aead_key);
+  auto encrypt_response_or = client_->AeadEncryptSync(encrypt_request);
+  EXPECT_THAT(encrypt_response_or.result(),
+              ResultIs(FailureExecutionResult(
+                  SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_KEYSET_HANDLE)));
+}
+
+TEST_F(CryptoClientProviderTest, AeadDecryptInvalidSecretForTinkKeyset) {
+  // Using an invalid binary tink keyset
+  auto secret = "NOT_BINARY_TINK_KEYSET";
+  AeadKey aead_key;
+  aead_key.set_binary_tink_keyset(secret);
+
+  auto ciphertext = "";
+  auto decrypt_request = CreateAeadDecryptRequest(aead_key, ciphertext);
+  auto decrypt_response_or = client_->AeadDecryptSync(decrypt_request);
+
+  EXPECT_THAT(decrypt_response_or.result(),
+              ResultIs(FailureExecutionResult(
+                  SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_KEYSET_HANDLE)));
 }
 
 TEST_F(CryptoClientProviderTest, CannotCreateAeadDueToInvalidSecret) {
@@ -985,7 +1223,7 @@ TEST_F(CryptoClientProviderTest, ComputeMacFailedDueToMissingKey) {
   string data = "some sensitive data";
   request.set_data(data);
 
-  EXPECT_THAT(client_->ComputeMacSync(move(request)).result(),
+  EXPECT_THAT(client_->ComputeMacSync(std::move(request)).result(),
               FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_MISSING_KEY));
 }
 
@@ -994,17 +1232,19 @@ TEST_F(CryptoClientProviderTest, ComputeMacFailedDueToMissingData) {
   string key = "some key";
   request.set_key(key);
 
-  EXPECT_THAT(client_->ComputeMacSync(move(request)).result(),
+  EXPECT_THAT(client_->ComputeMacSync(std::move(request)).result(),
               FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_MISSING_DATA));
 }
 
 TEST_F(CryptoClientProviderTest, ComputeMacSuccessfully) {
-  auto keyset_handle = KeysetHandle::GenerateNew(MacKeyTemplates::HmacSha256());
+  auto keyset_manager_or = KeysetManager::New(MacKeyTemplates::HmacSha256());
+  ASSERT_TRUE(keyset_manager_or.ok());
+  auto keyset_handle = (*keyset_manager_or)->GetKeysetHandle();
   std::stringbuf key_buf(std::ios_base::out);
   auto keyset_writer =
       BinaryKeysetWriter::New(std::make_unique<std::ostream>(&key_buf));
   auto write_result = CleartextKeysetHandle::Write(keyset_writer->get(),
-                                                   *keyset_handle->release());
+                                                   *keyset_handle.release());
   EXPECT_TRUE(write_result.ok()) << write_result;
 
   ComputeMacRequest request;
@@ -1012,17 +1252,19 @@ TEST_F(CryptoClientProviderTest, ComputeMacSuccessfully) {
                             Base64Encode(key_buf.str()));
   string data = "some sensitive data";
   request.set_data(data);
-  EXPECT_THAT(client_->ComputeMacSync(move(request))->mac(),
+  EXPECT_THAT(client_->ComputeMacSync(std::move(request))->mac(),
               testing::Not(testing::IsEmpty()));
 }
 
 TEST_F(CryptoClientProviderTest, MultipleComputeMacSuccessfully) {
-  auto keyset_handle = KeysetHandle::GenerateNew(MacKeyTemplates::HmacSha256());
+  auto keyset_manager_or = KeysetManager::New(MacKeyTemplates::HmacSha256());
+  ASSERT_TRUE(keyset_manager_or.ok());
+  auto keyset_handle = (*keyset_manager_or)->GetKeysetHandle();
   std::stringbuf key_buf(std::ios_base::out);
   auto keyset_writer =
       BinaryKeysetWriter::New(std::make_unique<std::ostream>(&key_buf));
   auto write_result = CleartextKeysetHandle::Write(keyset_writer->get(),
-                                                   *keyset_handle->release());
+                                                   *keyset_handle.release());
   EXPECT_TRUE(write_result.ok()) << write_result;
 
   ComputeMacRequest request;
@@ -1033,8 +1275,8 @@ TEST_F(CryptoClientProviderTest, MultipleComputeMacSuccessfully) {
 
   vector<thread> threads;
   for (auto i = 0; i < 10; ++i) {
-    threads.push_back(thread([this, &request, i]() {
-      EXPECT_THAT(client_->ComputeMacSync(move(request))->mac(),
+    threads.push_back(thread([this, &request]() {
+      EXPECT_THAT(client_->ComputeMacSync(std::move(request))->mac(),
                   testing::Not(testing::IsEmpty()));
     }));
   }
@@ -1046,12 +1288,14 @@ TEST_F(CryptoClientProviderTest, MultipleComputeMacSuccessfully) {
 
 TEST_F(CryptoClientProviderTest,
        ClientWithoutCacheMultipleComputeMacSuccessfully) {
-  auto keyset_handle = KeysetHandle::GenerateNew(MacKeyTemplates::HmacSha256());
+  auto keyset_manager_or = KeysetManager::New(MacKeyTemplates::HmacSha256());
+  ASSERT_TRUE(keyset_manager_or.ok());
+  auto keyset_handle = (*keyset_manager_or)->GetKeysetHandle();
   std::stringbuf key_buf(std::ios_base::out);
   auto keyset_writer =
       BinaryKeysetWriter::New(std::make_unique<std::ostream>(&key_buf));
   auto write_result = CleartextKeysetHandle::Write(keyset_writer->get(),
-                                                   *keyset_handle->release());
+                                                   *keyset_handle.release());
   EXPECT_TRUE(write_result.ok()) << write_result;
 
   ComputeMacRequest request;
@@ -1062,9 +1306,10 @@ TEST_F(CryptoClientProviderTest,
 
   vector<thread> threads;
   for (auto i = 0; i < 10; ++i) {
-    threads.push_back(thread([this, &request, i]() {
-      EXPECT_THAT(client_without_cache_->ComputeMacSync(move(request))->mac(),
-                  testing::Not(testing::IsEmpty()));
+    threads.push_back(thread([this, &request]() {
+      EXPECT_THAT(
+          client_without_cache_->ComputeMacSync(std::move(request))->mac(),
+          testing::Not(testing::IsEmpty()));
     }));
   }
 
@@ -1076,8 +1321,8 @@ TEST_F(CryptoClientProviderTest,
 StreamingAeadParams ValidAesGcmHkdfParams(bool is_binary) {
   AesGcmHkdfStreamingKey key;
   key.set_version(0);
-  key.set_key_value(
-      *Base64Encode(HexStringToBytes(kDecryptedPrivateKeyForAes128Gcm)));
+  key.set_key_value(*Base64Encode(
+      InternalHexStringToBytes(kDecryptedPrivateKeyForAes128Gcm)));
   key.mutable_params()->set_derived_key_size(16);
   key.mutable_params()->set_hkdf_hash_type(
       google::crypto::tink::HashType::SHA256);
@@ -1098,8 +1343,8 @@ StreamingAeadParams ValidAesGcmHkdfParams(bool is_binary) {
         ->set_version(0);
     params.mutable_aes_gcm_hkdf_key()
         ->mutable_raw_key_with_params()
-        ->set_key_value(
-            *Base64Encode(HexStringToBytes(kDecryptedPrivateKeyForAes128Gcm)));
+        ->set_key_value(*Base64Encode(
+            InternalHexStringToBytes(kDecryptedPrivateKeyForAes128Gcm)));
     params.mutable_aes_gcm_hkdf_key()
         ->mutable_raw_key_with_params()
         ->mutable_params()
@@ -1120,8 +1365,8 @@ StreamingAeadParams ValidAesGcmHkdfParams(bool is_binary) {
 StreamingAeadParams ValidAesCtrHmacParams(bool is_binary) {
   AesCtrHmacStreamingKey key;
   key.set_version(0);
-  key.set_key_value(
-      *Base64Encode(HexStringToBytes(kDecryptedPrivateKeyForAes128Gcm)));
+  key.set_key_value(*Base64Encode(
+      InternalHexStringToBytes(kDecryptedPrivateKeyForAes128Gcm)));
   key.mutable_params()->set_derived_key_size(16);
   key.mutable_params()->set_hkdf_hash_type(
       google::crypto::tink::HashType::SHA256);
@@ -1145,8 +1390,8 @@ StreamingAeadParams ValidAesCtrHmacParams(bool is_binary) {
         ->set_version(0);
     params.mutable_aes_ctr_hmac_key()
         ->mutable_raw_key_with_params()
-        ->set_key_value(
-            *Base64Encode(HexStringToBytes(kDecryptedPrivateKeyForAes128Gcm)));
+        ->set_key_value(*Base64Encode(
+            InternalHexStringToBytes(kDecryptedPrivateKeyForAes128Gcm)));
     params.mutable_aes_ctr_hmac_key()
         ->mutable_raw_key_with_params()
         ->mutable_params()

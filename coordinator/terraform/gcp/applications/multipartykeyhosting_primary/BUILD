@@ -24,13 +24,3 @@ pkg_files(
     ),
     prefix = "multipartykeyhosting_primary",
 )
-
-alias(
-    name = "publicKeyCloudFunctionDeploy",
-    actual = "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PublicKeyServiceHttpCloudFunctionDeploy",
-)
-
-alias(
-    name = "encryptionKeyServiceCloudFunctionDeploy",
-    actual = "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:EncryptionKeyServiceHttpCloudFunctionDeploy",
-)

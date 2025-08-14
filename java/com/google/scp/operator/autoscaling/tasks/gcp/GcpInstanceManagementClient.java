@@ -40,7 +40,7 @@ public class GcpInstanceManagementClient {
   private final RegionInstanceGroupManagersClient instanceGroupManagerClient;
   private final RegionAutoscalersClient autoscalerClient;
   private final String projectId;
-  private final String managedInstanceGroupId;
+  private final String managedInstanceGroupName;
   private final String region;
 
   /** Creates a new instance of the {@code GcpInstanceManagementClient} class. */
@@ -52,7 +52,7 @@ public class GcpInstanceManagementClient {
     this.instanceGroupManagerClient = instanceGroupManagerClient;
     this.autoscalerClient = autoscalerClient;
     this.projectId = instanceManagementConfig.projectId();
-    this.managedInstanceGroupId = instanceManagementConfig.managedInstanceGroupName();
+    this.managedInstanceGroupName = instanceManagementConfig.managedInstanceGroupName();
     this.region = instanceManagementConfig.region();
   }
 
@@ -65,7 +65,7 @@ public class GcpInstanceManagementClient {
         ListManagedInstancesRegionInstanceGroupManagersRequest.newBuilder()
             .setProject(projectId)
             .setRegion(region)
-            .setInstanceGroupManager(managedInstanceGroupId)
+            .setInstanceGroupManager(managedInstanceGroupName)
             .setFilter("currentAction != " + CurrentAction.DELETING)
             .build();
     ListManagedInstancesPagedResponse listInstanceResponse =
@@ -93,7 +93,7 @@ public class GcpInstanceManagementClient {
             .build();
     OperationFuture<Operation, Operation> future =
         instanceGroupManagerClient.deleteInstancesAsync(
-            projectId, region, managedInstanceGroupId, deleteRegionInstanceGroupManagerRequest);
+            projectId, region, managedInstanceGroupName, deleteRegionInstanceGroupManagerRequest);
 
     int maxRetries = 6;
     for (int retryCount = 0; retryCount <= maxRetries; retryCount++) {
@@ -113,7 +113,7 @@ public class GcpInstanceManagementClient {
    */
   public Optional<Autoscaler> getAutoscaler() {
     InstanceGroupManager manager =
-        instanceGroupManagerClient.get(projectId, region, managedInstanceGroupId);
+        instanceGroupManagerClient.get(projectId, region, managedInstanceGroupName);
     if (manager.hasStatus() && manager.getStatus().hasAutoscaler()) {
       String autoscalerUri = manager.getStatus().getAutoscaler();
       return Optional.of(
@@ -127,10 +127,14 @@ public class GcpInstanceManagementClient {
   public String getCurrentInstanceTemplate() {
     GetRegionInstanceGroupManagerRequest getManagedInstanceRequest =
         GetRegionInstanceGroupManagerRequest.newBuilder()
-            .setInstanceGroupManager(managedInstanceGroupId)
+            .setInstanceGroupManager(managedInstanceGroupName)
             .setProject(projectId)
             .setRegion(region)
             .build();
     return instanceGroupManagerClient.get(getManagedInstanceRequest).getInstanceTemplate();
+  }
+
+  public String getManagedInstanceGroupName() {
+    return managedInstanceGroupName;
   }
 }

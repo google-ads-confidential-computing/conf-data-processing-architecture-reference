@@ -15,12 +15,13 @@
  */
 
 locals {
-  subscription_id = google_pubsub_subscription.job_queue_sub.name
+  subscription_id    = google_pubsub_subscription.job_queue_sub.name
+  env_workgroup_name = var.workgroup == null ? var.environment : "${var.environment} ${var.workgroup}"
 }
 
 resource "google_monitoring_alert_policy" "job_queue_undelivered_message_too_old_alert" {
   count        = var.alarms_enabled ? 1 : 0
-  display_name = "${var.environment} Job Queue Message Too Old"
+  display_name = "${local.env_workgroup_name} Job Queue Message Too Old"
   combiner     = "OR"
   conditions {
     display_name = "Oldest Undelivered Message Age"
@@ -43,7 +44,8 @@ resource "google_monitoring_alert_policy" "job_queue_undelivered_message_too_old
   notification_channels = [var.notification_channel_id]
 
   user_labels = {
-    environment = var.environment
+    environment = var.environment,
+    workgroup   = var.workgroup
   }
   alert_strategy {
     auto_close           = "604800s"

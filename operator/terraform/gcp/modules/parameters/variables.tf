@@ -19,6 +19,11 @@ variable "environment" {
   description = "Description for the environment, e.g. dev, staging, production"
 }
 
+variable "workgroup" {
+  description = "Workgroup name to associate resources."
+  type        = string
+}
+
 variable "parameter_name" {
   type        = string
   description = "Name of the parameter."

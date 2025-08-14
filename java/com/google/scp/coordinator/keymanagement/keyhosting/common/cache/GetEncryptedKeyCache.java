@@ -23,6 +23,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
@@ -30,6 +31,7 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.Encryption
 import com.google.scp.shared.api.exception.ServiceException;
 import java.util.concurrent.TimeUnit;
 
+@Singleton
 public final class GetEncryptedKeyCache extends KeyDbCache<String, EncryptionKey> {
 
   private final KeyDb keyDb;

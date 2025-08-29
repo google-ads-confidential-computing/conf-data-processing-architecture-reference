@@ -1,4 +1,4 @@
-# Copyright 2024 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,16 +20,8 @@ java_library(
     name = "common",
     srcs = glob(["*.java"]),
     deps = [
-        "//java/com/google/scp/coordinator/keymanagement/shared/util",
+        "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/api/util",
-        "//java/com/google/scp/shared/gcp/util:json_util",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:jackson_databind",
-        "//java/external:protobuf_java",
-        "//java/external:protobuf_java_util",
-        "//java/external:slf4j",
     ],
 )

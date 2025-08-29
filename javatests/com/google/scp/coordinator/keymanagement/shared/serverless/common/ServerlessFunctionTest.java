@@ -26,6 +26,7 @@ import com.google.inject.multibindings.ProvidesIntoMap;
 import com.google.inject.multibindings.StringMapKey;
 import com.google.scp.shared.api.model.Code;
 import java.util.List;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,6 +46,11 @@ public final class ServerlessFunctionTest {
 
   @Mock(answer = CALLS_REAL_METHODS)
   ResponseContext testResponse;
+
+  @Before
+  public void setUp() {
+    ServerlessFunction.clearInjector();
+  }
 
   @Test
   public void testInvoke_matchingApiTask_noNotFoundResponse() throws Exception {

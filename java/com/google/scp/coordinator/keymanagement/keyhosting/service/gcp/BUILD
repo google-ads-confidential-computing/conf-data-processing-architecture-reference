@@ -27,6 +27,18 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
+        "//java/external:guice",
+    ],
+)
+
+java_library(
+    name = "GcpPrivateKeyServiceModule",
+    srcs = [
+        "GcpPrivateKeyServiceModule.java",
+    ],
+    deps = [
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/model",
         "//java/com/google/scp/shared/gcp/util:json_util",
         "//java/external:guava",
         "//java/external:guice",
@@ -53,34 +65,20 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common:public_key_service",
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
-        "//java/external:aws_lambda_java_core",
-        "//java/external:aws_lambda_java_events",
-        "//java/external:gcp_cloud_function",
         "//java/external:guice",
         "//java/external:protobuf_java_util",
     ],
 )
 
 java_binary(
-    name = "PublicKeyServiceHttpCloudFunction",
+    name = "PublicKeyServiceHttpCloudRun",
     runtime_deps = [
         ":public_key_service",
     ],
 )
 
-alias(
-    name = "PublicKeyServiceHttpCloudFunctionDeploy",
-    actual = ":PublicKeyServiceHttpCloudFunction_deploy.jar",
-)
-
-pkg_zip(
-    name = "PublicKeyServiceHttpCloudFunctionDeploy_zip",
-    srcs = [
-        ":PublicKeyServiceHttpCloudFunction_deploy.jar",
-    ],
-)
-
 java_binary(
+    # Used for tests
     name = "PublicKeyService",
     main_class = "com.google.cloud.functions.invoker.runner.Invoker",
     runtime_deps = [
@@ -89,10 +87,14 @@ java_binary(
     ],
 )
 
-## PKS Cloud Run
+alias(
+    name = "PublicKeyServiceHttpCloudRunDeploy",
+    actual = ":PublicKeyServiceHttpCloudRun_deploy.jar",
+)
+
 pkg_tar(
-    name = "public_key_service_cloud_function_tar",
-    srcs = [":PublicKeyServiceHttpCloudFunctionDeploy"],
+    name = "public_key_service_cloud_run_tar",
+    srcs = [":PublicKeyServiceHttpCloudRunDeploy"],
 )
 
 container_image(
@@ -101,7 +103,7 @@ container_image(
     cmd = [
         "./processed_java-function-invoker-1.3.1.jar",
         "--classpath",
-        "./PublicKeyServiceHttpCloudFunction_deploy.jar",
+        "./PublicKeyServiceHttpCloudRun_deploy.jar",
         "--target",
         "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PublicKeyService",
     ],
@@ -109,7 +111,7 @@ container_image(
     tags = ["manual"],
     tars = [
         ":function_invoker_tar",
-        ":public_key_service_cloud_function_tar",
+        ":public_key_service_cloud_run_tar",
     ],
 )
 
@@ -121,39 +123,26 @@ java_library(
     ],
     deps = [
         ":GcpKeyServiceModule",
+        ":GcpPrivateKeyServiceModule",
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common:private_key_service",
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
-        "//java/external:aws_lambda_java_core",
-        "//java/external:aws_lambda_java_events",
-        "//java/external:gcp_cloud_function",
         "//java/external:guice",
         "//java/external:protobuf_java_util",
     ],
 )
 
 java_binary(
-    name = "PrivateKeyServiceHttpCloudFunction",
+    name = "PrivateKeyServiceHttpCloudRun",
     runtime_deps = [
         ":private_key_service",
     ],
 )
 
-alias(
-    name = "PrivateKeyServiceHttpCloudFunctionDeploy",
-    actual = ":PrivateKeyServiceHttpCloudFunction_deploy.jar",
-)
-
-pkg_zip(
-    name = "PrivateKeyServiceHttpCloudFunctionDeploy_zip",
-    srcs = [
-        ":PrivateKeyServiceHttpCloudFunction_deploy.jar",
-    ],
-)
-
 java_binary(
+    # Used for tests
     name = "PrivateKeyService",
     main_class = "com.google.cloud.functions.invoker.runner.Invoker",
     runtime_deps = [
@@ -162,10 +151,14 @@ java_binary(
     ],
 )
 
-## EKS Cloud Run
+alias(
+    name = "PrivateKeyServiceHttpCloudRunDeploy",
+    actual = ":PrivateKeyServiceHttpCloudRun_deploy.jar",
+)
+
 pkg_tar(
-    name = "private_key_service_cloud_function_tar",
-    srcs = [":PrivateKeyServiceHttpCloudFunctionDeploy"],
+    name = "private_key_service_cloud_run_tar",
+    srcs = [":PrivateKeyServiceHttpCloudRunDeploy"],
 )
 
 container_image(
@@ -174,7 +167,7 @@ container_image(
     cmd = [
         "./processed_java-function-invoker-1.3.1.jar",
         "--classpath",
-        "./PrivateKeyServiceHttpCloudFunction_deploy.jar",
+        "./PrivateKeyServiceHttpCloudRun_deploy.jar",
         "--target",
         "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PrivateKeyService",
     ],
@@ -182,6 +175,6 @@ container_image(
     tags = ["manual"],
     tars = [
         ":function_invoker_tar",
-        ":private_key_service_cloud_function_tar",
+        ":private_key_service_cloud_run_tar",
     ],
 )

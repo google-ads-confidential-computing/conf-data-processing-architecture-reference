@@ -24,6 +24,7 @@ java_library(
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/common/cache",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/converter",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",

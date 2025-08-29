@@ -38,9 +38,9 @@ java_test(
 )
 
 java_test(
-    name = "GetActiveEncryptionKeysCacheTest",
+    name = "AllKeysForSetNameCacheTest",
     srcs = [
-        "GetActiveEncryptionKeysCacheTest.java",
+        "AllKeysForSetNameCacheTest.java",
     ],
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",

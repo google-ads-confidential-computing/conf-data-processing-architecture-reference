@@ -18,8 +18,11 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleartext;
+import static java.time.temporal.ChronoUnit.DAYS;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.crypto.tink.Aead;
@@ -63,6 +66,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateSplitKeyTaskBase.class);
   private static final int KEY_ID_CONFLICT_MAX_RETRY = 5;
+
   protected final Optional<PublicKeySign> signatureKey;
   protected final KeyDb keyDb;
   protected final KeyStorageClient keyStorageClient;
@@ -78,7 +82,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     }
   }
 
-  public CreateSplitKeyTaskBase(
+  protected CreateSplitKeyTaskBase(
       Optional<PublicKeySign> signatureKey,
       KeyDb keyDb,
       KeyStorageClient keyStorageClient,
@@ -133,10 +137,50 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       throws ServiceException;
 
   public void create(
-      String setName, String tinkTemplate, int numDesiredKeys, int validityInDays, int ttlInDays)
+      String setName,
+      String tinkTemplate,
+      int numDesiredKeys,
+      int validityInDays,
+      int ttlInDays,
+      int createMaxDaysAhead,
+      int overlapPeriodDays)
       throws ServiceException {
-    // Anchor one consistent definition of now for the creation process.
-    Instant now = Instant.now();
+    create(setName,
+        tinkTemplate,
+        numDesiredKeys,
+        validityInDays,
+        ttlInDays,
+        createMaxDaysAhead,
+        overlapPeriodDays,
+        Instant.now());
+  }
+
+  @VisibleForTesting
+  protected void create(
+      String setName,
+      String tinkTemplate,
+      int numDesiredKeys,
+      int validityInDays,
+      int ttlInDays,
+      int createMaxDaysAhead,
+      int overlapPeriodDays,
+      Instant now)
+      throws ServiceException {
+    if (overlapPeriodDays < 0) {
+      throw new ServiceException(
+          INVALID_ARGUMENT, INVALID_ARGUMENT.name(), "overlap must be greater than or equal to 0");
+    }
+    if (validityInDays > 0 && validityInDays <= overlapPeriodDays) {
+      throw new ServiceException(
+          INVALID_ARGUMENT, INVALID_ARGUMENT.name(), "validity must be greater than overlap");
+    }
+
+    if (overlapPeriodDays > 0 && validityInDays % (validityInDays - overlapPeriodDays) != 0) {
+      throw new ServiceException(
+          INVALID_ARGUMENT,
+          INVALID_ARGUMENT.name(),
+          "validity must be a multiple of the difference with the overlap");
+    }
 
     // Check if there are enough number of active keys, if not, create any missing keys.
     ImmutableList<EncryptionKey> activeKeys = keyDb.getActiveKeys(setName, numDesiredKeys, now);
@@ -166,12 +210,17 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
               setName, activeKeys.size(), numDesiredKeys));
     }
 
+    // Only create in advance if expiration is before cutoff
+    var createKeyCutoffEpochMilli = now.plus(createMaxDaysAhead, DAYS).toEpochMilli();
+
     // Check if there will be enough number of active keys when each active key expires, if not,
     // create any missing pending-active keys.
     ImmutableList<Instant> expirations =
         activeKeys.stream()
             .filter(EncryptionKey::hasExpirationTime)
             .map(EncryptionKey::getExpirationTime)
+            // Only create keys a certain amount of time ahead of schedule
+            .filter(epochMilli -> epochMilli < createKeyCutoffEpochMilli)
             .map(Instant::ofEpochMilli)
             .distinct()
             .sorted()
@@ -197,7 +246,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             numDesiredKeys - actual,
             validityInDays,
             ttlInDays,
-            expiration.minus(KEY_REFRESH_WINDOW));
+            expiration.minus(KEY_REFRESH_WINDOW).minus(overlapPeriodDays, DAYS));
       }
       actual = keyDb.getActiveKeys(setName, numDesiredKeys, expiration).size();
       if (actual < numDesiredKeys) {

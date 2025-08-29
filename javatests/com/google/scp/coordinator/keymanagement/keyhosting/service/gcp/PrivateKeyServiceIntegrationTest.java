@@ -33,7 +33,7 @@ import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyServiceCloudFunctionContainer;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyServiceCloudFunctionContainer;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.testutils.gcp.GcpMultiCoordinatorTestEnvModule;
@@ -70,7 +70,7 @@ public final class PrivateKeyServiceIntegrationTest {
   @Inject @KeyDbClient private DatabaseClient dbClient;
   @Inject private SpannerKeyDb keyDb;
 
-  @Inject @EncryptionKeyServiceCloudFunctionContainer
+  @Inject @PrivateKeyServiceCloudFunctionContainer
   private CloudFunctionEmulatorContainer functionContainer;
 
   @After

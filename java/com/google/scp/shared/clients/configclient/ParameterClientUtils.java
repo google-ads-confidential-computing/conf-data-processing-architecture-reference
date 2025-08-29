@@ -29,8 +29,8 @@ public final class ParameterClientUtils {
   /**
    * Builds the full parameter name used by the underlying parameter storage layer.
    *
-   * <p>The name is formatted as `{prefix}-{environment}-{parameter}`, with relevant tokens omitted
-   * if not provided within the Optional.
+   * <p>The name is formatted as `{prefix}-{environment}-{workgroup}-{parameter}`, with relevant
+   * tokens omitted if not provided within the Optional.
    *
    * @param parameter the name of the parameter to expand
    * @param prefix an optional prefix to add to the start of the parameter
@@ -39,7 +39,10 @@ public final class ParameterClientUtils {
    * @return the storage parameter name
    */
   public static String getStorageParameterName(
-      String parameter, Optional<String> prefix, Optional<String> environment)
+      String parameter,
+      Optional<String> prefix,
+      Optional<String> environment,
+      Optional<String> workgroup)
       throws ParameterClientException {
     if (parameter.isEmpty()) {
       throw new ParameterClientException(
@@ -47,7 +50,7 @@ public final class ParameterClientUtils {
     }
 
     String storageParameter =
-        Stream.of(prefix.orElse(""), environment.orElse(""), parameter)
+        Stream.of(prefix.orElse(""), environment.orElse(""), workgroup.orElse(""), parameter)
             .filter(e -> !e.isEmpty())
             .collect(joining("-"));
 

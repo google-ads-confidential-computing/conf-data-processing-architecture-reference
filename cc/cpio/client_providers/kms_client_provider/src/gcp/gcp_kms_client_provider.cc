@@ -67,7 +67,7 @@ using std::to_string;
 /// Filename for logging errors
 static constexpr char kGcpKmsClientProvider[] = "GcpKmsClientProvider";
 static constexpr char kGcpKmsClientAeadDecryptRetryLogTemplate[] =
-    "gcp-kms-client-aead-decrypt-%s";
+    "gcp-kms-client-aead-decrypt-%s|";
 
 const set<google::cloud::StatusCode> kRetryStatusCodes = {
     google::cloud::StatusCode::kUnavailable,

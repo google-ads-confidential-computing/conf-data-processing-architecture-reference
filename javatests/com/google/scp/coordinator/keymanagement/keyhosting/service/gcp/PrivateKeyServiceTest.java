@@ -19,6 +19,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import static com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer.startContainerAndConnectToSpannerWithEnvs;
+import static java.time.Instant.now;
+import static java.time.temporal.ChronoUnit.DAYS;
 
 import com.google.acai.Acai;
 import com.google.cloud.spanner.DatabaseClient;
@@ -42,7 +44,6 @@ import com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer;
 import com.google.scp.shared.testutils.gcp.SpannerEmulatorContainer;
 import java.io.IOException;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Optional;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
@@ -137,15 +138,7 @@ public final class PrivateKeyServiceTest {
   @Test
   public void v1alphaListRecentEncryptionKeys_missingMaxAgeSeconds_returnsExpectedError()
       throws Exception {
-    // Given
-    String endpoint = "/v1alpha/encryptionKeys:recent";
-
-    // When
-    HttpResponse response = getHttpResponse(endpoint);
-
-    // Then
-    assertThat(response.getStatusLine().getStatusCode())
-        .isEqualTo(INVALID_ARGUMENT.getHttpStatusCode());
+    invalidArgumentTest("/v1alpha/encryptionKeys:recent");
   }
 
   @Test
@@ -184,27 +177,88 @@ public final class PrivateKeyServiceTest {
   }
 
   @Test
-  public void v1betaGetActiveEncryptionKeys_specificSetName_returnsExpected() throws Exception {
-    // Given
-    String endpoint = "/v1beta/sets/test-set-2/activeKeys";
-
-    // When
-    GetActiveEncryptionKeysResponse keys = getActiveEncryptionKeys(endpoint);
-
-    // Then
-    assertThat(keys.getKeysList()).hasSize(1);
+  public void v1betaListRecentEncryptionKeys_missingSetName_returnsExpectedError()
+      throws Exception {
+    invalidArgumentTest("/v1beta/sets//encryptionKeys:recent");
   }
 
   @Test
   public void v1betaListRecentEncryptionKeys_missingMaxAgeSeconds_returnsExpectedError()
       throws Exception {
-    // Given
-    String endpoint = "/v1beta/sets//encryptionKeys:recent";
+    invalidArgumentTest("/v1beta/sets/test-set/encryptionKeys:recent");
+  }
+
+  @Test
+  public void v1betaGetActiveEncryptionKeys_specificSetName_returnsExpected() throws Exception {
+    var now = now();
+    var start = now.minusMillis(10000).toEpochMilli();
+    var end = now.plusMillis(10000).toEpochMilli();
+    getActiveKeysValidation("test-set-2", start, end, 1);
+  }
+
+  @Test
+  public void v1betaGetActiveEncryptionKeys_largeTimeRange_returnsAllKeys() throws Exception {
+    var now = now();
+    var start = now.minus(15, DAYS).toEpochMilli();
+    var end = now.plusMillis(10000).toEpochMilli();
+    getActiveKeysValidation("test-set-2", start, end, 2);
+  }
+
+  @Test
+  public void v1betaGetActiveEncryptionKeys_largeTimeRange_returnsAllEmptySet() throws Exception {
+    var now = now();
+    var start = now.minus(25, DAYS).toEpochMilli();
+    var end = now.plusMillis(10000).toEpochMilli();
+    getActiveKeysValidation("", start, end, 2);
+  }
+
+  private void getActiveKeysValidation(String setName, long start, long end, int expected)
+      throws Exception {
+    String endpoint =
+        String.format(
+            "/v1beta/sets/%s/activeKeys?startEpochMillis=%d&endEpochMillis=%d",
+            setName,
+            start,
+            end);
 
     // When
-    HttpResponse response = getHttpResponse(endpoint);
+    GetActiveEncryptionKeysResponse keys = getActiveEncryptionKeys(endpoint);
 
     // Then
+    assertThat(keys.getKeysList()).hasSize(expected);
+  }
+
+  @Test
+  public void v1betaGetActiveEncryptionKeys_missingStartParam_returnsExpectedError()
+      throws Exception {
+    var now = now();
+    var start = now.minusMillis(10000).toEpochMilli();
+    String endpoint =
+        String.format("/v1beta/sets/test-set-2/activeKeys?startEpochMillis=%d", start);
+    invalidArgumentTest(endpoint);
+  }
+
+  @Test
+  public void v1betaGetActiveEncryptionKeys_missingEndParam_returnsExpectedError()
+      throws Exception {
+    var now = now();
+    var end = now.plusMillis(10000).toEpochMilli();
+    String endpoint = String.format("/v1beta/sets/test-set-2/activeKeys?endEpochMillis=%d", end);
+    invalidArgumentTest(endpoint);
+  }
+
+  @Test
+  public void v1betaGetActiveEncryptionKeys_endTimeInPast_returnsNothing() throws Exception {
+    var now = now();
+    var start = now.toEpochMilli();
+    var end = now.minus(1, DAYS).toEpochMilli();
+    var endpoint = String.format(
+        "/v1beta/sets/test-set-2/activeKeys?startEpochMillis=%d&endEpochMillis=%d", start, end);
+    invalidArgumentTest(endpoint);
+  }
+
+  private void invalidArgumentTest(String endpoint) throws Exception {
+    HttpResponse response = getHttpResponse(endpoint);
     assertThat(response.getStatusLine().getStatusCode())
         .isEqualTo(INVALID_ARGUMENT.getHttpStatusCode());
   }
@@ -279,7 +333,7 @@ public final class PrivateKeyServiceTest {
   }
 
   private static EncryptionKey createKey(String setName, int expiryPlusDays) {
-    var expirationEpochMilli = Instant.now().plus(Duration.ofDays(expiryPlusDays)).toEpochMilli();
+    var expirationEpochMilli = now().plus(Duration.ofDays(expiryPlusDays)).toEpochMilli();
     var builder = FakeEncryptionKey.create().toBuilder();
     if (setName != null) {
       builder.setSetName(setName);

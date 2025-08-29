@@ -32,17 +32,17 @@ public final class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface PublicKeyCloudFunctionContainer {}
 
-  /** Container for Encryption Key Cloud Function Integration tests */
+  /** Container for Private Key Cloud Function Integration tests */
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface EncryptionKeyServiceCloudFunctionContainer {}
+  public @interface PrivateKeyServiceCloudFunctionContainer {}
 
-  /** Note: @EncryptionKeyServiceCloudFunctionContainer above is for Coordinator A */
+  /** Note: @PrivateKeyServiceCloudFunctionContainer above is for Coordinator A */
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface EncryptionKeyServiceCoordinatorBCloudFunctionContainer {}
+  public @interface PrivateKeyServiceCoordinatorBCloudFunctionContainer {}
 
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
@@ -57,12 +57,12 @@ public final class Annotations {
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface EncryptionKeyCoordinatorAEnvironmentVariables {}
+  public @interface PrivateKeyCoordinatorAEnvironmentVariables {}
 
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface EncryptionKeyCoordinatorBEnvironmentVariables {}
+  public @interface PrivateKeyCoordinatorBEnvironmentVariables {}
 
   @BindingAnnotation
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})

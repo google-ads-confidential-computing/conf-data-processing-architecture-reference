@@ -28,14 +28,14 @@ import com.google.inject.multibindings.OptionalBinder;
 import com.google.inject.multibindings.ProvidesIntoOptional;
 import com.google.kms.LocalKmsServerContainer;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyCoordinatorAEnvironmentVariables;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyCoordinatorBEnvironmentVariables;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyServiceCloudFunctionContainer;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyServiceCoordinatorBCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageCloudFunctionContainerWithKms;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageEnvironmentVariables;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.LocalKmsEnvironmentVariables;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyCoordinatorAEnvironmentVariables;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyCoordinatorBEnvironmentVariables;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyServiceCloudFunctionContainer;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyServiceCoordinatorBCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PublicKeyCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.TestLocalKmsServerContainer;
 import com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer;
@@ -65,14 +65,14 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
             binder(),
             Key.get(
                 new TypeLiteral<Optional<Map<String, String>>>() {},
-                EncryptionKeyCoordinatorAEnvironmentVariables.class))
+                PrivateKeyCoordinatorAEnvironmentVariables.class))
         .setDefault()
         .toInstance(Optional.empty());
     OptionalBinder.newOptionalBinder(
             binder(),
             Key.get(
                 new TypeLiteral<Optional<Map<String, String>>>() {},
-                EncryptionKeyCoordinatorBEnvironmentVariables.class))
+                PrivateKeyCoordinatorBEnvironmentVariables.class))
         .setDefault()
         .toInstance(Optional.empty());
   }
@@ -102,10 +102,10 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
    */
   @Provides
   @Singleton
-  @EncryptionKeyServiceCloudFunctionContainer
+  @PrivateKeyServiceCloudFunctionContainer
   public CloudFunctionEmulatorContainer getEncryptionKeyFunctionContainer(
       SpannerEmulatorContainer spannerEmulatorContainer,
-      @EncryptionKeyCoordinatorAEnvironmentVariables Optional<Map<String, String>> envVariables) {
+      @PrivateKeyCoordinatorAEnvironmentVariables Optional<Map<String, String>> envVariables) {
     return startContainerAndConnectToSpannerWithEnvs(
         spannerEmulatorContainer,
         envVariables,
@@ -120,10 +120,10 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
    */
   @Provides
   @Singleton
-  @EncryptionKeyServiceCoordinatorBCloudFunctionContainer
+  @PrivateKeyServiceCoordinatorBCloudFunctionContainer
   public CloudFunctionEmulatorContainer getEncryptionKeyCoordinatorBFunctionContainer(
       SpannerEmulatorContainer spannerEmulatorContainer,
-      @EncryptionKeyCoordinatorBEnvironmentVariables Optional<Map<String, String>> envVariables) {
+      @PrivateKeyCoordinatorBEnvironmentVariables Optional<Map<String, String>> envVariables) {
     return startContainerAndConnectToSpannerWithEnvs(
         spannerEmulatorContainer,
         envVariables,

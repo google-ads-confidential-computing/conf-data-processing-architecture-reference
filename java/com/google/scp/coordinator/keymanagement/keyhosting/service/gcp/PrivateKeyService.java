@@ -27,10 +27,11 @@ public class PrivateKeyService extends GcpServerlessFunction {
   protected void configure() {
     install(new PrivateKeyServiceModule());
     install(new GcpKeyServiceModule());
+    install(new GcpPrivateKeyServiceModule());
   }
 
   @Provides
   public LogMetricHelper provideLogMetricHelper() {
-    return new LogMetricHelper("key_service/encryption_key_service");
+    return new LogMetricHelper("key_service/private_key_service");
   }
 }

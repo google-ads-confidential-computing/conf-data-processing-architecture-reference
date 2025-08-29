@@ -25,6 +25,7 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/common/cache",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/converter",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",

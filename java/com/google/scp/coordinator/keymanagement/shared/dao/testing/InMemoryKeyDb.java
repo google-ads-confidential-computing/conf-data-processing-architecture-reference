@@ -40,11 +40,17 @@ public final class InMemoryKeyDb implements KeyDb {
   @Override
   public ImmutableList<EncryptionKey> getActiveKeys(String setName, int keyLimit, Instant instant)
       throws ServiceException {
-    Stream<EncryptionKey> keyStream =
+    return getActiveKeys(setName, keyLimit, instant, instant);
+  }
+
+  @Override
+  public ImmutableList<EncryptionKey> getActiveKeys(
+      String setName, int keyLimit, Instant start, Instant end) throws ServiceException {
+    var keyStream =
         getAllKeys().stream()
             .filter(k -> k.getSetName().equals(setName))
-            .filter(k -> !k.hasExpirationTime() || k.getExpirationTime() > instant.toEpochMilli())
-            .filter(k -> k.getActivationTime() <= instant.toEpochMilli());
+            .filter(k -> !k.hasExpirationTime() || k.getExpirationTime() > start.toEpochMilli())
+            .filter(k -> k.getActivationTime() <= end.toEpochMilli());
     if (keyLimit > 0) {
       keyStream = keyStream.limit(keyLimit);
     }
@@ -89,6 +95,57 @@ public final class InMemoryKeyDb implements KeyDb {
           Code.ALREADY_EXISTS, DATASTORE_ERROR.name(), "KeyId already exists in the database");
     }
     keys.put(key.getKeyId(), key);
+  }
+
+  @Override
+  public void updateKeyMaterial(ImmutableList<EncryptionKey> keys) throws ServiceException {
+    if (serviceException != null) {
+      throw serviceException;
+    }
+    for (EncryptionKey key : keys) {
+      if (!this.keys.containsKey(key.getKeyId())) {
+        throw new ServiceException(
+            Code.NOT_FOUND, DATASTORE_ERROR.name(), "KeyId not found in the database");
+      }
+    }
+    // Update only if all keys exist
+    for (EncryptionKey key : keys) {
+      EncryptionKey existingKey = this.keys.get(key.getKeyId());
+      EncryptionKey updatedKey =
+          existingKey.toBuilder()
+              .setJsonEncodedKeyset(key.getJsonEncodedKeyset())
+              .clearKeySplitData()
+              .addAllKeySplitData(key.getKeySplitDataList())
+              .setKeyEncryptionKeyUri(key.getKeyEncryptionKeyUri())
+              .build();
+      this.keys.put(key.getKeyId(), updatedKey);
+    }
+  }
+
+  @Override
+  public void updateMigrationKeyMaterial(ImmutableList<EncryptionKey> keys)
+      throws ServiceException {
+    if (serviceException != null) {
+      throw serviceException;
+    }
+    for (EncryptionKey key : keys) {
+      if (!this.keys.containsKey(key.getKeyId())) {
+        throw new ServiceException(
+            Code.NOT_FOUND, DATASTORE_ERROR.name(), "KeyId not found in the database");
+      }
+    }
+    // Update only if all keys exist
+    for (EncryptionKey key : keys) {
+      EncryptionKey existingKey = this.keys.get(key.getKeyId());
+      EncryptionKey updatedKey =
+          existingKey.toBuilder()
+              .setMigrationJsonEncodedKeyset(key.getMigrationJsonEncodedKeyset())
+              .clearMigrationKeySplitData()
+              .addAllMigrationKeySplitData(key.getMigrationKeySplitDataList())
+              .setMigrationKeyEncryptionKeyUri(key.getMigrationKeyEncryptionKeyUri())
+              .build();
+      this.keys.put(key.getKeyId(), updatedKey);
+    }
   }
 
   public void setServiceException(ServiceException serviceException) {

@@ -84,6 +84,15 @@ message PrivateKeyEndpoint {
   string gcp_cloud_function_url = 5;
 }
 
+// The time range for listing active keys. The `end_time` must be on or after
+// the `start_time`.
+message TimeRange {
+  // The start time of the interval.
+  google.protobuf.Timestamp start_time = 1;
+  // The end time of the interval.
+  google.protobuf.Timestamp end_time = 2;
+}
+
 // Request to list private keys by key IDs or age.
 message ListPrivateKeysRequest {
   // Given key IDs. If set, don't honor the max_age_seconds filter.
@@ -97,6 +106,9 @@ message ListPrivateKeysRequest {
   // If not set, the request will use "" as default key set.
   // Only for GCP. AWS Key Service does not support key set.
   optional string key_set_name = 4;
+
+  // Specifies the time range to be used when listing active private keys.
+  optional TimeRange active_keys_query_time_range = 5;
 }
 
 // Response of listing private keys by key IDs or age.
@@ -115,6 +127,10 @@ message ListActiveEncryptionKeysRequest {
   // If not set, the request will use "" as default key set.
   // Only for GCP. AWS Key Service does not support key set.
   optional string key_set_name = 2;
+
+  // The time range for which the keys are active. This is set to the current
+  // time by default.
+  optional TimeRange query_time_range = 4;
 }
 
 // Response of listing all active encryption keys in a key set.

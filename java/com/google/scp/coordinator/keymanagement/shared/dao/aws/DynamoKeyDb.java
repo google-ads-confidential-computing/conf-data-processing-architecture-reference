@@ -292,6 +292,12 @@ public final class DynamoKeyDb implements KeyDb {
   }
 
   @Override
+  public ImmutableList<EncryptionKey> getActiveKeys(
+      String setName, int keyLimit, Instant start, Instant end) throws ServiceException {
+    throw new ServiceException(UNIMPLEMENTED, UNIMPLEMENTED.name(), "Not implemented for AWS");
+  }
+
+  @Override
   public ImmutableList<EncryptionKey> listAllKeysForSetName(String setName)
       throws ServiceException {
     throw new ServiceException(UNIMPLEMENTED, UNIMPLEMENTED.name(), "Not implemented for AWS");
@@ -404,6 +410,27 @@ public final class DynamoKeyDb implements KeyDb {
         throw new ServiceException(INTERNAL, DYNAMODB_ERROR.name(), e);
       }
     }
+  }
+
+  /**
+   * Key migrations are not supported for a DynamoDb KeyDb
+   *
+   * @throws ServiceException Always throws UNIMPLEMENTED exception
+   */
+  @Override
+  public void updateKeyMaterial(ImmutableList<EncryptionKey> keys) throws ServiceException {
+    throw new ServiceException(UNIMPLEMENTED, UNIMPLEMENTED.name(), "Not implemented for AWS");
+  }
+
+  /**
+   * Key migrations are not supported for a DynamoDb KeyDb
+   *
+   * @throws ServiceException Always throws UNIMPLEMENTED exception
+   */
+  @Override
+  public void updateMigrationKeyMaterial(ImmutableList<EncryptionKey> keys)
+      throws ServiceException {
+    throw new ServiceException(UNIMPLEMENTED, UNIMPLEMENTED.name(), "Not implemented for AWS");
   }
 
   private ServiceException logAndReturnException(RuntimeException exception) {

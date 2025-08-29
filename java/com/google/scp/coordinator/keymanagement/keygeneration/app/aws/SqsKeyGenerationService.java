@@ -33,6 +33,8 @@ import org.slf4j.LoggerFactory;
 /** Guava service for repeatedly pulling from the SQS queue and generating a key */
 public final class SqsKeyGenerationService extends AbstractExecutionThreadService {
 
+  private static final int DEFAULT_OVERLAP_DAYS = 0;
+  private static final int DEFAULT_CREATE_MAX_DAYS_AHEAD = 365;
   private static final Long THREAD_SLEEP_TIME_MILLIS = 5000L;
   private static final Logger logger = LoggerFactory.getLogger(SqsKeyGenerationService.class);
 
@@ -74,7 +76,13 @@ public final class SqsKeyGenerationService extends AbstractExecutionThreadServic
         } else {
           logger.info("Key generation message pulled");
           createSplitKeyTask.create(
-              DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, numDesiredKeys, validityInDays, ttlInDays);
+              DEFAULT_SET_NAME,
+              DEFAULT_TINK_TEMPLATE,
+              numDesiredKeys,
+              validityInDays,
+              ttlInDays,
+              DEFAULT_CREATE_MAX_DAYS_AHEAD,
+              DEFAULT_OVERLAP_DAYS);
           sqsKeyGenerationQueue.acknowledgeKeyGenerationCompletion(item.get());
         }
 

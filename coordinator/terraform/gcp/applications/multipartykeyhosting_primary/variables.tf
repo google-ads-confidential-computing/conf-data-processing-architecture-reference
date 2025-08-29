@@ -145,6 +145,15 @@ variable "key_generation_ttl_in_days" {
   }
 }
 
+variable "key_generation_max_days_ahead" {
+  description = "Max number of days ahead that a key can be created."
+  type        = number
+  validation {
+    condition     = var.key_generation_max_days_ahead > 1
+    error_message = "Must be greater than 1."
+  }
+}
+
 variable "key_generation_cron_schedule" {
   description = <<-EOT
     Frequency for key generation cron job. Must be valid cron statement. Default is every Monday at 10AM
@@ -375,18 +384,18 @@ variable "private_key_service_cache_refresh_in_minutes" {
 }
 
 ### EKS
-variable "private_key_service_cloudfunction_memory_mb" {
-  description = "Memory size in MB for encryption key cloud function."
+variable "private_key_service_cloud_run_memory_mb" {
+  description = "Memory size in MB for private key service cloud run."
   type        = number
 }
 
-variable "encryption_key_service_cloudfunction_min_instances" {
-  description = "The minimum number of function instances that may coexist at a given time."
+variable "private_key_service_cloud_run_min_instances" {
+  description = "The minimum number of cloud run instances that may coexist at a given time."
   type        = number
 }
 
-variable "private_key_service_cloudfunction_max_instances" {
-  description = "The maximum number of function instances that may coexist at a given time."
+variable "private_key_service_cloud_run_max_instances" {
+  description = "The maximum number of cloud run instances that may coexist at a given time."
   type        = number
 }
 
@@ -414,11 +423,6 @@ variable "public_key_service_cdn_serve_while_stale_seconds" {
   type        = number
 }
 
-variable "public_key_service_regions_to_exclude_from_lb" {
-  description = "Maximum CDN TTL seconds that cache header directive cannot surpass."
-  type        = set(string)
-}
-
 ################################################################################
 # Public Key Alarm Variables.
 ################################################################################
@@ -443,7 +447,7 @@ variable "public_key_service_5xx_threshold" {
   type        = number
 }
 
-variable "publickeyservice_cloudfunction_alert_on_memory_usage_threshold" {
+variable "public_key_service_cloud_run_alert_on_memory_usage_threshold" {
   description = "Memory usage of the Cloud Function should be higher than this value to alert."
   type        = number
 }
@@ -482,17 +486,17 @@ variable "private_key_service_alarm_eval_period_sec" {
   type        = string
 }
 
-variable "private_key_service_cloudfunction_max_execution_time_max" {
+variable "private_key_service_cloud_run_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number
 }
 
-variable "private_key_service_cloudfunction_5xx_threshold" {
+variable "private_key_service_cloud_run_5xx_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "private_key_service_cloudfunction_alert_on_memory_usage_threshold" {
+variable "private_key_service_cloud_run_alert_on_memory_usage_threshold" {
   description = "Memory usage of the Cloud Function should be higher than this value to alert."
   type        = number
 }
@@ -547,12 +551,15 @@ variable "get_encrypted_private_key_general_error_threshold" {
   type        = number
 }
 
+variable "private_key_service_exception_alert_threshold" {
+  description = "Private KS exception count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
 variable "alert_severity_overrides" {
   description = "Alerts severity overrides."
   type        = map(string)
 }
-
-
 
 variable "disable_key_set_acl" {
   description = "Controls whether to generate keys enforcing key set level acl."

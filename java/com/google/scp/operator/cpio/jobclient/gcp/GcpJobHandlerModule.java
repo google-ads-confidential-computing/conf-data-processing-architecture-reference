@@ -34,6 +34,7 @@ import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbModule
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectId;
+import com.google.scp.shared.clients.configclient.model.GetParameterRequest;
 import com.google.scp.shared.clients.configclient.model.WorkerParameter;
 
 /** Guice module for binding the GCP job client functionality */
@@ -64,15 +65,33 @@ public final class GcpJobHandlerModule extends JobHandlerModule {
       throws ParameterClientException {
     String topicId =
         parameterClient
-            .getParameter(WorkerParameter.JOB_PUBSUB_TOPIC_ID.name())
+            .getParameter(
+                GetParameterRequest.builder()
+                    .setParamName(WorkerParameter.JOB_PUBSUB_TOPIC_ID.name())
+                    .setParamPrefix(GetParameterRequest.SCP_PARAM_PREFIX)
+                    .setIncludeEnvironmentPrefix(true)
+                    .setIncludeWorkgroupPrefix(true)
+                    .build())
             .orElse(config.pubSubTopicId());
     String subscriptionId =
         parameterClient
-            .getParameter(WorkerParameter.JOB_PUBSUB_SUBSCRIPTION_ID.name())
+            .getParameter(
+                GetParameterRequest.builder()
+                    .setParamName(WorkerParameter.JOB_PUBSUB_SUBSCRIPTION_ID.name())
+                    .setParamPrefix(GetParameterRequest.SCP_PARAM_PREFIX)
+                    .setIncludeEnvironmentPrefix(true)
+                    .setIncludeWorkgroupPrefix(true)
+                    .build())
             .orElse(config.pubSubSubscriptionId());
     String messageLeaseSeconds =
         parameterClient
-            .getParameter(WorkerParameter.MAX_JOB_PROCESSING_TIME_SECONDS.name())
+            .getParameter(
+                GetParameterRequest.builder()
+                    .setParamName(WorkerParameter.MAX_JOB_PROCESSING_TIME_SECONDS.name())
+                    .setParamPrefix(GetParameterRequest.SCP_PARAM_PREFIX)
+                    .setIncludeEnvironmentPrefix(true)
+                    .setIncludeWorkgroupPrefix(true)
+                    .build())
             .orElse(Integer.toString(config.pubSubMessageLeaseSeconds()));
 
     return PubSubJobQueueConfig.builder()
@@ -114,7 +133,13 @@ public final class GcpJobHandlerModule extends JobHandlerModule {
       throws ParameterClientException {
     String maxNumAttempts =
         parameterClient
-            .getParameter(WorkerParameter.MAX_JOB_NUM_ATTEMPTS.name())
+            .getParameter(
+                GetParameterRequest.builder()
+                    .setParamName(WorkerParameter.MAX_JOB_NUM_ATTEMPTS.name())
+                    .setParamPrefix(GetParameterRequest.SCP_PARAM_PREFIX)
+                    .setIncludeEnvironmentPrefix(true)
+                    .setIncludeWorkgroupPrefix(true)
+                    .build())
             .orElse(Integer.toString(config.maxNumAttempts()));
     return Integer.parseInt(maxNumAttempts);
   }

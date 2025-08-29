@@ -20,6 +20,7 @@ import static com.google.scp.shared.clients.configclient.local.Annotations.Param
 
 import com.google.common.collect.ImmutableMap;
 import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.model.GetParameterRequest;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -72,7 +73,18 @@ public final class LocalParameterClient implements ParameterClient {
   }
 
   @Override
+  public Optional<String> getParameter(GetParameterRequest getParameterRequest)
+      throws ParameterClientException {
+    return getParameter(getParameterRequest.getParamName());
+  }
+
+  @Override
   public Optional<String> getEnvironmentName() {
     return Optional.of("local");
+  }
+
+  @Override
+  public Optional<String> getWorkgroupId() {
+    return Optional.empty();
   }
 }

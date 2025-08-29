@@ -159,18 +159,18 @@ variable "private_key_service_cloud_run_concurrency" {
 }
 
 ### EKS
-variable "private_key_service_cloudfunction_memory_mb" {
-  description = "Memory size in MB for encryption key cloud function."
+variable "private_key_service_cloud_run_memory_mb" {
+  description = "Memory size in MB for private key service cloud run."
   type        = number
 }
 
-variable "encryption_key_service_cloudfunction_min_instances" {
-  description = "The minimum number of function instances that may coexist at a given time."
+variable "private_key_service_cloud_run_min_instances" {
+  description = "The minimum number of cloud run instances that may coexist at a given time."
   type        = number
 }
 
-variable "private_key_service_cloudfunction_max_instances" {
-  description = "The maximum number of function instances that may coexist at a given time."
+variable "private_key_service_cloud_run_max_instances" {
+  description = "The maximum number of cloud run instances that may coexist at a given time."
   type        = number
 }
 
@@ -285,42 +285,42 @@ variable "allowed_operators" {
 # Key Storage Alarm Variables.
 ################################################################################
 
-variable "keystorageservice_alarm_eval_period_sec" {
+variable "key_storage_service_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
   type        = string
 }
 
-variable "keystorageservice_cloudfunction_max_execution_time_max" {
+variable "key_storage_service_cloudfunction_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number
 }
 
-variable "keystorageservice_cloudfunction_5xx_threshold" {
+variable "key_storage_service_cloudfunction_5xx_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "keystorageservice_cloudfunction_alert_on_memory_usage_threshold" {
+variable "key_storage_service_cloudfunction_alert_on_memory_usage_threshold" {
   description = "Memory usage of the Cloud Function should be higher than this value to alert."
   type        = number
 }
 
-variable "keystorageservice_lb_max_latency_ms" {
+variable "key_storage_service_lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
   type        = string
 }
 
-variable "keystorageservice_lb_5xx_threshold" {
+variable "key_storage_service_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "keystorageservice_lb_5xx_ratio_threshold" {
+variable "key_storage_service_lb_5xx_ratio_threshold" {
   description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "keystorageservice_alarm_duration_sec" {
+variable "key_storage_service_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
 }
@@ -334,17 +334,17 @@ variable "private_key_service_alarm_eval_period_sec" {
   type        = string
 }
 
-variable "private_key_service_cloudfunction_max_execution_time_max" {
+variable "private_key_service_cloud_run_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number
 }
 
-variable "private_key_service_cloudfunction_5xx_threshold" {
+variable "private_key_service_cloud_run_5xx_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "private_key_service_cloudfunction_alert_on_memory_usage_threshold" {
+variable "private_key_service_cloud_run_alert_on_memory_usage_threshold" {
   description = "Memory usage of the Cloud Function should be higher than this value to alert."
   type        = number
 }
@@ -371,6 +371,11 @@ variable "private_key_service_alarm_duration_sec" {
 
 variable "get_encrypted_private_key_general_error_threshold" {
   description = "Get Encrypted Key General error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "private_key_service_exception_alert_threshold" {
+  description = "Private KS exception count greater than this to send alarm. Example: 0."
   type        = number
 }
 

@@ -17,6 +17,11 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.GetActiveEncryptionKeysTask.END_EPOCH_MILLI_PARAM;
+import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.GetActiveEncryptionKeysTask.START_EPOCH_MILLI_PARAM;
+import static java.time.Instant.now;
+import static java.time.temporal.ChronoUnit.DAYS;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Answers.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -34,6 +39,8 @@ import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActiveEncryptionKeysResponseProto.GetActiveEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
+import com.google.scp.shared.api.exception.ServiceException;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import org.junit.Before;
 import org.junit.Rule;
@@ -48,13 +55,21 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
 
+  private static final String TEST_SET = "test-set";
+  private static final String TEST_SET_NO_ROTATION = "test-set-no-rotation";
   private static final ImmutableList<EncryptionKey> TEST_KEYS =
       ImmutableList.of(
           FakeEncryptionKey.create(),
           FakeEncryptionKey.create(),
-          FakeEncryptionKey.create().toBuilder().setSetName("test-set").build(),
-          FakeEncryptionKey.create().toBuilder().setSetName("test-set").build(),
-          FakeEncryptionKey.create().toBuilder().setSetName("test-set").build());
+          FakeEncryptionKey.create().toBuilder().setSetName(TEST_SET).build(),
+          FakeEncryptionKey.create().toBuilder().setSetName(TEST_SET).build(),
+          FakeEncryptionKey.create().toBuilder().setSetName(TEST_SET).build(),
+          FakeEncryptionKey.create()
+              .toBuilder()
+              .setSetName(TEST_SET_NO_ROTATION)
+              .clearExpirationTime()
+              .build()
+          );
 
   @Rule public final Acai acai = new Acai(InMemoryTestEnv.class);
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
@@ -75,31 +90,110 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
   }
 
   @Test
-  public void testExecute_happyPath_returnsExpected() throws Exception {
-    // Given
+  public void noParamsThrowsExceptionTest() {
     doReturn("").when(matcher).group("name");
-
-    // When
-    task.execute(matcher, request, response);
-
-    // Then
-    GetActiveEncryptionKeysResponse keys = verifyResponse(response);
-    assertThat(keys.getKeysList()).hasSize(2);
-    assertThat(keys.getKeysList()).hasSize(2);
-    assertThat(keys.getKeysList()).hasSize(2);
+    assertThrows(ServiceException.class, () -> task.execute(matcher, request, response));
   }
 
   @Test
-  public void testExecute_specificSet_returnsExpected() throws Exception {
-    // Given
-    doReturn("test-set").when(matcher).group("name");
+  public void noStartParamThrowsExceptionTest() {
+    doReturn("").when(matcher).group("name");
+    doReturn(Optional.of("50000"))
+        .when(request)
+        .getFirstQueryParameter(END_EPOCH_MILLI_PARAM);
+    assertThrows(ServiceException.class, () -> task.execute(matcher, request, response));
+  }
 
-    // When
+  @Test
+  public void noEndParamThrowsExceptionTest() {
+    doReturn("").when(matcher).group("name");
+    doReturn(Optional.of("5"))
+        .when(request)
+        .getFirstQueryParameter(START_EPOCH_MILLI_PARAM);
+    assertThrows(ServiceException.class, () -> task.execute(matcher, request, response));
+  }
+
+  @Test
+  public void startAfterEndThrowsTest() {
+    doReturn("").when(matcher).group("name");
+    doReturn(Optional.of("5000"))
+        .when(request)
+        .getFirstQueryParameter(START_EPOCH_MILLI_PARAM);
+    doReturn(Optional.of("500"))
+        .when(request)
+        .getFirstQueryParameter(END_EPOCH_MILLI_PARAM);
+    assertThrows(ServiceException.class, () -> task.execute(matcher, request, response));
+  }
+
+  @Test
+  public void validStartEndMillis_emptySetName_returnAllExpected() throws Exception {
+    var now = now();
+    var start = now.plusMillis(1000).toEpochMilli();
+    var end = now.plusMillis(10000).toEpochMilli();
+    returnAllExpectedValidation("", start, end, 2);
+  }
+
+  @Test
+  public void validStartEndMillis_testSetName_returnAllExpected() throws Exception {
+    var now = now();
+    var start = now.plusMillis(1000).toEpochMilli();
+    var end = now.plusMillis(10000).toEpochMilli();
+    returnAllExpectedValidation(TEST_SET, start, end, 3);
+  }
+
+  @Test
+  public void validStartEndMillis_noRotationSetName_returnAllExpected() throws Exception {
+    var now = now();
+    var start = now.plusMillis(1000).toEpochMilli();
+    var end = now.plusMillis(10000).toEpochMilli();
+    returnAllExpectedValidation(TEST_SET_NO_ROTATION, start, end, 1);
+  }
+
+  @Test
+  public void endMillisBeforeActivation_returnNothing() throws Exception {
+    var now = now();
+    var start = now.minus(2, DAYS).toEpochMilli();
+    var end = now.minus(1, DAYS).toEpochMilli();
+    returnAllExpectedValidation(TEST_SET, start, end, 0);
+  }
+
+  @Test
+  public void endMillisBeforeActivation_noRotation_returnNothing() throws Exception {
+    var now = now();
+    var start = now.minus(2, DAYS).toEpochMilli();
+    var end = now.minus(1, DAYS).toEpochMilli();
+    returnAllExpectedValidation(TEST_SET_NO_ROTATION, start, end, 0);
+  }
+
+  @Test
+  public void startMillisAfterExpiration_returnNothing() throws Exception {
+    var now = now();
+    var start = now.plus(100, DAYS).toEpochMilli();
+    var end = now.plus(200, DAYS).toEpochMilli();
+    returnAllExpectedValidation(TEST_SET, start, end, 0);
+  }
+
+  @Test
+  public void noRotationKey_startMillisFarInFuture_returnsExpected() throws Exception {
+    var now = now();
+    var start = now.plus(100, DAYS).toEpochMilli();
+    var end = now.plus(200, DAYS).toEpochMilli();
+    returnAllExpectedValidation(TEST_SET_NO_ROTATION, start, end, 1);
+  }
+
+  private void returnAllExpectedValidation(
+      String setName, long start, long end, int expected) throws Exception {
+
+    doReturn(setName).when(matcher).group("name");
+    doReturn(Optional.of(String.valueOf(start)))
+        .when(request)
+        .getFirstQueryParameter(START_EPOCH_MILLI_PARAM);
+    doReturn(Optional.of(String.valueOf(end)))
+        .when(request)
+        .getFirstQueryParameter(END_EPOCH_MILLI_PARAM);
+
     task.execute(matcher, request, response);
-
-    // Then
-    GetActiveEncryptionKeysResponse keys = verifyResponse(response);
-    assertThat(keys.getKeysList()).hasSize(3);
+    assertThat(verifyResponse(response).getKeysList()).hasSize(expected);
   }
 
   private static GetActiveEncryptionKeysResponse verifyResponse(ResponseContext response)

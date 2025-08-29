@@ -16,6 +16,8 @@
 
 package com.google.scp.coordinator.keymanagement.shared.serverless.common;
 
+import static com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestHeaderParsingUtil.getCallerEmail;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -69,7 +71,15 @@ public abstract class ApiTask {
         logMetricHelper.format(
             "count", ImmutableMap.of("apiVersion", apiVersion, "methodId", methodId)));
     var start = Instant.now().toEpochMilli();
-    execute(matcher, request, response);
+    try {
+      execute(matcher, request, response);
+    } catch (RuntimeException e) {
+      logError(e.getMessage(), getCallerEmail(request).orElse("unknown"));
+      throw e;
+    } catch (ServiceException e) {
+      logError(e.getErrorReason(), getCallerEmail(request).orElse("unknown"));
+      throw e;
+    }
     var end = Instant.now().toEpochMilli();
     logger.info(
         logMetricHelper.format(
@@ -82,5 +92,11 @@ public abstract class ApiTask {
                 "timeMs",
                 Long.toString(end - start))));
     return true;
+  }
+
+  private void logError(String errorReason, String email) {
+    logger.error(
+        logMetricHelper.format(
+            "exception_thrown", ImmutableMap.of("errorReason", errorReason, "callerEmail", email)));
   }
 }

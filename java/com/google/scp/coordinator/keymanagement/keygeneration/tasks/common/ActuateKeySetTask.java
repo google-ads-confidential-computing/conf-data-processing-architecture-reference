@@ -57,7 +57,9 @@ public final class ActuateKeySetTask {
             config.getTinkTemplate(),
             config.getCount(),
             config.getValidityInDays(),
-            config.getTtlInDays());
+            config.getTtlInDays(),
+            config.getCreateMaxDaysAhead(),
+            config.getOverlapPeriodDays());
       } catch (Exception exception) {
         if (exception instanceof InterruptedException) {
           Thread.currentThread().interrupt();

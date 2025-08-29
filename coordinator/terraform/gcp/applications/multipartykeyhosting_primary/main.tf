@@ -50,7 +50,7 @@ locals {
   kms_key_base_uri = "gcp-kms://${module.keygenerationservice.key_ring_id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
   migration_kms_key_base_uri = (var.location_new_key_ring == null
     ? local.kms_key_base_uri
-    : "gcp-kms://${module.key_management_service[0].kms_key_ring.id}/cryptoKeys/${var.environment}_$setName$_kms_key"
+    : "gcp-kms://${module.key_management_service[0].kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
   )
   migration_peer_coordinator_kms_key_base_uri = (var.migration_peer_coordinator_kms_key_base_uri == null
     ? var.peer_coordinator_kms_key_base_uri
@@ -158,7 +158,7 @@ module "key_set_acl_kek_pool" {
   key_encryption_key_id      = module.keygenerationservice.key_encryption_key_id
 
   key_sets           = toset(each.value.key_sets)
-  global_kms_key_ids = var.location_new_key_ring == null ? {} : module.key_management_service[0].kms_key_ids
+  global_key_ring_id = var.location_new_key_ring == null ? null : module.key_management_service[0].kms_key_ring_id
 
   allowed_operator = each.value
   pool_name        = each.key
@@ -174,16 +174,6 @@ module "key_management_service" {
   service_account_email = module.keygenerationservice.key_generation_service_account
   location_new_key_ring = var.location_new_key_ring
   key_sets              = local.key_sets
-}
-
-moved {
-  from = module.public_key_service_dashboard
-  to   = module.public_key_service.module.dashboard
-}
-
-moved {
-  from = module.public_key_service_load_balancer
-  to   = module.public_key_service.module.load_balancer
 }
 
 module "public_key_service" {
@@ -209,7 +199,6 @@ module "public_key_service" {
 
   # Load Balancer
   managed_domain                = local.public_key_domain
-  regions_to_exclude_from_lb    = var.public_key_service_regions_to_exclude_from_lb
   enable_cdn                    = var.enable_public_key_service_cdn
   cdn_default_ttl_seconds       = var.public_key_service_cdn_default_ttl_seconds
   cdn_max_ttl_seconds           = var.public_key_service_cdn_max_ttl_seconds
@@ -228,7 +217,7 @@ module "public_key_service" {
 
   cloud_run_5xx_threshold                   = var.public_key_service_5xx_threshold
   cloud_run_max_execution_time_max          = var.public_key_service_max_execution_time_max
-  cloud_run_alert_on_memory_usage_threshold = var.publickeyservice_cloudfunction_alert_on_memory_usage_threshold
+  cloud_run_alert_on_memory_usage_threshold = var.public_key_service_cloud_run_alert_on_memory_usage_threshold
 }
 
 module "private_key_service" {
@@ -248,10 +237,10 @@ module "private_key_service" {
 
   # Cloud Run settings
   cpu_count          = var.private_key_service_cloud_run_cpu_count
-  memory_mb          = var.private_key_service_cloudfunction_memory_mb
+  memory_mb          = var.private_key_service_cloud_run_memory_mb
   concurrency        = var.private_key_service_cloud_run_concurrency
-  max_instance_count = var.private_key_service_cloudfunction_max_instances
-  min_instance_count = var.encryption_key_service_cloudfunction_min_instances
+  max_instance_count = var.private_key_service_cloud_run_max_instances
+  min_instance_count = var.private_key_service_cloud_run_min_instances
 
   # Spanner and access configs
   spanner_database_name      = module.keydb.keydb_name
@@ -268,10 +257,11 @@ module "private_key_service" {
   alert_severity_overrides = var.alert_severity_overrides
 
   get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
+  exception_alert_threshold                         = var.private_key_service_exception_alert_threshold
 
-  cloud_run_5xx_threshold                   = var.private_key_service_cloudfunction_5xx_threshold
-  cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloudfunction_alert_on_memory_usage_threshold
-  cloud_run_max_execution_time_max          = var.private_key_service_cloudfunction_max_execution_time_max
+  cloud_run_5xx_threshold                   = var.private_key_service_cloud_run_5xx_threshold
+  cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloud_run_alert_on_memory_usage_threshold
+  cloud_run_max_execution_time_max          = var.private_key_service_cloud_run_max_execution_time_max
 
   lb_5xx_threshold       = var.private_key_service_lb_5xx_threshold
   lb_5xx_ratio_threshold = var.private_key_service_lb_5xx_ratio_threshold
@@ -340,6 +330,13 @@ module "key_generation_ttl_in_days" {
   environment     = var.environment
   parameter_name  = "KEY_TTL_IN_DAYS"
   parameter_value = var.key_generation_ttl_in_days
+}
+
+module "key_generation_max_days_ahead" {
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = "CREATE_MAX_DAYS_AHEAD"
+  parameter_value = var.key_generation_max_days_ahead
 }
 
 # TODO: b/428770204 - This URI should no longer be used in GCP post migration.

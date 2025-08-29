@@ -27,12 +27,12 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.Ke
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbTestModule;
 import com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyCoordinatorAEnvironmentVariables;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyCoordinatorBEnvironmentVariables;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyServiceCloudFunctionContainer;
-import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.EncryptionKeyServiceCoordinatorBCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageEnvironmentVariables;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyCoordinatorAEnvironmentVariables;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyCoordinatorBEnvironmentVariables;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyServiceCloudFunctionContainer;
+import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyServiceCoordinatorBCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.cloudfunction.KeyManagementCloudFunctionContainersModule;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.GcsBlobStorageClient;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAEncryptionKeyServiceBaseUrl;
@@ -73,7 +73,7 @@ public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
   @Provides
   @CoordinatorAEncryptionKeyServiceBaseUrl
   public String providesCoordinatorAEncryptionKeyServiceBaseUrl(
-      @EncryptionKeyServiceCloudFunctionContainer
+      @PrivateKeyServiceCloudFunctionContainer
           CloudFunctionEmulatorContainer encryptionKeyServiceCloudFunction) {
     return String.format("http://%s", encryptionKeyServiceCloudFunction.getEmulatorEndpoint());
   }
@@ -81,7 +81,7 @@ public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
   @Provides
   @CoordinatorBEncryptionKeyServiceBaseUrl
   public String providesCoordinatorBEncryptionKeyServiceBaseUrl(
-      @EncryptionKeyServiceCoordinatorBCloudFunctionContainer
+      @PrivateKeyServiceCoordinatorBCloudFunctionContainer
           CloudFunctionEmulatorContainer encryptionKeyServiceCloudFunction) {
     return String.format("http://%s", encryptionKeyServiceCloudFunction.getEmulatorEndpoint());
   }
@@ -132,7 +132,7 @@ public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
 
   @ProvidesIntoOptional(ProvidesIntoOptional.Type.ACTUAL)
   @Singleton
-  @EncryptionKeyCoordinatorAEnvironmentVariables
+  @PrivateKeyCoordinatorAEnvironmentVariables
   public Optional<Map<String, String>> providesEncryptionKeyCoordinatorAEnvVars() {
     return Optional.of(
         ImmutableMap.of(
@@ -146,7 +146,7 @@ public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
 
   @ProvidesIntoOptional(ProvidesIntoOptional.Type.ACTUAL)
   @Singleton
-  @EncryptionKeyCoordinatorBEnvironmentVariables
+  @PrivateKeyCoordinatorBEnvironmentVariables
   public Optional<Map<String, String>> providesEncryptionKeyCoordinatorBEnvVars(
       @Named("CoordinatorBKeyDbConfig") SpannerKeyDbConfig config) {
     return Optional.of(

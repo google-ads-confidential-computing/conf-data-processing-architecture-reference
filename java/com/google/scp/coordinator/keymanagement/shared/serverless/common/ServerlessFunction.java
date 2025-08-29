@@ -19,6 +19,7 @@ package com.google.scp.coordinator.keymanagement.shared.serverless.common;
 import static com.google.scp.shared.api.exception.SharedErrorReason.INVALID_URL_PATH_OR_VARIABLE;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -32,27 +33,37 @@ import java.util.Map;
 /** Abstract serverless function class to service HTTP requests. */
 public abstract class ServerlessFunction extends AbstractModule {
 
+  private static Injector INJECTOR;
+
   /** Locates the {@link ApiTask} that can service the request. */
   protected void invoke(RequestContext request, ResponseContext response) {
-    // Create an injector installing itself as the root module.
-    Injector injector =
-        Guice.createInjector(
-            new AbstractModule() {
-              @Override
-              protected void configure() {
-                // Binder that maps base URLs to API tasks that each services an endpoint.
-                MapBinder.newMapBinder(
-                    binder(), new TypeLiteral<String>() {}, new TypeLiteral<List<ApiTask>>() {});
-                install(ServerlessFunction.this);
-              }
-            });
-
-    Map<String, List<ApiTask>> tasks = injector.getInstance(Key.get(new TypeLiteral<>() {}));
+    Map<String, List<ApiTask>> tasks = injector().getInstance(Key.get(new TypeLiteral<>() {}));
     try {
       dispatch(tasks, request, response);
     } catch (ServiceException exception) {
       response.setError(exception);
     }
+  }
+
+  @VisibleForTesting
+  static void clearInjector() {
+    INJECTOR = null;
+  }
+
+  private Injector injector() {
+    if (INJECTOR == null) {
+      INJECTOR = Guice.createInjector(
+          new AbstractModule() {
+            @Override
+            protected void configure() {
+              // Binder that maps base URLs to API tasks that each services an endpoint.
+              MapBinder.newMapBinder(
+                  binder(), new TypeLiteral<String>() {}, new TypeLiteral<List<ApiTask>>() {});
+              install(ServerlessFunction.this);
+            }
+          });
+    }
+    return INJECTOR;
   }
 
   private static void dispatch(

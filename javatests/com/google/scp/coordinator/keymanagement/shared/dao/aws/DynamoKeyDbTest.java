@@ -31,6 +31,7 @@ import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTest
 import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.putItemWithExpirationTime;
 import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.setUpTable;
 import static com.google.scp.shared.api.model.Code.ALREADY_EXISTS;
+import static com.google.scp.shared.api.model.Code.UNIMPLEMENTED;
 import static java.time.Instant.now;
 import static java.time.temporal.ChronoUnit.DAYS;
 import static java.util.UUID.randomUUID;
@@ -394,5 +395,28 @@ public class DynamoKeyDbTest extends KeyDbBaseTest {
 
     assertThat(returnedKey.getPublicKeyMaterial()).isEqualTo(publicKeyMaterial);
     assertThat(returnedKey.getKeyEncryptionKeyUri()).isEqualTo(encryptionKeyUri);
+  }
+
+  @Test
+  public void updateKeyMaterial_throwsServiceException() throws ServiceException {
+    String keyId = "test-key-id";
+    EncryptionKey key = EncryptionKey.newBuilder().setKeyId(keyId).build();
+
+    ServiceException ex =
+        assertThrows(
+            ServiceException.class, () -> dynamoKeyDb.updateKeyMaterial(ImmutableList.of(key)));
+    assertThat(ex.getErrorCode()).isEqualTo(UNIMPLEMENTED);
+  }
+
+  @Test
+  public void updateMigrationKeyMaterial_throwsServiceException() throws ServiceException {
+    String keyId = "test-key-id";
+    EncryptionKey key = EncryptionKey.newBuilder().setKeyId(keyId).build();
+
+    ServiceException ex =
+        assertThrows(
+            ServiceException.class,
+            () -> dynamoKeyDb.updateMigrationKeyMaterial(ImmutableList.of(key)));
+    assertThat(ex.getErrorCode()).isEqualTo(UNIMPLEMENTED);
   }
 }

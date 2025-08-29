@@ -29,6 +29,7 @@ import com.google.scp.shared.clients.configclient.ParameterClientUtils;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpClientConfigMetadataServiceClient;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectId;
 import com.google.scp.shared.clients.configclient.model.ErrorReason;
+import com.google.scp.shared.clients.configclient.model.GetParameterRequest;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -45,9 +46,12 @@ public final class GcpParameterClient implements ParameterClient {
   private static final long CACHE_ENTRY_TTL_SEC = 3600;
   private static final String DEFAULT_PARAM_PREFIX = "scp";
   private static final String METADATA_ENVIRONMENT_KEY = "scp-environment";
+  private static final String METADATA_WORKGROUP_KEY = "scp-workgroup";
 
   private final Supplier<String> environmentSupplier =
       Suppliers.memoizeWithExpiration(this::loadEnvironment, CACHE_ENTRY_TTL_SEC, TimeUnit.SECONDS);
+  private final Supplier<String> workgroupSupplier =
+      Suppliers.memoizeWithExpiration(this::loadWorkgroup, CACHE_ENTRY_TTL_SEC, TimeUnit.SECONDS);
   private final LoadingCache<String, Optional<String>> paramCache =
       CacheBuilder.newBuilder()
           .maximumSize(MAX_CACHE_SIZE)
@@ -91,11 +95,28 @@ public final class GcpParameterClient implements ParameterClient {
   public Optional<String> getParameter(
       String param, Optional<String> paramPrefix, boolean includeEnvironmentParam, boolean latest)
       throws ParameterClientException {
+    GetParameterRequest.Builder getParameterRequestBuilder =
+        GetParameterRequest.builder()
+            .setParamName(param)
+            .setIncludeEnvironmentPrefix(includeEnvironmentParam)
+            .setLatest(latest);
+    paramPrefix.ifPresent(getParameterRequestBuilder::setParamPrefix);
+    return getParameter(getParameterRequestBuilder.build());
+  }
+
+  @Override
+  public Optional<String> getParameter(GetParameterRequest getParameterRequest)
+      throws ParameterClientException {
     String storageParam =
         ParameterClientUtils.getStorageParameterName(
-            param, paramPrefix, includeEnvironmentParam ? getEnvironmentName() : Optional.empty());
+            getParameterRequest.getParamName(),
+            getParameterRequest.getParamPrefix(),
+            getParameterRequest.getIncludeEnvironmentPrefix()
+                ? getEnvironmentName()
+                : Optional.empty(),
+            getParameterRequest.getIncludeWorkgroupPrefix() ? getWorkgroupId() : Optional.empty());
     try {
-      if (latest) {
+      if (getParameterRequest.getLatest()) {
         paramCache.invalidate(storageParam);
       }
       return paramCache.get(storageParam);
@@ -110,6 +131,11 @@ public final class GcpParameterClient implements ParameterClient {
   @Override
   public Optional<String> getEnvironmentName() {
     return Optional.of(environmentSupplier.get());
+  }
+
+  @Override
+  public Optional<String> getWorkgroupId() {
+    return Optional.ofNullable(workgroupSupplier.get());
   }
 
   private Optional<String> getParameterValue(String param) throws ParameterClientException {
@@ -144,6 +170,18 @@ public final class GcpParameterClient implements ParameterClient {
 
     } catch (IOException e) {
       throw new IllegalStateException("Failed to fetch environment from instance metadata.", e);
+    }
+  }
+
+  private String loadWorkgroup() {
+    try {
+      return metadataServiceClient
+          .getMetadata(METADATA_WORKGROUP_KEY)
+          // If workgroup doesn't exist, assume non-workgroup instance.
+          .orElse(null);
+
+    } catch (IOException e) {
+      throw new IllegalStateException("Failed to fetch workgroup from instance metadata.", e);
     }
   }
 }

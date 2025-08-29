@@ -21,6 +21,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.model.GetParameterRequest;
 import java.io.IOException;
 import java.util.Optional;
 
@@ -60,7 +61,18 @@ public class DefaultParameterModule extends AbstractModule {
     }
 
     @Override
+    public Optional<String> getParameter(GetParameterRequest getParameterRequest)
+        throws ParameterClientException {
+      return Optional.empty();
+    }
+
+    @Override
     public Optional<String> getEnvironmentName() throws ParameterClientException {
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<String> getWorkgroupId() throws ParameterClientException {
       return Optional.empty();
     }
   }

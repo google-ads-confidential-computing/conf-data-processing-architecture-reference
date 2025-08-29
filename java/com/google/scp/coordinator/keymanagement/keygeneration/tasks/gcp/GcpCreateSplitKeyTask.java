@@ -71,7 +71,6 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
   private final KmsClient migrationPeerKmsClient;
   private final Provider<Boolean> populateMigrationDataProvider;
 
-
   @Inject
   public GcpCreateSplitKeyTask(
       @KeyEncryptionKeyBaseUri String keyEncryptionKeyBaseUri,
@@ -104,7 +103,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
    * The actual key generation process. Performs the necessary encryption key generation and
    * splitting, key storage request, and database persistence with signatures.
    *
-   * @see CreateSplitKeyTaskBase#createSplitKey(String, int, int, int, Instant)
+   * @see CreateSplitKeyTaskBase#createSplitKey(String, String, int, int, int, Instant)
    */
   public void createSplitKey(
       String setName,
@@ -115,7 +114,14 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       Instant activation)
       throws ServiceException {
     createSplitKeyBase(
-        setName, tinkTemplate, count, validityInDays, ttlInDays, activation, Optional.empty(), populateMigrationDataProvider.get());
+        setName,
+        tinkTemplate,
+        count,
+        validityInDays,
+        ttlInDays,
+        activation,
+        Optional.empty(),
+        populateMigrationDataProvider.get());
   }
 
   /**

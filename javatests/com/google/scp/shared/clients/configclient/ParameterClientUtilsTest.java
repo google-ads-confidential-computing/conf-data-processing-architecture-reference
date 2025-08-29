@@ -33,14 +33,15 @@ public final class ParameterClientUtilsTest {
   public void getStorageParameterName_withPrefixAndEnvironment() throws Exception {
     String value =
         ParameterClientUtils.getStorageParameterName(
-            "TEST", Optional.of("scp"), Optional.of("environment"));
+            "TEST", Optional.of("scp"), Optional.of("environment"), Optional.empty());
     assertThat(value).isEqualTo("scp-environment-TEST");
   }
 
   @Test
   public void getStorageParameterName_withPrefixOnly() throws Exception {
     String value =
-        ParameterClientUtils.getStorageParameterName("param", Optional.of("scp"), Optional.empty());
+        ParameterClientUtils.getStorageParameterName(
+            "param", Optional.of("scp"), Optional.empty(), Optional.empty());
     assertThat(value).isEqualTo("scp-param");
   }
 
@@ -48,14 +49,15 @@ public final class ParameterClientUtilsTest {
   public void getStorageParameterName_withEnvironmentOnly() throws Exception {
     String value =
         ParameterClientUtils.getStorageParameterName(
-            "param", Optional.empty(), Optional.of("environment"));
+            "param", Optional.empty(), Optional.of("environment"), Optional.empty());
     assertThat(value).isEqualTo("environment-param");
   }
 
   @Test
   public void getStorageParameterName_withParameterOnly() throws Exception {
     String value =
-        ParameterClientUtils.getStorageParameterName("param", Optional.empty(), Optional.empty());
+        ParameterClientUtils.getStorageParameterName(
+            "param", Optional.empty(), Optional.empty(), Optional.empty());
     assertThat(value).isEqualTo("param");
   }
 
@@ -63,7 +65,9 @@ public final class ParameterClientUtilsTest {
   public void getStorageParameterName_withoutParameterThrows() throws Exception {
     assertThrows(
         ParameterClientException.class,
-        () -> ParameterClientUtils.getStorageParameterName("", Optional.empty(), Optional.empty()));
+        () ->
+            ParameterClientUtils.getStorageParameterName(
+                "", Optional.empty(), Optional.empty(), Optional.empty()));
   }
 
   @Test
@@ -72,7 +76,7 @@ public final class ParameterClientUtilsTest {
         ParameterClientException.class,
         () ->
             ParameterClientUtils.getStorageParameterName(
-                "invalid@", Optional.of("prefix"), Optional.of("environment")));
+                "invalid@", Optional.of("prefix"), Optional.of("environment"), Optional.empty()));
   }
 
   @Test
@@ -81,7 +85,7 @@ public final class ParameterClientUtilsTest {
         ParameterClientException.class,
         () ->
             ParameterClientUtils.getStorageParameterName(
-                "param", Optional.of("/invalid/"), Optional.empty()));
+                "param", Optional.of("/invalid/"), Optional.empty(), Optional.empty()));
   }
 
   @Test
@@ -90,7 +94,7 @@ public final class ParameterClientUtilsTest {
         ParameterClientException.class,
         () ->
             ParameterClientUtils.getStorageParameterName(
-                "param", Optional.of("prefix"), Optional.of("'invalid'")));
+                "param", Optional.of("prefix"), Optional.of("'invalid'"), Optional.empty()));
   }
 
   @Test

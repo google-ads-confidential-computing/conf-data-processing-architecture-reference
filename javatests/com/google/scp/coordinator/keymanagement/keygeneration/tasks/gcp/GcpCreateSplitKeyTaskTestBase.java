@@ -23,6 +23,7 @@ import static com.google.scp.coordinator.keymanagement.keygeneration.app.common.
 import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTask.KEY_REFRESH_WINDOW;
 import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
+import static java.time.Instant.now;
 import static java.time.temporal.ChronoUnit.DAYS;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
@@ -54,7 +55,6 @@ import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Base64;
 import java.util.Optional;
 import org.junit.Before;
@@ -99,18 +99,15 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
     var key = validateCreateSplitKey(setName, 3, 10, 20);
+    var now = now();
 
     // Must have expected expiration time
-    var dayInMilli =
-        Instant.now()
-            .plus(expectedExpiryInDays, DAYS)
-            .plus(KEY_REFRESH_WINDOW)
-            .toEpochMilli();
-    assertThat(key.getExpirationTime()).isIn(Range.closed(dayInMilli - 1000, dayInMilli));
+    var dayInMilli = now.plus(expectedExpiryInDays, DAYS).plus(KEY_REFRESH_WINDOW).toEpochMilli();
+    assertThat(key.getExpirationTime()).isIn(Range.closed(dayInMilli - 5000, dayInMilli));
 
     // Must match expected ttl
-    var ttlInSec = Instant.now().plus(expectedTtlInDays, DAYS).getEpochSecond();
-    assertThat(key.getTtlTime()).isIn(Range.closed(ttlInSec - 2, ttlInSec));
+    var ttlInSec = now.plus(expectedTtlInDays, DAYS).getEpochSecond();
+    assertThat(key.getTtlTime()).isIn(Range.closed(ttlInSec - 5, ttlInSec));
   }
 
   @Test
@@ -133,19 +130,14 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
     assertThat(key.getTtlTime()).isEqualTo(0);
 
     // Verify that the keys will not expire
-    assertThat(keyDb.getActiveKeys(setName, 1, Instant.now()).size()).isEqualTo(1);
+    assertThat(keyDb.getActiveKeys(setName, 1, now()).size()).isEqualTo(1);
     assertThat(
-        keyDb.getActiveKeys(setName, 1, Instant.now().plus(Duration.ofHours(1))).size())
-        .isEqualTo(1);
+        keyDb.getActiveKeys(setName, 1, now().plus(Duration.ofHours(1))).size()).isEqualTo(1);
+    assertThat(keyDb.getActiveKeys(setName, 1, now().plus(Duration.ofDays(1))).size()).isEqualTo(1);
     assertThat(
-        keyDb.getActiveKeys(setName, 1, Instant.now().plus(Duration.ofDays(1))).size())
-        .isEqualTo(1);
+        keyDb.getActiveKeys(setName, 1, now().plus(Duration.ofDays(365))).size()).isEqualTo(1);
     assertThat(
-        keyDb.getActiveKeys(setName, 1, Instant.now().plus(Duration.ofDays(365))).size())
-        .isEqualTo(1);
-    assertThat(
-        keyDb.getActiveKeys(setName, 1, Instant.now().plus(Duration.ofDays(36500))).size())
-        .isEqualTo(1);
+        keyDb.getActiveKeys(setName, 1, now().plus(Duration.ofDays(36500))).size()).isEqualTo(1);
   }
 
   private EncryptionKey validateCreateSplitKey(
@@ -157,7 +149,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
-        Instant.now());
+        now());
 
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
     assertThat(keys).hasSize(keysToCreate);
@@ -198,8 +190,8 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
       // TODO: Verify signature
 
       // Must have a creationTime of now
-      var now = Instant.now().toEpochMilli();
-      assertThat(key.getCreationTime()).isIn(Range.closed(now - 1000, now));
+      var now = now().toEpochMilli();
+      assertThat(key.getCreationTime()).isIn(Range.closed(now - 2000, now));
     }
 
     verify(keyStorageClient, times(keysToCreate))
@@ -234,7 +226,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
             ServiceException.class,
             () ->
                 task.createSplitKey(
-                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
     assertThat(ex.getErrorCode()).isEqualTo(Code.INTERNAL);

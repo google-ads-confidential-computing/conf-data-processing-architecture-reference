@@ -19,7 +19,6 @@ package com.google.scp.coordinator.keymanagement.keyhosting.common.cache;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,40 +52,22 @@ public class GetEncryptedKeyCacheTest {
   @Mock KeyDb mockKeyDb;
 
   @Test
-  public void readDbFails_cacheEnabledTest() throws Exception {
-    readDbFailsTest(true);
-  }
-
-  @Test
-  public void readDbFails_cacheDisabledTest() throws Exception {
-    readDbFailsTest(false);
-  }
-
-  private void readDbFailsTest(boolean enabled) throws Exception {
+  public void readDbThrows_dbCalledOnceTest() throws Exception {
     when(mockKeyDb.getKey(anyString())).thenThrow(SERVICE_EXCEPTION);
-    var cache = new GetEncryptedKeyCache(mockKeyDb, enabled, LOG_METRIC_HELPER);
+    var cache = new GetEncryptedKeyCache(mockKeyDb, LOG_METRIC_HELPER);
     assertThrows(ServiceException.class, () -> cache.get(KEY));
     assertThrows(ServiceException.class, () -> cache.get(KEY));
     assertThrows(ServiceException.class, () -> cache.get(KEY));
-    verify(mockKeyDb, times(enabled ? 1 : 3)).getKey(anyString());
+    verify(mockKeyDb).getKey(anyString());
   }
 
   @Test
-  public void readDbSucceeds_cacheEnabledTest() throws Exception {
-    readDbSucceedsTest(true);
-  }
-
-  @Test
-  public void readDbSucceeds_cacheDisabledTest() throws Exception {
-    readDbSucceedsTest(false);
-  }
-
-  public void readDbSucceedsTest(boolean enabled) throws Exception {
+  public void readDbSucceeds_dbCalledOnceTest() throws Exception {
     when(mockKeyDb.getKey(anyString())).thenReturn(ENCRYPTION_KEY);
-    var cache = new GetEncryptedKeyCache(mockKeyDb, enabled, LOG_METRIC_HELPER);
+    var cache = new GetEncryptedKeyCache(mockKeyDb, LOG_METRIC_HELPER);
     assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEY);
     assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEY);
     assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEY);
-    verify(mockKeyDb, times(enabled ? 1 : 3)).getKey(anyString());
+    verify(mockKeyDb).getKey(anyString());
   }
 }

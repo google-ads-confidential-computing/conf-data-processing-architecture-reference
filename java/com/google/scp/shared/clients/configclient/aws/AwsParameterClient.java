@@ -26,6 +26,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClientUtils;
+import com.google.scp.shared.clients.configclient.model.GetParameterRequest;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -96,14 +97,29 @@ public final class AwsParameterClient implements ParameterClient {
   public Optional<String> getParameter(
       String param, Optional<String> paramPrefix, boolean includeEnvironmentParam, boolean latest)
       throws ParameterClientException {
-    Optional<String> environment =
-        includeEnvironmentParam ? getEnvironmentName() : Optional.empty();
-    String storageParam =
-        ParameterClientUtils.getStorageParameterName(param, paramPrefix, environment);
+    GetParameterRequest.Builder getParameterRequestBuilder =
+        GetParameterRequest.builder()
+            .setParamName(param)
+            .setIncludeEnvironmentPrefix(includeEnvironmentParam)
+            .setLatest(latest);
+    paramPrefix.ifPresent(getParameterRequestBuilder::setParamPrefix);
+    return getParameter(getParameterRequestBuilder.build());
+  }
 
-    Optional<String> paramValue;
+  @Override
+  public Optional<String> getParameter(GetParameterRequest getParameterRequest)
+      throws ParameterClientException {
+    Optional<String> environment =
+        getParameterRequest.getIncludeEnvironmentPrefix() ? getEnvironmentName() : Optional.empty();
+    String storageParam =
+        ParameterClientUtils.getStorageParameterName(
+            getParameterRequest.getParamName(),
+            getParameterRequest.getParamPrefix(),
+            environment,
+            Optional.empty());
+
     try {
-      if (latest) {
+      if (getParameterRequest.getLatest()) {
         paramCache.invalidate(storageParam);
       }
       return paramCache.get(storageParam);
@@ -117,6 +133,12 @@ public final class AwsParameterClient implements ParameterClient {
   @Override
   public Optional<String> getEnvironmentName() {
     return Optional.ofNullable(parameterEnvSupplier.get());
+  }
+
+  /** Return empty because workgroups are not supported for SCP AWS. */
+  @Override
+  public Optional<String> getWorkgroupId() {
+    return Optional.empty();
   }
 
   /**

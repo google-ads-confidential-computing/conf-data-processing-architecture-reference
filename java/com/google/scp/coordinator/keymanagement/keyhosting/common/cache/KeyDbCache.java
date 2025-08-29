@@ -34,13 +34,11 @@ public abstract class KeyDbCache<K, V> {
   private static final String PRIVATE_KEY_READ_CACHE = "privateKeyReadCache";
 
   private final LoadingCache<K, V> keyCache;
-  private final boolean enableCache;
   private final LogMetricHelper logMetricHelper;
   private final ImmutableMap<String, String> labelMap;
 
   protected KeyDbCache(
       CacheBuilder<Object, Object> cacheBuilder,
-      boolean enableCache,
       String methodName,
       LogMetricHelper logMetricHelper) {
     this.keyCache = cacheBuilder
@@ -52,7 +50,6 @@ public abstract class KeyDbCache<K, V> {
                   }
                 },
                 Executors.newSingleThreadExecutor()));
-    this.enableCache = enableCache;
     this.logMetricHelper = logMetricHelper;
     this.labelMap = ImmutableMap.of("methodName", methodName);
   }
@@ -65,9 +62,6 @@ public abstract class KeyDbCache<K, V> {
   }
 
   public V get(K key) throws ServiceException {
-    if (!enableCache) {
-      return readDb(key);
-    }
     try {
       logger.info(logMetricHelper.format(PRIVATE_KEY_READ_CACHE, labelMap));
       return keyCache.get(key);

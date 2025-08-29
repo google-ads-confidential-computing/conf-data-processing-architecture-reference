@@ -52,7 +52,7 @@ resource "google_monitoring_alert_policy" "non_5xx_error_count" {
   display_name = "${var.service_prefix} Load Balancer Non-5xx Errors"
   combiner     = "OR"
   conditions {
-    display_name = "5xx Errors"
+    display_name = "Non-5xx Errors"
     condition_threshold {
       filter          = "metric.type=\"loadbalancing.googleapis.com/https/request_count\" AND resource.type=\"https_lb_rule\" AND resource.label.\"url_map_name\"=\"${var.lb_url_map_name}\" AND metric.label.response_code_class!=500 AND metric.label.response_code_class!=200"
       duration        = "${var.non_5xx_error_alarm_config.duration_sec}s"

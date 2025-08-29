@@ -24,7 +24,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -36,14 +35,12 @@ public final class GetEncryptedKeyCache extends KeyDbCache<String, EncryptionKey
 
   private final KeyDb keyDb;
   private final LoadingCache<String, Boolean> missingKeyCache;
-  private final boolean enableCache;
 
   @Inject
   public GetEncryptedKeyCache(
-      KeyDb keyDb, @EnableCache Boolean enableCache, LogMetricHelper logMetricHelper) {
+      KeyDb keyDb, LogMetricHelper logMetricHelper) {
     super(
         CacheBuilder.newBuilder().maximumSize(2000),
-        enableCache,
         "getEncryptedKeyCache",
         logMetricHelper);
     this.keyDb = keyDb;
@@ -57,22 +54,19 @@ public final class GetEncryptedKeyCache extends KeyDbCache<String, EncryptionKey
                 return true;
               }
             });
-    this.enableCache = enableCache;
   }
 
   @Override
   EncryptionKey readDb(String key) throws ServiceException {
     // Does not cause values to be loaded.
-    if (enableCache && missingKeyCache.getIfPresent(key) != null) {
+    if (missingKeyCache.getIfPresent(key) != null) {
       throw new ServiceException(
           NOT_FOUND, MISSING_KEY.name(), "Unable to find item with keyId " + key);
     }
     try {
       return keyDb.getKey(key);
     } catch (ServiceException e) {
-      if (enableCache) {
-        missingKeyCache.put(key, true);
-      }
+      missingKeyCache.put(key, true);
       throw e;
     }
   }

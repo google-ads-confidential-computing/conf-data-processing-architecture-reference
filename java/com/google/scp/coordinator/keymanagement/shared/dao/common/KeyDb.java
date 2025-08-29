@@ -71,10 +71,22 @@ public interface KeyDb {
    * Returns keys active at a specific time in descending expiration time order.
    *
    * @param setName the key set name.
-   * @param instant the instant where the keys are active.
    * @param keyLimit the maximum number of keys to retrieve.
+   * @param instant the instant where the keys are active.
    */
   ImmutableList<EncryptionKey> getActiveKeys(String setName, int keyLimit, Instant instant)
+      throws ServiceException;
+
+  /**
+   * Returns keys active at within a specific time range in descending expiration time order.
+   *
+   * @param setName the key set name.
+   * @param keyLimit the maximum number of keys to retrieve.
+   * @param start keys returned must have expiration time after (exclusive)
+   * @param end keys returned must have activation time before (inclusive)
+   */
+  ImmutableList<EncryptionKey> getActiveKeys(
+      String setName, int keyLimit, Instant start, Instant end)
       throws ServiceException;
 
   /** Returns all keys in the database without explicit ordering */
@@ -135,6 +147,16 @@ public interface KeyDb {
 
   /** Create key with overwrite option */
   void createKey(EncryptionKey key, boolean overwrite) throws ServiceException;
+
+  // TODO(b/439619571): Look into refactoring to live under keymigration/ since methods shouldn't be
+  // used elsewhere.
+  /** Used to update key data for an existing key */
+  void updateKeyMaterial(ImmutableList<EncryptionKey> keys) throws ServiceException;
+
+  // TODO(b/439619571): Look into refactoring to live under keymigration/ since methods shouldn't be
+  // used elsewhere.
+  /** Used to update migration data for an existing key */
+  void updateMigrationKeyMaterial(ImmutableList<EncryptionKey> keys) throws ServiceException;
 
   /**
    * Thrown when the KeyDB record contains a Status field that does not match a value of

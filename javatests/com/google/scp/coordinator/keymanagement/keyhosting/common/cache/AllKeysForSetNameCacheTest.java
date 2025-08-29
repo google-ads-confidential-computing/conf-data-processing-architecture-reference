@@ -19,8 +19,8 @@ package com.google.scp.coordinator.keymanagement.keyhosting.common.cache;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,14 +40,14 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public class GetActiveEncryptionKeysCacheTest {
+public class AllKeysForSetNameCacheTest {
 
-  private static final String KEY = "key";
+  private static final String SET_NAME = "setName";
   private static final LogMetricHelper LOG_METRIC_HELPER = new LogMetricHelper("test");
   private static final EncryptionKey ENCRYPTION_KEY =
       EncryptionKey.newBuilder().setKeyId("keyId").setKeyType("keyType").build();
   private static final ImmutableList<EncryptionKey> ENCRYPTION_KEYS =
-      ImmutableList.of(ENCRYPTION_KEY);
+      ImmutableList.of(ENCRYPTION_KEY, ENCRYPTION_KEY);
   private static final ServiceException SERVICE_EXCEPTION =
       new ServiceException(Code.NOT_FOUND, "errorReason", "msg");
 
@@ -56,38 +56,30 @@ public class GetActiveEncryptionKeysCacheTest {
   @Mock KeyDb mockKeyDb;
 
   @Test
-  public void readDbFails_cacheDisabledTest() throws Exception {
-    when(mockKeyDb.getActiveKeys(anyString(), anyInt())).thenThrow(SERVICE_EXCEPTION);
-    var cache = new GetActiveEncryptionKeysCache(mockKeyDb, true, 1, LOG_METRIC_HELPER);
-    assertThrows(ServiceException.class, () -> cache.get(KEY));
+  public void readDbThrowsTest() throws Exception {
+    when(mockKeyDb.listAllKeysForSetName(anyString())).thenThrow(SERVICE_EXCEPTION);
+    var cache = new AllKeysForSetNameCache(mockKeyDb, 1, LOG_METRIC_HELPER);
+    assertThrows(ServiceException.class, () -> cache.get(SET_NAME));
   }
 
   @Test
   public void readCacheAfterRefreshTest() throws Exception {
-    when(mockKeyDb.getActiveKeys(anyString(), anyInt())).thenReturn(ENCRYPTION_KEYS);
-    var cache = new GetActiveEncryptionKeysCache(mockKeyDb, true, 1, SECONDS, LOG_METRIC_HELPER);
-    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEYS);
+    when(mockKeyDb.listAllKeysForSetName(eq(SET_NAME))).thenReturn(ENCRYPTION_KEYS);
+    var cache = new AllKeysForSetNameCache(mockKeyDb, 1, SECONDS, LOG_METRIC_HELPER);
+
+    assertThat(cache.get(SET_NAME)).isEqualTo(ENCRYPTION_KEYS);
     Thread.sleep(1000 * 3); // 3 seconds
-    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEYS);
-    verify(mockKeyDb, times(2)).getActiveKeys(anyString(), anyInt());
+    assertThat(cache.get(SET_NAME)).isEqualTo(ENCRYPTION_KEYS);
+    verify(mockKeyDb, times(2)).listAllKeysForSetName(eq(SET_NAME));
   }
 
   @Test
-  public void readDbSucceeds_cacheEnabledTest() throws Exception {
-    readDbSucceedsTest(true);
-  }
-
-  @Test
-  public void readDbSucceeds_cacheDisabledTest() throws Exception {
-    readDbSucceedsTest(false);
-  }
-
-  public void readDbSucceedsTest(boolean enabled) throws Exception {
-    when(mockKeyDb.getActiveKeys(anyString(), anyInt())).thenReturn(ENCRYPTION_KEYS);
-    var cache = new GetActiveEncryptionKeysCache(mockKeyDb, enabled, 1, LOG_METRIC_HELPER);
-    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEYS);
-    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEYS);
-    assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEYS);
-    verify(mockKeyDb, times(enabled ? 1 : 3)).getActiveKeys(anyString(), anyInt());
+  public void readDbSucceeds_dbCalledOnceTest() throws Exception {
+    when(mockKeyDb.listAllKeysForSetName(eq(SET_NAME))).thenReturn(ENCRYPTION_KEYS);
+    var cache = new AllKeysForSetNameCache(mockKeyDb, 1, LOG_METRIC_HELPER);
+    assertThat(cache.get(SET_NAME)).isEqualTo(ENCRYPTION_KEYS);
+    assertThat(cache.get(SET_NAME)).isEqualTo(ENCRYPTION_KEYS);
+    assertThat(cache.get(SET_NAME)).isEqualTo(ENCRYPTION_KEYS);
+    verify(mockKeyDb).listAllKeysForSetName(eq(SET_NAME));
   }
 }

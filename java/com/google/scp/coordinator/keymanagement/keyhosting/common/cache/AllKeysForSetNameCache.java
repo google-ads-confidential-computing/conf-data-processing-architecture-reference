@@ -18,32 +18,40 @@ package com.google.scp.coordinator.keymanagement.keyhosting.common.cache;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheRefreshInMinutes;
-import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
+import java.util.concurrent.TimeUnit;
 
 @Singleton
-public class ListRecentEncryptionKeysCache extends KeyDbCache<String, ImmutableList<EncryptionKey>> {
+public class AllKeysForSetNameCache extends KeyDbCache<String, ImmutableList<EncryptionKey>> {
 
   private final KeyDb keyDb;
 
   @Inject
-  public ListRecentEncryptionKeysCache(
+  public AllKeysForSetNameCache(
       KeyDb keyDb,
-      @EnableCache Boolean enableCache,
       @CacheRefreshInMinutes Integer cacheRefresh,
       LogMetricHelper logMetricHelper) {
+    this(keyDb, cacheRefresh, MINUTES, logMetricHelper);
+  }
+
+  @VisibleForTesting
+  AllKeysForSetNameCache(
+      KeyDb keyDb,
+      Integer cacheRefresh,
+      TimeUnit timeUnit,
+      LogMetricHelper logMetricHelper) {
     super(
-        CacheBuilder.newBuilder().refreshAfterWrite(cacheRefresh, MINUTES).maximumSize(200),
-        enableCache,
-        "listRecentEncryptionKeysCache",
+        CacheBuilder.newBuilder().refreshAfterWrite(cacheRefresh, timeUnit).maximumSize(200),
+        "allKeysForSetNameCache",
         logMetricHelper);
     this.keyDb = keyDb;
   }

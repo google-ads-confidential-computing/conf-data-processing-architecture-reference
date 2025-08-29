@@ -17,6 +17,7 @@
 package com.google.scp.shared.clients.configclient;
 
 import com.google.scp.shared.clients.configclient.model.ErrorReason;
+import com.google.scp.shared.clients.configclient.model.GetParameterRequest;
 import java.util.Optional;
 
 /** Interface for fetching parameters. */
@@ -70,11 +71,30 @@ public interface ParameterClient {
       throws ParameterClientException;
 
   /**
+   * Blocking call to get a parameter based on the {@link GetParameterRequest} configurations.
+   *
+   * <p>The parameter storage layer will be invoked in the format:
+   * `{paramPrefix}-{environment}-{workgroup}-{param}`, with the inclusion of the parameter prefix,
+   * the environment, and the workgroup controlled by the arguments.
+   *
+   * @param getParameterRequest contains the parameter request configurations
+   */
+  Optional<String> getParameter(GetParameterRequest getParameterRequest)
+      throws ParameterClientException;
+
+  /**
    * Blocking call to get the environment name.
    *
    * @return an {@link Optional} of {@link String} for environment name
    */
   Optional<String> getEnvironmentName() throws ParameterClientException;
+
+  /**
+   * Blocking call to get the workgroup id.
+   *
+   * @return an {@link Optional} of {@link String} for environment name
+   */
+  Optional<String> getWorkgroupId() throws ParameterClientException;
 
   /** Represents an exception thrown by the {@code ParameterClient} class. */
   final class ParameterClientException extends Exception {

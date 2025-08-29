@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("@rules_pkg//:mappings.bzl", "pkg_files")
 
@@ -47,6 +48,20 @@ java_library(
         "//java/external:slf4j",
         "//java/external:slf4j_simple",
     ],
+)
+
+container_image(
+    name = "KeyGenerationServiceRuntimeContainer",
+    base = "@java_base_21//image",
+    cmd = [
+        "./KeyGenerationApp_deploy.jar",
+        "--multiparty",
+    ],
+    files = ["//java/com/google/scp/coordinator/keymanagement/keygeneration/app/gcp:KeyGenerationApp_deploy.jar"],
+    labels = {
+        "tee.launch_policy.allow_cmd_override": "false",
+        "tee.launch_policy.log_redirect": "always",
+    },
 )
 
 java_binary(

@@ -16,16 +16,12 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
-import static com.google.scp.shared.gcp.util.JsonHelper.getField;
-import static com.google.scp.shared.gcp.util.JsonHelper.parseJson;
-
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
+import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestHeaderParsingUtil;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
-import java.util.Base64;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,29 +70,30 @@ public final class KeyMigrationVendingUtil {
     }
 
     // Capture the caller email early for logging purposes.
-    Optional<String> callerEmail = getCallerEmail(request);
+    Optional<String> callerEmail = RequestHeaderParsingUtil.getCallerEmail(request);
     String email = callerEmail.orElse("unknown");
     String keyId = encryptionKey.getKeyId();
     String setName = encryptionKey.getSetName();
 
-    // Return the original key data if any migration data is missing.
+    // Validate that migration data exists for the key.
     final boolean hasMigrationData =
         !encryptionKey.getMigrationJsonEncodedKeyset().isEmpty()
             && !encryptionKey.getMigrationKeyEncryptionKeyUri().isEmpty()
             && !encryptionKey.getMigrationKeySplitDataList().isEmpty();
-    if (!hasMigrationData) {
-      logger.info(
-          format(
-              logMetricHelper,
-              Vended.WITHOUT_MIGRATION_DATA,
-              Reason.MISSING_MIGRATION_DATA,
-              setName,
-              email,
-              keyId));
-      return clearMigrationData(encryptionKey);
-    }
+
     // Validate set names for migration key vending.
     if (allowedMigrators.contains(encryptionKey.getSetName())) {
+      if (!hasMigrationData) {
+        logger.info(
+            format(
+                logMetricHelper,
+                Vended.WITHOUT_MIGRATION_DATA,
+                Reason.MISSING_MIGRATION_DATA,
+                setName,
+                email,
+                keyId));
+        return clearMigrationData(encryptionKey);
+      }
       logger.info(
           format(
               logMetricHelper,
@@ -109,6 +106,17 @@ public final class KeyMigrationVendingUtil {
     }
     // Validate callers for migration key vending.
     if (callerEmail.isPresent() && allowedMigrators.contains(email)) {
+      if (!hasMigrationData) {
+        logger.info(
+            format(
+                logMetricHelper,
+                Vended.WITHOUT_MIGRATION_DATA,
+                Reason.MISSING_MIGRATION_DATA,
+                setName,
+                email,
+                keyId));
+        return clearMigrationData(encryptionKey);
+      }
       logger.info(
           format(
               logMetricHelper,
@@ -120,6 +128,10 @@ public final class KeyMigrationVendingUtil {
       return vendMigrationData(encryptionKey);
     }
     // Caller or key set is not allow listed for migration.
+    if (!hasMigrationData) {
+      // Not an error and may be expected but logged for visibility.
+      logger.info("The migration disallowed KeyID {} is missing migration data.", keyId);
+    }
     logger.info(
         format(
             logMetricHelper,
@@ -129,37 +141,6 @@ public final class KeyMigrationVendingUtil {
             email,
             keyId));
     return clearMigrationData(encryptionKey);
-  }
-
-  /**
-   * Returns and Optional populated with the email associated with a {@link RequestContext}. If an
-   * email cannot be parsed from the request, an empty Optional will be returned.
-   */
-  private static Optional<String> getCallerEmail(RequestContext request) {
-    return request
-        .getFirstHeader("Authorization")
-        .flatMap(
-            authHeader -> {
-              try {
-                // Removes the "Bearer " prefix from the Authorization header
-                String[] authHeaderParts = authHeader.replace("Bearer ", "").split("\\.");
-                // Valid JWTs are formatted as <header>.<payload>.<signature>.
-                if (authHeaderParts.length < 2) {
-                  logger.warn("Authorization header is not in a valid JWT format.");
-                  return Optional.empty();
-                }
-                // Extracts, decodes, and parses the payload which will contain the email claim.
-                String encodedPayload = authHeaderParts[1];
-                String decodedPayload = new String(Base64.getUrlDecoder().decode(encodedPayload));
-                JsonNode payloadNode = parseJson(decodedPayload);
-                return Optional.of(getField(payloadNode, AUTH_HEADER_EMAIL_FIELD).asText());
-              } catch (RuntimeException e) {
-                logger.warn(
-                    "Unable to parse Authorization header in private key request. {}",
-                    e.getMessage());
-                return Optional.empty();
-              }
-            });
   }
 
   /** Clears any migration related fields from the provided {@link EncryptionKey} */

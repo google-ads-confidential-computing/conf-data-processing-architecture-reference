@@ -65,8 +65,16 @@ public interface CreateSplitKeyTask {
    * @param numDesiredKeys the number of keys is ensured to be active.
    * @param validityInDays the number of days each key should be active/valid for before expiring.
    * @param ttlInDays the number of days each key should be stored in the database.
+   * @param createMaxDaysAhead the number of days ahead that a key can be created
+   * @param overlapPeriodDays the number of days each consecutive active set should overlap
    */
   void create(
-      String setName, String tinkTemplate, int numDesiredKeys, int validityInDays, int ttlInDays)
+      String setName,
+      String tinkTemplate,
+      int numDesiredKeys,
+      int validityInDays,
+      int ttlInDays,
+      int createMaxDaysAhead,
+      int overlapPeriodDays)
       throws ServiceException;
 }

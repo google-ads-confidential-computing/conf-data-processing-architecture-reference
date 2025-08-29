@@ -31,7 +31,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
-import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.ListRecentEncryptionKeysCache;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.AllKeysForSetNameCache;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTaskTestBase;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
@@ -73,7 +73,7 @@ public class ListRecentEncryptionKeysTaskTest extends ApiTaskTestBase {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
   @Inject private InMemoryKeyDb keyDb;
-  @Inject private ListRecentEncryptionKeysCache cache;
+  @Inject private AllKeysForSetNameCache cache;
   @Inject LogMetricHelper logMetricHelper;
   @Inject @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators;
 
@@ -212,7 +212,7 @@ public class ListRecentEncryptionKeysTaskTest extends ApiTaskTestBase {
     // Then
     ServiceException exception = assertThrows(ServiceException.class, when);
     assertThat(exception.getErrorCode()).isEqualTo(Code.INVALID_ARGUMENT);
-    assertThat(exception).hasMessageThat().contains("should be a valid integer");
+    assertThat(exception).hasMessageThat().contains("should be a valid number, found not a number");
   }
 
   private static ListRecentEncryptionKeysResponse verifyResponse(ResponseContext response)

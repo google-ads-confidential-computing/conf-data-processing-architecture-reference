@@ -21,6 +21,8 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         ":model",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
         "//java/external:guice",
     ],
 )
@@ -28,7 +30,10 @@ java_library(
 java_library(
     name = "model",
     srcs = glob(["model/*.java"]),
-    deps = [],
+    deps = [
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+    ],
 )
 
 java_library(
@@ -48,6 +53,8 @@ java_library(
         "//java/external:apache_httpclient5",
         "//java/external:apache_httpcore",
         "//java/external:apache_httpcore5",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
         "//java/external:aws_apache_http",
         "//java/external:aws_auth",
         "//java/external:aws_core",

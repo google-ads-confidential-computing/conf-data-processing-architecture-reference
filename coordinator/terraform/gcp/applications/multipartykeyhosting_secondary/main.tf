@@ -51,7 +51,7 @@ locals {
   kms_key_base_uri = "gcp-kms://${google_kms_key_ring.key_encryption_ring.id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
   migration_kms_key_base_uri = (var.location_new_key_ring == null
     ? local.kms_key_base_uri
-    : "gcp-kms://${module.key_management_service[0].kms_key_ring.id}/cryptoKeys/${var.environment}_$setName$_kms_key"
+    : "gcp-kms://${module.key_management_service[0].kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
   )
 }
 
@@ -121,15 +121,15 @@ module "keystorageservice" {
 
   # Alarms
   alarms_enabled                                = var.alarms_enabled
-  alarm_eval_period_sec                         = var.keystorageservice_alarm_eval_period_sec
-  alarm_duration_sec                            = var.keystorageservice_alarm_duration_sec
-  cloudfunction_5xx_threshold                   = var.keystorageservice_cloudfunction_5xx_threshold
-  cloudfunction_max_execution_time_max          = var.keystorageservice_cloudfunction_max_execution_time_max
-  cloudfunction_alert_on_memory_usage_threshold = var.keystorageservice_cloudfunction_alert_on_memory_usage_threshold
+  alarm_eval_period_sec                         = var.key_storage_service_alarm_eval_period_sec
+  alarm_duration_sec                            = var.key_storage_service_alarm_duration_sec
+  cloudfunction_5xx_threshold                   = var.key_storage_service_cloudfunction_5xx_threshold
+  cloudfunction_max_execution_time_max          = var.key_storage_service_cloudfunction_max_execution_time_max
+  cloudfunction_alert_on_memory_usage_threshold = var.key_storage_service_cloudfunction_alert_on_memory_usage_threshold
 
-  lb_5xx_threshold       = var.keystorageservice_lb_5xx_threshold
-  lb_5xx_ratio_threshold = var.keystorageservice_lb_5xx_ratio_threshold
-  lb_max_latency_ms      = var.keystorageservice_lb_max_latency_ms
+  lb_5xx_threshold       = var.key_storage_service_lb_5xx_threshold
+  lb_5xx_ratio_threshold = var.key_storage_service_lb_5xx_ratio_threshold
+  lb_max_latency_ms      = var.key_storage_service_lb_max_latency_ms
 
   key_storage_severity_map = var.alert_severity_overrides
   depends_on = [
@@ -156,10 +156,10 @@ module "private_key_service" {
 
   # Cloud Run settings
   cpu_count          = var.private_key_service_cloud_run_cpu_count
-  memory_mb          = var.private_key_service_cloudfunction_memory_mb
+  memory_mb          = var.private_key_service_cloud_run_memory_mb
   concurrency        = var.private_key_service_cloud_run_concurrency
-  max_instance_count = var.private_key_service_cloudfunction_max_instances
-  min_instance_count = var.encryption_key_service_cloudfunction_min_instances
+  max_instance_count = var.private_key_service_cloud_run_max_instances
+  min_instance_count = var.private_key_service_cloud_run_min_instances
 
   # Spanner and access configs
   spanner_database_name      = module.keydb.keydb_name
@@ -176,10 +176,11 @@ module "private_key_service" {
   alert_severity_overrides = var.alert_severity_overrides
 
   get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
+  exception_alert_threshold                         = var.private_key_service_exception_alert_threshold
 
-  cloud_run_5xx_threshold                   = var.private_key_service_cloudfunction_5xx_threshold
-  cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloudfunction_alert_on_memory_usage_threshold
-  cloud_run_max_execution_time_max          = var.private_key_service_cloudfunction_max_execution_time_max
+  cloud_run_5xx_threshold                   = var.private_key_service_cloud_run_5xx_threshold
+  cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloud_run_alert_on_memory_usage_threshold
+  cloud_run_max_execution_time_max          = var.private_key_service_cloud_run_max_execution_time_max
 
   lb_5xx_threshold       = var.private_key_service_lb_5xx_threshold
   lb_5xx_ratio_threshold = var.private_key_service_lb_5xx_ratio_threshold
@@ -296,7 +297,7 @@ module "key_set_acl_kek_pool" {
   key_encryption_key_id      = google_kms_crypto_key.key_encryption_key.id
 
   key_sets           = toset(each.value.key_sets)
-  global_kms_key_ids = var.location_new_key_ring == null ? {} : module.key_management_service[0].kms_key_ids
+  global_key_ring_id = var.location_new_key_ring == null ? null : module.key_management_service[0].kms_key_ring_id
 
   allowed_operator = each.value
   pool_name        = each.key

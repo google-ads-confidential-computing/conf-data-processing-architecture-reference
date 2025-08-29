@@ -102,8 +102,6 @@ module "load_balancer" {
   cdn_max_ttl_seconds           = 60
   cdn_serve_while_stale_seconds = 60
 
-  regions_to_exclude_from_lb = []
-
   cloud_run_ids = local.cloud_run_ids
 
   # Custom url/domain

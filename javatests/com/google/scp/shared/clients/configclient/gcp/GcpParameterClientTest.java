@@ -30,6 +30,7 @@ import com.google.api.gax.rpc.NotFoundException;
 import com.google.cloud.secretmanager.v1.AccessSecretVersionResponse;
 import com.google.cloud.secretmanager.v1.SecretPayload;
 import com.google.protobuf.ByteString;
+import com.google.scp.shared.clients.configclient.model.GetParameterRequest;
 import com.google.scp.shared.clients.configclient.model.WorkerParameter;
 import io.grpc.Status;
 import io.grpc.Status.Code;
@@ -50,6 +51,7 @@ public final class GcpParameterClientTest {
 
   private static final String PROJECT_ID = "projectId1";
   private static final String ENVIRONMENT = "environment";
+  private static final String WORKGROUP = "workgroup";
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
@@ -205,6 +207,94 @@ public final class GcpParameterClientTest {
     // Then
     assertThat(firstReturned).hasValue(originalValue);
     assertThat(secondReturned).hasValue(originalValue);
+  }
+
+  @Test
+  public void getParameter_getParameterRequestWithWorkgroup_returnsParameter() throws Exception {
+    String secretName = getSecretName("environment-workgroup-testParam");
+    String secretValue = "testVal";
+    ByteString data = ByteString.copyFrom(secretValue.getBytes(StandardCharsets.UTF_8));
+    when(metadataServiceClient.getMetadata(eq("scp-environment")))
+        .thenReturn(Optional.of(ENVIRONMENT));
+    when(metadataServiceClient.getMetadata(eq("scp-workgroup"))).thenReturn(Optional.of(WORKGROUP));
+    when(secretManagerServiceClientProxy.accessSecretVersion(secretName))
+        .thenReturn(
+            AccessSecretVersionResponse.newBuilder()
+                .setPayload(SecretPayload.newBuilder().setData(data))
+                .build());
+
+    GetParameterRequest getParameterRequest =
+        GetParameterRequest.builder()
+            .setParamName("testParam")
+            .setIncludeEnvironmentPrefix(true)
+            .setIncludeWorkgroupPrefix(true)
+            .build();
+    Optional<String> val = parameterClient.getParameter(getParameterRequest);
+
+    assertThat(val).isPresent();
+    assertThat(val.get()).isEqualTo(secretValue);
+    verify(metadataServiceClient).getMetadata(eq("scp-environment"));
+    verify(metadataServiceClient).getMetadata(eq("scp-workgroup"));
+    verify(secretManagerServiceClientProxy).accessSecretVersion(secretName);
+  }
+
+  @Test
+  public void getParameter_getParameterRequestWithWorkgroupNotAvailable_returnsParameter()
+      throws Exception {
+    String secretName = getSecretName("environment-testParam");
+    String secretValue = "testVal";
+    ByteString data = ByteString.copyFrom(secretValue.getBytes(StandardCharsets.UTF_8));
+    when(metadataServiceClient.getMetadata(eq("scp-environment")))
+        .thenReturn(Optional.of(ENVIRONMENT));
+    when(metadataServiceClient.getMetadata(eq("scp-workgroup"))).thenReturn(Optional.empty());
+    when(secretManagerServiceClientProxy.accessSecretVersion(secretName))
+        .thenReturn(
+            AccessSecretVersionResponse.newBuilder()
+                .setPayload(SecretPayload.newBuilder().setData(data))
+                .build());
+
+    GetParameterRequest getParameterRequest =
+        GetParameterRequest.builder()
+            .setParamName("testParam")
+            .setIncludeEnvironmentPrefix(true)
+            .setIncludeWorkgroupPrefix(true)
+            .build();
+    Optional<String> val = parameterClient.getParameter(getParameterRequest);
+
+    assertThat(val).isPresent();
+    assertThat(val.get()).isEqualTo(secretValue);
+    verify(metadataServiceClient).getMetadata(eq("scp-environment"));
+    verify(metadataServiceClient).getMetadata(eq("scp-workgroup"));
+    verify(secretManagerServiceClientProxy).accessSecretVersion(secretName);
+  }
+
+  @Test
+  public void getParameter_getParameterRequestWithoutWorkgroup_returnsParameter() throws Exception {
+    String secretName = getSecretName("environment-testParam");
+    String secretValue = "testVal";
+    ByteString data = ByteString.copyFrom(secretValue.getBytes(StandardCharsets.UTF_8));
+    when(metadataServiceClient.getMetadata(eq("scp-environment")))
+        .thenReturn(Optional.of(ENVIRONMENT));
+    when(metadataServiceClient.getMetadata(eq("scp-workgroup"))).thenReturn(Optional.empty());
+    when(secretManagerServiceClientProxy.accessSecretVersion(secretName))
+        .thenReturn(
+            AccessSecretVersionResponse.newBuilder()
+                .setPayload(SecretPayload.newBuilder().setData(data))
+                .build());
+
+    GetParameterRequest getParameterRequest =
+        GetParameterRequest.builder()
+            .setParamName("testParam")
+            .setIncludeEnvironmentPrefix(true)
+            .setIncludeWorkgroupPrefix(false)
+            .build();
+    Optional<String> val = parameterClient.getParameter(getParameterRequest);
+
+    assertThat(val).isPresent();
+    assertThat(val.get()).isEqualTo(secretValue);
+    verify(metadataServiceClient).getMetadata(eq("scp-environment"));
+    verify(metadataServiceClient, never()).getMetadata(eq("scp-workgroup"));
+    verify(secretManagerServiceClientProxy).accessSecretVersion(secretName);
   }
 
   private String getSecretName(String parameter) {

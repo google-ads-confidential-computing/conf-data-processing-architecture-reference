@@ -17,6 +17,7 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.common.RequestContextUtil.getRequestParameter;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -80,18 +81,9 @@ public final class ListRecentEncryptionKeysTask extends ApiTask {
   }
 
   private static int getMaxAgeSeconds(RequestContext request) throws ServiceException {
-    String maxAgeSeconds =
-        request
-            .getFirstQueryParameter(MAX_AGE_SECONDS_PARAM_NAME)
-            .orElseThrow(
-                () ->
-                    new ServiceException(
-                        Code.INVALID_ARGUMENT,
-                        SharedErrorReason.INVALID_ARGUMENT.name(),
-                        String.format(
-                            "%s query parameter is required.", MAX_AGE_SECONDS_PARAM_NAME)));
+    String maxAgeSecondsString = getRequestParameter(request, MAX_AGE_SECONDS_PARAM_NAME);
     try {
-      return Integer.parseInt(maxAgeSeconds);
+      return Integer.parseInt(maxAgeSecondsString);
     } catch (NumberFormatException e) {
       throw new ServiceException(
           Code.INVALID_ARGUMENT,

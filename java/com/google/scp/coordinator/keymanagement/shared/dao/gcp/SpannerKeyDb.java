@@ -16,6 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.shared.dao.gcp;
 
+import static com.google.cloud.Timestamp.ofTimeSecondsAndNanos;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.DATASTORE_ERROR;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.MISSING_KEY;
@@ -91,6 +92,45 @@ public final class SpannerKeyDb implements KeyDb {
   }
 
   @Override
+  public ImmutableList<EncryptionKey> getActiveKeys(
+      String setName, int keyLimit, Instant start, Instant end) throws ServiceException {
+    Statement statement =
+        Statement.newBuilder(
+                "SELECT * FROM "
+                    + TABLE_NAME
+                    + " WHERE ("
+                    + EXPIRY_TIME_COLUMN
+                    + " IS NULL OR "
+                    + EXPIRY_TIME_COLUMN
+                    + " > @startParam) AND ("
+                    + ACTIVATION_TIME_COLUMN
+                    + " is NULL OR "
+                    + ACTIVATION_TIME_COLUMN
+                    + " <= @endParam)"
+                    // Filter keys with matching set name, if it's the default set, includes keys
+                    // with null set name.
+                    + " AND (SetName = @setName"
+                    + " OR (@setName = @defaultSetName AND SetName IS NULL))"
+                    // Ordering implementation should follow {@link
+                    // KeyDbUtil.getActiveKeysComparator}
+                    + " ORDER BY "
+                    + NATURAL_ORDERING
+                    + (keyLimit == 0 ? "" : " LIMIT @keyLimitParam"))
+            .bind("startParam")
+            .to(ofTimeSecondsAndNanos(start.getEpochSecond(), start.getNano()))
+            .bind("endParam")
+            .to(ofTimeSecondsAndNanos(end.getEpochSecond(), end.getNano()))
+            .bind("keyLimitParam")
+            .to(keyLimit)
+            .bind("defaultSetName")
+            .to(KeyDb.DEFAULT_SET_NAME)
+            .bind("setName")
+            .to(setName)
+            .build();
+    return retrieveKeys(statement);
+  }
+
+  @Override
   public ImmutableList<EncryptionKey> getActiveKeys(String setName, int keyLimit, Instant instant)
       throws ServiceException {
     Statement statement =
@@ -116,7 +156,7 @@ public final class SpannerKeyDb implements KeyDb {
                     + NATURAL_ORDERING
                     + (keyLimit == 0 ? "" : " LIMIT @keyLimitParam"))
             .bind("nowParam")
-            .to(Timestamp.ofTimeSecondsAndNanos(instant.getEpochSecond(), instant.getNano()))
+            .to(ofTimeSecondsAndNanos(instant.getEpochSecond(), instant.getNano()))
             .bind("keyLimitParam")
             .to(keyLimit)
             .bind("defaultSetName")
@@ -191,7 +231,7 @@ public final class SpannerKeyDb implements KeyDb {
                     + NATURAL_ORDERING)
             .bind("nowParam")
             .to(
-                Timestamp.ofTimeSecondsAndNanos(
+                ofTimeSecondsAndNanos(
                     maxCreation.getEpochSecond(), maxCreation.getNano()))
             .bind("defaultSetName")
             .to(KeyDb.DEFAULT_SET_NAME)
@@ -250,6 +290,52 @@ public final class SpannerKeyDb implements KeyDb {
     writeTransaction(mutations);
   }
 
+  /**
+   * Updates the stored <u>key material</u> fields for each KeyId to the associated EncryptionKey
+   * fields provided. UpdatedAt will be set to the transaction timestamp. No other fields will be
+   * modified.
+   *
+   * <p><b>Warning:</b> <u>Will overwrite any existing stored key material!</u>
+   *
+   * <p>Use only for the following migration phase:
+   *
+   * <ul>
+   *   <li>Phase 2 (Migrate): Overwrite original key material with migration material.
+   * </ul>
+   *
+   * @param keys The list of encryption keys to update key material for.
+   */
+  @Override
+  public void updateKeyMaterial(ImmutableList<EncryptionKey> keys) throws ServiceException {
+    List<Mutation> mutations =
+        keys.stream().map(SpannerKeyDb::toKeyMaterialMutation).collect(toImmutableList());
+    writeTransaction(mutations);
+  }
+
+  /**
+   * Updates the stored <u>migration key material</u> fields for each KeyId to the associated
+   * EncryptionKey fields provided. UpdatedAt will be set to the transaction timestamp. No other
+   * fields will be modified.
+   *
+   * <p><b>Warning:</b> <u>Will overwrite any existing stored migration key material!</u>
+   *
+   * <p>Use only for the following migration phases:
+   *
+   * <ul>
+   *   <li>Phase 1 (Generate): Generate and store migration material.
+   *   <li>Phase 3 (Cleanup): Clear migration columns.
+   * </ul>
+   *
+   * @param keys The list of encryption keys to update migration material for.
+   */
+  @Override
+  public void updateMigrationKeyMaterial(ImmutableList<EncryptionKey> keys)
+      throws ServiceException {
+    List<Mutation> mutations =
+        keys.stream().map(SpannerKeyDb::toMigrationKeyMaterialMutation).collect(toImmutableList());
+    writeTransaction(mutations);
+  }
+
   private void writeTransaction(List<Mutation> mutations) throws ServiceException {
     try {
       dbClient
@@ -265,7 +351,12 @@ public final class SpannerKeyDb implements KeyDb {
         LOGGER.warn(message);
         throw new ServiceException(ALREADY_EXISTS, DATASTORE_ERROR.name(), message, ex);
       }
-      String message = "Spanner encountered error creating keys";
+      if (ex.getErrorCode().equals(ErrorCode.NOT_FOUND)) {
+        String message = "KeyId not found in database";
+        LOGGER.warn(message);
+        throw new ServiceException(NOT_FOUND, DATASTORE_ERROR.name(), message, ex);
+      }
+      String message = "Spanner encountered error creating or updating keys";
       LOGGER.error(message, ex);
       throw new ServiceException(INTERNAL, DATASTORE_ERROR.name(), message, ex);
     }
@@ -280,34 +371,17 @@ public final class SpannerKeyDb implements KeyDb {
     // TTL is saved in seconds, however Spanner requires a timestamp
     Timestamp ttlTime =
         key.hasTtlTime()
-            ? Timestamp.ofTimeSecondsAndNanos(
+            ? ofTimeSecondsAndNanos(
                 TimeUnit.SECONDS.convert(key.getTtlTime(), TimeUnit.SECONDS), 0)
             : null;
     Timestamp activationTime =
         Timestamp.ofTimeMicroseconds(
             TimeUnit.MICROSECONDS.convert(key.getActivationTime(), TimeUnit.MILLISECONDS));
-    // Serialize keySplitData to JSON and wrap it in Value object for Spanner
-    Value keySplitJsonValue;
-    Value migrationKeySplitJsonValue;
-    try {
-      KeySplitDataList proto =
-          KeySplitDataList.newBuilder().addAllKeySplitData(key.getKeySplitDataList()).build();
-      String json = JSON_PRINTER.print(proto);
-      keySplitJsonValue = Value.json(json);
 
-      KeySplitDataList migrationProto =
-          KeySplitDataList.newBuilder()
-              .addAllKeySplitData(key.getMigrationKeySplitDataList())
-              .build();
-      String migrationJson = JSON_PRINTER.print(migrationProto);
-      migrationKeySplitJsonValue = Value.json(migrationJson);
-    } catch (InvalidProtocolBufferException ex) {
-      // TODO: remove after proto migration. Currently cannot throw checked exception in java
-      // stream.
-      String message = "Spanner encountered keySplitData serialization error";
-      LOGGER.error(message, ex);
-      throw new RuntimeException(message, ex);
-    }
+    // Wrap keySplitData in a Value object for Spanner
+    Value keySplitJsonValue = toValueFromKeySplitData(key.getKeySplitDataList());
+    Value migrationKeySplitJsonValue = toValueFromKeySplitData(key.getMigrationKeySplitDataList());
+
     Mutation.WriteBuilder builder = Mutation.newInsertBuilder(SpannerKeyDb.TABLE_NAME);
     if (overwrite) {
       builder = Mutation.newInsertOrUpdateBuilder(SpannerKeyDb.TABLE_NAME);
@@ -347,6 +421,59 @@ public final class SpannerKeyDb implements KeyDb {
         .set(UPDATED_AT_COLUMN)
         .to(Value.COMMIT_TIMESTAMP)
         .build();
+  }
+
+  /** Creates a mutation that will only update the key material fields of an existing key. */
+  private static Mutation toKeyMaterialMutation(EncryptionKey key) {
+    Value keySplitJsonValue = toValueFromKeySplitData(key.getKeySplitDataList());
+    return Mutation.newUpdateBuilder(SpannerKeyDb.TABLE_NAME)
+        .set(KEY_ID_COLUMN)
+        .to(key.getKeyId())
+        .set(PRIVATE_KEY_COLUMN)
+        .to(key.getJsonEncodedKeyset())
+        .set(KEY_SPLIT_DATA_COLUMN)
+        .to(keySplitJsonValue)
+        .set(KEY_ENCRYPTION_KEY_URI)
+        .to(key.getKeyEncryptionKeyUri())
+        .set(UPDATED_AT_COLUMN)
+        .to(Value.COMMIT_TIMESTAMP)
+        .build();
+  }
+
+  /**
+   * Creates a mutation that will only update the migration key material fields of an existing key.
+   */
+  private static Mutation toMigrationKeyMaterialMutation(EncryptionKey key) {
+    Value migrationKeySplitJsonValue = toValueFromKeySplitData(key.getMigrationKeySplitDataList());
+    return Mutation.newUpdateBuilder(SpannerKeyDb.TABLE_NAME)
+        .set(KEY_ID_COLUMN)
+        .to(key.getKeyId())
+        .set(MIGRATION_PRIVATE_KEY_COLUMN)
+        .to(key.getMigrationJsonEncodedKeyset())
+        .set(MIGRATION_KEY_SPLIT_DATA_COLUMN)
+        .to(migrationKeySplitJsonValue)
+        .set(MIGRATION_KEY_ENCRYPTION_KEY_URI_COLUMN)
+        .to(key.getMigrationKeyEncryptionKeyUri())
+        .set(UPDATED_AT_COLUMN)
+        .to(Value.COMMIT_TIMESTAMP)
+        .build();
+  }
+
+  /** Serialize a list of {@link KeySplitData} to JSON and wrap it in Value object for Spanner */
+  private static Value toValueFromKeySplitData(List<KeySplitData> keySplitData)
+      throws RuntimeException {
+    try {
+      KeySplitDataList proto =
+          KeySplitDataList.newBuilder().addAllKeySplitData(keySplitData).build();
+      String json = JSON_PRINTER.print(proto);
+      return Value.json(json);
+    } catch (InvalidProtocolBufferException ex) {
+      // TODO: remove after proto migration. Currently cannot throw checked exception in java
+      // stream.
+      String message = "Spanner encountered keySplitData serialization error";
+      LOGGER.error(message, ex);
+      throw new RuntimeException(message, ex);
+    }
   }
 
   private static EncryptionKey buildEncryptionKey(ResultSet resultSet) throws ServiceException {

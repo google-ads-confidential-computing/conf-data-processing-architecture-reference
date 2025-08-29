@@ -17,6 +17,8 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.KeyMigrationVendingUtil.vendAccordingToConfig;
+import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.common.RequestContextUtil.getPositiveNumberRequestValue;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -24,8 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
-import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.ListRecentEncryptionKeysCache;
-import com.google.scp.coordinator.keymanagement.keyhosting.tasks.KeyMigrationVendingUtil;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.AllKeysForSetNameCache;
 import com.google.scp.coordinator.keymanagement.shared.converter.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
@@ -35,8 +36,6 @@ import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
-import com.google.scp.shared.api.exception.SharedErrorReason;
-import com.google.scp.shared.api.model.Code;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.regex.Matcher;
@@ -51,7 +50,7 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
   static final String MAX_AGE_SECONDS_PARAM_NAME = "maxAgeSeconds";
 
   private final KeyDb keyDb;
-  private final ListRecentEncryptionKeysCache cache;
+  private final AllKeysForSetNameCache cache;
   private final boolean enableCache;
   private final LogMetricHelper logMetricHelper;
   private final ImmutableSet<String> allowedMigrators;
@@ -59,7 +58,7 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
   @Inject
   ListRecentEncryptionKeysTask(
       KeyDb keyDb,
-      ListRecentEncryptionKeysCache cache,
+      AllKeysForSetNameCache cache,
       @EnableCache Boolean enableCache,
       LogMetricHelper logMetricHelper,
       @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators) {
@@ -92,8 +91,7 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
                 keys
                     .map(
                         key ->
-                            KeyMigrationVendingUtil.vendAccordingToConfig(
-                                key, request, allowedMigrators, logMetricHelper))
+                            vendAccordingToConfig(key, request, allowedMigrators, logMetricHelper))
                     .map(EncryptionKeyConverter::toApiEncryptionKey)
                     .collect(toImmutableList())));
   }
@@ -121,33 +119,6 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
   }
 
   private static Duration getMaxAage(RequestContext request) throws ServiceException {
-    String maxAgeSecondsString =
-        request
-            .getFirstQueryParameter(MAX_AGE_SECONDS_PARAM_NAME)
-            .orElseThrow(
-                () ->
-                    new ServiceException(
-                        Code.INVALID_ARGUMENT,
-                        SharedErrorReason.INVALID_ARGUMENT.name(),
-                        String.format(
-                            "%s query parameter is required.", MAX_AGE_SECONDS_PARAM_NAME)));
-    try {
-      int maxAgeSeconds = Integer.parseInt(maxAgeSecondsString);
-      if (maxAgeSeconds < 0) {
-        throw new ServiceException(
-            Code.INVALID_ARGUMENT,
-            SharedErrorReason.INVALID_ARGUMENT.name(),
-            String.format(
-                "%s should be positive, found (%s) instead.",
-                MAX_AGE_SECONDS_PARAM_NAME, maxAgeSeconds));
-      }
-      return Duration.ofSeconds(maxAgeSeconds);
-    } catch (NumberFormatException e) {
-      throw new ServiceException(
-          Code.INVALID_ARGUMENT,
-          SharedErrorReason.INVALID_ARGUMENT.name(),
-          String.format("%s should be a valid integer.", MAX_AGE_SECONDS_PARAM_NAME),
-          e);
-    }
+    return Duration.ofSeconds(getPositiveNumberRequestValue(request, MAX_AGE_SECONDS_PARAM_NAME));
   }
 }

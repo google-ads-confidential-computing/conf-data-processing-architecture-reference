@@ -74,6 +74,19 @@ java_test(
     ],
 )
 
+java_test(
+    name = "RequestHeaderParsingUtilTest",
+    srcs = [
+        "RequestHeaderParsingUtilTest.java",
+    ],
+    deps = [
+        "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
+        "//java/external:google_truth",
+        "//java/external:guice",
+        "//java/external:mockito",
+    ],
+)
+
 proto_library(
     name = "common_proto",
     srcs = ["common.proto"],

@@ -19,14 +19,15 @@ package com.google.scp.operator.shared.dao.jobqueue.gcp;
 import static com.google.scp.operator.shared.dao.jobqueue.common.Constants.JSON_BODY_TYPE;
 import static com.google.scp.operator.shared.dao.jobqueue.common.Constants.MESSAGE_BODY_TYPE;
 import static com.google.scp.operator.shared.dao.jobqueue.common.JobQueueUtil.getProcessingTimeSeconds;
+import static com.google.scp.shared.clients.configclient.model.GetParameterRequest.SCP_PARAM_PREFIX;
+import static com.google.scp.shared.clients.configclient.model.WorkerParameter.JOB_PUBSUB_TOPIC_NAME;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import com.google.api.core.ApiFuture;
 import com.google.api.gax.rpc.ApiException;
-import com.google.cloud.pubsub.v1.Publisher;
+import com.google.cloud.pubsub.v1.stub.PublisherStub;
 import com.google.cloud.pubsub.v1.stub.SubscriberStub;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Inject;
@@ -37,6 +38,8 @@ import com.google.protobuf.util.Durations;
 import com.google.protobuf.util.JsonFormat;
 import com.google.pubsub.v1.AcknowledgeRequest;
 import com.google.pubsub.v1.ModifyAckDeadlineRequest;
+import com.google.pubsub.v1.PublishRequest;
+import com.google.pubsub.v1.PublishResponse;
 import com.google.pubsub.v1.PubsubMessage;
 import com.google.pubsub.v1.PullRequest;
 import com.google.pubsub.v1.PullResponse;
@@ -46,13 +49,15 @@ import com.google.scp.operator.protos.shared.backend.JobMessageProto.JobMessage;
 import com.google.scp.operator.protos.shared.backend.jobqueue.JobQueueProto.JobQueueItem;
 import com.google.scp.operator.shared.dao.jobqueue.common.JobQueue;
 import com.google.scp.operator.shared.model.BackendModelUtil;
+import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
+import com.google.scp.shared.clients.configclient.model.GetParameterRequest;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,58 +73,95 @@ public final class PubSubJobQueue implements JobQueue {
   private static final int MAX_NUMBER_OF_MESSAGES_RECEIVED = 1;
 
   private final SubscriberStub subscriber;
-  private final Publisher publisher;
+  private final PublisherStub publisher;
+  private final Provider<String> topicName;
   private final Provider<String> subscriptionName;
   // The "lease" length that the item receipt has. If the item is not acknowledged (deleted) within
   // this time window it will be visible on the queue again for another worker to pick up. See GCP
   // docs for more detail.
   private final int messageLeaseSeconds;
+  private final ParameterClient parameterClient;
 
   /** Creates a new instance of the {@code PubSubJobQueue} class. */
   @Inject
   PubSubJobQueue(
-      Publisher publisher,
+      @JobQueuePublisherStub PublisherStub publisher,
       SubscriberStub subscriber,
+      @JobQueuePubSubTopicName Provider<String> topicName,
       @JobQueuePubSubSubscriptionName Provider<String> subscriptionName,
-      @JobQueueMessageLeaseSeconds int messageLeaseSeconds) {
+      @JobQueueMessageLeaseSeconds int messageLeaseSeconds,
+      ParameterClient parameterClient) {
     this.publisher = publisher;
     this.subscriber = subscriber;
+    this.topicName = topicName;
     this.subscriptionName = subscriptionName;
     this.messageLeaseSeconds = messageLeaseSeconds;
+    this.parameterClient = parameterClient;
   }
 
   @Override
   public void sendJob(JobKey jobKey, String serverJobId) throws JobQueueException {
-    Optional<String> messageId;
-    ByteString data;
+    sendPubSubMessage(jobKey, serverJobId, topicName.get());
+  }
 
+  @Override
+  public void sendJob(JobKey jobKey, String serverJobId, String workgroupId)
+      throws JobQueueException {
     try {
-      JobMessage jobMessage =
-          JobMessage.newBuilder()
-              .setJobRequestId(jobKey.getJobRequestId())
-              .setServerJobId(serverJobId)
+      GetParameterRequest getParameterRequest =
+          GetParameterRequest.builder()
+              .setParamPrefix(SCP_PARAM_PREFIX)
+              .setParamName(JOB_PUBSUB_TOPIC_NAME.name())
+              .setIncludeEnvironmentPrefix(true)
+              .setIncludeWorkgroupPrefix(true)
+              .setWorkgroupOverride(workgroupId)
               .build();
-      data = ByteString.copyFromUtf8(JSON_PRINTER.print(jobMessage));
-      PubsubMessage pubsubMessage =
-          PubsubMessage.newBuilder()
-              .setData(data)
-              .putAttributes(MESSAGE_BODY_TYPE, JSON_BODY_TYPE)
-              .build();
+      Optional<String> targetTopicName = parameterClient.getParameter(getParameterRequest);
+      if (targetTopicName.isEmpty()) {
+        throw new JobQueueException(
+            "Job queue topic name parameter not found for workgroup " + workgroupId);
+      }
 
-      ApiFuture<String> publisherFuture = publisher.publish(pubsubMessage);
-
-      messageId = Optional.of(publisherFuture.get());
-    } catch (ApiException
-        | ExecutionException
-        | InterruptedException
-        | InvalidProtocolBufferException e) {
+      sendPubSubMessage(jobKey, serverJobId, targetTopicName.get());
+    } catch (ParameterClientException e) {
       throw new JobQueueException(e);
     }
+  }
 
-    logger.info(
-        String.format(
-            "Job '%s' was successfully added to job queue with message ID '%s'.",
-            BackendModelUtil.toJobKeyString(jobKey), messageId));
+  @Override
+  public boolean validateWorkgroupJobQueue(String workgroupId) throws JobQueueException {
+    try {
+      GetParameterRequest getParameterRequest =
+          GetParameterRequest.builder()
+              .setParamPrefix(SCP_PARAM_PREFIX)
+              .setParamName(JOB_PUBSUB_TOPIC_NAME.name())
+              .setIncludeEnvironmentPrefix(true)
+              .setIncludeWorkgroupPrefix(true)
+              .setWorkgroupOverride(workgroupId)
+              .build();
+      Optional<String> targetTopicName = parameterClient.getParameter(getParameterRequest);
+      return targetTopicName.isPresent();
+    } catch (ParameterClientException e) {
+      throw new JobQueueException(e);
+    }
+  }
+
+  private void sendPubSubMessage(JobKey jobKey, String serverJobId, String topicName)
+      throws JobQueueException {
+
+    try {
+      PubsubMessage pubsubMessage = buildJobPubSubMessage(jobKey, serverJobId);
+      PublishRequest publishRequest =
+          PublishRequest.newBuilder().addMessages(pubsubMessage).setTopic(topicName).build();
+      PublishResponse publishResponse = publisher.publishCallable().call(publishRequest);
+      Optional<String> messageId = publishResponse.getMessageIdsList().stream().findFirst();
+      logger.info(
+          String.format(
+              "Job '%s' was successfully added to job queue %s with message ID '%s'.",
+              BackendModelUtil.toJobKeyString(jobKey), topicName, messageId));
+    } catch (ApiException | InvalidProtocolBufferException e) {
+      throw new JobQueueException(e);
+    }
   }
 
   /**
@@ -225,6 +267,20 @@ public final class PubSubJobQueue implements JobQueue {
             .build());
   }
 
+  private PubsubMessage buildJobPubSubMessage(JobKey jobKey, String serverJobId)
+      throws InvalidProtocolBufferException {
+    JobMessage jobMessage =
+        JobMessage.newBuilder()
+            .setJobRequestId(jobKey.getJobRequestId())
+            .setServerJobId(serverJobId)
+            .build();
+    ByteString data = ByteString.copyFromUtf8(JSON_PRINTER.print(jobMessage));
+    return PubsubMessage.newBuilder()
+        .setData(data)
+        .putAttributes(MESSAGE_BODY_TYPE, JSON_BODY_TYPE)
+        .build();
+  }
+
   /** The subscription name for the Pub/Sub queue. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
@@ -235,11 +291,17 @@ public final class PubSubJobQueue implements JobQueue {
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface JobQueuePubSubTopicId {}
+  public @interface JobQueuePubSubTopicName {}
 
   /** Maximum message size in bytes. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface JobQueuePubSubMaxMessageSizeBytes {}
+
+  /** Configurable publisher stub for the sending job queue messages. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface JobQueuePublisherStub {}
 }

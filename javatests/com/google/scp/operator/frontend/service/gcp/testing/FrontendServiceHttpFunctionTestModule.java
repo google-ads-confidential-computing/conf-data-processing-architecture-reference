@@ -29,15 +29,14 @@ import com.google.api.gax.grpc.GrpcTransportChannel;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
 import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.NoCredentials;
-import com.google.cloud.pubsub.v1.Publisher;
-import com.google.cloud.pubsub.v1.stub.GrpcSubscriberStub;
+import com.google.cloud.pubsub.v1.stub.PublisherStub;
 import com.google.cloud.pubsub.v1.stub.SubscriberStub;
-import com.google.cloud.pubsub.v1.stub.SubscriberStubSettings;
 import com.google.cloud.spanner.DatabaseClient;
 import com.google.cloud.spanner.DatabaseId;
 import com.google.cloud.spanner.InstanceId;
 import com.google.cloud.spanner.SpannerOptions;
 import com.google.common.base.Converter;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -65,6 +64,8 @@ import com.google.scp.operator.shared.dao.jobqueue.common.JobQueue;
 import com.google.scp.operator.shared.dao.jobqueue.common.JobQueue.JobQueueMessageLeaseSeconds;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePubSubSubscriptionName;
+import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePubSubTopicName;
+import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePublisherStub;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobDb;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobDb.JobDbClient;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb;
@@ -75,7 +76,10 @@ import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerJobDb.JobDbTable
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb.MetadataDbSpannerTtlDays;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbConfig;
+import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.local.LocalParameterClient;
 import com.google.scp.shared.mapper.TimeObjectMapper;
+import com.google.scp.shared.testutils.gcp.PubSubContainerUtil;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.io.IOException;
@@ -103,6 +107,18 @@ public class FrontendServiceHttpFunctionTestModule extends AbstractModule {
   }
 
   @Provides
+  @JobQueuePubSubTopicName
+  String providePubSubTopicName() {
+    return TopicName.format(PROJECT_ID, TOPIC_ID);
+  }
+
+  @Provides
+  ParameterClient provideParameterClient() {
+    return new LocalParameterClient(
+        ImmutableMap.of("JOB_PUBSUB_TOPIC_NAME", TopicName.format(PROJECT_ID, TOPIC_ID)));
+  }
+
+  @Provides
   @Singleton
   public TransportChannelProvider provideChannelProvider() {
     String hostport = System.getenv("PUBSUB_EMULATOR_HOST");
@@ -112,27 +128,18 @@ public class FrontendServiceHttpFunctionTestModule extends AbstractModule {
 
   @Provides
   @Singleton
-  public Publisher providePublisher(TransportChannelProvider channelProvider) throws IOException {
+  @JobQueuePublisherStub
+  PublisherStub providePublisherStub(TransportChannelProvider channelProvider) throws IOException {
     NoCredentialsProvider credentialsProvider = NoCredentialsProvider.create();
 
-    return Publisher.newBuilder(TopicName.of(PROJECT_ID, TOPIC_ID))
-        .setChannelProvider(channelProvider)
-        .setCredentialsProvider(credentialsProvider)
-        .build();
+    return PubSubContainerUtil.createPublisherStub(channelProvider, credentialsProvider);
   }
 
   @Provides
   SubscriberStub provideSubscriber(TransportChannelProvider channelProvider) throws IOException {
-
     NoCredentialsProvider credentialsProvider = NoCredentialsProvider.create();
 
-    SubscriberStubSettings subscriberStubSettings =
-        SubscriberStubSettings.newBuilder()
-            .setTransportChannelProvider(channelProvider)
-            .setCredentialsProvider(credentialsProvider)
-            .build();
-
-    return GrpcSubscriberStub.create(subscriberStubSettings);
+    return PubSubContainerUtil.createSubscriptionStub(channelProvider, credentialsProvider);
   }
 
   @Provides

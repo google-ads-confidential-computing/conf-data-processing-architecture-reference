@@ -21,7 +21,6 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.Answers.CALLS_REAL_METHODS;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -60,6 +59,8 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final Acai acai = new Acai(InMemoryTestEnv.class);
 
+  private static final String APPROVED_CALLER = "approved-caller@google.com";
+  private static final String UNAPPROVED_CALLER = "unapproved-caller@google.com";
   private static final String SET_NAME = "TestSet";
   private static final EncryptionKey TEST_KEY =
       FakeEncryptionKey.createWithMigration().toBuilder().setSetName(SET_NAME).build();
@@ -110,31 +111,34 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
   }
 
   @Test
-  public void execute_noAuthHeader_vendsStandardKey() throws Exception {
-    // Given no "Authorization" header is provided
-    doReturn(Optional.empty()).when(request).getFirstHeader("Authorization");
-    doReturn(TEST_KEY.getKeyId()).when(matcher).group("id");
-
-    // When
-    task.execute(matcher, request, response);
-
-    // Then
-    EncryptionKeyProto.EncryptionKey responseKey = getResponseKey();
-    verify(request, never()).getFirstHeader(anyString());
-    assertThat(responseKey.getKeyData(0).getKeyMaterial()).isEqualTo(STANDARD_KEYSET);
+  public void cacheGlobalDisabledTest() throws Exception {
+    cacheValidation(false, ImmutableSet.of(), /* numRequests= */ 3, /* expectedKeyDbCalls= */ 3);
   }
 
   @Test
-  public void cacheDisabledTest() throws Exception {
-    cacheValidation(false);
+  public void cacheGlobalDisabled_callerNotAllowedTest() throws Exception {
+    String fakeJwt = createFakeJwt(UNAPPROVED_CALLER);
+    doReturn(Optional.of("Bearer: " + fakeJwt)).when(request).getFirstHeader("Authorization");
+    cacheValidation(
+        false, ImmutableSet.of(APPROVED_CALLER), /* numRequests= */ 3, /* expectedKeyDbCalls= */ 3);
   }
 
   @Test
-  public void cacheEnabledTest() throws Exception {
-    cacheValidation(true);
+  public void cacheGlobalEnabledTest() throws Exception {
+    cacheValidation(true, ImmutableSet.of(), /* numRequests= */ 3, /* expectedKeyDbCalls= */ 1);
   }
 
-  private void cacheValidation(boolean enabled) throws Exception {
+  @Test
+  public void cacheGlobalDisabled_callerAllowedTest() throws Exception {
+    String fakeJwt = createFakeJwt(APPROVED_CALLER);
+    doReturn(Optional.of("Bearer: " + fakeJwt)).when(request).getFirstHeader("Authorization");
+    cacheValidation(
+        false, ImmutableSet.of(APPROVED_CALLER), /* numRequests= */ 3, /* expectedKeyDbCalls= */ 1);
+  }
+
+  private void cacheValidation(
+      boolean enabled, ImmutableSet<String> cacheUsers, int numRequests, int expectedKeyDbCalls)
+      throws Exception {
     doReturn(TEST_KEY.getKeyId()).when(matcher).group("id");
     var taskWithMigrators =
         new GetEncryptedPrivateKeyTask(
@@ -143,39 +147,64 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
             enabled,
             new LogMetricHelper("test"),
             "v1Alpha",
-            ImmutableSet.of());
-    taskWithMigrators.execute(matcher, request, response);
-    taskWithMigrators.execute(matcher, request, response);
-    taskWithMigrators.execute(matcher, request, response);
+            ImmutableSet.of(),
+            cacheUsers);
+    for (int i = 0; i < numRequests; i++) {
+      taskWithMigrators.execute(matcher, request, response);
+    }
 
-    verify(spyKeyDb, times(enabled ? 1 : 3)).getKey(TEST_KEY.getKeyId());
+    verify(spyKeyDb, times(expectedKeyDbCalls)).getKey(TEST_KEY.getKeyId());
+  }
+
+  @Test
+  public void execute_noAllowedMigrators_vendsStandardKey() throws Exception {
+    doReturn(TEST_KEY.getKeyId()).when(matcher).group("id");
+    String fakeJwt = createFakeJwt(APPROVED_CALLER);
+    doReturn(Optional.of("Bearer: " + fakeJwt)).when(request).getFirstHeader("Authorization");
+
+    // When
+    task.execute(matcher, request, response);
+
+    // Then
+    EncryptionKeyProto.EncryptionKey responseKey = getResponseKey();
+    verify(request).getFirstHeader(anyString());
+    assertThat(responseKey.getKeyData(0).getKeyMaterial()).isEqualTo(STANDARD_KEYSET);
+  }
+
+  @Test
+  public void execute_noAuthHeader_vendsStandardKey() throws Exception {
+    // Given no "Authorization" header is provided
+    doReturn(TEST_KEY.getKeyId()).when(matcher).group("id");
+    doReturn(Optional.empty()).when(request).getFirstHeader("Authorization");
+
+    vendMigrationKeyValidation(ImmutableSet.of(APPROVED_CALLER), STANDARD_KEYSET);
   }
 
   @Test
   public void execute_unapprovedCaller_vendsStandardKey() throws Exception {
     // Given an unapproved caller sends a valid JWT
     doReturn(TEST_KEY.getKeyId()).when(matcher).group("id");
-    String fakeJwt = createFakeJwt("unapproved-caller@google.com");
+    String fakeJwt = createFakeJwt(UNAPPROVED_CALLER);
     doReturn(Optional.of("Bearer: " + fakeJwt)).when(request).getFirstHeader("Authorization");
 
-    vendMigrationKeyValidation(ImmutableSet.of("approved-caller@google.com"), STANDARD_KEYSET);
+    vendMigrationKeyValidation(ImmutableSet.of(APPROVED_CALLER), STANDARD_KEYSET);
   }
 
   @Test
   public void execute_approvedCaller_vendsMigrationKey() throws Exception {
     // Given an approved caller sends a valid JWT
     doReturn(TEST_KEY.getKeyId()).when(matcher).group("id");
-    String fakeJwt = createFakeJwt("approved-caller@google.com");
+    String fakeJwt = createFakeJwt(APPROVED_CALLER);
     doReturn(Optional.of("Bearer: " + fakeJwt)).when(request).getFirstHeader("Authorization");
 
-    vendMigrationKeyValidation(ImmutableSet.of("approved-caller@google.com"), MIGRATION_KEYSET);
+    vendMigrationKeyValidation(ImmutableSet.of(APPROVED_CALLER), MIGRATION_KEYSET);
   }
 
   @Test
   public void execute_approvedSetName_vendsMigrationKey() throws Exception {
     // Given an approved caller sends a valid JWT
     doReturn(TEST_KEY.getKeyId()).when(matcher).group("id");
-    String fakeJwt = createFakeJwt("approved-caller@google.com");
+    String fakeJwt = createFakeJwt(APPROVED_CALLER);
     doReturn(Optional.of("Bearer: " + fakeJwt)).when(request).getFirstHeader("Authorization");
 
     vendMigrationKeyValidation(ImmutableSet.of(SET_NAME), MIGRATION_KEYSET);
@@ -191,13 +220,14 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
             true,
             new LogMetricHelper("test"),
             "v1Alpha",
-            allowedMigrators);
+            allowedMigrators,
+            ImmutableSet.of());
     taskWithMigrators.execute(matcher, request, response);
 
     // Then
     EncryptionKeyProto.EncryptionKey responseKey = getResponseKey();
     assertThat(responseKey.getKeyData(0).getKeyMaterial()).isEqualTo(keySet);
-    verify(request).getFirstHeader("Authorization");
+    verify(request, times(2)).getFirstHeader("Authorization");
   }
 
   /** Helper to extract the response body and parse it into an EncryptionKey proto. */

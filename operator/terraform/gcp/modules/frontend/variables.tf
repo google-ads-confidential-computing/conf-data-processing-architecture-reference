@@ -283,12 +283,12 @@ variable "job_table_name" {
 ################################################################################
 
 variable "job_queue_topic" {
-  description = "Name of the job queue topic."
+  description = "The ID of the job queue topic."
   type        = string
 }
 
 variable "job_queue_sub" {
-  description = "Name of the job queue subscription."
+  description = "The ID of the job queue subscription."
   type        = string
 }
 

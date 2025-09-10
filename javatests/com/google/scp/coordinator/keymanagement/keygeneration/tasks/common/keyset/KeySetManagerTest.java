@@ -40,6 +40,7 @@ public final class KeySetManagerTest {
   private static final int TEST_VALIDITY_IN_DAYS = new Random().nextInt();
   private static final int TEST_TTL_IN_DAYS = new Random().nextInt();
   private static final int TEST_CREATE_MAX_DAYS_AHEAD = new Random().nextInt();
+  private static final boolean TEST_NO_REFRESH_WINDOW = true;
   private static final ConfigCacheDuration TEST_CACHE_DURATION =
       ConfigCacheDuration.of(Duration.ofSeconds(1));
 
@@ -146,8 +147,9 @@ public final class KeySetManagerTest {
         "{\"key_sets\":["
             + "{\"name\":\"test_set\", \"tink_template\":null, \"count\":null,"
             + " \"validity_in_days\":null, \"ttl_in_days\":null,"
-            + " \"create_max_days_ahead\":null, \"overlap_period_days\":null}"
-            + "]}";
+            + " \"create_max_days_ahead\":null, \"overlap_period_days\":null,"
+            + " \"no_refresh_window\":null"
+            + "}]}";
     KeySetManager manager = createKeySetManager(config);
 
     // When
@@ -164,7 +166,8 @@ public final class KeySetManagerTest {
         "{\"key_sets\":["
             + "{\"name\":\"set1\", \"tink_template\":\"test_template\", \"count\":5,"
             + " \"validity_in_days\":0, \"ttl_in_days\":0, "
-            + " \"create_max_days_ahead\":13, \"overlap_period_days\":24"
+            + " \"create_max_days_ahead\":13, \"overlap_period_days\":24,"
+            + " \"no_refresh_window\":true"
             + "}]}";
     KeySetManager manager = createKeySetManager(config);
 
@@ -173,7 +176,7 @@ public final class KeySetManagerTest {
 
     // Then
     assertThat(configs)
-        .containsExactly(KeySetConfig.create("set1", "test_template", 5, 0, 0, 13, 24));
+        .containsExactly(KeySetConfig.create("set1", "test_template", 5, 0, 0, 13, 24, true));
   }
 
   private static KeySetManager createKeySetManager(String config) {
@@ -183,6 +186,7 @@ public final class KeySetManagerTest {
         TEST_VALIDITY_IN_DAYS,
         TEST_TTL_IN_DAYS,
         TEST_CREATE_MAX_DAYS_AHEAD,
+        false,
         new ConfigCacheDuration());
   }
 
@@ -194,6 +198,7 @@ public final class KeySetManagerTest {
         TEST_VALIDITY_IN_DAYS,
         TEST_TTL_IN_DAYS,
         TEST_CREATE_MAX_DAYS_AHEAD,
+        false,
         TEST_CACHE_DURATION);
   }
 
@@ -205,6 +210,7 @@ public final class KeySetManagerTest {
         TEST_VALIDITY_IN_DAYS,
         TEST_TTL_IN_DAYS,
         TEST_CREATE_MAX_DAYS_AHEAD,
-        0);
+        0,
+        false);
   }
 }

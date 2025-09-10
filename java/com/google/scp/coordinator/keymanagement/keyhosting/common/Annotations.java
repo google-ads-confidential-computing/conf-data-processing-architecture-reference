@@ -68,4 +68,10 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface KeySetsVendingConfigAllowedMigrators {}
+
+  /** Binds allowed users from a Key Sets Vending Config to control Private KS cache usage. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface KeySetsVendingConfigCacheUsers {}
 }

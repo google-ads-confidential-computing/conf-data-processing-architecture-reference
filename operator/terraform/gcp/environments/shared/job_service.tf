@@ -190,4 +190,10 @@ module "job_service" {
   frontend_cloudfunction_use_java21_runtime     = var.frontend_cloudfunction_use_java21_runtime
   notification_cloudfunction_use_java21_runtime = var.notification_cloudfunction_use_java21_runtime
   autoscaling_cloudfunction_use_java21_runtime  = var.autoscaling_cloudfunction_use_java21_runtime
+
+  # Workgroup
+  default_workgroup_configs = var.default_workgroup_configs
+  workgroup_configs         = var.workgroup_configs
+  initial_workgroup         = var.initial_workgroup
+  enable_legacy_worker      = var.enable_legacy_worker
 }

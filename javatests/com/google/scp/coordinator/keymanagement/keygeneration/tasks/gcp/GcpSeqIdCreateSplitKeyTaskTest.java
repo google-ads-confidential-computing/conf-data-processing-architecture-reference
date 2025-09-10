@@ -76,6 +76,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
+        false,
         Instant.now());
 
     task.createSplitKey(
@@ -84,6 +85,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
+        false,
         Instant.now());
 
     List<String> keys = sortKeysById();
@@ -116,6 +118,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
+        false,
         Instant.now());
 
     keys = sortKeysById();
@@ -149,6 +152,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
+        false,
         Instant.now());
 
     keys = sortKeysById();
@@ -177,6 +181,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
+        false,
         Instant.now());
 
     keys = sortKeysById();
@@ -202,6 +207,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
           keysToCreate,
           expectedExpiryInDays,
           expectedTtlInDays,
+          false,
           Instant.now());
     } catch (ServiceException e) {
       List<String> keys = sortKeysById();

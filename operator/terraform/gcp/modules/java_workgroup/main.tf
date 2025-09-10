@@ -49,6 +49,24 @@ module "jobqueue" {
   max_undelivered_message_age_sec = var.jobqueue_max_undelivered_message_age_sec
 }
 
+module "job_queue_topic_name" {
+  source         = "../parameters"
+  environment    = var.environment
+  workgroup      = var.workgroup
+  parameter_name = "JOB_PUBSUB_TOPIC_NAME"
+  // Terraform definition of topic id and name are the opposite of GCP API definition
+  parameter_value = module.jobqueue.jobqueue_pubsub_topic_id
+}
+
+module "job_queue_subscription_name" {
+  source         = "../parameters"
+  environment    = var.environment
+  workgroup      = var.workgroup
+  parameter_name = "JOB_PUBSUB_SUBSCRIPTION_NAME"
+  // Terraform definition of subscription id and name are the opposite of GCP API definition
+  parameter_value = module.jobqueue.jobqueue_pubsub_sub_id
+}
+
 module "worker" {
   source                        = "../worker/java_worker"
   environment                   = var.environment
@@ -92,7 +110,6 @@ module "worker" {
   alarm_duration_sec                                  = var.worker_alarm_duration_sec
   alarm_eval_period_sec                               = var.worker_alarm_eval_period_sec
   notification_channel_id                             = var.notification_channel_id
-  java_job_validations_to_alert                       = var.java_job_validations_to_alert
   enable_new_metrics                                  = var.enable_remote_metric_aggregation
   enable_legacy_metrics                               = var.enable_legacy_metrics
   legacy_jobclient_job_validation_failure_metric_type = var.legacy_jobclient_job_validation_failure_metric_type

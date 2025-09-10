@@ -40,7 +40,8 @@ public abstract class KeySetConfig {
       int validityInDays,
       int ttlInDays,
       int createMaxDaysAhead,
-      int overlapPeriodDays) {
+      int overlapPeriodDays,
+      boolean noRefreshWindow) {
     return new AutoValue_KeySetConfig(
         name,
         tinkTemplate,
@@ -48,7 +49,8 @@ public abstract class KeySetConfig {
         validityInDays,
         ttlInDays,
         createMaxDaysAhead,
-        overlapPeriodDays);
+        overlapPeriodDays,
+        noRefreshWindow);
   }
 
   /* Returns the name of the key set. */
@@ -71,4 +73,7 @@ public abstract class KeySetConfig {
 
   /* Returns number of days active keys can overlap. */
   public abstract int getOverlapPeriodDays();
+
+  /* Returns number of days active keys can overlap. */
+  public abstract boolean getNoRefreshWindow();
 }

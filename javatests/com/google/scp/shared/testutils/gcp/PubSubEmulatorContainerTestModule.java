@@ -21,6 +21,7 @@ import com.google.api.gax.grpc.GrpcTransportChannel;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
 import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.Publisher;
+import com.google.cloud.pubsub.v1.stub.PublisherStub;
 import com.google.cloud.pubsub.v1.stub.SubscriberStub;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -83,5 +84,17 @@ public class PubSubEmulatorContainerTestModule extends AbstractModule {
   SubscriberStub provideSubscriber(TransportChannelProvider channelProvider) throws IOException {
     return PubSubContainerUtil.createSubscriptionStub(
         channelProvider, NoCredentialsProvider.create());
+  }
+
+  @Provides
+  @Singleton
+  PublisherStub providePublisherStub(TransportChannelProvider channelProvider) throws IOException {
+    NoCredentialsProvider credentialsProvider = NoCredentialsProvider.create();
+
+    PubSubContainerUtil.createTopic(projectId, topicId, channelProvider, credentialsProvider);
+    PubSubContainerUtil.createSubscription(
+        projectId, topicId, subscriptionId, channelProvider, credentialsProvider);
+
+    return PubSubContainerUtil.createPublisherStub(channelProvider, NoCredentialsProvider.create());
   }
 }

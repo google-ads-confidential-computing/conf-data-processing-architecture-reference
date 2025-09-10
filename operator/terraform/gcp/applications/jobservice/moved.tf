@@ -58,3 +58,93 @@ moved {
   from = module.worker.module.base_worker.google_project_iam_member.worker_pubsub_publisher_iam
   to   = module.worker_service_account.google_project_iam_member.worker_pubsub_publisher_iam
 }
+
+moved {
+  from = module.worker[0].module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric[0]
+}
+
+moved {
+  from = module.worker[0].module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_metric[0]
+}
+
+moved {
+  from = module.worker[0].module.java_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_metric[0]
+}
+
+moved {
+  from = module.worker[0].module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_counter_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_counter_metric[0]
+}
+
+moved {
+  from = module.worker[0].module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_counter_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_counter_metric[0]
+}
+
+moved {
+  from = module.worker[0].module.java_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_new_metric[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_new_metric[0]
+}
+
+moved {
+  from = module.worker[0].module.java_custom_monitoring[0].google_monitoring_alert_policy.jobclient_job_validation_failure_alert[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_alert_policy.jobclient_job_validation_failure_alert[0]
+}
+
+moved {
+  from = module.worker[0].module.java_custom_monitoring[0].google_monitoring_alert_policy.worker_job_error_alert[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_alert_policy.worker_job_error_alert[0]
+}
+
+moved {
+  from = module.worker[0].module.java_custom_monitoring[0].google_monitoring_alert_policy.jobclient_job_validation_failure_counter_alert[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_alert_policy.jobclient_job_validation_failure_counter_alert[0]
+}
+
+moved {
+  from = module.worker[0].module.java_custom_monitoring[0].google_monitoring_alert_policy.worker_job_error_new_alert[0]
+  to   = module.java_global_custom_monitoring[0].google_monitoring_alert_policy.worker_job_error_new_alert[0]
+}
+
+moved {
+  from = module.worker
+  to   = module.worker[0]
+}
+
+moved {
+  from = module.autoscaling
+  to   = module.autoscaling[0]
+}
+
+moved {
+  from = module.jobqueue
+  to   = module.jobqueue[0]
+}
+
+moved {
+  from = module.job_queue_topic_id
+  to   = module.job_queue_topic_id[0]
+}
+
+moved {
+  from = module.job_queue_topic_name
+  to   = module.job_queue_topic_name[0]
+}
+
+moved {
+  from = module.job_queue_subscription_id
+  to   = module.job_queue_subscription_id[0]
+}
+
+moved {
+  from = module.job_queue_subscription_name
+  to   = module.job_queue_subscription_name[0]
+}
+
+moved {
+  from = module.worker_managed_instance_group_name
+  to   = module.worker_managed_instance_group_name[0]
+}

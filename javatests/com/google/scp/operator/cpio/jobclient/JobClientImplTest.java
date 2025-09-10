@@ -21,6 +21,8 @@ import static com.google.common.truth.Truth8.assertThat;
 import static com.google.scp.shared.clients.configclient.model.ErrorReason.INVALID_PARAMETER_NAME;
 import static com.google.scp.shared.clients.configclient.model.WorkerParameter.JOB_COMPLETION_NOTIFICATIONS_TOPIC_ID;
 import static com.google.scp.shared.clients.configclient.model.WorkerParameter.NOTIFICATIONS_TOPIC_ID;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -48,6 +50,7 @@ import com.google.scp.operator.cpio.jobclient.model.GetJobRequest;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
+import com.google.scp.operator.cpio.jobclient.model.WorkgroupAllocationFuncResponse;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobResultGenerator;
 import com.google.scp.operator.cpio.jobclient.testing.OneTimePullBackoff;
@@ -889,6 +892,177 @@ public final class JobClientImplTest {
                 .getErrorSummary()
                 .getErrorMessages(0))
         .isEqualTo(sampleErrorMessage);
+  }
+
+  @Test
+  public void processWorkgroupAllocation_sendToWorkgroupInvalidWorkgroup()
+      throws JobClientException {
+    jobQueue.setJobQueueItemToBeReceived(Optional.of(baseJobQueueItem));
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(baseJobMetadata));
+    Job job = jobClient.buildJob(baseJobQueueItem, baseJobMetadata);
+    GetJobRequest getJobRequest =
+        GetJobRequest.builder()
+            .setWorkgroupAllocationFunc(
+                (Job jobInQueue) ->
+                    WorkgroupAllocationFuncResponse.builder()
+                        .setWorkgroupId("other-workgroup")
+                        .build())
+            .build();
+
+    assertThrows(
+        JobClientException.class,
+        () ->
+            jobClient.processWorkgroupAllocation(
+                "current-workgroup", job, baseJobQueueItem, getJobRequest, baseJobMetadata));
+
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getJobStatus())
+        .isEqualTo(JobStatus.RECEIVED);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getNumAttempts()).isEqualTo(1);
+    assertThat(jobQueue.getLastJobQueueItemSent()).isNull();
+  }
+
+  @Test
+  public void processWorkgroupAllocation_workgroupAllocationFailureResponse()
+      throws JobClientException {
+    jobQueue.setJobQueueItemToBeReceived(Optional.of(baseJobQueueItem));
+    jobQueue.setValidWorkgroup(true);
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(baseJobMetadata));
+    Job job = jobClient.buildJob(baseJobQueueItem, baseJobMetadata);
+    ResultInfo resultInfo = ResultInfo.newBuilder().setReturnCode("ALLOCATION_FAILURE").build();
+    GetJobRequest getJobRequest =
+        GetJobRequest.builder()
+            .setWorkgroupAllocationFunc(
+                (Job jobInQueue) ->
+                    WorkgroupAllocationFuncResponse.builder().setResultInfo(resultInfo).build())
+            .build();
+
+    boolean result =
+        jobClient.processWorkgroupAllocation(
+            "current-workgroup", job, baseJobQueueItem, getJobRequest, baseJobMetadata);
+
+    assertTrue(result);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getJobStatus())
+        .isEqualTo(JobStatus.RECEIVED);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getNumAttempts()).isEqualTo(1);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getResultInfo()).isEqualTo(resultInfo);
+    assertThat(jobQueue.getLastJobQueueItemSent()).isNull();
+  }
+
+  @Test
+  public void processWorkgroupAllocation_workgroupAllocationError() throws JobClientException {
+    jobQueue.setJobQueueItemToBeReceived(Optional.of(baseJobQueueItem));
+    jobQueue.setValidWorkgroup(true);
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(baseJobMetadata));
+    Job job = jobClient.buildJob(baseJobQueueItem, baseJobMetadata);
+    GetJobRequest getJobRequest =
+        GetJobRequest.builder()
+            .setWorkgroupAllocationFunc(
+                (Job jobInQueue) -> {
+                  throw new RuntimeException("workgroup allocation error");
+                })
+            .build();
+
+    assertThrows(
+        JobClientException.class,
+        () ->
+            jobClient.processWorkgroupAllocation(
+                "current-workgroup", job, baseJobQueueItem, getJobRequest, baseJobMetadata));
+
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getJobStatus())
+        .isEqualTo(JobStatus.RECEIVED);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getNumAttempts()).isEqualTo(1);
+    assertThat(jobQueue.getLastJobQueueItemSent()).isNull();
+  }
+
+  @Test
+  public void processWorkgroupAllocation_sendToWorkgroup() throws JobClientException {
+    jobQueue.setJobQueueItemToBeReceived(Optional.of(baseJobQueueItem));
+    jobQueue.setValidWorkgroup(true);
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(baseJobMetadata));
+    Job job = jobClient.buildJob(baseJobQueueItem, baseJobMetadata);
+    GetJobRequest getJobRequest =
+        GetJobRequest.builder()
+            .setWorkgroupAllocationFunc(
+                (Job jobInQueue) ->
+                    WorkgroupAllocationFuncResponse.builder()
+                        .setWorkgroupId("other-workgroup")
+                        .build())
+            .build();
+
+    boolean result =
+        jobClient.processWorkgroupAllocation(
+            "current-workgroup", job, baseJobQueueItem, getJobRequest, baseJobMetadata);
+
+    assertTrue(result);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getJobStatus())
+        .isEqualTo(JobStatus.RECEIVED);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getNumAttempts()).isEqualTo(0);
+    assertThat(jobMetadataDb.getLastJobMetadataUpdated().getTargetWorkgroup())
+        .isEqualTo("other-workgroup");
+    assertThat(jobQueue.getLastJobQueueItemSent()).isEqualTo(baseJobQueueItem);
+  }
+
+  @Test
+  public void processWorkgroupAllocation_allocateSameWorkgroup() throws JobClientException {
+    jobQueue.setJobQueueItemToBeReceived(Optional.of(baseJobQueueItem));
+    jobQueue.setValidWorkgroup(true);
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(baseJobMetadata));
+    Job job = jobClient.buildJob(baseJobQueueItem, baseJobMetadata);
+    GetJobRequest getJobRequest =
+        GetJobRequest.builder()
+            .setWorkgroupAllocationFunc(
+                (Job jobInQueue) ->
+                    WorkgroupAllocationFuncResponse.builder()
+                        .setWorkgroupId("current-workgroup")
+                        .build())
+            .build();
+
+    boolean result =
+        jobClient.processWorkgroupAllocation(
+            "current-workgroup", job, baseJobQueueItem, getJobRequest, baseJobMetadata);
+
+    assertFalse(result);
+    assertNull(jobMetadataDb.getLastJobMetadataUpdated());
+    assertThat(jobQueue.getLastJobQueueItemSent()).isNull();
+  }
+
+  @Test
+  public void processWorkgroupAllocation_alreadyAssignedSameWorkgroup() throws JobClientException {
+    jobQueue.setJobQueueItemToBeReceived(Optional.of(baseJobQueueItem));
+    jobQueue.setValidWorkgroup(true);
+    JobMetadata jobMetadata =
+        baseJobMetadata.toBuilder().setTargetWorkgroup("current-workgroup").build();
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(jobMetadata));
+    Job job = jobClient.buildJob(baseJobQueueItem, jobMetadata);
+    GetJobRequest getJobRequest = GetJobRequest.builder().build();
+
+    boolean result =
+        jobClient.processWorkgroupAllocation(
+            "current-workgroup", job, baseJobQueueItem, getJobRequest, baseJobMetadata);
+
+    assertFalse(result);
+    assertNull(jobMetadataDb.getLastJobMetadataUpdated());
+    assertThat(jobQueue.getLastJobQueueItemSent()).isNull();
+  }
+
+  @Test
+  public void processWorkgroupAllocation_alreadyAssignedDifferentWorkgroup()
+      throws JobClientException {
+    jobQueue.setJobQueueItemToBeReceived(Optional.of(baseJobQueueItem));
+    jobQueue.setValidWorkgroup(true);
+    JobMetadata jobMetadata =
+        baseJobMetadata.toBuilder().setTargetWorkgroup("other-workgroup").build();
+    jobMetadataDb.setJobMetadataToReturn(Optional.of(jobMetadata));
+    Job job = jobClient.buildJob(baseJobQueueItem, jobMetadata);
+    GetJobRequest getJobRequest = GetJobRequest.builder().build();
+
+    boolean result =
+        jobClient.processWorkgroupAllocation(
+            "current-workgroup", job, baseJobQueueItem, getJobRequest, baseJobMetadata);
+
+    assertTrue(result);
+    assertNull(jobMetadataDb.getLastJobMetadataUpdated());
+    assertThat(jobQueue.getLastJobQueueItemSent()).isEqualTo(baseJobQueueItem);
   }
 
   private static final class TestEnv extends AbstractModule {

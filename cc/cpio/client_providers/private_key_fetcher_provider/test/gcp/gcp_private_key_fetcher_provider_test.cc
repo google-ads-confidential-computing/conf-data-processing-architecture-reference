@@ -19,6 +19,7 @@
 
 #include <functional>
 #include <memory>
+#include <regex>
 #include <string>
 
 #include "absl/strings/str_cat.h"
@@ -42,6 +43,7 @@ using google::scp::core::HttpMethod;
 using google::scp::core::HttpRequest;
 using google::scp::core::HttpResponse;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::common::TimeProvider;
 using google::scp::core::errors::
     SC_GCP_PRIVATE_KEY_FETCHER_PROVIDER_CREDENTIALS_PROVIDER_NOT_FOUND;
 using google::scp::core::errors::
@@ -58,9 +60,13 @@ using std::make_shared;
 using std::make_unique;
 using std::move;
 using std::shared_ptr;
+using std::stoll;
 using std::string;
 using std::unique_ptr;
 using std::vector;
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using std::chrono::minutes;
 using testing::Pair;
 using testing::Pointee;
 using testing::Return;
@@ -86,6 +92,8 @@ constexpr char kKeySetNameSuffix[] = "/sets";
 constexpr char kListKeysByTimeUri[] = ":recent";
 constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
 constexpr char kActiveKeysSuffix[] = "activeKeys";
+constexpr char kActiveKeyQueryTimeRangePattern[] =
+    "startEpochMillis=%d&endEpochMillis=%d";
 }  // namespace
 
 namespace google::scp::cpio::client_providers::test {
@@ -313,6 +321,60 @@ TEST_F(GcpPrivateKeyFetcherProviderTest,
   request_->key_id = nullptr;
   request_->key_set_name = make_shared<string>(kKeySetName);
   request_->max_age_seconds = 0;
+  request_->active_key_query_start_time_ms = 1111;
+  request_->active_key_query_end_time_ms = 2222;
+
+  AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
+      request_,
+      [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
+        EXPECT_SUCCESS(context.result);
+        const auto& signed_request_ = *context.response;
+
+        EXPECT_EQ(signed_request_.method, HttpMethod::GET);
+        EXPECT_THAT(signed_request_.headers,
+                    Pointee(UnorderedElementsAre(Pair(
+                        kAuthorizationHeaderKey,
+                        absl::StrCat(kBearerTokenPrefix, kSessionTokenMock)))));
+        string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberBetaSuffix,
+                                  kEncryptionKeyUrlSuffix, kKeySetNameSuffix,
+                                  "/", kKeySetName, "/", kActiveKeysSuffix);
+        string query =
+            absl::StrFormat(kActiveKeyQueryTimeRangePattern, 1111, 2222);
+        EXPECT_EQ(*signed_request_.path, uri);
+        EXPECT_EQ(*signed_request_.query, query);
+        condition = true;
+        return SuccessExecutionResult();
+      });
+
+  gcp_private_key_fetcher_provider_->SignHttpRequest(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST_F(GcpPrivateKeyFetcherProviderTest,
+       SignHttpRequestForActiveEncryptionKeysWithoutQueryTimeRange) {
+  atomic<bool> condition = false;
+
+  EXPECT_CALL(*credentials_provider_,
+              GetSessionTokenForTargetAudience(
+                  TargetAudienceUriEquals(kPrivateKeyCloudfunctionUri)))
+      .WillOnce([=](AsyncContext<GetSessionTokenForTargetAudienceRequest,
+                                 GetSessionTokenResponse>& context) {
+        context.response = make_shared<GetSessionTokenResponse>();
+        context.response->session_token =
+            make_shared<string>(kSessionTokenMock);
+        context.result = SuccessExecutionResult();
+        context.Finish();
+      });
+
+  auto endpoint = make_shared<PrivateKeyEndpoint>();
+  endpoint->set_endpoint(kPrivateKeyBaseUriWithVersionSuffix);
+  endpoint->set_key_service_region(kRegion);
+  endpoint->set_account_identity(kAccountIdentity);
+  endpoint->set_gcp_cloud_function_url(kPrivateKeyCloudfunctionUri);
+  request_->key_endpoint = move(endpoint);
+  request_->key_id = nullptr;
+  request_->key_set_name = make_shared<string>(kKeySetName);
+  request_->max_age_seconds = 0;
 
   AsyncContext<PrivateKeyFetchingRequest, HttpRequest> context(
       request_,
@@ -329,6 +391,23 @@ TEST_F(GcpPrivateKeyFetcherProviderTest,
                                   kEncryptionKeyUrlSuffix, kKeySetNameSuffix,
                                   "/", kKeySetName, "/", kActiveKeysSuffix);
         EXPECT_EQ(*signed_request_.path, uri);
+
+        // Extracts the start_time and end_time values from the query.
+        std::regex pattern("(\\d+)");
+        std::smatch timestamp_matches;
+        EXPECT_TRUE(std::regex_search(*signed_request_.query, timestamp_matches,
+                                      pattern));
+        EXPECT_EQ(timestamp_matches.size(), 2);
+        EXPECT_EQ(timestamp_matches[0], timestamp_matches[1]);
+        // The default timestamp should be one minute from now.
+        int now_in_minutes = duration_cast<minutes>(
+                                 TimeProvider::GetWallTimestampInNanoseconds())
+                                 .count();
+        EXPECT_EQ(duration_cast<minutes>(
+                      milliseconds(stoll(timestamp_matches[0].str())))
+                      .count(),
+                  now_in_minutes);
+
         condition = true;
         return SuccessExecutionResult();
       });

@@ -35,14 +35,14 @@ locals {
   )
 
   service_environment_variables = {
-    PROJECT_ID             = var.project_id
-    INSTANCE_ID            = var.spanner_instance_name
-    DATABASE_ID            = var.spanner_database_name
-    PUBSUB_TOPIC_ID        = var.job_queue_topic
-    PUBSUB_SUBSCRIPTION_ID = var.job_queue_sub
-    JOB_METADATA_TTL       = var.job_metadata_table_ttl_days
-    JOB_TABLE_NAME         = var.job_table_name
-    JOB_VERSION            = var.job_version
+    PROJECT_ID               = var.project_id
+    INSTANCE_ID              = var.spanner_instance_name
+    DATABASE_ID              = var.spanner_database_name
+    PUBSUB_TOPIC_NAME        = var.job_queue_topic
+    PUBSUB_SUBSCRIPTION_NAME = var.job_queue_sub
+    JOB_METADATA_TTL         = var.job_metadata_table_ttl_days
+    JOB_TABLE_NAME           = var.job_table_name
+    JOB_VERSION              = var.job_version
   }
 
   create_multiple_cloud_run_frontends = length(var.frontend_service_cloud_run_regions) > 0

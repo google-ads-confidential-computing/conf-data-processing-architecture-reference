@@ -64,6 +64,19 @@ public final class PubSubJobQueueTest {
 
     assertThat(jobQueueItem).isPresent();
     assertThat(jobQueueItem.get().getJobKeyString()).isEqualTo(jobKey.getJobRequestId());
+    pubSubJobQueue.acknowledgeJobCompletion(jobQueueItem.get());
+  }
+
+  @Test
+  public void pushJobToAnotherQueue() throws Exception {
+    // no setup
+
+    pubSubJobQueue.sendJob(jobKey, serverJobId, "workgroup");
+    Optional<JobQueueItem> jobQueueItem = pubSubJobQueue.receiveJob();
+
+    assertThat(jobQueueItem).isPresent();
+    assertThat(jobQueueItem.get().getJobKeyString()).isEqualTo(jobKey.getJobRequestId());
+    pubSubJobQueue.acknowledgeJobCompletion(jobQueueItem.get());
   }
 
   @Test

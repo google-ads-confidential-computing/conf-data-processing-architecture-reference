@@ -28,3 +28,27 @@ variable "enable_legacy_metrics" {
   description = "When true, disable legacy metrics created before enable remote metric aggregation"
   type        = bool
 }
+
+
+variable "alarm_eval_period_sec" {
+  description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
+  type        = string
+}
+
+variable "alarm_duration_sec" {
+  description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
+  type        = string
+}
+
+variable "notification_channel_id" {
+  description = "Notification channel to which to send alarms."
+  type        = string
+}
+
+variable "java_job_validations_to_alert" {
+  description = <<-EOT
+      Job validations to alarm for Java CPIO Job Client. Supported validations:
+      ["JobValidatorCheckFields", "JobValidatorCheckRetryLimit", "JobValidatorCheckStatus"]
+  EOT
+  type        = list(string)
+}

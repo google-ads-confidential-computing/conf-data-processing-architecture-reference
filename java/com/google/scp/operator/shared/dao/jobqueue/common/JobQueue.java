@@ -33,11 +33,21 @@ import java.util.Optional;
 public interface JobQueue {
 
   /**
-   * Place an item on the queue.
+   * Place a message on the job queue.
    *
    * @param jobKey the identifier for the job to be placed the queue
+   * @param serverJobId the SCP internal server job id
    */
   void sendJob(JobKey jobKey, String serverJobId) throws JobQueueException;
+
+  /**
+   * Place a message on a specific job queue.
+   *
+   * @param jobKey the identifier for the job to be placed the queue
+   * @param serverJobId the SCP internal server job id
+   * @param workgroupId the target workgroup to send the message
+   */
+  void sendJob(JobKey jobKey, String serverJobId, String workgroupId) throws JobQueueException;
 
   /**
    * Blocking call to receive a message.
@@ -66,6 +76,15 @@ public interface JobQueue {
    */
   void modifyJobProcessingTime(JobQueueItem jobQueueItem, Duration processingTime)
       throws JobQueueException;
+
+  /**
+   * Validates that the workgroup has an associated job queue.
+   *
+   * @param workgroupId the workgroup id to validate
+   * @return true if the workgroup has an associated job queue, false otherwise
+   * @throws JobQueueException
+   */
+  boolean validateWorkgroupJobQueue(String workgroupId) throws JobQueueException;
 
   /** Represents an exception thrown by the {@code JobQueue} class. */
   class JobQueueException extends Exception {

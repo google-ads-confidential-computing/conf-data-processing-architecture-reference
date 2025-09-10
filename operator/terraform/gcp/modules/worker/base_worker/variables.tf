@@ -111,6 +111,10 @@ variable "worker_container_log_redirect" {
 variable "worker_image" {
   description = "The worker docker image."
   type        = string
+  validation {
+    condition     = var.worker_image != null && var.worker_image != ""
+    error_message = "worker_image must be specified."
+  }
 }
 
 variable "worker_image_signature_repos" {

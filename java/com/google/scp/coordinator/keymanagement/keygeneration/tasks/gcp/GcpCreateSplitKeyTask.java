@@ -103,7 +103,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
    * The actual key generation process. Performs the necessary encryption key generation and
    * splitting, key storage request, and database persistence with signatures.
    *
-   * @see CreateSplitKeyTaskBase#createSplitKey(String, String, int, int, int, Instant)
+   * @see CreateSplitKeyTaskBase#createSplitKey(String, String, int, int, int, boolean, Instant)
    */
   public void createSplitKey(
       String setName,
@@ -111,6 +111,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       int count,
       int validityInDays,
       int ttlInDays,
+      boolean noRefreshWindow,
       Instant activation)
       throws ServiceException {
     createSplitKeyBase(
@@ -119,6 +120,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
         count,
         validityInDays,
         ttlInDays,
+        noRefreshWindow,
         activation,
         Optional.empty(),
         populateMigrationDataProvider.get());

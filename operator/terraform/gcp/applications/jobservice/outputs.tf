@@ -20,7 +20,7 @@ output "frontend_service_cloudfunction_url" {
 }
 
 output "worker_service_account_email" {
-  value       = module.worker.worker_service_account_email
+  value       = module.worker_service_account.worker_service_account_email
   description = "The worker service account email to provide to coordinator."
 }
 

@@ -83,6 +83,7 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       int count,
       int validityInDays,
       int ttlInDays,
+      boolean noRefreshWindow,
       Instant activation)
       throws ServiceException {
     // Reuse same data key for key batch.
@@ -95,6 +96,7 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
         count,
         validityInDays,
         ttlInDays,
+        noRefreshWindow,
         activation,
         Optional.of(dataKey),
         populateMigrationData);
@@ -125,8 +127,8 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
     return this.keyEncryptionKeyAead;
   }
 
-  @Override
   /** Migrations in AWS are not supported. Returns the standard keyEncryptionKeyAead. */
+  @Override
   protected Aead getMigrationAead(String migrationKmsKeyEncryptionKeyUri) {
     return this.keyEncryptionKeyAead;
   }

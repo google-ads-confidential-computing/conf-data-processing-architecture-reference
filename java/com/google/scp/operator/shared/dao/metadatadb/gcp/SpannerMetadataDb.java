@@ -25,6 +25,7 @@ import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataD
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb.SpannerJobMetadataTableColumn.REQUEST_UPDATED_AT_COLUMN;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb.SpannerJobMetadataTableColumn.RESULT_INFO_COLUMN;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb.SpannerJobMetadataTableColumn.SERVER_JOB_ID_COLUMN;
+import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb.SpannerJobMetadataTableColumn.TARGET_WORKGROUP_COLUMN;
 import static com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb.SpannerJobMetadataTableColumn.TTL;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 import static java.lang.annotation.ElementType.FIELD;
@@ -157,6 +158,10 @@ public final class SpannerMetadataDb implements JobMetadataDb {
             .to(com.google.cloud.Timestamp.fromProto(jobMetadata.getRequestProcessingStartedAt()));
       }
 
+      if (jobMetadata.hasTargetWorkgroup()) {
+        insertBuilder.set(TARGET_WORKGROUP_COLUMN.label).to(jobMetadata.getTargetWorkgroup());
+      }
+
       ImmutableList<Mutation> inserts = ImmutableList.of(insertBuilder.build());
       logger.debug("executing spanner inserts: " + inserts);
       dbClient.write(inserts);
@@ -237,6 +242,12 @@ public final class SpannerMetadataDb implements JobMetadataDb {
                                 jobMetadata.getRequestProcessingStartedAt()));
                   }
 
+                  if (jobMetadata.hasTargetWorkgroup()) {
+                    updateBuilder
+                        .set(TARGET_WORKGROUP_COLUMN.label)
+                        .to(jobMetadata.getTargetWorkgroup());
+                  }
+
                   ImmutableList<Mutation> updates = ImmutableList.of(updateBuilder.build());
                   logger.debug("Buffering spanner updates: " + updates);
                   transaction.buffer(updates);
@@ -300,6 +311,10 @@ public final class SpannerMetadataDb implements JobMetadataDb {
       jobMetadataBuilder.setRequestProcessingStartedAt(requestProcessingStartedAt);
     }
 
+    if (!resultSet.isNull(TARGET_WORKGROUP_COLUMN.label)) {
+      String targetWorkgroup = resultSet.getString(TARGET_WORKGROUP_COLUMN.label);
+      jobMetadataBuilder.setTargetWorkgroup(targetWorkgroup);
+    }
     return jobMetadataBuilder.build();
   }
 
@@ -314,7 +329,8 @@ public final class SpannerMetadataDb implements JobMetadataDb {
     REQUEST_RECEIVED_AT_COLUMN("RequestReceivedAt"),
     REQUEST_UPDATED_AT_COLUMN("RequestUpdatedAt"),
     TTL("Ttl"),
-    REQUEST_PROCESSING_STARTED_AT("RequestProcessingStartedAt");
+    REQUEST_PROCESSING_STARTED_AT("RequestProcessingStartedAt"),
+    TARGET_WORKGROUP_COLUMN("TargetWorkgroup");
 
     /** Value of a {@code SpannerJobMetadataTableColumn} constant. */
     public final String label;

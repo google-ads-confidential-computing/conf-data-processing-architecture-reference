@@ -34,7 +34,7 @@ public final class LocalParameterClient implements ParameterClient {
 
   /** Creates a new instance of the {@code LocalParameterClient} class. */
   @Inject
-  LocalParameterClient(@ParameterValues ImmutableMap<String, String> parameterValues) {
+  public LocalParameterClient(@ParameterValues ImmutableMap<String, String> parameterValues) {
     this.parameterValues = parameterValues;
   }
 

@@ -27,6 +27,7 @@ import com.google.scp.operator.cpio.jobclient.model.GetJobRequest;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
+import com.google.scp.operator.cpio.jobclient.model.WorkgroupAllocationFuncResponse;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.model.Annotations.EnableRemoteMetricAggregation;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
@@ -106,6 +107,14 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
                     (Job jobInQueue) -> {
                       return getTopicIdByJobType(jobInQueue);
                     })
+                .setWorkgroupAllocationFunc(
+                    (Job jobInQueue) ->
+                        WorkgroupAllocationFuncResponse.builder()
+                            .setWorkgroupId(
+                                jobInQueue
+                                    .requestInfo()
+                                    .getJobParametersOrDefault("targetWorkgroup", ""))
+                            .build())
                 .build();
         job = jobClient.getJob(request);
         if (enableRemoteAggregationMetrics) {

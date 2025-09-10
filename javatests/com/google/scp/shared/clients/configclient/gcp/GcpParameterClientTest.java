@@ -297,6 +297,37 @@ public final class GcpParameterClientTest {
     verify(secretManagerServiceClientProxy).accessSecretVersion(secretName);
   }
 
+  @Test
+  public void getParameter_withWorkgroupOverride() throws Exception {
+    String secretName = getSecretName("prefix-environment-override-param");
+    String secretValue = "testVal";
+    ByteString data = ByteString.copyFrom(secretValue.getBytes(StandardCharsets.UTF_8));
+    when(metadataServiceClient.getMetadata(eq("scp-environment")))
+        .thenReturn(Optional.of(ENVIRONMENT));
+    when(metadataServiceClient.getMetadata(eq("scp-workgroup"))).thenReturn(Optional.empty());
+    when(secretManagerServiceClientProxy.accessSecretVersion(secretName))
+        .thenReturn(
+            AccessSecretVersionResponse.newBuilder()
+                .setPayload(SecretPayload.newBuilder().setData(data))
+                .build());
+
+    GetParameterRequest getParameterRequest =
+        GetParameterRequest.builder()
+            .setParamPrefix("prefix")
+            .setParamName("param")
+            .setIncludeEnvironmentPrefix(true)
+            .setIncludeWorkgroupPrefix(true)
+            .setWorkgroupOverride("override")
+            .build();
+    Optional<String> val = parameterClient.getParameter(getParameterRequest);
+
+    assertThat(val).isPresent();
+    assertThat(val.get()).isEqualTo(secretValue);
+    verify(metadataServiceClient).getMetadata(eq("scp-environment"));
+    verify(metadataServiceClient, never()).getMetadata(eq("scp-workgroup"));
+    verify(secretManagerServiceClientProxy).accessSecretVersion(secretName);
+  }
+
   private String getSecretName(String parameter) {
     return String.format("projects/%s/secrets/%s/versions/latest", PROJECT_ID, parameter);
   }

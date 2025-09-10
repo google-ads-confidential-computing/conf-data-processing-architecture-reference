@@ -25,7 +25,12 @@ public abstract class PubSubJobQueueConfig {
 
   /** Returns a new instance of the builder for this class. */
   public static PubSubJobQueueConfig.Builder builder() {
-    return new AutoValue_PubSubJobQueueConfig.Builder();
+    return new AutoValue_PubSubJobQueueConfig.Builder()
+        .setPubSubTopicName("")
+        .setPubSubSubscriptionName("")
+        .setPubSubSubscriptionId("")
+        .setPubSubTopicId("")
+        .setGcpProjectId("");
   }
 
   /** Set the topic ID of the job queue. */
@@ -33,6 +38,12 @@ public abstract class PubSubJobQueueConfig {
 
   /** Set the subscription ID of the job queue. */
   public abstract String pubSubSubscriptionId();
+
+  /** Set the topic name of the job queue. */
+  public abstract String pubSubTopicName();
+
+  /** Set the subscription name of the job queue. */
+  public abstract String pubSubSubscriptionName();
 
   /** Set the maximum size of the job queue messages. */
   public abstract int pubSubMaxMessageSizeBytes();
@@ -55,6 +66,12 @@ public abstract class PubSubJobQueueConfig {
 
     /** Get the subscription ID of the job queue. */
     public abstract Builder setPubSubSubscriptionId(String subscriptionId);
+
+    /** Get the topic name of the job queue. */
+    public abstract Builder setPubSubTopicName(String topicName);
+
+    /** Get the subscription name of the job queue. */
+    public abstract Builder setPubSubSubscriptionName(String subscriptionName);
 
     /** Get the maximum size of the job queue messages. */
     public abstract Builder setPubSubMaxMessageSizeBytes(int maxMessageSizeBytes);

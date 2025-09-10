@@ -13,7 +13,7 @@
 # limitations under the License.
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
-load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_zip")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -39,6 +39,7 @@ java_library(
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/gcp/util:json_util",
         "//java/external:guava",
         "//java/external:guice",

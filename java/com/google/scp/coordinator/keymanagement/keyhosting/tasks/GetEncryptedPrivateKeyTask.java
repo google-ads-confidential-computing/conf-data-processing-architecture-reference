@@ -16,18 +16,20 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
+import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.KeyMigrationVendingUtil.vendAccordingToConfig;
 import static com.google.scp.coordinator.keymanagement.shared.converter.EncryptionKeyConverter.toApiEncryptionKey;
+import static com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestHeaderParsingUtil.getCallerEmail;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigCacheUsers;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.GetEncryptedKeyCache;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
-import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestHeaderParsingUtil;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -49,6 +51,7 @@ public class GetEncryptedPrivateKeyTask extends ApiTask {
   private final boolean enableCache;
   private final LogMetricHelper logMetricHelper;
   private final ImmutableSet<String> allowedMigrators;
+  private final ImmutableSet<String> cacheUsers;
 
   @Inject
   public GetEncryptedPrivateKeyTask(
@@ -56,8 +59,9 @@ public class GetEncryptedPrivateKeyTask extends ApiTask {
       GetEncryptedKeyCache cache,
       @EnableCache Boolean enableCache,
       LogMetricHelper logMetricHelper,
-      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators) {
-    this(keyDb, cache, enableCache, logMetricHelper, "v1Alpha", allowedMigrators);
+      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators,
+      @KeySetsVendingConfigCacheUsers ImmutableSet<String> cacheUsers) {
+    this(keyDb, cache, enableCache, logMetricHelper, "v1Alpha", allowedMigrators, cacheUsers);
   }
 
   protected GetEncryptedPrivateKeyTask(
@@ -66,7 +70,8 @@ public class GetEncryptedPrivateKeyTask extends ApiTask {
       Boolean enableCache,
       LogMetricHelper logMetricHelper,
       String apiVersion,
-      ImmutableSet<String> allowedMigrators) {
+      ImmutableSet<String> allowedMigrators,
+      ImmutableSet<String> cacheUsers) {
     super(
         "GET",
         Pattern.compile("/encryptionKeys/(?<id>[a-zA-Z0-9\\-]+)"),
@@ -78,19 +83,19 @@ public class GetEncryptedPrivateKeyTask extends ApiTask {
     this.enableCache = enableCache;
     this.logMetricHelper = logMetricHelper;
     this.allowedMigrators = allowedMigrators;
+    this.cacheUsers = cacheUsers;
   }
 
   @Override
   protected void execute(Matcher matcher, RequestContext request, ResponseContext response)
       throws ServiceException {
+    String email = getCallerEmail(request).orElse("unknown");
     String id = matcher.group("id");
     try {
       EncryptionKey vendedEncryptionKey =
-          KeyMigrationVendingUtil.vendAccordingToConfig(
-              getKey(id), request, allowedMigrators, logMetricHelper);
+          vendAccordingToConfig(getKey(id, email), request, allowedMigrators, logMetricHelper);
       response.setBody(toApiEncryptionKey(vendedEncryptionKey));
     } catch (ServiceException e) {
-      String email = RequestHeaderParsingUtil.getCallerEmail(request).orElse("unknown");
       logger.error(
           logMetricHelper.format(
               "get_encrypted_private_key/error",
@@ -101,8 +106,8 @@ public class GetEncryptedPrivateKeyTask extends ApiTask {
   }
 
   /** Returns an {@link EncryptionKey} for a provided key ID. */
-  private EncryptionKey getKey(String id) throws ServiceException {
-    var key = enableCache ? cache.get(id) : keyDb.getKey(id);
+  private EncryptionKey getKey(String id, String email) throws ServiceException {
+    var key = isCacheEnabled(email) ? cache.get(id) : keyDb.getKey(id);
     var nowMilli = Instant.now().toEpochMilli();
     var activationAgeInMillis = nowMilli - key.getActivationTime();
     var dayInMillis = TimeUnit.DAYS.toMillis(1);
@@ -113,5 +118,9 @@ public class GetEncryptedPrivateKeyTask extends ApiTask {
             ImmutableMap.of(
                 "setName", key.getSetName(), "keyId", id, "days", Long.toString(days))));
     return key;
+  }
+
+  private boolean isCacheEnabled(String email) {
+    return enableCache || cacheUsers.contains(email);
   }
 }

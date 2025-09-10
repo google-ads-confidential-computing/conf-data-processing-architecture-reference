@@ -433,8 +433,10 @@ variable "key_sets_vending_config" {
 
   Attributes:
     allowed_migrators (list(string)) - The list of individual key set and/or caller emails allowed to consume migration key data.
+    cache_users       (list(string)) - The list of individual key set and/or caller emails allowed to use cache.
   EOT
   type = object({
     allowed_migrators = list(string)
+    cache_users       = optional(list(string))
   })
 }

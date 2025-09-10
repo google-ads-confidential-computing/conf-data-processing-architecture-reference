@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "core/interface/http_client_interface.h"
 #include "cpio/client_providers/interface/auth_token_provider_interface.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
@@ -60,6 +61,8 @@ constexpr char kActiveEncryptionKeyUrlSuffix[] = "/activeKeys";
 constexpr char kKeySetName[] = "sets";
 constexpr char kListKeysByTimeUri[] = ":recent";
 constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
+constexpr char kActiveKeyQueryTimeRangePattern[] =
+    "startEpochMillis=%d&endEpochMillis=%d";
 }  // namespace
 
 namespace google::scp::cpio::client_providers {
@@ -146,6 +149,9 @@ shared_ptr<HttpRequest> GcpPrivateKeyFetcherProvider::CreateHttpRequest(
         endpoint, kVersionNumberBetaSuffix, kEncryptionKeyUrlSuffix, "/",
         kKeySetName, "/", *request.key_set_name, kActiveEncryptionKeyUrlSuffix);
     http_request->path = make_shared<Uri>(base_uri);
+    http_request->query = make_shared<string>(absl::StrFormat(
+        kActiveKeyQueryTimeRangePattern, request.active_key_query_start_time_ms,
+        request.active_key_query_end_time_ms));
     return http_request;
   }
   base_uri =

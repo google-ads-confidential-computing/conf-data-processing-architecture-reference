@@ -19,12 +19,14 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.KeyMigrationVendingUtil.vendAccordingToConfig;
 import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.common.RequestContextUtil.getPositiveNumberRequestValue;
+import static com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestHeaderParsingUtil.getCallerEmail;
 import static java.time.Instant.ofEpochMilli;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigCacheUsers;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.AllKeysForSetNameCache;
 import com.google.scp.coordinator.keymanagement.shared.converter.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
@@ -51,6 +53,7 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
   private final boolean enableCache;
   private final ImmutableSet<String> allowedMigrators;
   private final LogMetricHelper logMetricHelper;
+  private final ImmutableSet<String> cacheUsers;
 
   @Inject
   GetActiveEncryptionKeysTask(
@@ -58,7 +61,8 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
       AllKeysForSetNameCache cache,
       @EnableCache Boolean enableCache,
       LogMetricHelper logMetricHelper,
-      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators) {
+      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators,
+      @KeySetsVendingConfigCacheUsers ImmutableSet<String> cacheUsers) {
     super(
         "GET",
         Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/activeKeys"),
@@ -70,6 +74,7 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
     this.enableCache = enableCache;
     this.allowedMigrators = allowedMigrators;
     this.logMetricHelper = logMetricHelper;
+    this.cacheUsers = cacheUsers;
   }
 
   @Override
@@ -83,7 +88,9 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
           SharedErrorReason.INVALID_ARGUMENT.name(),
           String.format("Start time %d cannot be after end time %d.", start, end));
     }
-    var keys = getActiveKeys(matcher.group("name"), start, end);
+
+    String email = getCallerEmail(request).orElse("unknown");
+    var keys = getActiveKeys(matcher.group("name"), start, end, email);
     response.setBody(
         GetActiveEncryptionKeysResponse.newBuilder()
             .addAllKeys(
@@ -95,9 +102,9 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
                     .collect(toImmutableList())));
   }
 
-  private Stream<EncryptionKey> getActiveKeys(String setName, long startMilli, long endMilli)
-      throws ServiceException {
-    return enableCache
+  private Stream<EncryptionKey> getActiveKeys(
+      String setName, long startMilli, long endMilli, String email) throws ServiceException {
+    return isCacheEnabled(email, setName)
         ? cache.get(setName).stream().filter(key -> isKeyActive(key, startMilli, endMilli))
         : keyDb
             .getActiveKeys(setName, 0, ofEpochMilli(startMilli), ofEpochMilli(endMilli))
@@ -111,5 +118,9 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
     return
         key.getActivationTime() <= endMilli &&
             (key.getExpirationTime() == 0 || key.getExpirationTime() > startMilli);
+  }
+
+  private boolean isCacheEnabled(String email, String setName) {
+    return enableCache || cacheUsers.contains(email) || cacheUsers.contains(setName);
   }
 }

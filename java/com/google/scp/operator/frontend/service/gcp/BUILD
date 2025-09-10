@@ -36,6 +36,8 @@ java_library(
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
         "//java/com/google/scp/shared/api/util",
+        "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:gcp",
         "//java/com/google/scp/shared/gcp/util",
         "//java/com/google/scp/shared/mapper",
         "//java/external:gcp_cloud_function",

@@ -22,6 +22,9 @@ java_library(
         "*.java",
     ]),
     deps = [
+        "//java/com/google/scp/operator/shared/dao/jobqueue/gcp",
+        "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:gcp",
         "//java/external:acai",
         "//java/external:gcp_api_gax",
         "//java/external:gcp_core",
@@ -31,6 +34,7 @@ java_library(
         "//java/external:gcp_spanner",
         "//java/external:gcp_storage",
         "//java/external:grpc_api",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:testcontainers",
         "//javatests/com/google/scp/shared/gcp:constants",

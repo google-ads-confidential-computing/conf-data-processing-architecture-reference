@@ -83,6 +83,26 @@ public final class GcpJobHandlerModule extends JobHandlerModule {
                     .setIncludeWorkgroupPrefix(true)
                     .build())
             .orElse(config.pubSubSubscriptionId());
+    String topicName =
+        parameterClient
+            .getParameter(
+                GetParameterRequest.builder()
+                    .setParamName(WorkerParameter.JOB_PUBSUB_TOPIC_NAME.name())
+                    .setParamPrefix(GetParameterRequest.SCP_PARAM_PREFIX)
+                    .setIncludeEnvironmentPrefix(true)
+                    .setIncludeWorkgroupPrefix(true)
+                    .build())
+            .orElse("");
+    String subscriptionName =
+        parameterClient
+            .getParameter(
+                GetParameterRequest.builder()
+                    .setParamName(WorkerParameter.JOB_PUBSUB_SUBSCRIPTION_NAME.name())
+                    .setParamPrefix(GetParameterRequest.SCP_PARAM_PREFIX)
+                    .setIncludeEnvironmentPrefix(true)
+                    .setIncludeWorkgroupPrefix(true)
+                    .build())
+            .orElse("");
     String messageLeaseSeconds =
         parameterClient
             .getParameter(
@@ -98,6 +118,8 @@ public final class GcpJobHandlerModule extends JobHandlerModule {
         .setGcpProjectId(projectId)
         .setPubSubTopicId(topicId)
         .setPubSubSubscriptionId(subscriptionId)
+        .setPubSubTopicName(topicName)
+        .setPubSubSubscriptionName(subscriptionName)
         .setPubSubMaxMessageSizeBytes(1000)
         .setPubSubMessageLeaseSeconds(Integer.parseInt(messageLeaseSeconds))
         .setEndpointUrl(config.pubSubEndpoint())

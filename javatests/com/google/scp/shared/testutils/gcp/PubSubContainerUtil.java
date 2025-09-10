@@ -23,7 +23,10 @@ import com.google.cloud.pubsub.v1.SubscriptionAdminClient;
 import com.google.cloud.pubsub.v1.SubscriptionAdminSettings;
 import com.google.cloud.pubsub.v1.TopicAdminClient;
 import com.google.cloud.pubsub.v1.TopicAdminSettings;
+import com.google.cloud.pubsub.v1.stub.GrpcPublisherStub;
 import com.google.cloud.pubsub.v1.stub.GrpcSubscriberStub;
+import com.google.cloud.pubsub.v1.stub.PublisherStub;
+import com.google.cloud.pubsub.v1.stub.PublisherStubSettings;
 import com.google.cloud.pubsub.v1.stub.SubscriberStub;
 import com.google.cloud.pubsub.v1.stub.SubscriberStubSettings;
 import com.google.pubsub.v1.ProjectSubscriptionName;
@@ -82,6 +85,19 @@ public class PubSubContainerUtil {
             .build();
 
     return GrpcSubscriberStub.create(subscriberStubSettings);
+  }
+
+  public static PublisherStub createPublisherStub(
+      TransportChannelProvider channelProvider, CredentialsProvider credentialsProvider)
+      throws IOException {
+
+    PublisherStubSettings publisherStubSettings =
+        PublisherStubSettings.newBuilder()
+            .setTransportChannelProvider(channelProvider)
+            .setCredentialsProvider(credentialsProvider)
+            .build();
+
+    return GrpcPublisherStub.create(publisherStubSettings);
   }
 
   public static Publisher createPublisher(

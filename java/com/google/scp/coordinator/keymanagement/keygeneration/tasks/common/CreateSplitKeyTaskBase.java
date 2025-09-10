@@ -50,7 +50,6 @@ import com.google.scp.shared.util.PublicKeyConversionUtil;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -136,6 +135,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       Optional<DataKey> dataKey)
       throws ServiceException;
 
+  @Override
   public void create(
       String setName,
       String tinkTemplate,
@@ -143,8 +143,10 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int validityInDays,
       int ttlInDays,
       int createMaxDaysAhead,
-      int overlapPeriodDays)
+      int overlapPeriodDays,
+      boolean noRefreshWindow)
       throws ServiceException {
+    LOGGER.info(logMetricHelper.format("create", ImmutableMap.of("setName", setName)));
     create(setName,
         tinkTemplate,
         numDesiredKeys,
@@ -152,6 +154,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         ttlInDays,
         createMaxDaysAhead,
         overlapPeriodDays,
+        noRefreshWindow,
         Instant.now());
   }
 
@@ -164,6 +167,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int ttlInDays,
       int createMaxDaysAhead,
       int overlapPeriodDays,
+      boolean noRefreshWindow,
       Instant now)
       throws ServiceException {
     if (overlapPeriodDays < 0) {
@@ -198,6 +202,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
           numDesiredKeys - activeKeys.size(),
           validityInDays,
           ttlInDays,
+          noRefreshWindow,
           now);
     }
     activeKeys = keyDb.getActiveKeys(setName, numDesiredKeys, now);
@@ -246,7 +251,10 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             numDesiredKeys - actual,
             validityInDays,
             ttlInDays,
-            expiration.minus(KEY_REFRESH_WINDOW).minus(overlapPeriodDays, DAYS));
+            noRefreshWindow,
+            expiration
+                .minus(noRefreshWindow ? 0 : KEY_REFRESH_WINDOW_DAYS, DAYS)
+                .minus(overlapPeriodDays, DAYS));
       }
       actual = keyDb.getActiveKeys(setName, numDesiredKeys, expiration).size();
       if (actual < numDesiredKeys) {
@@ -275,6 +283,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int count,
       int validityInDays,
       int ttlInDays,
+      boolean noRefreshWindow,
       Instant activation,
       Optional<DataKey> dataKey,
       Boolean populateMigrationData)
@@ -286,6 +295,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
           tinkTemplate,
           validityInDays,
           ttlInDays,
+          noRefreshWindow,
           activation,
           dataKey,
           populateMigrationData,
@@ -300,6 +310,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       String tinkTemplate,
       int validityInDays,
       int ttlInDays,
+      boolean noRefreshWindow,
       Instant activation,
       Optional<DataKey> dataKey,
       Boolean populateMigrationData,
@@ -329,6 +340,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
               activation,
               validityInDays,
               ttlInDays,
+              noRefreshWindow,
               publicKeysetHandle,
               keyEncryptionKeyUri,
               migrationKeyEncryptionKeyUri,
@@ -387,6 +399,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             tinkTemplate,
             validityInDays,
             ttlInDays,
+            noRefreshWindow,
             activation,
             dataKey,
             populateMigrationData,
@@ -511,6 +524,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       Instant activation,
       int validityInDays,
       int ttlInDays,
+      boolean noRefreshWindow,
       Optional<KeysetHandle> publicKeysetHandle,
       String keyEncryptionKeyUri,
       Optional<String> migrationkeyEncryptionKeyUri,
@@ -534,11 +548,14 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     }
     if (validityInDays > 0) {
       unsignedEncryptionKey.setExpirationTime(
-          activation.plus(validityInDays, ChronoUnit.DAYS).plus(KEY_REFRESH_WINDOW).toEpochMilli());
+          activation
+              .plus(validityInDays, DAYS)
+              .plus(noRefreshWindow ? 0 : KEY_REFRESH_WINDOW_DAYS, DAYS)
+              .toEpochMilli());
     }
     if (ttlInDays > 0) {
       unsignedEncryptionKey.setTtlTime(
-          activation.plus(ttlInDays, ChronoUnit.DAYS).getEpochSecond());
+          activation.plus(ttlInDays, DAYS).getEpochSecond());
     }
 
     try {

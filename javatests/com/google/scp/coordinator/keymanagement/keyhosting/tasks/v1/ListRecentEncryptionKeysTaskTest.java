@@ -21,7 +21,10 @@ import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.ListR
 import static java.time.temporal.ChronoUnit.DAYS;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Answers.CALLS_REAL_METHODS;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
@@ -45,6 +48,7 @@ import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import org.junit.Before;
@@ -61,6 +65,7 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public class ListRecentEncryptionKeysTaskTest extends ApiTaskTestBase {
 
+  private static final String APPROVED_CALLER = "approved-caller@google.com";
   private static final ImmutableList<EncryptionKey> TEST_KEYS =
       ImmutableList.of(
           createKey(null, 7),
@@ -84,13 +89,16 @@ public class ListRecentEncryptionKeysTaskTest extends ApiTaskTestBase {
   private ResponseContext response;
 
   private ListRecentEncryptionKeysTask task;
+  private InMemoryKeyDb spyKeyDb;
 
   @Before
   public void setUp() throws Exception {
     keyDb.createKeys(TEST_KEYS);
     task =
-        new ListRecentEncryptionKeysTask(keyDb, cache, true, logMetricHelper, allowedMigrators);
+        new ListRecentEncryptionKeysTask(
+            keyDb, cache, true, logMetricHelper, allowedMigrators, ImmutableSet.of());
     super.task = spy(task);
+    spyKeyDb = spy(keyDb);
   }
 
   @Test
@@ -153,13 +161,46 @@ public class ListRecentEncryptionKeysTaskTest extends ApiTaskTestBase {
     keysReturned("test-set", 28, 3, false);
   }
 
-  private void keysReturned(String setName, int creationDays, int expected, boolean enable)
+  @Test
+  public void cacheGlobalEnabledTest() throws Exception {
+    keysReturned("test-set", 28, 3, true);
+    verify(spyKeyDb, never()).listRecentKeys(anyString(), any());
+  }
+
+  @Test
+  public void cacheGlobalDisabledTest() throws Exception {
+    keysReturned("test-set", 28, 3, false);
+    verify(spyKeyDb).listRecentKeys(anyString(), any());
+  }
+
+  @Test
+  public void cacheGlobalDisabled_approvedCallerTest() throws Exception {
+    String fakeJwt = createFakeJwt(APPROVED_CALLER);
+    doReturn(Optional.of("Bearer: " + fakeJwt)).when(request).getFirstHeader("Authorization");
+    keysReturned("test-set", 28, 3, false, ImmutableSet.of(APPROVED_CALLER));
+    verify(spyKeyDb, never()).listRecentKeys(anyString(), any());
+  }
+
+  @Test
+  public void cacheGlobalDisabled_approvedSetNameTest() throws Exception {
+    keysReturned("test-set", 28, 3, false, ImmutableSet.of("test-set"));
+    verify(spyKeyDb, never()).listRecentKeys(anyString(), any());
+  }
+
+  private void keysReturned(String setName, int createDays, int expected, boolean enable)
+      throws Exception {
+    keysReturned(setName, createDays, expected, enable, ImmutableSet.of());
+  }
+
+  private void keysReturned(
+      String setName, int createDays, int expected, boolean enable, ImmutableSet<String> cacheUsers)
       throws Exception {
     task =
-        new ListRecentEncryptionKeysTask(keyDb, cache, enable, logMetricHelper, allowedMigrators);
+        new ListRecentEncryptionKeysTask(
+            spyKeyDb, cache, enable, logMetricHelper, allowedMigrators, cacheUsers);
     super.task = spy(task);
     doReturn(setName).when(matcher).group("name");
-    var daysInSecs = Duration.ofDays(creationDays).toSeconds();
+    var daysInSecs = Duration.ofDays(createDays).toSeconds();
     doReturn(Optional.of(String.valueOf(daysInSecs)))
         .when(request)
         .getFirstQueryParameter(MAX_AGE_SECONDS_PARAM_NAME);
@@ -237,5 +278,13 @@ public class ListRecentEncryptionKeysTaskTest extends ApiTaskTestBase {
         .setCreationTime(creationTime.toEpochMilli())
         .setExpirationTime(creationTime.plus(1, DAYS).toEpochMilli())
         .build();
+  }
+
+  private String createFakeJwt(String email) {
+    String payload = String.format("{\"email\":\"%s\"}", email);
+    String encodedPayload =
+        Base64.getUrlEncoder().withoutPadding().encodeToString(payload.getBytes());
+    // A dummy header and signature are needed to pass the split check in the task.
+    return "header." + encodedPayload + ".signature";
   }
 }

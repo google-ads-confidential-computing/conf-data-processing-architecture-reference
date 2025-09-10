@@ -68,4 +68,7 @@ message JobMetadata {
 
   // The time the worker starts to process the request.
   google.protobuf.Timestamp request_processing_started_at = 12;
+
+  // The target workgroup for the job.
+  optional string target_workgroup = 13;
 }

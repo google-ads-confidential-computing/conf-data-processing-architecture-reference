@@ -22,6 +22,8 @@ java_library(
     deps = [
         "//java/com/google/scp/operator/shared/dao/jobqueue/common",
         "//java/com/google/scp/operator/shared/model",
+        "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:model",
         "//java/com/google/scp/shared/mapper",
         "//java/com/google/scp/shared/proto",
         "//java/external:autovalue",

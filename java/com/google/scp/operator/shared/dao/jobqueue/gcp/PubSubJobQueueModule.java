@@ -20,8 +20,10 @@ import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
 import com.google.api.gax.rpc.TransportChannelProvider;
-import com.google.cloud.pubsub.v1.Publisher;
+import com.google.cloud.pubsub.v1.stub.GrpcPublisherStub;
 import com.google.cloud.pubsub.v1.stub.GrpcSubscriberStub;
+import com.google.cloud.pubsub.v1.stub.PublisherStub;
+import com.google.cloud.pubsub.v1.stub.PublisherStubSettings;
 import com.google.cloud.pubsub.v1.stub.SubscriberStub;
 import com.google.cloud.pubsub.v1.stub.SubscriberStubSettings;
 import com.google.inject.AbstractModule;
@@ -32,7 +34,8 @@ import com.google.scp.operator.shared.dao.jobqueue.common.JobQueue;
 import com.google.scp.operator.shared.dao.jobqueue.common.JobQueue.JobQueueMessageLeaseSeconds;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePubSubMaxMessageSizeBytes;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePubSubSubscriptionName;
-import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePubSubTopicId;
+import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePubSubTopicName;
+import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePublisherStub;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.io.IOException;
@@ -58,7 +61,7 @@ public final class PubSubJobQueueModule extends AbstractModule {
 
   /** Provides an instance of the {@code SubscriberStub} class. */
   @Provides
-  SubscriberStub provideSubscriber(
+  SubscriberStub provideSubscriberStub(
       @JobQueuePubSubMaxMessageSizeBytes int maxMessageSizeBytes, PubSubJobQueueConfig config)
       throws IOException {
     SubscriberStubSettings.Builder settingsBuilder = SubscriberStubSettings.newBuilder();
@@ -79,22 +82,23 @@ public final class PubSubJobQueueModule extends AbstractModule {
     return GrpcSubscriberStub.create(settingsBuilder.build());
   }
 
-  /** Provides an instance of the {@code Publisher} class. */
+  /** Provides an instance of the {@code PublisherStub} class. */
   @Provides
-  Publisher providePublisher(PubSubJobQueueConfig config) throws IOException {
-    Publisher.Builder publisherBuilder =
-        Publisher.newBuilder(TopicName.of(config.gcpProjectId(), config.pubSubTopicId()));
+  @JobQueuePublisherStub
+  PublisherStub providePublisherStub(PubSubJobQueueConfig config) throws IOException {
+    PublisherStubSettings.Builder settingsBuilder = PublisherStubSettings.newBuilder();
+    settingsBuilder.setTransportChannelProvider(
+        PublisherStubSettings.defaultGrpcTransportProviderBuilder().build());
     config
         .endpointUrl()
         .ifPresent(
             endpoint -> {
-              publisherBuilder.setChannelProvider(getTransportChannelProvider(endpoint));
+              settingsBuilder.setTransportChannelProvider(getTransportChannelProvider(endpoint));
               if (isEmulatorEndpoint(endpoint)) {
-                publisherBuilder.setCredentialsProvider(NoCredentialsProvider.create());
+                settingsBuilder.setCredentialsProvider(NoCredentialsProvider.create());
               }
             });
-
-    return publisherBuilder.build();
+    return GrpcPublisherStub.create(settingsBuilder.build());
   }
 
   private static TransportChannelProvider getTransportChannelProvider(String endpointUrl) {
@@ -102,18 +106,22 @@ public final class PubSubJobQueueModule extends AbstractModule {
     return FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
   }
 
-  /** Provides a String representing the Pub/Sub topic ID. */
+  /** Provides a String representing the Pub/Sub topic name. */
   @Provides
-  @JobQueuePubSubTopicId
-  String providePubSubTopicId(PubSubJobQueueConfig config) {
-    return config.pubSubTopicId();
+  @JobQueuePubSubTopicName
+  String providePubSubTopicName(PubSubJobQueueConfig config) {
+    return config.pubSubTopicName().isEmpty()
+        ? TopicName.format(config.gcpProjectId(), config.pubSubTopicId())
+        : config.pubSubTopicName();
   }
 
   /** Provides a String representing the Pub/Sub subscription name. */
   @Provides
   @JobQueuePubSubSubscriptionName
   String providePubSubSubscriptionName(PubSubJobQueueConfig config) {
-    return ProjectSubscriptionName.format(config.gcpProjectId(), config.pubSubSubscriptionId());
+    return config.pubSubSubscriptionName().isEmpty()
+        ? ProjectSubscriptionName.format(config.gcpProjectId(), config.pubSubSubscriptionId())
+        : config.pubSubSubscriptionName();
   }
 
   /** Provides an int representing the maximum Pub/Sub message size in bytes. */

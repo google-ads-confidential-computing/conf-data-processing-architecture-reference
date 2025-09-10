@@ -353,8 +353,8 @@ module "frontend" {
   spanner_database_name       = module.jobdatabase.database_name
   job_table_name              = var.job_client_parameter_values.job_table_name
   job_metadata_table_ttl_days = var.job_table_ttl_days
-  job_queue_topic             = module.jobqueue.queue_pubsub_topic_name
-  job_queue_sub               = module.jobqueue.queue_pubsub_sub_name
+  job_queue_topic             = module.jobqueue.queue_pubsub_topic_id
+  job_queue_sub               = module.jobqueue.queue_pubsub_sub_id
 
   create_frontend_service_cloud_function = var.create_frontend_service_cloud_function
   operator_package_bucket_name           = var.frontend_service_path.bucket_name != "" ? var.frontend_service_path.bucket_name : google_storage_bucket.operator_package_bucket[0].id

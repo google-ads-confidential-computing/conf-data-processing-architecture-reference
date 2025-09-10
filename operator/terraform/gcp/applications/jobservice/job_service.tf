@@ -61,6 +61,19 @@ locals {
       threshold_ms    = tonumber(var.frontend_cloudfunction_max_execution_time_max)
     }
   : var.frontend_cloud_run_execution_time_alarm_config)
+
+  # Generate final workgroup configs merging workgroup configs with environment defaults
+  merged_workgroup_configs = {
+    for workgroup_id, configs in var.workgroup_configs : workgroup_id =>
+    merge(
+      var.default_workgroup_configs,
+      { for config_key, config_value in configs : config_key => config_value if config_value != null }
+    )
+  }
+
+  workgroup_to_job_queue_mapping = tomap({
+    for id, wg in module.workgroups : wg.workgroup_id => wg
+  })
 }
 
 module "bazel" {
@@ -132,6 +145,7 @@ module "metadatadb" {
 }
 
 module "jobqueue" {
+  count       = var.enable_legacy_worker ? 1 : 0
   source      = "../../modules/jobqueue"
   environment = var.environment
   workgroup   = null
@@ -159,19 +173,43 @@ module "metadata_db_name" {
 }
 
 module "job_queue_topic_id" {
-  source          = "../../modules/parameters"
-  environment     = var.environment
-  workgroup       = null
-  parameter_name  = "JOB_PUBSUB_TOPIC_ID"
-  parameter_value = module.jobqueue.jobqueue_pubsub_topic_name
+  count          = var.enable_legacy_worker ? 1 : 0
+  source         = "../../modules/parameters"
+  environment    = var.environment
+  workgroup      = null
+  parameter_name = "JOB_PUBSUB_TOPIC_ID"
+  // Terraform definition of topic id and name are the opposite of GCP API definition
+  parameter_value = module.jobqueue[0].jobqueue_pubsub_topic_name
 }
 
 module "job_queue_subscription_id" {
-  source          = "../../modules/parameters"
-  environment     = var.environment
-  workgroup       = null
-  parameter_name  = "JOB_PUBSUB_SUBSCRIPTION_ID"
-  parameter_value = module.jobqueue.jobqueue_pubsub_sub_name
+  count          = var.enable_legacy_worker ? 1 : 0
+  source         = "../../modules/parameters"
+  environment    = var.environment
+  workgroup      = null
+  parameter_name = "JOB_PUBSUB_SUBSCRIPTION_ID"
+  // Terraform definition of subscription id and name are the opposite of GCP API definition
+  parameter_value = module.jobqueue[0].jobqueue_pubsub_sub_name
+}
+
+module "job_queue_topic_name" {
+  count          = var.enable_legacy_worker ? 1 : 0
+  source         = "../../modules/parameters"
+  environment    = var.environment
+  workgroup      = null
+  parameter_name = "JOB_PUBSUB_TOPIC_NAME"
+  // Terraform definition of topic id and name are the opposite of GCP API definition
+  parameter_value = module.jobqueue[0].jobqueue_pubsub_topic_id
+}
+
+module "job_queue_subscription_name" {
+  count          = var.enable_legacy_worker ? 1 : 0
+  source         = "../../modules/parameters"
+  environment    = var.environment
+  workgroup      = null
+  parameter_name = "JOB_PUBSUB_SUBSCRIPTION_NAME"
+  // Terraform definition of subscription id and name are the opposite of GCP API definition
+  parameter_value = module.jobqueue[0].jobqueue_pubsub_sub_id
 }
 
 module "max_job_processing_time" {
@@ -191,11 +229,12 @@ module "max_job_num_attempts" {
 }
 
 module "worker_managed_instance_group_name" {
+  count           = var.enable_legacy_worker ? 1 : 0
   source          = "../../modules/parameters"
   environment     = var.environment
   workgroup       = null
   parameter_name  = "WORKER_MANAGED_INSTANCE_GROUP_NAME"
-  parameter_value = module.autoscaling.worker_managed_instance_group_name
+  parameter_value = module.autoscaling[0].worker_managed_instance_group_name
 }
 
 module "notifications_topic_id" {
@@ -311,8 +350,8 @@ module "frontend" {
   spanner_database_name       = module.metadatadb.metadatadb_name
   job_table_name              = "JobMetadata"
   job_metadata_table_ttl_days = var.job_metadata_table_ttl_days
-  job_queue_topic             = module.jobqueue.jobqueue_pubsub_topic_name
-  job_queue_sub               = module.jobqueue.jobqueue_pubsub_sub_name
+  job_queue_topic             = var.initial_workgroup != "" ? local.workgroup_to_job_queue_mapping[var.initial_workgroup].jobqueue_pubsub_topic_id : module.jobqueue[0].jobqueue_pubsub_topic_id
+  job_queue_sub               = var.initial_workgroup != "" ? local.workgroup_to_job_queue_mapping[var.initial_workgroup].jobqueue_pubsub_sub_id : module.jobqueue[0].jobqueue_pubsub_sub_id
 
   create_frontend_service_cloud_function = var.create_frontend_service_cloud_function
   operator_package_bucket_name           = var.frontend_service_path.bucket_name != "" ? var.frontend_service_path.bucket_name : google_storage_bucket.operator_package_bucket[0].id
@@ -384,6 +423,7 @@ module "worker_service_account" {
 }
 
 module "worker" {
+  count                         = var.enable_legacy_worker ? 1 : 0
   source                        = "../../modules/worker/java_worker"
   environment                   = var.environment
   workgroup                     = null
@@ -395,8 +435,8 @@ module "worker" {
 
   metadatadb_instance_name = module.metadatadb.metadatadb_instance_name
   metadatadb_name          = module.metadatadb.metadatadb_name
-  job_queue_sub            = module.jobqueue.jobqueue_pubsub_sub_name
-  job_queue_topic          = module.jobqueue.jobqueue_pubsub_topic_name
+  job_queue_sub            = module.jobqueue[0].jobqueue_pubsub_sub_name
+  job_queue_topic          = module.jobqueue[0].jobqueue_pubsub_topic_name
 
   instance_type                = var.instance_type
   instance_disk_image_family   = var.instance_disk_image_family
@@ -416,10 +456,10 @@ module "worker" {
   worker_restart_policy            = var.worker_restart_policy
   allowed_operator_service_account = var.allowed_operator_service_account
 
-  autoscaler_cloudfunction_name        = module.autoscaling.autoscaler_cloudfunction_name
-  autoscaler_name                      = module.autoscaling.autoscaler_name
-  vm_instance_group_name               = module.autoscaling.worker_managed_instance_group_name
-  vm_instance_group_base_instance_name = module.autoscaling.worker_managed_instance_group_base_instance_name
+  autoscaler_cloudfunction_name        = module.autoscaling[0].autoscaler_cloudfunction_name
+  autoscaler_name                      = module.autoscaling[0].autoscaler_name
+  vm_instance_group_name               = module.autoscaling[0].worker_managed_instance_group_name
+  vm_instance_group_base_instance_name = module.autoscaling[0].worker_managed_instance_group_base_instance_name
 
   # Metrics / Alarming
   alarms_enabled                     = var.alarms_enabled
@@ -427,7 +467,6 @@ module "worker" {
   alarm_duration_sec                 = var.worker_alarm_duration_sec
   alarm_eval_period_sec              = var.worker_alarm_eval_period_sec
   notification_channel_id            = local.notification_channel_id
-  java_job_validations_to_alert      = var.java_job_validations_to_alert
   enable_new_metrics                 = var.enable_remote_metric_aggregation
   enable_legacy_metrics              = var.enable_legacy_metrics
 
@@ -443,6 +482,7 @@ module "worker" {
 }
 
 module "autoscaling" {
+  count                   = var.enable_legacy_worker ? 1 : 0
   source                  = "../../modules/autoscaling"
   environment             = var.environment
   workgroup               = null
@@ -452,10 +492,10 @@ module "autoscaling" {
   vpc_connector_id        = var.vpcsc_compatible ? module.vpc.connectors[var.region] : null
   auto_create_subnetworks = var.auto_create_subnetworks
 
-  worker_template                     = module.worker.worker_template
+  worker_template                     = module.worker[0].worker_template
   min_worker_instances                = var.min_worker_instances
   max_worker_instances                = var.max_worker_instances
-  jobqueue_subscription_name          = module.jobqueue.jobqueue_pubsub_sub_name
+  jobqueue_subscription_name          = module.jobqueue[0].jobqueue_pubsub_sub_name
   autoscaling_jobs_per_instance       = var.autoscaling_jobs_per_instance
   autoscaling_cloudfunction_memory_mb = var.autoscaling_cloudfunction_memory_mb
   worker_service_account              = module.worker_service_account.worker_service_account_email
@@ -485,11 +525,15 @@ module "autoscaling" {
 }
 
 module "java_global_custom_monitoring" {
-  source                = "../../modules/java_global_custom_monitoring"
-  count                 = var.alarms_enabled ? 1 : 0
-  environment           = var.environment
-  enable_new_metrics    = var.enable_remote_metric_aggregation
-  enable_legacy_metrics = var.enable_legacy_metrics
+  source                        = "../../modules/java_global_custom_monitoring"
+  count                         = var.alarms_enabled ? 1 : 0
+  environment                   = var.environment
+  enable_new_metrics            = var.enable_remote_metric_aggregation
+  enable_legacy_metrics         = var.enable_legacy_metrics
+  alarm_eval_period_sec         = var.worker_alarm_eval_period_sec
+  alarm_duration_sec            = var.worker_alarm_duration_sec
+  notification_channel_id       = local.notification_channel_id
+  java_job_validations_to_alert = var.java_job_validations_to_alert
 }
 
 module "notifications" {
@@ -554,32 +598,84 @@ resource "google_pubsub_topic_iam_member" "job_completion_notifications_cloud_fu
   topic  = module.notifications[0].notifications_pubsub_topic_id
 }
 
-moved {
-  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric[0]
-  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_metric[0]
-}
+module "workgroups" {
+  for_each = local.merged_workgroup_configs
+  source   = "../../modules/java_workgroup"
 
-moved {
-  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_metric[0]
-  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_metric[0]
-}
+  project_id  = var.project_id
+  environment = var.environment
+  workgroup   = each.key
+  region      = var.region
 
-moved {
-  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_metric[0]
-  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_metric[0]
-}
+  worker_service_account_email = module.worker_service_account.worker_service_account_email
 
-moved {
-  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_counter_metric[0]
-  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_validation_failure_counter_metric[0]
-}
+  metadatadb_instance_name = module.metadatadb.metadatadb_instance_name
+  metadatadb_name          = module.metadatadb.metadatadb_name
 
-moved {
-  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_counter_metric[0]
-  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.jobclient_job_client_error_counter_metric[0]
-}
+  alarms_enabled                   = var.alarms_enabled
+  notification_channel_id          = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
+  enable_remote_metric_aggregation = var.enable_remote_metric_aggregation
+  enable_legacy_metrics            = var.enable_legacy_metrics
 
-moved {
-  from = module.worker.module.java_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_new_metric[0]
-  to   = module.java_global_custom_monitoring[0].google_monitoring_metric_descriptor.worker_job_error_new_metric[0]
+  # VPC Network
+  network                 = module.vpc.network
+  subnet_id               = module.vpc.worker_subnet_ids[var.region]
+  auto_create_subnetworks = var.auto_create_subnetworks
+  egress_internet_tag     = module.vpc.egress_internet_tag
+  vpc_connector_id        = var.vpcsc_compatible ? module.vpc.connectors[var.region] : null
+
+  # Job Queue
+  jobqueue_alarm_eval_period_sec           = each.value.jobqueue_alarm_eval_period_sec
+  jobqueue_max_undelivered_message_age_sec = each.value.jobqueue_max_undelivered_message_age_sec
+
+  # Worker
+  max_job_processing_time          = each.value.max_job_processing_time
+  max_job_num_attempts             = each.value.max_job_num_attempts
+  instance_type                    = each.value.instance_type
+  instance_disk_image_family       = each.value.instance_disk_image_family
+  instance_disk_image              = each.value.instance_disk_image
+  worker_instance_disk_type        = each.value.worker_instance_disk_type
+  worker_instance_disk_size_gb     = each.value.worker_instance_disk_size_gb
+  worker_logging_enabled           = each.value.worker_logging_enabled
+  worker_monitoring_enabled        = each.value.worker_monitoring_enabled
+  worker_memory_monitoring_enabled = each.value.worker_memory_monitoring_enabled
+  worker_container_log_redirect    = each.value.worker_container_log_redirect
+  worker_image                     = each.value.worker_image
+  worker_image_signature_repos     = each.value.worker_image_signature_repos
+  worker_restart_policy            = each.value.worker_restart_policy
+  allowed_operator_service_account = each.value.allowed_operator_service_account
+  worker_instance_force_replace    = each.value.worker_instance_force_replace
+  worker_alarm_eval_period_sec     = each.value.worker_alarm_eval_period_sec
+  worker_alarm_duration_sec        = each.value.worker_alarm_duration_sec
+
+  legacy_jobclient_job_validation_failure_metric_type = var.alarms_enabled ? module.java_global_custom_monitoring[0].legacy_jobclient_job_validation_failure_metric_type : ""
+  legacy_jobclient_error_metric_type                  = var.alarms_enabled ? module.java_global_custom_monitoring[0].legacy_jobclient_error_metric_type : ""
+  legacy_worker_error_metric_type                     = var.alarms_enabled ? module.java_global_custom_monitoring[0].legacy_worker_error_metric_type : ""
+  new_jobclient_job_validation_failure_metric_type    = var.alarms_enabled ? module.java_global_custom_monitoring[0].new_jobclient_job_validation_failure_metric_type : ""
+  new_jobclient_error_metric_type                     = var.alarms_enabled ? module.java_global_custom_monitoring[0].new_jobclient_error_metric_type : ""
+  new_worker_error_metric_type                        = var.alarms_enabled ? module.java_global_custom_monitoring[0].new_worker_error_metric_type : ""
+
+  # Autoscaling
+  min_worker_instances                            = each.value.min_worker_instances
+  max_worker_instances                            = each.value.max_worker_instances
+  autoscaling_jobs_per_instance                   = each.value.autoscaling_jobs_per_instance
+  autoscaling_cloudfunction_memory_mb             = each.value.autoscaling_cloudfunction_memory_mb
+  operator_package_bucket_name                    = var.worker_scale_in_path.bucket_name != "" ? var.worker_scale_in_path.bucket_name : google_storage_bucket.operator_package_bucket[0].id
+  worker_scale_in_jar                             = local.worker_scale_in_jar
+  worker_scale_in_zip                             = var.worker_scale_in_path.zip_file_name
+  termination_wait_timeout_sec                    = each.value.termination_wait_timeout_sec
+  worker_scale_in_cron                            = each.value.worker_scale_in_cron
+  asg_instances_table_ttl_days                    = each.value.asg_instances_table_ttl_days
+  autoscaling_cloudfunction_use_java21_runtime    = var.autoscaling_cloudfunction_use_java21_runtime
+  autoscaling_alarm_eval_period_sec               = each.value.autoscaling_alarm_eval_period_sec
+  autoscaling_alarm_duration_sec                  = each.value.autoscaling_alarm_duration_sec
+  autoscaling_max_vm_instances_ratio_threshold    = each.value.autoscaling_max_vm_instances_ratio_threshold
+  autoscaling_cloudfunction_5xx_threshold         = each.value.autoscaling_cloudfunction_5xx_threshold
+  autoscaling_cloudfunction_error_threshold       = each.value.autoscaling_cloudfunction_error_threshold
+  autoscaling_cloudfunction_max_execution_time_ms = each.value.autoscaling_cloudfunction_max_execution_time_ms
+  autoscaling_cloudfunction_alarm_eval_period_sec = each.value.autoscaling_alarm_eval_period_sec
+  autoscaling_cloudfunction_alarm_duration_sec    = each.value.autoscaling_alarm_duration_sec
+
+  # Make sure the otel collector is running before creating the server instances.
+  depends_on = [module.opentelemetry_collector]
 }

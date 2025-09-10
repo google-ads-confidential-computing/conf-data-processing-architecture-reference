@@ -22,9 +22,15 @@ import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.Publisher;
+import com.google.cloud.pubsub.v1.stub.PublisherStub;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.pubsub.v1.TopicName;
+import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePublisherStub;
+import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.local.LocalParameterClient;
 import com.google.scp.shared.testutils.gcp.Annotations.JobSubscriptionId;
 import com.google.scp.shared.testutils.gcp.Annotations.JobTopicId;
 import com.google.scp.shared.testutils.gcp.Annotations.KeyGenerationPublisher;
@@ -51,6 +57,14 @@ public class GcpPubSubIntegrationTestModule extends AbstractModule {
     install(
         new PubSubEmulatorContainerTestModule(
             GCP_TEST_PROJECT_ID, JOB_TOPIC_ID, JOB_SUBSCRIPTION_ID, true));
+    bind(PublisherStub.class).annotatedWith(JobQueuePublisherStub.class).to(PublisherStub.class);
+  }
+
+  @Provides
+  ParameterClient provideParameterClient() {
+    return new LocalParameterClient(
+        ImmutableMap.of(
+            "JOB_PUBSUB_TOPIC_NAME", TopicName.format(GCP_TEST_PROJECT_ID, JOB_TOPIC_ID)));
   }
 
   @Provides

@@ -16,11 +16,13 @@
 
 #pragma once
 
+#include <chrono>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "core/common/time_provider/src/time_provider.h"
 #include "core/interface/async_context.h"
 #include "core/interface/http_client_interface.h"
 #include "core/interface/service_interface.h"
@@ -51,6 +53,17 @@ struct PrivateKeyFetchingRequest {
   /// The name of the key set.
   /// If not set, the request will use "" as default key set.
   std::shared_ptr<std::string> key_set_name;
+
+  // The active_keys query requires a time range. If none is specified, the
+  // current timestamp in milliseconds will be used.
+  core::Timestamp active_key_query_start_time_ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          core::common::TimeProvider::GetWallTimestampInNanoseconds())
+          .count();
+  core::Timestamp active_key_query_end_time_ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          core::common::TimeProvider::GetWallTimestampInNanoseconds())
+          .count();
 };
 
 /// Type of encryption key and how it is split.

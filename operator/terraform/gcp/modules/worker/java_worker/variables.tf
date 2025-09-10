@@ -211,14 +211,6 @@ variable "notification_channel_id" {
   type        = string
 }
 
-variable "java_job_validations_to_alert" {
-  description = <<-EOT
-      Job validations to alarm for Java CPIO Job Client. Supported validations:
-      ["JobValidatorCheckFields", "JobValidatorCheckRetryLimit", "JobValidatorCheckStatus"]
-  EOT
-  type        = list(string)
-}
-
 variable "enable_new_metrics" {
   description = "When true, enable new metrics created after enable remote metric aggregation"
   type        = bool

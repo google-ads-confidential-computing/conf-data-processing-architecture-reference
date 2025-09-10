@@ -112,7 +112,6 @@ public final class GcpMetricClient implements MetricClient {
     String metricName = getMetricName(metric);
     AttributesBuilder attributesBuilder = Attributes.builder();
     metric.labels().forEach((key, value) -> attributesBuilder.put(key, value));
-    getWorkgroupId().ifPresent(workgroup -> attributesBuilder.put("workgroup", workgroup));
     switch (metric.metricType()) {
       case DOUBLE_COUNTER:
         DoubleCounter doubleCounter =
@@ -164,7 +163,6 @@ public final class GcpMetricClient implements MetricClient {
         pointList.add(point);
 
         Map<String, String> metricLabels = new HashMap<String, String>(metric.labels());
-        getWorkgroupId().ifPresent(workgroup -> metricLabels.put("workgroup", workgroup));
         String metricType =
             String.format(
                 "custom.googleapis.com/%s/%s/%s",
@@ -229,16 +227,6 @@ public final class GcpMetricClient implements MetricClient {
               "Defaulting to environment name %s for custom monitoring metrics.", DEFAULT_ENV));
     }
     return environment.orElse(DEFAULT_ENV);
-  }
-
-  private Optional<String> getWorkgroupId() {
-    Optional<String> workgroup = Optional.empty();
-    try {
-      workgroup = parameterClient.getWorkgroupId();
-    } catch (ParameterClientException e) {
-      logger.info(String.format("Could not get workgroup name.\n%s", e));
-    }
-    return workgroup;
   }
 
   private String getMetricName(CustomMetric metric) {

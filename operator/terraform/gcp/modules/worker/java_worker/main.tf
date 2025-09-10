@@ -64,10 +64,6 @@ module "java_custom_monitoring" {
   workgroup                            = var.workgroup
   vm_instance_group_name               = var.vm_instance_group_name
   vm_instance_group_base_instance_name = var.vm_instance_group_base_instance_name
-  alarm_duration_sec                   = var.alarm_duration_sec
-  alarm_eval_period_sec                = var.alarm_eval_period_sec
-  notification_channel_id              = var.notification_channel_id
-  java_job_validations_to_alert        = var.java_job_validations_to_alert
   enable_new_metrics                   = var.enable_new_metrics
   enable_legacy_metrics                = var.enable_legacy_metrics
 
@@ -77,5 +73,4 @@ module "java_custom_monitoring" {
   new_jobclient_job_validation_failure_metric_type    = var.new_jobclient_job_validation_failure_metric_type
   new_jobclient_error_metric_type                     = var.new_jobclient_error_metric_type
   new_worker_error_metric_type                        = var.new_worker_error_metric_type
-
 }

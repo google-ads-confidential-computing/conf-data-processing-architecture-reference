@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Google LLC
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,17 @@
  * limitations under the License.
  */
 
-output "jobqueue_pubsub_topic_name" {
-  value       = google_pubsub_topic.job_queue_topic.name
-  description = "The name of the pubsub job queue topic."
+output "workgroup_id" {
+  value       = var.workgroup
+  description = "Workgroup where this service is deployed."
 }
 
 output "jobqueue_pubsub_topic_id" {
-  value       = google_pubsub_topic.job_queue_topic.id
+  value       = module.jobqueue.jobqueue_pubsub_topic_id
   description = "The id of the pubsub job queue topic."
 }
 
-output "jobqueue_pubsub_sub_name" {
-  value       = google_pubsub_subscription.job_queue_sub.name
-  description = "The name of the pubsub job queue subscription."
-}
-
 output "jobqueue_pubsub_sub_id" {
-  value       = google_pubsub_subscription.job_queue_sub.id
+  value       = module.jobqueue.jobqueue_pubsub_sub_id
   description = "The id of the pubsub job queue subscription."
 }

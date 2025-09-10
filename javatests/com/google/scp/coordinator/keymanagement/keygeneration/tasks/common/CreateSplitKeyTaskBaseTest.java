@@ -16,10 +16,12 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTask.KEY_REFRESH_WINDOW_DAYS;
 import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
 import static com.google.scp.shared.util.KeySplitUtil.reconstructXorKeysetHandle;
 import static java.lang.Integer.MAX_VALUE;
+import static java.time.Instant.now;
 import static java.time.temporal.ChronoUnit.DAYS;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,7 +71,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     // When
     for (Entry<String, Class<?>> primitive : expectedPrimitives) {
       String template = primitive.getKey();
-      task.createSplitKey("test-set", template, 1, 1, 1, Instant.now());
+      task.createSplitKey("test-set", template, 1, 1, 1, false, now());
     }
 
     // Then
@@ -99,7 +101,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
 
     // When
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365, 14, 0, false);
 
     // Then
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(5);
@@ -112,20 +114,18 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var validity = 7;
     var validityMillis = Duration.ofDays(validity).toMillis();
     var ttl = 365;
+    var noRefresh = false;
 
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 14, 0, noRefresh);
 
+    validateEncryptionKeyTimes(validity + 1, ttl);
     var keys = task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE);
     assertThat(keys).hasSize(count);
-
-    validateEncryptionKeyTimes(validity, ttl, keys.get(0));
     validateTimesMatch(keys);
 
     var allKeys = task.keyDb.getAllKeys();
     assertThat(allKeys).hasSize(count * 2);
-
-    validateEncryptionKeyTimes(validity, ttl, allKeys.get(0));
     validateTimesMatch(allKeys.subList(0, count));
     validateTimesMatch(allKeys.subList(count, count * 2));
 
@@ -147,12 +147,12 @@ public abstract class CreateSplitKeyTaskBaseTest {
   @Test
   public void create_onlyOneButNotEnough_createsOnlyMissingKey() throws Exception {
     // Given
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 7, 365, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 7, 365, 14, 0, false);
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(1);
     assertThat(task.keyDb.getAllKeys()).hasSize(2);
 
     // When
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365, 14, 0, false);
 
     // Then
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(5);
@@ -165,13 +165,12 @@ public abstract class CreateSplitKeyTaskBaseTest {
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
 
     // When
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365, 14, 0, false);
 
     // Then
     EncryptionKey key = task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE).get(0);
     Instant expiration = Instant.ofEpochMilli(key.getExpirationTime());
-    Instant refreshWindowBeforeExpiration =
-        expiration.minus(CreateSplitKeyTaskBase.KEY_REFRESH_WINDOW);
+    Instant refreshWindowBeforeExpiration = expiration.minus(KEY_REFRESH_WINDOW_DAYS, DAYS);
     Instant refreshWindowAndSecondBeforeExpiration =
         refreshWindowBeforeExpiration.minus(1, ChronoUnit.SECONDS);
 
@@ -191,14 +190,14 @@ public abstract class CreateSplitKeyTaskBaseTest {
     // Given
     String setName1 = "set-name-1";
     String setName2 = "set-name-2";
+    var template = "DHKEM_X25519_HKDF_SHA256_HKDF_SHA256_CHACHA20_POLY1305_RAW";
 
     assertThat(task.keyDb.getActiveKeys(setName1, MAX_VALUE)).isEmpty();
     assertThat(task.keyDb.getActiveKeys(setName2, MAX_VALUE)).isEmpty();
 
     // When
-    task.create(
-        setName1, "DHKEM_X25519_HKDF_SHA256_HKDF_SHA256_CHACHA20_POLY1305_RAW", 5, 7, 365, 14, 0);
-    task.create(setName2, "HMAC_SHA512_256BITTAG_RAW", 5, 7, 365, 14, 0);
+    task.create(setName1, template, 5, 7, 365, 14, 0, false);
+    task.create(setName2, template, 5, 7, 365, 14, 0, false);
 
     // Then
     assertThat(
@@ -228,7 +227,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
             ServiceException.class,
             () ->
                 task.createSplitKey(
-                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, Instant.now()));
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, false, now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(KeyStorageServiceException.class);
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
@@ -242,7 +241,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var ex = assertThrows(
         ServiceException.class,
         () ->
-            task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap));
+            task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, false));
     assertThat(ex.getMessage()).contains("must be greater than or equal to 0");
   }
 
@@ -253,7 +252,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var ex = assertThrows(
         ServiceException.class,
         () ->
-            task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap));
+            task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, false));
     assertThat(ex.getMessage()).contains("must be greater than overlap");
   }
 
@@ -264,7 +263,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var ex = assertThrows(
         ServiceException.class,
         () ->
-            task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap));
+            task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, false));
     assertThat(ex.getMessage()).contains("multiple of the difference");
   }
 
@@ -276,12 +275,12 @@ public abstract class CreateSplitKeyTaskBaseTest {
 
     assertThat(keyDb.getActiveKeys(setName, MAX_VALUE)).isEmpty();
 
-    task.create(setName, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, false);
     assertThat(keyDb.getActiveKeys(setName, MAX_VALUE)).hasSize(1);
     assertThat(keyDb.getAllKeys()).hasSize(2);
 
     // Assert another run does not create additional keys
-    task.create(setName, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, false);
     assertThat(keyDb.getActiveKeys(setName, MAX_VALUE)).hasSize(1);
     assertThat(keyDb.getAllKeys()).hasSize(2);
   }
@@ -292,18 +291,18 @@ public abstract class CreateSplitKeyTaskBaseTest {
     int validity = 30;
     int overlap = 20;
     int ttl = 365;
+    var noRefresh = false;
     String setName = "setName";
     var differenceMillis = Duration.ofDays(validity - overlap).toMillis();
 
-    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, noRefresh);
 
+    validateEncryptionKeyTimes(validity + 1, ttl);
     var keys = task.keyDb.getActiveKeys(setName, MAX_VALUE);
     assertThat(keys).hasSize(count);
-    validateEncryptionKeyTimes(validity, ttl, keys.get(0));
 
     var allKeys = task.keyDb.getAllKeys();
     assertThat(allKeys).hasSize(count * 2);
-    validateEncryptionKeyTimes(validity, ttl, allKeys.get(0));
 
     var currActivation = keys.get(0).getActivationTime();
     var nextActivation = allKeys.get(0).getActivationTime();
@@ -319,9 +318,9 @@ public abstract class CreateSplitKeyTaskBaseTest {
     int ttl = 365;
     String setName = "setName";
 
-    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap);
-    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap);
-    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, false);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, false);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, false);
 
     assertThat(task.keyDb.getActiveKeys(setName, MAX_VALUE)).hasSize(count);
     assertThat(task.keyDb.getAllKeys()).hasSize(count * 2);
@@ -334,18 +333,17 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var overlap = 20;
     var ttl = 365;
     var setName = "setName";
+    var template = DEFAULT_TINK_TEMPLATE;
     var differenceMillis = Duration.ofDays(validity - overlap).toMillis();
-    var now = Instant.now();
+    var now = now();
 
-    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap);
+    task.create(setName, template, count, validity, ttl, 365, overlap, false);
     assertThat(task.keyDb.getAllKeys()).hasSize(count * 2);
 
-    task.create(
-        setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, now.plus(11, DAYS));
+    task.create(setName, template, count, validity, ttl, 365, overlap, false, now.plus(11, DAYS));
     assertThat(task.keyDb.getAllKeys()).hasSize(count * 3);
 
-    task.create(
-        setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap,  now.plus(21, DAYS));
+    task.create(setName, template, count, validity, ttl, 365, overlap, false,  now.plus(21, DAYS));
     var allKeys = task.keyDb.getAllKeys();
     assertThat(allKeys).hasSize(count * 4);
 
@@ -368,10 +366,10 @@ public abstract class CreateSplitKeyTaskBaseTest {
     validateMaxDaysAheadBlocksNextActiveSetCreation(4, 13, 30);
   }
 
-  private void validateMaxDaysAheadBlocksNextActiveSetCreation(
+  public void validateMaxDaysAheadBlocksNextActiveSetCreation(
       int keysToCreate, int validity, int ttl) throws Exception {
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, validity, ttl, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, validity, ttl, 14, 0, false);
 
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(keysToCreate);
     // No next set
@@ -387,13 +385,14 @@ public abstract class CreateSplitKeyTaskBaseTest {
 
     // Create partial set
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, ttl, maxDaysAhead, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, ttl, maxDaysAhead, 0, false);
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(1);
     // No next set
     assertThat(keyDb.getAllKeys()).hasSize(1);
 
     // Finish complete set
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0);
+    task.create(
+        DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0, false);
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(count);
     // No next set
     assertThat(keyDb.getAllKeys()).hasSize(count);
@@ -407,23 +406,74 @@ public abstract class CreateSplitKeyTaskBaseTest {
     int maxDaysAhead = validity + 5;
 
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0, false);
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(count);
     assertThat(keyDb.getAllKeys()).hasSize(count * 2);
   }
 
-  private static void validateEncryptionKeyTimes(int validity, int ttl, EncryptionKey key) {
-    var validityPlusOneMillis = Duration.ofDays(validity + 1).toMillis();
+  @Test
+  public void createKeys_noRefreshWindowTest() throws Exception {
+    var setName = "setName";
+    var count = 1;
+    var validity = 14;
+    var ttl = 365;
+    var noRefresh = true;
+
+    assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, 0, noRefresh);
+
+    validateEncryptionKeyTimes(validity, ttl);
+    assertThat(task.keyDb.getActiveKeys(setName, MAX_VALUE)).hasSize(count);
+
+    var allKeys = task.keyDb.getAllKeys();
+    assertThat(allKeys).hasSize(count * 2);
+
+    // Check there is no overlap between keys
+    assertThat(allKeys.get(0).getActivationTime()).isEqualTo(allKeys.get(1).getExpirationTime());
+  }
+
+  @Test
+  public void createKeys_switchToNoRefreshWindowTest() throws Exception {
+    var setName = "setName";
+    var count = 1;
+    var validity = 14;
+    var ttl = 365;
+    var expectedValidityMillis = Duration.ofDays(validity).toMillis();
+
+    assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
+    // Use createMaxDaysAhead = 10 to prevent creating next active set
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 10, 0, false);
+    // Create next active set with no refresh window
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 30, 0, true);
+
+    assertThat(task.keyDb.getActiveKeys(setName, MAX_VALUE)).hasSize(1);
+
+    var allKeys = task.keyDb.getAllKeys();
+    assertThat(allKeys).hasSize(2);
+
+    // Check next active key has appropriate active period and starts immediately when prev ended
+    var currActivation = allKeys.get(0).getActivationTime();
+    var currExpiration = allKeys.get(0).getExpirationTime();
+    assertThat(currExpiration - currActivation)
+        .isIn(Range.closed(expectedValidityMillis - 2000, expectedValidityMillis + 2000));
+    assertThat(currActivation).isEqualTo(allKeys.get(1).getExpirationTime());
+  }
+
+  private void validateEncryptionKeyTimes(int validity, int ttl) throws Exception {
+    var expectedValidityMillis = Duration.ofDays(validity).toMillis();
     var ttlMillis = Duration.ofDays(ttl).toMillis();
 
-    var currActivation = key.getActivationTime();
-    var currExpiration = key.getExpirationTime();
-    assertThat(currExpiration - currActivation)
-        .isIn(Range.closed(validityPlusOneMillis - 2000, validityPlusOneMillis + 2000));
+    var keys = task.keyDb.getAllKeys();
+    for (var key : keys) {
+      var currActivation = key.getActivationTime();
+      var currExpiration = key.getExpirationTime();
+      assertThat(currExpiration - currActivation)
+          .isIn(Range.closed(expectedValidityMillis - 2000, expectedValidityMillis + 2000));
 
-    var currTtl = key.getTtlTime() * 1000; // ttl is in seconds
-    assertThat(currTtl - currActivation)
-        .isIn(Range.closed(ttlMillis - 2000, ttlMillis + 2000));
+      var currTtl = key.getTtlTime() * 1000; // ttl is in seconds
+      assertThat(currTtl - currActivation)
+          .isIn(Range.closed(ttlMillis - 2000, ttlMillis + 2000));
+    }
   }
 
   @Test
@@ -434,7 +484,8 @@ public abstract class CreateSplitKeyTaskBaseTest {
     int maxDaysAhead = 365;
 
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0);
+    task.create(
+        DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0, false);
     var keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE);
     assertThat(keys).hasSize(count);
     // Must have null expiration time which is represented as 0

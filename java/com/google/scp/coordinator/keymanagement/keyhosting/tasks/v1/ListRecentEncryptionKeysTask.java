@@ -19,6 +19,7 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.KeyMigrationVendingUtil.vendAccordingToConfig;
 import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.common.RequestContextUtil.getPositiveNumberRequestValue;
+import static com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestHeaderParsingUtil.getCallerEmail;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -26,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigCacheUsers;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.AllKeysForSetNameCache;
 import com.google.scp.coordinator.keymanagement.shared.converter.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
@@ -54,6 +56,7 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
   private final boolean enableCache;
   private final LogMetricHelper logMetricHelper;
   private final ImmutableSet<String> allowedMigrators;
+  private final ImmutableSet<String> cacheUsers;
 
   @Inject
   ListRecentEncryptionKeysTask(
@@ -61,7 +64,8 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
       AllKeysForSetNameCache cache,
       @EnableCache Boolean enableCache,
       LogMetricHelper logMetricHelper,
-      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators) {
+      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators,
+      @KeySetsVendingConfigCacheUsers ImmutableSet<String> cacheUsers) {
     super(
         "GET",
         Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/encryptionKeys:recent"),
@@ -73,6 +77,7 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
     this.enableCache = enableCache;
     this.logMetricHelper = logMetricHelper;
     this.allowedMigrators = allowedMigrators;
+    this.cacheUsers = cacheUsers;
   }
 
   @Override
@@ -84,7 +89,9 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
         logMetricHelper.format(
             "list_recent_encrypted_keys/age_in_days",
             ImmutableMap.of("setName", setName, "days", Long.toString(maxAge.toDays()))));
-    var keys = getListOfKeys(setName, maxAge);
+
+    String email = getCallerEmail(request).orElse("unknown");
+    var keys = getListOfKeys(setName, maxAge, email);
     response.setBody(
         ListRecentEncryptionKeysResponse.newBuilder()
             .addAllKeys(
@@ -96,9 +103,9 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
                     .collect(toImmutableList())));
   }
 
-  private Stream<EncryptionKey> getListOfKeys(String setName, Duration maxAge)
+  private Stream<EncryptionKey> getListOfKeys(String setName, Duration maxAge, String email)
       throws ServiceException {
-    if (enableCache) {
+    if (isCacheEnabled(email, setName)) {
       var expiryTimeCutoff = Instant.now().minus(maxAge).toEpochMilli();
       ImmutableList<EncryptionKey> keys = cache.get(setName);
       return keys
@@ -120,5 +127,9 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
 
   private static Duration getMaxAage(RequestContext request) throws ServiceException {
     return Duration.ofSeconds(getPositiveNumberRequestValue(request, MAX_AGE_SECONDS_PARAM_NAME));
+  }
+
+  private boolean isCacheEnabled(String email, String setName) {
+    return enableCache || cacheUsers.contains(email) || cacheUsers.contains(setName);
   }
 }

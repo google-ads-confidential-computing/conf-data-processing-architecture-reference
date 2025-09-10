@@ -75,6 +75,10 @@ public abstract class Job {
   @JsonProperty("processing_start_time")
   public abstract Optional<Instant> processingStartTime();
 
+  /** The target workgroup for the job. */
+  @JsonProperty("target_workgroup")
+  public abstract Optional<String> targetWorkgroup();
+
   /** Returns a new builder instance from a {@code Job} instance. */
   public abstract Builder toBuilder();
 
@@ -111,6 +115,9 @@ public abstract class Job {
 
     /** Set the processing start time for the job during the last attempt. */
     public abstract Builder setProcessingStartTime(Optional<Instant> processingStartTime);
+
+    /** Set the target workgroup for the job. */
+    public abstract Builder setTargetWorkgroup(String targetWorkgroup);
 
     /** Creates a new instance of the {@code Job} class from the builder. */
     public abstract Job build();

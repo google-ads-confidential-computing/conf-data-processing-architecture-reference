@@ -40,6 +40,12 @@ public enum ErrorReason {
   JOB_COMPLETION_NOTIFICATIONS_NOT_ENABLED,
   // Failed to publish job notification
   JOB_COMPLETION_NOTIFICATION_FAILED,
+  // The workgroup allocation function failed with an uncaught exception.
+  WORKGROUP_ALLOCATION_FUNCTION_FAILED,
+  // Failure in workgroup processing or routing.
+  WORKGROUP_PROCESSING_FAILED,
+  // Workgroup allocation function returned an invalid workgroup.
+  WORKGROUP_ALLOCATION_FUNCTION_INVALID_WORKGROUP,
   // An unspecified fatal error occurred.
   UNSPECIFIED_ERROR
 }

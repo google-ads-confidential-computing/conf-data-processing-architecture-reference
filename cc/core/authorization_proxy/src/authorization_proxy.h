@@ -20,19 +20,15 @@
 #include <memory>
 #include <string>
 
-#include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
+#include "core/authorization_proxy/src/authorization_proxy_base.h"
 #include "core/interface/authorization_proxy_interface.h"
 #include "core/interface/http_client_interface.h"
 #include "core/interface/http_request_response_auth_interceptor_interface.h"
 
 namespace google::scp::core {
 
-class AuthorizationProxy : public AuthorizationProxyInterface {
+class AuthorizationProxy : public AuthorizationProxyBase {
  public:
-  struct CacheEntry : public LoadableObject {
-    AuthorizedMetadata authorized_metadata;
-  };
-
   AuthorizationProxy(
       const std::string& server_endpoint,
       const std::shared_ptr<AsyncExecutorInterface>& async_executor,
@@ -43,32 +39,22 @@ class AuthorizationProxy : public AuthorizationProxyInterface {
 
   ExecutionResult Init() noexcept override;
 
-  ExecutionResult Run() noexcept override;
-
-  ExecutionResult Stop() noexcept override;
-
-  ExecutionResult Authorize(
+ protected:
+  ExecutionResult AuthorizeInternal(
       AsyncContext<AuthorizationProxyRequest,
                    AuthorizationProxyResponse>&) noexcept override;
 
- protected:
   /**
    * @brief The handler when performing HttpClient operations.
    *
    * @param authorization_context The authorization context to perform
    * operation on.
-   * @param cache_entry_key key of the entry
    * @param http_context
    */
   void HandleAuthorizeResponse(
       AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
           authorization_context,
-      std::string& cache_entry_key,
       AsyncContext<HttpRequest, HttpResponse>& http_context);
-
-  /// The authorization token cache.
-  common::AutoExpiryConcurrentMap<std::string, std::shared_ptr<CacheEntry>>
-      cache_;
 
   /// The remote authorization end point URI
   /// Ex: http://localhost:65534/endpoint

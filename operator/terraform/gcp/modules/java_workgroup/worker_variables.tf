@@ -163,14 +163,6 @@ variable "new_worker_error_metric_type" {
 # Job Client Monitoring Variables.
 ################################################################################
 
-variable "java_job_validations_to_alert" {
-  description = <<-EOT
-      Job validations to alarm for Java CPIO Job Client. Supported validations:
-      ["JobValidatorCheckFields", "JobValidatorCheckRetryLimit", "JobValidatorCheckStatus"]
-  EOT
-  type        = list(string)
-}
-
 variable "legacy_jobclient_job_validation_failure_metric_type" {
   description = "The metric for legacy JobClient job validation failures."
   type        = string

@@ -29,6 +29,7 @@ public final class FakeJobQueue implements JobQueue {
   private JobKey lastJobKeySent;
   private String lastServerJobIdSent;
   private JobQueueItem lastJobQueueItemSent;
+  private boolean validWorkgroup;
 
   // Item to be returned by receiveJob
   private Optional<JobQueueItem> jobQueueItemToBeReceived;
@@ -43,10 +44,22 @@ public final class FakeJobQueue implements JobQueue {
     lastJobQueueItemSent = null;
     jobQueueItemToBeReceived = Optional.empty();
     shouldThrowException = false;
+    validWorkgroup = false;
   }
 
   @Override
   public void sendJob(JobKey jobKey, String serverJobId) throws JobQueueException {
+    if (shouldThrowException) {
+      throw new JobQueueException(new IllegalStateException("was set to throw"));
+    }
+
+    lastJobKeySent = jobKey;
+    lastServerJobIdSent = serverJobId;
+  }
+
+  @Override
+  public void sendJob(JobKey jobKey, String serverJobId, String workgroupId)
+      throws JobQueueException {
     if (shouldThrowException) {
       throw new JobQueueException(new IllegalStateException("was set to throw"));
     }
@@ -82,6 +95,11 @@ public final class FakeJobQueue implements JobQueue {
     }
   }
 
+  @Override
+  public boolean validateWorkgroupJobQueue(String workgroupId) {
+    return validWorkgroup;
+  }
+
   /** Get the job key used in the last call to the {@code sendJob} method. */
   public JobKey getLastJobKeySent() {
     return lastJobKeySent;
@@ -90,6 +108,10 @@ public final class FakeJobQueue implements JobQueue {
   /** Get the server job id used in the last call to the {@code sendJob} method. */
   public String getLastServerJobIdSent() {
     return lastServerJobIdSent;
+  }
+
+  public void setValidWorkgroup(boolean isValid) {
+    validWorkgroup = isValid;
   }
 
   /**

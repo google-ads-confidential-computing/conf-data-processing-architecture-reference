@@ -23,8 +23,8 @@ import java.util.Optional;
  * A class for defining parameters used to get a parameter.
  *
  * <p>The parameter storage layer will be invoked in the format:
- * `{paramPrefix}-{environment}-{workgroup}-{param}`, with the inclusion of the parameter prefix, the
- * environment, and the workgroup controlled by the arguments.
+ * `{paramPrefix}-{environment}-{workgroup}-{param}`, with the inclusion of the parameter prefix,
+ * the environment, and the workgroup controlled by the arguments.
  */
 @AutoValue
 public abstract class GetParameterRequest {
@@ -49,8 +49,17 @@ public abstract class GetParameterRequest {
   /** Returns whether to include the environment in the requested parameter. */
   public abstract boolean getIncludeEnvironmentPrefix();
 
-  /** Returns whether to include the workgroup in the requested parameter. */
+  /**
+   * Returns whether to include the workgroup in the requested parameter. Currently, only supported
+   * in GCP Operator.
+   */
   public abstract boolean getIncludeWorkgroupPrefix();
+
+  /**
+   * Returns the workgroup to use instead of the current instance workgroup. Currently, only
+   * supported in GCP Operator.
+   */
+  public abstract Optional<String> getWorkgroupOverride();
 
   /** Return whether to fetch the latest parameter value. */
   public abstract boolean getLatest();
@@ -72,6 +81,9 @@ public abstract class GetParameterRequest {
 
     /** Set whether to fetch the latest parameter value. */
     public abstract Builder setLatest(boolean value);
+
+    /** Set the workgroup to use instead of the current instance workgroup. */
+    public abstract Builder setWorkgroupOverride(String value);
 
     /** Returns a new instance of the {@code GetParameterRequest} class from the builder. */
     public abstract GetParameterRequest build();

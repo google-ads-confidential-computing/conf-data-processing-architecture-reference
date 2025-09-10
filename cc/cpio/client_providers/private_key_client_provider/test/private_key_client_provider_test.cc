@@ -337,6 +337,14 @@ class PrivateKeyClientProviderTest : public ScpTestBase {
                   mock_responses.at(endpoint));
             }
           }
+          // When request->max_age_seconds equals to 0, the request is to list
+          // active keys which will have valid query time range.
+          if (context.request->max_age_seconds == 0) {
+            EXPECT_GT(context.request->active_key_query_start_time_ms, 0);
+            EXPECT_TRUE(context.request->active_key_query_end_time_ms >=
+                        context.request->active_key_query_start_time_ms);
+          }
+
           context.Finish();
           return context.result;
         });
@@ -477,6 +485,31 @@ TEST_F(PrivateKeyClientProviderTest, GetActiveEncryptionKeysFetchKeysFailed) {
                                ListActiveEncryptionKeysResponse>& context) {
                 EXPECT_THAT(context.result,
                             ResultIs(FailureExecutionResult(SC_UNKNOWN)));
+                response_count.fetch_add(1);
+              });
+
+  private_key_client_provider->ListActiveEncryptionKeys(context);
+  WaitUntil([&]() { return response_count.load() == 1; });
+}
+
+TEST_F(PrivateKeyClientProviderTest,
+       ListActiveEncryptionKeysFailedWithInvalidQueryTimeRangeRequest) {
+  list_active_encryption_keys_request_->set_key_set_name(kTestKeySetName);
+  auto* time_range =
+      list_active_encryption_keys_request_->mutable_query_time_range();
+  // Invalid time range as the `end_time` is before the `start_time`
+  *time_range->mutable_start_time() = TimeUtil::GetCurrentTime();
+  *time_range->mutable_end_time() = TimeUtil::GetEpoch();
+  atomic<size_t> response_count = 0;
+  AsyncContext<ListActiveEncryptionKeysRequest,
+               ListActiveEncryptionKeysResponse>
+      context(list_active_encryption_keys_request_,
+              [&](AsyncContext<ListActiveEncryptionKeysRequest,
+                               ListActiveEncryptionKeysResponse>& context) {
+                EXPECT_THAT(
+                    context.result,
+                    ResultIs(FailureExecutionResult(
+                        SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST)));
                 response_count.fetch_add(1);
               });
 

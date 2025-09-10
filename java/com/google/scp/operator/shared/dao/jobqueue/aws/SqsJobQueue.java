@@ -35,6 +35,7 @@ import com.google.scp.operator.protos.shared.backend.JobKeyProto.JobKey;
 import com.google.scp.operator.protos.shared.backend.JobMessageProto.JobMessage;
 import com.google.scp.operator.protos.shared.backend.jobqueue.JobQueueProto.JobQueueItem;
 import com.google.scp.operator.shared.dao.jobqueue.common.JobQueue;
+import com.google.scp.operator.shared.model.BackendModelUtil;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -52,6 +53,7 @@ import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.MessageAttributeValue;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
 /** SQS-Backed implementation of the {@code JobQueue}. */
 public final class SqsJobQueue implements JobQueue {
@@ -109,11 +111,20 @@ public final class SqsJobQueue implements JobQueue {
                           .build()))
               .build();
 
-      sqsClient.sendMessage(sendMessageRequest);
-      logger.info("Placed job on queue: " + jobKey.getJobRequestId());
+      SendMessageResponse response = sqsClient.sendMessage(sendMessageRequest);
+      logger.info(
+          String.format(
+              "Job '%s' was successfully added to job queue %s with message ID '%s'.",
+              BackendModelUtil.toJobKeyString(jobKey), queueUrl.get(), response.messageId()));
     } catch (SdkException | InvalidProtocolBufferException e) {
       throw new JobQueueException(e);
     }
+  }
+
+  @Override
+  public void sendJob(JobKey jobKey, String serverJobId, String workgroupId)
+      throws JobQueueException {
+    throw new UnsupportedOperationException("Workgroup parameter not supported for AWS.");
   }
 
   @Override
@@ -182,6 +193,11 @@ public final class SqsJobQueue implements JobQueue {
     } catch (SdkException e) {
       throw new JobQueueException(e);
     }
+  }
+
+  @Override
+  public boolean validateWorkgroupJobQueue(String workgroupId) {
+    return false;
   }
 
   /**

@@ -20,10 +20,13 @@ import static com.google.scp.shared.gcp.util.JsonHelper.getField;
 import static com.google.scp.shared.gcp.util.JsonHelper.parseJson;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigCacheUsers;
+import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,41 +40,55 @@ public final class GcpPrivateKeyServiceModule extends AbstractModule {
   private static final Logger logger = LoggerFactory.getLogger(GcpPrivateKeyServiceModule.class);
   private static final String KEY_SETS_VENDING_CONFIG_ENV_VAR = "KEY_SETS_VENDING_CONFIG";
   private static final String VENDING_CONFIG_ALLOWED_MIGRATORS = "allowed_migrators";
+  private static final String VENDING_CONFIG_CACHE_USERS = "cache_users";
+
+  private static ImmutableSet<String> parseConfigString(
+      String configString,
+      String fieldName,
+      LogMetricHelper logHelper) {
+    ImmutableSet.Builder<String> configBuilder = ImmutableSet.builder();
+    try {
+      JsonNode configNode = parseJson(configString);
+      JsonNode arrayNode = getField(configNode, fieldName);
+      if (!arrayNode.isArray()) {
+        logger.warn(
+            logHelper.format(fieldName, ImmutableMap.of("errorReason", "json node not an array")));
+        return ImmutableSet.of();
+      }
+      for (JsonNode node : arrayNode) {
+        configBuilder.add(node.asText());
+      }
+    } catch (RuntimeException e) {
+      logger.warn(
+          logHelper.format(fieldName, ImmutableMap.of("errorReason", e.getMessage())));
+    }
+    return configBuilder.build();
+  }
 
   /**
    * Returns the set of consumers allowed to use key migration data. A consumer is designated by
    * either individual set names or caller email identities.
    */
-  private static ImmutableSet<String> getKeySetsVendingConfigAllowedMigrators() {
-    ImmutableSet.Builder<String> configBuilder = ImmutableSet.builder();
-    Optional.ofNullable(System.getenv(KEY_SETS_VENDING_CONFIG_ENV_VAR))
-        .ifPresent(
-            configString -> {
-              try {
-                JsonNode configNode = parseJson(configString);
-                JsonNode allowedMigratorsNode =
-                    getField(configNode, VENDING_CONFIG_ALLOWED_MIGRATORS);
-                if (!allowedMigratorsNode.isArray()) {
-                  logger.info(
-                      "Vending migration key data disabled. Misconfigured allowed migrators list.");
-                  return;
-                }
-                for (JsonNode allowedMigratorNode : allowedMigratorsNode) {
-                  configBuilder.add(allowedMigratorNode.asText());
-                }
-              } catch (RuntimeException e) {
-                logger.warn("Vending migration key data disabled. {}", e.getMessage());
-              }
-            });
-    var config = configBuilder.build();
-    logger.info("Allowed migrators vending list: {}.", config);
-    return config;
+  private static ImmutableSet<String> getKeySetsVendingConfigInfo(
+      String fieldName, LogMetricHelper logHelper) {
+    return Optional.ofNullable(System.getenv(KEY_SETS_VENDING_CONFIG_ENV_VAR))
+        .map(configString -> parseConfigString(configString, fieldName, logHelper))
+        .orElse(ImmutableSet.of());
   }
 
   @Override
   protected void configure() {
+    var logHelper = new LogMetricHelper("key_service/private_ks_module");
+    var allowedMigrators = getKeySetsVendingConfigInfo(VENDING_CONFIG_ALLOWED_MIGRATORS, logHelper);
+    logger.info("Allowed migrators vending list: {}.", allowedMigrators);
     bind(new TypeLiteral<ImmutableSet<String>>() {})
         .annotatedWith(KeySetsVendingConfigAllowedMigrators.class)
-        .toInstance(getKeySetsVendingConfigAllowedMigrators());
+        .toInstance(allowedMigrators);
+
+    var cacheUsers = getKeySetsVendingConfigInfo(VENDING_CONFIG_CACHE_USERS, logHelper);
+    logger.info("Allowed cache users list: {}.", cacheUsers);
+    bind(new TypeLiteral<ImmutableSet<String>>() {})
+        .annotatedWith(KeySetsVendingConfigCacheUsers.class)
+        .toInstance(cacheUsers);
   }
 }

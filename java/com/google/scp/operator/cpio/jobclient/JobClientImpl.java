@@ -34,6 +34,7 @@ import com.google.scp.operator.cpio.jobclient.model.GetJobRequest;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.jobclient.model.JobRetryRequest;
+import com.google.scp.operator.cpio.jobclient.model.WorkgroupAllocationFuncResponse;
 import com.google.scp.operator.cpio.lifecycleclient.LifecycleClient;
 import com.google.scp.operator.cpio.lifecycleclient.LifecycleClient.LifecycleClientException;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
@@ -90,6 +91,8 @@ public final class JobClientImpl implements JobClient {
   // https://docs.google.com/document/d/1Cv1BgSB1vK5KysTOap46BDJeYEUyMfo_NHdp7kdv6J4/edit?resourcekey=0-wsNR34Ax0mfvdO4wSeOGgg#bookmark=id.ah724n4y05sm
   /** Fixed reporting window interval, set to 1hr. */
   static final Duration REPORTING_WINDOW_FIXED_LENGTH = Duration.of(1, ChronoUnit.HOURS);
+
+  static final Duration WORKGROUP_ALLOCATION_RETRY_DELAY = Duration.ofSeconds(1);
 
   /** Namespace used to track job validation failures. */
   static final String METRIC_NAMESPACE = "scp/jobclient";
@@ -157,6 +160,7 @@ public final class JobClientImpl implements JobClient {
     Optional<JobMetadata> metadata = Optional.empty();
     Optional<Job> job = Optional.empty();
     try {
+      Optional<String> currentWorkgroup = parameterClient.getWorkgroupId();
       while (pollForJob) {
         if (lifecycleClient.handleScaleInLifecycleAction()) {
           // Adding some sleep to give the instance some time to terminate.
@@ -256,6 +260,19 @@ public final class JobClientImpl implements JobClient {
           continue;
         }
 
+        if (currentWorkgroup.isPresent()) {
+          boolean continueToProcessingNextJob =
+              processWorkgroupAllocation(
+                  currentWorkgroup.get(),
+                  job.get(),
+                  queueItem.get(),
+                  getJobRequest,
+                  metadata.get());
+          if (continueToProcessingNextJob) {
+            continue;
+          }
+        }
+
         pollForJob = false;
       }
 
@@ -265,12 +282,16 @@ public final class JobClientImpl implements JobClient {
       }
 
       Timestamp processingStartTime = ProtoUtil.toProtoTimestamp(Instant.now(clock));
-      metadataDb.updateJobMetadata(
+      JobMetadata.Builder jobMetadataBuilder =
           metadata.get().toBuilder()
               .setJobStatus(JobStatus.IN_PROGRESS)
               .setRequestProcessingStartedAt(processingStartTime)
-              .setNumAttempts(metadata.get().getNumAttempts() + 1)
-              .build());
+              .setNumAttempts(metadata.get().getNumAttempts() + 1);
+      if (!jobMetadataBuilder.hasTargetWorkgroup()) {
+        currentWorkgroup.ifPresent(jobMetadataBuilder::setTargetWorkgroup);
+      }
+      metadataDb.updateJobMetadata(jobMetadataBuilder.build());
+
       // Cache job in memory, to be able to retrieve the queue item when job completes.
       cache.put(
           toJobKeyString(metadata.get().getJobKey()),
@@ -286,7 +307,8 @@ public final class JobClientImpl implements JobClient {
         | JobMetadataDbException
         | JobMetadataConflictException
         | LifecycleClientException
-        | InterruptedException e) {
+        | InterruptedException
+        | ParameterClientException e) {
       logger.log(Level.SEVERE, "Failed to pull new job from job queue.", e);
       recordJobClientError(ErrorReason.JOB_PULL_FAILED);
       throw new JobClientException(e, ErrorReason.JOB_PULL_FAILED);
@@ -661,6 +683,9 @@ public final class JobClientImpl implements JobClient {
           ErrorReason.JOB_PULL_FAILED);
     }
 
+    if (jobMetadata.hasTargetWorkgroup()) {
+      resBuilder.setTargetWorkgroup(jobMetadata.getTargetWorkgroup());
+    }
     return resBuilder.build();
   }
 
@@ -744,5 +769,116 @@ public final class JobClientImpl implements JobClient {
 
     return job.get().jobStatus() == JobStatus.IN_PROGRESS
         && jobStarted.plus(jobProcessingTimeout).isAfter(currentTime);
+  }
+
+  /**
+   * Handles workgroup allocation for the job.
+   *
+   * <p>Returns true if the job is routed to another workgroup or workgroup allocation failed.
+   * Returns false to continue process the job in the current workgroup.
+   */
+  @VisibleForTesting
+  boolean processWorkgroupAllocation(
+      String currentWorkgroup,
+      Job job,
+      JobQueueItem queueItem,
+      GetJobRequest getJobRequest,
+      JobMetadata metadata)
+      throws JobClientException {
+    try {
+      if (job.targetWorkgroup().isPresent()
+          && !currentWorkgroup.equals(job.targetWorkgroup().get())) {
+        processAlreadyAssignedWorkgroup(job, queueItem);
+        return true;
+      } else if (job.targetWorkgroup().isEmpty()
+          && getJobRequest.getWorkgroupAllocationFunc().isPresent()) {
+        logger.info(
+            String.format(
+                "Target workgroup not set. Evaluating workgroup allocation for job %s.",
+                job.jobKey().getJobRequestId()));
+        WorkgroupAllocationFuncResponse response;
+        try {
+          response = getJobRequest.getWorkgroupAllocationFunc().get().apply(job);
+        } catch (Exception e) {
+          logger.info("Workgroup allocation function failed with an uncaught exception.");
+          recordJobClientError(ErrorReason.WORKGROUP_ALLOCATION_FUNCTION_FAILED);
+          metadataDb.updateJobMetadata(
+              metadata.toBuilder().setNumAttempts(metadata.getNumAttempts() + 1).build());
+          jobQueue.modifyJobProcessingTime(queueItem, WORKGROUP_ALLOCATION_RETRY_DELAY);
+          throw new JobClientException(e, ErrorReason.WORKGROUP_ALLOCATION_FUNCTION_FAILED);
+        }
+        if (response.resultInfo().isPresent()) {
+          handleWorkgroupAllocationFuncResponseWithResultInfo(
+              metadata, queueItem, response.resultInfo().get());
+          return true;
+        } else if (response.workgroupId().isPresent()
+            && !currentWorkgroup.equals(response.workgroupId().get())) {
+          handleWorkgroupAllocationResponseWithDifferentTargetWorkgroup(
+              metadata, queueItem, response.workgroupId().get());
+          return true;
+        }
+      }
+      return false;
+    } catch (JobClientException e) {
+      throw e;
+    } catch (Exception e) {
+      logger.info("Workgroup processing failed with an uncaught exception");
+      throw new JobClientException(e, ErrorReason.WORKGROUP_PROCESSING_FAILED);
+    }
+  }
+
+  private void processAlreadyAssignedWorkgroup(Job job, JobQueueItem queueItem)
+      throws JobQueueException {
+    if (job.jobStatus().equals(JobStatus.RECEIVED)) {
+      logger.info(
+          String.format(
+              "Target workgroup %s already set. Try resending the job message for job %s.",
+              job.targetWorkgroup().get(), job.jobKey().getJobRequestId()));
+      jobQueue.sendJob(
+          JobKey.newBuilder().setJobRequestId(queueItem.getJobKeyString()).build(),
+          queueItem.getServerJobId(),
+          job.targetWorkgroup().get());
+    }
+    jobQueue.acknowledgeJobCompletion(queueItem);
+  }
+
+  private void handleWorkgroupAllocationFuncResponseWithResultInfo(
+      JobMetadata metadata, JobQueueItem queueItem, ResultInfo resultInfo)
+      throws JobMetadataDbException, JobMetadataConflictException, JobQueueException {
+    metadataDb.updateJobMetadata(
+        metadata.toBuilder()
+            .setNumAttempts(metadata.getNumAttempts() + 1)
+            .setResultInfo(resultInfo)
+            .build());
+    jobQueue.modifyJobProcessingTime(queueItem, WORKGROUP_ALLOCATION_RETRY_DELAY);
+  }
+
+  private void handleWorkgroupAllocationResponseWithDifferentTargetWorkgroup(
+      JobMetadata metadata, JobQueueItem queueItem, String targetWorkgroup)
+      throws JobClientException,
+          JobQueueException,
+          JobMetadataDbException,
+          JobMetadataConflictException {
+    if (!jobQueue.validateWorkgroupJobQueue(targetWorkgroup)) {
+      String invalidWorkgroupMessage =
+          "Workgroup allocation function returned an invalid workgroup: " + targetWorkgroup;
+      logger.info(invalidWorkgroupMessage);
+      metadataDb.updateJobMetadata(
+          metadata.toBuilder().setNumAttempts(metadata.getNumAttempts() + 1).build());
+      recordJobClientError(ErrorReason.WORKGROUP_ALLOCATION_FUNCTION_INVALID_WORKGROUP);
+      jobQueue.modifyJobProcessingTime(queueItem, WORKGROUP_ALLOCATION_RETRY_DELAY);
+      throw new JobClientException(
+          invalidWorkgroupMessage, ErrorReason.WORKGROUP_ALLOCATION_FUNCTION_INVALID_WORKGROUP);
+    }
+    metadataDb.updateJobMetadata(metadata.toBuilder().setTargetWorkgroup(targetWorkgroup).build());
+    jobQueue.sendJob(
+        JobKey.newBuilder().setJobRequestId(queueItem.getJobKeyString()).build(),
+        queueItem.getServerJobId(),
+        targetWorkgroup);
+    jobQueue.acknowledgeJobCompletion(queueItem);
+    logger.info(
+        String.format(
+            "Successfully allocated job %s to workgroup %s.",
+            queueItem.getJobKeyString(), targetWorkgroup));
   }
 }

@@ -30,6 +30,7 @@ import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.Di
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigCacheUsers;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 
@@ -56,6 +57,9 @@ public final class InMemoryTestEnv extends AbstractModule {
     bind(Boolean.class).annotatedWith(DisableActivationTime.class).toInstance(false);
     bind(new TypeLiteral<ImmutableSet<String>>() {})
         .annotatedWith(KeySetsVendingConfigAllowedMigrators.class)
+        .toInstance(ImmutableSet.of());
+    bind(new TypeLiteral<ImmutableSet<String>>() {})
+        .annotatedWith(KeySetsVendingConfigCacheUsers.class)
         .toInstance(ImmutableSet.of());
   }
 }

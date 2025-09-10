@@ -154,6 +154,11 @@ variable "key_generation_max_days_ahead" {
   }
 }
 
+variable "key_generation_no_refresh_window" {
+  description = "Determines if there is a refresh window (implicit overlap) used during key generation."
+  type        = bool
+}
+
 variable "key_generation_cron_schedule" {
   description = <<-EOT
     Frequency for key generation cron job. Must be valid cron statement. Default is every Monday at 10AM
@@ -215,6 +220,11 @@ variable "key_generation_alignment_period" {
     condition     = var.key_generation_alignment_period > 0 && var.key_generation_alignment_period < 81000
     error_message = "Must be between 0 and 81,000 seconds."
   }
+}
+
+variable "key_generation_create_alert_alignment_periods" {
+  description = "Total number of key generation alignment periods that need to pass without a create to alert."
+  type        = number
 }
 
 variable "key_gen_instance_force_replace" {
@@ -528,20 +538,26 @@ variable "key_sets_config" {
   Note: For backward compatibility, if a config is not defined. A default key set with name = "" is created.
 
   Attributes:
-    key_sets                    (list) - The list of individual key set configuration, one for each unique key set.
-    key_sets[].name             (string) - The unique set name for the key set, the value should be a valid URL path segment (e.g. ^[a-zA-Z0-9\\-\\._~]+$).
-    key_sets[].tink_template    (optional(string)) - The Tink template to be used for key generation.
-    key_sets[].count            (optional(number)) - The number of keys to be generated.
-    key_sets[].validity_in_days (optional(number)) - Number of days the generated keys will be valid. If set to 0, the keys will never expire.
-    key_sets[].ttl_in_days      (optional(number)) - Number of days the generated keys will be kept in the database. If set to 0, the keys will never be deleted.
+    key_sets                         (list) - The list of individual key set configuration, one for each unique key set.
+    key_sets[].name                  (string) - The unique set name for the key set, the value should be a valid URL path segment (e.g. ^[a-zA-Z0-9\\-\\._~]+$).
+    key_sets[].tink_template         (optional(string)) - The Tink template to be used for key generation.
+    key_sets[].count                 (optional(number)) - The number of keys to be generated.
+    key_sets[].validity_in_days      (optional(number)) - Number of days the generated keys will be valid. If set to 0, the keys will never expire.
+    key_sets[].ttl_in_days           (optional(number)) - Number of days the generated keys will be kept in the database. If set to 0, the keys will never be deleted.
+    key_sets[].create_max_days_ahead (optional(number)) - Number of days ahead that a key can be created
+    key_sets[].overlap_period_days   (optional(number)) - Number of days each consecutive active set should overlap
+    key_sets[].no_refresh_window     (optional(bool)) - Determines if there is a refresh window (implicit overlap) when generating keys
   EOT
   type = object({
     key_sets = list(object({
-      name             = string
-      tink_template    = string
-      count            = number
-      validity_in_days = number
-      ttl_in_days      = number
+      name                  = string
+      tink_template         = string
+      count                 = number
+      validity_in_days      = number
+      ttl_in_days           = number
+      create_max_days_ahead = optional(number)
+      overlap_period_days   = optional(number)
+      no_refresh_window     = optional(bool)
     }))
   })
 }
@@ -591,9 +607,11 @@ variable "key_sets_vending_config" {
 
   Attributes:
     allowed_migrators (list(string)) - The list of individual key set and/or caller emails allowed to consume migration key data.
+    cache_users       (list(string)) - The list of individual key set and/or caller emails allowed to use cache.
   EOT
   type = object({
     allowed_migrators = list(string)
+    cache_users       = optional(list(string))
   })
 }
 

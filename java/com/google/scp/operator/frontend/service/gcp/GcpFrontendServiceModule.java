@@ -20,6 +20,7 @@ import static com.google.scp.operator.frontend.service.gcp.FrontendServiceHttpFu
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Converter;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.TypeLiteral;
@@ -48,11 +49,14 @@ import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerJobDbModule;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb.MetadataDbSpannerTtlDays;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbConfig;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDbModule;
+import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.local.LocalParameterClient;
 import com.google.scp.shared.mapper.TimeObjectMapper;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Collections;
 import java.util.Map;
 
 /** Defines dependencies for GCP implementation of FrontendService. */
@@ -61,8 +65,8 @@ public final class GcpFrontendServiceModule extends AbstractModule {
   private static final String PROJECT_ID_ENV_VAR = "PROJECT_ID";
   private static final String INSTANCE_ID_ENV_VAR = "INSTANCE_ID";
   private static final String DATABASE_ID_ENV_VAR = "DATABASE_ID";
-  private static final String PUBSUB_TOPIC_ID_ENV_VAR = "PUBSUB_TOPIC_ID";
-  private static final String PUBSUB_SUBSCRIPTION_ID_ENV_VAR = "PUBSUB_SUBSCRIPTION_ID";
+  private static final String PUBSUB_TOPIC_NAME_ENV_VAR = "PUBSUB_TOPIC_NAME";
+  private static final String PUBSUB_SUBSCRIPTION_NAME_ENV_VAR = "PUBSUB_SUBSCRIPTION_NAME";
   private static final String JOB_METADATA_TTL_ENV_VAR = "JOB_METADATA_TTL";
   private static final String JOB_TABLE_NAME_ENV_VAR = "JOB_TABLE_NAME";
   private static final String JOB_VERSION_ENV_VAR = "JOB_VERSION";
@@ -75,8 +79,8 @@ public final class GcpFrontendServiceModule extends AbstractModule {
     String projectId = env.getOrDefault(PROJECT_ID_ENV_VAR, "adh-cloud-adtech1");
     String instanceId = env.getOrDefault(INSTANCE_ID_ENV_VAR, "jobmetadatainstance");
     String databaseId = env.getOrDefault(DATABASE_ID_ENV_VAR, "jobmetadatadb");
-    String pubsubTopicId = env.getOrDefault(PUBSUB_TOPIC_ID_ENV_VAR, "aggregate-service-jobqueue");
-    String pubsubSubscriptionId = env.getOrDefault(PUBSUB_SUBSCRIPTION_ID_ENV_VAR, "");
+    String pubsubTopicName = env.getOrDefault(PUBSUB_TOPIC_NAME_ENV_VAR, "");
+    String pubsubSubscriptionName = env.getOrDefault(PUBSUB_SUBSCRIPTION_NAME_ENV_VAR, "");
     String jobTableName = env.getOrDefault(JOB_TABLE_NAME_ENV_VAR, "JobTable");
     Integer metadataTtlDays = Integer.parseInt(env.getOrDefault(JOB_METADATA_TTL_ENV_VAR, "365"));
 
@@ -119,14 +123,17 @@ public final class GcpFrontendServiceModule extends AbstractModule {
                 .setSpannerInstanceId(instanceId)
                 .setSpannerDbName(databaseId)
                 .build());
+    // Parameter client initialization required for PubSubJobQueue
+    bind(ParameterClient.class)
+        .toInstance(new LocalParameterClient(ImmutableMap.copyOf(Collections.emptyMap())));
     install(new SpannerMetadataDbModule());
     install(new SpannerJobDbModule());
     bind(PubSubJobQueueConfig.class)
         .toInstance(
             PubSubJobQueueConfig.builder()
                 .setGcpProjectId(projectId)
-                .setPubSubTopicId(pubsubTopicId)
-                .setPubSubSubscriptionId(pubsubSubscriptionId)
+                .setPubSubTopicName(pubsubTopicName)
+                .setPubSubSubscriptionName(pubsubSubscriptionName)
                 .setPubSubMaxMessageSizeBytes(1000)
                 .setPubSubMessageLeaseSeconds(600)
                 .build());

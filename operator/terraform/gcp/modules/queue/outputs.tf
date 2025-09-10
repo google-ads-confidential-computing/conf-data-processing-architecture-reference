@@ -24,6 +24,11 @@ output "queue_pubsub_sub_name" {
   description = "The name of the pubsub queue subscription."
 }
 
+output "queue_pubsub_topic_id" {
+  value       = google_pubsub_topic.queue_topic.id
+  description = "The name of the pubsub queue topic."
+}
+
 output "queue_pubsub_sub_id" {
   value       = google_pubsub_subscription.queue_sub.id
   description = "The name of the pubsub queue subscription."

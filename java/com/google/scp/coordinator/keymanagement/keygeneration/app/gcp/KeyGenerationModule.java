@@ -25,6 +25,7 @@ import static com.google.scp.coordinator.keymanagement.shared.model.KeyGeneratio
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_TTL_IN_DAYS;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_URI;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.NO_REFRESH_WINDOW;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.NUMBER_OF_KEYS_TO_CREATE;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_SERVICE_ACCOUNT;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_WIP_PROVIDER;
@@ -39,6 +40,7 @@ import com.google.scp.coordinator.clients.configclient.gcp.GcpCoordinatorClientC
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.DisableKeySetAcl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationCreateMaxDaysAhead;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationKeyCount;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationNoRefreshWindow;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationTtlInDays;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationValidityInDays;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyIdTypeName;
@@ -76,6 +78,7 @@ import java.util.Optional;
 public final class KeyGenerationModule extends AbstractModule {
 
   private static final int DEFAULT_CREATE_MAX_DAYS_AHEAD = 365;
+  private static final boolean DEFAULT_NO_REFRESH_WINDOW = false;
 
   private final KeyGenerationArgs args;
 
@@ -132,6 +135,17 @@ public final class KeyGenerationModule extends AbstractModule {
         .getParameter(CREATE_MAX_DAYS_AHEAD)
         .map(Integer::valueOf)
         .orElse(DEFAULT_CREATE_MAX_DAYS_AHEAD);
+  }
+
+  @Provides
+  @Singleton
+  @KeyGenerationNoRefreshWindow
+  Boolean provideKeyGenerationNoRefreshWindow(ParameterClient parameterClient)
+      throws ParameterClientException {
+    return parameterClient
+        .getParameter(NO_REFRESH_WINDOW)
+        .map(Boolean::valueOf)
+        .orElse(DEFAULT_NO_REFRESH_WINDOW);
   }
 
   @Provides

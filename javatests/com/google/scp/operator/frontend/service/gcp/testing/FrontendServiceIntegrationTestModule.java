@@ -18,19 +18,27 @@ package com.google.scp.operator.frontend.service.gcp.testing;
 
 import static com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueueTestModule.PROJECT_ID;
 import static com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueueTestModule.SUBSCRIPTION_ID;
+import static com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueueTestModule.TOPIC_ID;
 
-import com.google.cloud.pubsub.v1.Publisher;
+import com.google.cloud.pubsub.v1.stub.PublisherStub;
 import com.google.cloud.pubsub.v1.stub.SubscriberStub;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.pubsub.v1.ProjectSubscriptionName;
+import com.google.pubsub.v1.TopicName;
 import com.google.scp.operator.shared.dao.jobqueue.common.JobQueue.JobQueueMessageLeaseSeconds;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePubSubSubscriptionName;
+import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePubSubTopicName;
+import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueue.JobQueuePublisherStub;
 import com.google.scp.operator.shared.dao.jobqueue.gcp.PubSubJobQueueTestModule;
 import com.google.scp.operator.shared.dao.metadatadb.gcp.SpannerMetadataDb.MetadataDbSpannerTtlDays;
+import com.google.scp.shared.clients.configclient.ParameterClient;
+import com.google.scp.shared.clients.configclient.local.LocalParameterClient;
 import com.google.scp.shared.testutils.gcp.PubSubEmulatorContainer;
 
 /** Test environment for frontend service integration test */
@@ -48,8 +56,15 @@ public class FrontendServiceIntegrationTestModule extends AbstractModule {
     pubSubInjector = Guice.createInjector(new PubSubJobQueueTestModule());
     pubSubInjector.getInstance(PubSubEmulatorContainer.class).start();
 
-    bind(Publisher.class).toInstance(pubSubInjector.getInstance(Publisher.class));
+    bind(PublisherStub.class)
+        .annotatedWith(JobQueuePublisherStub.class)
+        .toInstance(
+            pubSubInjector.getInstance(Key.get(PublisherStub.class, JobQueuePublisherStub.class)));
     bind(SubscriberStub.class).toInstance(pubSubInjector.getInstance(SubscriberStub.class));
+    bind(ParameterClient.class).toInstance(new LocalParameterClient(ImmutableMap.of()));
+    bind(String.class)
+        .annotatedWith(JobQueuePubSubTopicName.class)
+        .toInstance(TopicName.format(PROJECT_ID, TOPIC_ID));
     bind(int.class).annotatedWith(JobQueueMessageLeaseSeconds.class).toInstance(10);
     bind(String.class)
         .annotatedWith(JobQueuePubSubSubscriptionName.class)

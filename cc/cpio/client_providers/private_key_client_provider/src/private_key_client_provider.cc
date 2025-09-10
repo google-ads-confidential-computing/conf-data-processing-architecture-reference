@@ -25,6 +25,7 @@
 #include "core/interface/async_context.h"
 #include "core/interface/http_client_interface.h"
 #include "core/interface/http_types.h"
+#include "google/protobuf/util/time_util.h"
 #include "public/core/interface/execution_result_macros.h"
 #include "public/core/interface/execution_result_or_macros.h"
 #include "public/cpio/interface/private_key_client/type_def.h"
@@ -43,6 +44,7 @@ using google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest;
 using google::cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse;
 using google::cmrt::sdk::private_key_service::v1::PrivateKey;
 using google::cmrt::sdk::private_key_service::v1::PrivateKeyEndpoint;
+using google::protobuf::util::TimeUtil;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;
@@ -92,6 +94,7 @@ void PrivateKeyClientProvider::ListPrivateKeys(
                       "The list of key_ids is empty and the max_age_seconds is "
                       "invalid in the request.");
     list_private_keys_context.Finish();
+    return;
   }
   ListPrivateKeysBase(list_private_keys_context);
 }
@@ -106,6 +109,18 @@ void PrivateKeyClientProvider::ListActiveEncryptionKeys(
   *list_private_keys_request->mutable_key_endpoints() =
       list_active_encryption_keys_context.request->key_endpoints();
   list_private_keys_request->set_max_age_seconds(0);
+  auto* active_key_query_time_range =
+      list_private_keys_request->mutable_active_keys_query_time_range();
+  if (list_active_encryption_keys_context.request->has_query_time_range()) {
+    *active_key_query_time_range =
+        list_active_encryption_keys_context.request->query_time_range();
+  } else {
+    // Set the List Active EncryptionKeys Request query time range to [now, now]
+    // by default.
+    auto now = TimeUtil::GetCurrentTime();
+    *active_key_query_time_range->mutable_start_time() = now;
+    *active_key_query_time_range->mutable_end_time() = now;
+  }
 
   AsyncContext<ListPrivateKeysRequest, ListPrivateKeysResponse>
       list_private_key_context(
@@ -156,6 +171,31 @@ void PrivateKeyClientProvider::ListPrivateKeysBase(
 
       request->key_set_name = make_shared<string>(
           list_private_keys_context.request->key_set_name());
+
+      if (list_private_keys_context.request
+              ->has_active_keys_query_time_range()) {
+        auto start_time = TimeUtil::TimestampToMilliseconds(
+            list_private_keys_context.request->active_keys_query_time_range()
+                .start_time());
+        auto end_time = TimeUtil::TimestampToMilliseconds(
+            list_private_keys_context.request->active_keys_query_time_range()
+                .end_time());
+
+        if (end_time < start_time) {
+          list_private_keys_context.result = FailureExecutionResult(
+              SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST);
+          SCP_ERROR_CONTEXT(
+              kPrivateKeyClientProvider, list_private_keys_context,
+              list_private_keys_context.result,
+              "The list of active keys request's active key interval's end "
+              "time is later than the start time.");
+          list_private_keys_context.Finish();
+          return;
+        }
+
+        request->active_key_query_start_time_ms = start_time;
+        request->active_key_query_end_time_ms = end_time;
+      }
 
       AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>
           fetch_private_key_context(

@@ -67,6 +67,8 @@ abstract class KeySetsConfig {
 
     abstract Optional<Integer> overlapPeriodDays();
 
+    abstract Optional<Boolean> noRefreshWindow();
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     @AutoValue.Builder
     abstract static class Builder {
@@ -108,6 +110,13 @@ abstract class KeySetsConfig {
       }
 
       abstract Builder overlapPeriodDays(Optional<Integer> overlapPeriodDays);
+
+      @JsonProperty("no_refresh_window")
+      Builder noRefreshWindow(Boolean noRefreshWindow) {
+        return noRefreshWindow(Optional.ofNullable(noRefreshWindow));
+      }
+
+      abstract Builder noRefreshWindow(Optional<Boolean> overlapPeriodDays);
 
       @JsonProperty("tink_template")
       Builder tinkTemplate(String tinkTemplate) {

@@ -114,7 +114,9 @@ public final class GcpParameterClient implements ParameterClient {
             getParameterRequest.getIncludeEnvironmentPrefix()
                 ? getEnvironmentName()
                 : Optional.empty(),
-            getParameterRequest.getIncludeWorkgroupPrefix() ? getWorkgroupId() : Optional.empty());
+            getParameterRequest.getIncludeWorkgroupPrefix()
+                ? getParameterRequest.getWorkgroupOverride().or(this::getWorkgroupId)
+                : Optional.empty());
     try {
       if (getParameterRequest.getLatest()) {
         paramCache.invalidate(storageParam);

@@ -14,20 +14,25 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_test")
 
-# package(default_visibility = ["//cc:scp_cc_internal_pkg"])
-
-TEST_SRCS = [
-    "authorization_proxy_test.cc",
-]
-
 cc_test(
     name = "authorization_proxy_test",
     size = "small",
-    srcs =
-        TEST_SRCS,
-    copts = [
-        "-std=c++17",
+    srcs = ["authorization_proxy_test.cc"],
+    deps = [
+        "//cc:cc_base_include_dir",
+        "//cc/core/async_executor/mock:core_async_executor_mock",
+        "//cc/core/authorization_proxy/src:core_authorization_proxy_lib",
+        "//cc/core/interface:interface_lib",
+        "//cc/core/test/utils:utils_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "@com_google_googletest//:gtest_main",
     ],
+)
+
+cc_test(
+    name = "authorization_proxy_base_test",
+    size = "small",
+    srcs = ["authorization_proxy_base_test.cc"],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",

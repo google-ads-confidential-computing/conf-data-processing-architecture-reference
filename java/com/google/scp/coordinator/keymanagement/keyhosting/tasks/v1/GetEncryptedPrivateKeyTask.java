@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigCacheUsers;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.GetEncryptedKeyCache;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
@@ -34,7 +35,8 @@ public final class GetEncryptedPrivateKeyTask
       GetEncryptedKeyCache cache,
       @EnableCache Boolean enableCache,
       LogMetricHelper logMetricHelper,
-      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators) {
-    super(keyDb, cache, enableCache, logMetricHelper, "v1Beta", allowedMigrators);
+      @KeySetsVendingConfigAllowedMigrators ImmutableSet<String> allowedMigrators,
+      @KeySetsVendingConfigCacheUsers ImmutableSet<String> cacheUsers) {
+    super(keyDb, cache, enableCache, logMetricHelper, "v1Beta", allowedMigrators, cacheUsers);
   }
 }

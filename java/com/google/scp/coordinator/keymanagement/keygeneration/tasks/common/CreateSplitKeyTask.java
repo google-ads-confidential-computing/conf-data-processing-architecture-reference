@@ -17,17 +17,16 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import com.google.scp.shared.api.exception.ServiceException;
-import java.time.Duration;
 import java.time.Instant;
 
 /** Interface for task classes that generate split keys */
 public interface CreateSplitKeyTask {
 
   /**
-   * Amount of time a key must be valid for to not be refreshed. Keys that expire before (now +
+   * Amount of days a key must be valid for to not be refreshed. Keys that expire before (now +
    * keyRefreshWindow) should be replaced with a new key.
    */
-  Duration KEY_REFRESH_WINDOW = Duration.ofDays(1);
+  int KEY_REFRESH_WINDOW_DAYS = 1;
 
   /**
    * The actual key generation process. Performs the necessary key exchange key fetching (if
@@ -39,6 +38,7 @@ public interface CreateSplitKeyTask {
    * @param count the number of keys is ensured to be active.
    * @param validityInDays the number of days each key should be active/valid for before expiring.
    * @param ttlInDays the number of days each key should be stored in the database.
+   * @param noRefreshWindow determines if there is a refresh window when generating keys
    * @param activation the instant when the key should be active for encryption.
    */
   void createSplitKey(
@@ -47,17 +47,18 @@ public interface CreateSplitKeyTask {
       int count,
       int validityInDays,
       int ttlInDays,
+      boolean noRefreshWindow,
       Instant activation)
       throws ServiceException;
 
   /**
    * Ensures {@code numDesiredKeys} active keys are currently available by creating new immediately
    * active keys to meet that number. For each active key, ensures that there is a corresponding
-   * replacement key that will be active {@link #KEY_REFRESH_WINDOW} before the former expires.
+   * replacement key that will be active {@link #KEY_REFRESH_WINDOW_DAYS} before the former expires.
    *
    * <p>The created immediately active keys expire in {@code validityInDays} days and will be in the
    * key database for {@code ttlInDays} days. The subsequent replacement keys will be active {@link
-   * #KEY_REFRESH_WINDOW} before a currently active key expires, the replacement key will also
+   * #KEY_REFRESH_WINDOW_DAYS} before a currently active key expires, the replacement key will also
    * expire in {@code validityInDays} and in the key database for {@code ttlInDays} days.
    *
    * @param setName the name of the key set the keys belong to.
@@ -67,6 +68,7 @@ public interface CreateSplitKeyTask {
    * @param ttlInDays the number of days each key should be stored in the database.
    * @param createMaxDaysAhead the number of days ahead that a key can be created
    * @param overlapPeriodDays the number of days each consecutive active set should overlap
+   * @param noRefreshWindow determines if there is a refresh window when generating keys
    */
   void create(
       String setName,
@@ -75,6 +77,7 @@ public interface CreateSplitKeyTask {
       int validityInDays,
       int ttlInDays,
       int createMaxDaysAhead,
-      int overlapPeriodDays)
+      int overlapPeriodDays,
+      boolean noRefreshWindow)
       throws ServiceException;
 }

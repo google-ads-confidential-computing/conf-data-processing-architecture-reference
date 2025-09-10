@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2022-2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -197,8 +197,7 @@ TEST_F(AuthorizationProxyTest, AuthorizeReturnsRetryDueToRemoteError) {
                   errors::SC_AUTHORIZATION_PROXY_REMOTE_UNAVAILABLE)));
 }
 
-TEST_F(AuthorizationProxyTest,
-       AuthorizeReturnsRetryDueToRemoteErrorAsCallback) {
+TEST_F(AuthorizationProxyTest, AuthorizeReturnsRemoteErrorResponseInCallback) {
   auto authorization_http_helper =
       std::make_unique<HttpRequestResponseAuthInterceptorMock>();
 
@@ -215,7 +214,9 @@ TEST_F(AuthorizationProxyTest,
 
   EXPECT_CALL(*mock_http_client_, PerformRequest)
       .WillOnce([](AsyncContext<HttpRequest, HttpResponse>& context) {
-        if (context.request == nullptr) ADD_FAILURE();
+        if (context.request == nullptr) {
+          ADD_FAILURE();
+        }
         context.result = FailureExecutionResult(123);
         context.Finish();
         return SuccessExecutionResult();
@@ -303,7 +304,9 @@ TEST_F(AuthorizationProxyTest,
 
   EXPECT_CALL(*mock_http_client_, PerformRequest)
       .WillOnce([](AsyncContext<HttpRequest, HttpResponse>& context) {
-        if (context.request == nullptr) ADD_FAILURE();
+        if (context.request == nullptr) {
+          ADD_FAILURE();
+        }
         context.result = SuccessExecutionResult();
         context.Finish();
         return SuccessExecutionResult();
@@ -341,6 +344,9 @@ TEST_F(AuthorizationProxyTest,
     WaitUntil([&]() { return request_finished.load(); });
   }
 
+  // We don't expect the HTTP request to be sent again.
+  EXPECT_CALL(*mock_http_client_, PerformRequest(_)).Times(0);
+
   // Try again, doesn't issue remote HTTP request, but simply returns the cached
   // response.
   {
@@ -358,9 +364,6 @@ TEST_F(AuthorizationProxyTest,
       return SuccessExecutionResult();
     };
     EXPECT_SUCCESS(proxy.Authorize(authorization_request));
-    EXPECT_EQ(
-        *authorization_request.response->authorized_metadata.authorized_domain,
-        *authorized_metadata_.authorized_domain);
     WaitUntil([&]() { return request_finished.load(); });
   }
 }
@@ -385,7 +388,9 @@ TEST_F(AuthorizationProxyTest,
   EXPECT_CALL(*mock_http_client_, PerformRequest)
       .Times(2)
       .WillRepeatedly([](AsyncContext<HttpRequest, HttpResponse>& context) {
-        if (context.request == nullptr) ADD_FAILURE();
+        if (context.request == nullptr) {
+          ADD_FAILURE();
+        }
         context.result = SuccessExecutionResult();
         context.Finish();
         return SuccessExecutionResult();

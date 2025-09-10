@@ -54,6 +54,12 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface KeyGenerationCreateMaxDaysAhead {}
 
+  /** How many days ahead are we allowed to create a key */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface KeyGenerationNoRefreshWindow {}
+
   /** Base URL (e.g. `https://foo.com/v1`) where the key storage service is located. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})

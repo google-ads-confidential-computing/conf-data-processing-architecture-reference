@@ -19,7 +19,6 @@ package com.google.scp.operator.cpio.jobclient.model;
 import com.google.auto.value.AutoValue;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nullable;
 
 /** A class for defining parameters used to request getting a job. */
 @AutoValue
@@ -34,14 +33,11 @@ public abstract class GetJobRequest {
    * Returns the function used to get job completed notification topic id for the job. Users
    * maintains the mapping between job id and topic id.
    */
-  @Nullable
   public abstract Optional<Function<Job, String>> getJobCompletionNotificationTopicIdFunc();
 
-  /**
-   * Returns the function used to get the workgroup to allocate the job.
-   */
-  @Nullable
-  public abstract Optional<Function<Job, WorkgroupAllocationFuncResponse>> getWorkgroupAllocationFunc();
+  /** Returns the function used to get the workgroup to allocate the job. */
+  public abstract Optional<Function<Job, WorkgroupAllocationFuncResponse>>
+      getWorkgroupAllocationFunc();
 
   /** Builder class for the {@code GetJobRequest} class. */
   @AutoValue.Builder
@@ -51,7 +47,8 @@ public abstract class GetJobRequest {
     public abstract Builder setJobCompletionNotificationTopicIdFunc(Function<Job, String> func);
 
     /** Set the function used to get workgroup to allocate the job. */
-    public abstract Builder setWorkgroupAllocationFunc(Function<Job, WorkgroupAllocationFuncResponse> func);
+    public abstract Builder setWorkgroupAllocationFunc(
+        Function<Job, WorkgroupAllocationFuncResponse> func);
 
     /** Returns a new instance of the {@code GetJobRequest} class from the builder. */
     public abstract GetJobRequest build();

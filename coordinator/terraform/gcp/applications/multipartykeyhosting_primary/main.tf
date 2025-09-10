@@ -130,6 +130,7 @@ module "keygenerationservice" {
   alarms_enabled                  = var.alarms_enabled
   keydb_instance_name             = module.keydb.keydb_instance_name
   key_generation_alignment_period = var.key_generation_alignment_period
+  create_alert_alignment_periods  = var.key_generation_create_alert_alignment_periods
   undelivered_messages_threshold  = var.key_generation_undelivered_messages_threshold
   key_generation_error_threshold  = var.key_generation_error_threshold
 
@@ -337,6 +338,13 @@ module "key_generation_max_days_ahead" {
   environment     = var.environment
   parameter_name  = "CREATE_MAX_DAYS_AHEAD"
   parameter_value = var.key_generation_max_days_ahead
+}
+
+module "key_generation_no_refresh_window" {
+  source          = "../../modules/parameters"
+  environment     = var.environment
+  parameter_name  = "NO_REFRESH_WINDOW"
+  parameter_value = var.key_generation_no_refresh_window
 }
 
 # TODO: b/428770204 - This URI should no longer be used in GCP post migration.

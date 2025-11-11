@@ -1,23 +1,6 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 ################################################################################
-# Rules JVM External: Begin
-################################################################################
-load("//build_defs/java:rules_jvm_external.bzl", "rules_jvm_external")
-
-rules_jvm_external()
-
-load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
-
-rules_jvm_external_deps()
-
-load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
-
-rules_jvm_external_setup()
-################################################################################
-# Rules JVM External: End
-################################################################################
-################################################################################
 # Download all http_archives and git_repositories: Begin
 ################################################################################
 
@@ -34,6 +17,30 @@ PROTOBUF_SHA_256_FOR_CC = "13e7749c30bc24af6ee93e092422f9dc08491c7097efa69461f88
 load("//build_defs/cc:sdk.bzl", "sdk_dependencies")
 
 sdk_dependencies(PROTOBUF_CORE_VERSION_FOR_CC, PROTOBUF_SHA_256_FOR_CC)
+
+################################################################################
+# Rules JVM External: Begin
+################################################################################
+
+########
+## NOTE: This block must come AFTER sdk_dependencies,
+## so that we (SCP) set the java_rules version and not rules_jvm_external
+########
+
+load("//build_defs/java:rules_jvm_external.bzl", "rules_jvm_external")
+
+rules_jvm_external()
+
+load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
+
+rules_jvm_external_deps()
+
+load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
+
+rules_jvm_external_setup()
+################################################################################
+# Rules JVM External: End
+################################################################################
 
 #############
 # CPP Rules #
@@ -69,10 +76,9 @@ switched_rules_by_language(
 )
 
 ##########
-# GRPC C #
+# GRPC C Deps #
 ##########
-# These dependencies from @com_github_grpc_grpc need to be loaded after the
-# google cloud deps so that the grpc version can be set by the google cloud deps
+
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 
 grpc_deps()
@@ -94,9 +100,11 @@ bind(
 ###############
 # Proto rules #
 ###############
-load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies")
 
 rules_proto_dependencies()
+
+load("@rules_proto//proto:toolchains.bzl", "rules_proto_toolchains")
 
 rules_proto_toolchains()
 

@@ -39,6 +39,15 @@ class ConcurrentMap {
       ConcurrentMapImpl;
 
  public:
+  /**
+   * @brief Construct a new Concurrent Map< T Key,  T Value> object
+   *
+   * @param use_read_lock temporal flag for ConcurrentMap to use
+   * const_accessor for Find().
+   */
+  explicit ConcurrentMap<TKey, TValue>(bool use_read_lock = false)
+      : use_read_lock_(use_read_lock) {}
+
   // TODO: We might need to look into keeping the size constant.
 
   /**
@@ -82,18 +91,29 @@ class ConcurrentMap {
    */
   ExecutionResult Find(const TKey& key, TValue& out_value) {
     std::shared_lock lock(concurrent_map_mutex_);
-
-    typename ConcurrentMapImpl::accessor map_accessor;
     ExecutionResult execution_result = SuccessExecutionResult();
 
-    if (!concurrent_map_.find(map_accessor, key)) {
-      execution_result = FailureExecutionResult(
-          errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST);
+    if (use_read_lock_) {
+      typename ConcurrentMapImpl::const_accessor map_accessor;
+
+      if (!concurrent_map_.find(map_accessor, key)) {
+        execution_result = FailureExecutionResult(
+            errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST);
+      } else {
+        out_value = map_accessor->second;
+      }
+      map_accessor.release();
     } else {
-      out_value = map_accessor->second;
+      typename ConcurrentMapImpl::accessor map_accessor;
+      if (!concurrent_map_.find(map_accessor, key)) {
+        execution_result = FailureExecutionResult(
+            errors::SC_CONCURRENT_MAP_ENTRY_DOES_NOT_EXIST);
+      } else {
+        out_value = map_accessor->second;
+      }
+      map_accessor.release();
     }
 
-    map_accessor.release();
     return execution_result;
   }
 
@@ -148,5 +168,7 @@ class ConcurrentMap {
 
   /// Mutex to prevent write operations during Keys calls.
   mutable std::shared_timed_mutex concurrent_map_mutex_;
+
+  bool use_read_lock_;
 };
 }  // namespace google::scp::core::common

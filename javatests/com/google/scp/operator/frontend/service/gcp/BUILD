@@ -87,8 +87,8 @@ java_test(
         "//java/external:jackson_core",
         "//java/external:jackson_databind",
         "//java/external:mockito",
+        "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
-        "@com_google_protobuf//:protobuf_java",
     ],
 )
 

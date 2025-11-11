@@ -18,6 +18,7 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.common.RequestContextUtil.getRequestParameter;
+import static com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestHeaderParsingUtil.getCallerEmail;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -69,13 +70,14 @@ public final class ListRecentEncryptionKeysTask extends ApiTask {
   protected void execute(Matcher matcher, RequestContext request, ResponseContext response)
       throws ServiceException {
     Stream<EncryptionKey> keys = keyDb.listRecentKeys(getMaxAgeSeconds(request));
+    String email = getCallerEmail(request).orElse("unknown");
     response.setBody(
         ListRecentEncryptionKeysResponse.newBuilder()
             .addAllKeys(
                 keys.map(
                         key ->
                             KeyMigrationVendingUtil.vendAccordingToConfig(
-                                key, request, allowedMigrators, logMetricHelper))
+                                key, email, allowedMigrators, logMetricHelper))
                     .map(EncryptionKeyConverter::toApiEncryptionKey)
                     .collect(toImmutableList())));
   }

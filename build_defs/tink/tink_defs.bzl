@@ -16,12 +16,10 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-TINK_COMMIT = "1f4cd38874ec0be85f5aa55ba86d95d18c3fd965"
-TINK_SHALLOW_SINCE = "1713349341 -0700"
-
 # List of Maven dependencies necessary for Tink to compile -- to be included in
 # the list of Maven dependenceis passed to maven_install by the workspace.
 
+TINK_CC_VERSION = "v2.4.0"  # Nov 11, 2025
 TINK_GCP_KMS_VERSION = "1.7.0"  # Aug 10, 2022
 TINK_JAVA_VERSION = "1.15.0"  # Aug 30, 2024
 TINK_MAVEN_ARTIFACTS = [
@@ -51,17 +49,6 @@ def import_tink_git(repo_name = ""):
         strip_prefix = "rules_android-0.1.1",
     )
 
-    # Tink contains multiple Bazel Workspaces. The "tink_java" workspace is what's
-    # needed but it references the "tink_base" workspace so import both here.
-    maybe(
-        git_repository,
-        name = "tink_base",
-        commit = TINK_COMMIT,
-        remote = "https://github.com/google/tink.git",
-        shallow_since = TINK_SHALLOW_SINCE,
-        strip_prefix = "cc",
-    )
-
     # Note: loading and invoking `tink_java_deps` causes a cyclical dependency issue
     # so Tink's dependencies are just included directly in this workspace above.
 
@@ -80,12 +67,8 @@ def import_tink_git(repo_name = ""):
     maybe(
         git_repository,
         name = "tink_cc",
-        commit = TINK_COMMIT,
-        remote = "https://github.com/google/tink.git",
-        shallow_since = TINK_SHALLOW_SINCE,
-        strip_prefix = "cc",
-        patch_args = ["-p1"],
-        patches = [Label("//build_defs/tink:tink.patch")],
+        tag = TINK_CC_VERSION,
+        remote = "https://github.com/tink-crypto/tink-cc.git",
     )
 
     maybe(

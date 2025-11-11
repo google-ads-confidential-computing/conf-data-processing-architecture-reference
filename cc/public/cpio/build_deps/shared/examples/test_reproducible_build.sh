@@ -20,7 +20,7 @@ source "${code_repo_dir}/cc/public/cpio/build_deps/shared/reproducible_build.sh"
 
 setup_build_time_container "cc/public/cpio/build_deps/shared/examples:test_build_time_image.tar" "bazel-bin/cc/public/cpio/build_deps/shared/examples/test_build_time_image.tar"
 
-build_command="bazel build --//cc/public/cpio/build_deps/shared:reproducible_build=False --//cc/public/cpio/interface:platform=gcp --//cc/public/cpio/interface:run_inside_tee=True //javatests/com/google/scp/e2e/cmrtworker/gcp:test_gcp_sdk_server_container"
+build_command="bazel build --//cc/public/cpio/build_deps/shared:reproducible_build=False --//cc/public/cpio/interface:platform=gcp --//cc/public/cpio/interface:run_inside_tee=True cc/cpio/worker/native_lib/deploy/gcp:lib_cmrt_worker_gcp_postsubmit_test"
 # Build runtime test tar.
 # build_command="bazel build cc/public/cpio/build_deps/shared/examples:runtime_test"
 run_within_build_time_container "bazel/cc/public/cpio/build_deps/shared/examples:test_build_time_image" "$code_repo_dir" "$build_command"

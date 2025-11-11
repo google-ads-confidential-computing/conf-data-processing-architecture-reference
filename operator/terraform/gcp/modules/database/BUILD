@@ -20,7 +20,10 @@ pkg_files(
     name = "database",
     srcs = glob(
         ["*"],
-        exclude = ["BUILD"],
+        exclude = [
+            "BUILD",
+            "*.tftest.hcl",
+        ],
     ),
     prefix = "database",
 )

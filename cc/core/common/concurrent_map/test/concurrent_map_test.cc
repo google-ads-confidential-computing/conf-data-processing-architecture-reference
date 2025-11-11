@@ -34,6 +34,11 @@ using std::atomic;
 using std::make_pair;
 using std::thread;
 using std::vector;
+using std::chrono::duration;
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using std::chrono::nanoseconds;
+using std::chrono::steady_clock;
 using std::this_thread::yield;
 
 namespace google::scp::core::common::test {
@@ -109,7 +114,7 @@ TEST_F(ConcurrentMapTests, FindAnExistingElementUuid) {
   EXPECT_EQ(value, uuid_value);
 }
 
-TEST_F(ConcurrentMapTests, GetKeys) {
+TEST_F(ConcurrentMapTests, GetKeysWithAccessor) {
   ConcurrentMap<Uuid, Uuid, UuidCompare> map;
 
   Uuid uuid_key = Uuid::GenerateUuid();
@@ -123,6 +128,107 @@ TEST_F(ConcurrentMapTests, GetKeys) {
 
   result = map.Insert(make_pair(uuid_key1, uuid_value1), uuid_value1);
   EXPECT_SUCCESS(result);
+
+  auto start_time = steady_clock::now();
+
+  auto kNumThreads = 1000;
+  std::vector<std::thread> work_threads;
+  work_threads.reserve(kNumThreads);
+  size_t key_size_sum = 0;
+  atomic<uint64_t> all_threads_duration{0};
+  for (int i = 0; i < kNumThreads; i++) {
+    work_threads.emplace_back([&] {
+      Uuid value;
+      auto st_start_time = steady_clock::now();
+      for (auto i = 0; i < 100; i++) {
+        result = map.Find(uuid_key1, value);
+        EXPECT_SUCCESS(result);
+      }
+      auto st_end_time = steady_clock::now();
+
+      all_threads_duration.fetch_add(
+          duration_cast<nanoseconds>(st_end_time - st_start_time).count());
+    });
+  }
+
+  for (auto& t : work_threads) {
+    if (t.joinable()) {
+      t.join();
+    }
+  }
+
+  auto end_time = steady_clock::now();
+
+  std::cout << "Threads Find Time taken (ms): " << all_threads_duration / 10e6
+            << " ms" << std::endl;
+
+  auto ms = duration_cast<milliseconds>(end_time - start_time);
+  std::cout << "Time taken (ms): " << ms.count() << " ms" << std::endl;
+
+  vector<Uuid> keys;
+  result = map.Keys(keys);
+  EXPECT_SUCCESS(result);
+
+  if (keys[0] == uuid_key) {
+    EXPECT_EQ(keys[1], uuid_key1);
+  } else if (keys[0] == uuid_key1) {
+    EXPECT_EQ(keys[1], uuid_key);
+  } else {
+    EXPECT_EQ(true, false);
+  }
+}
+
+TEST_F(ConcurrentMapTests, GetKeysWithConstAccessor) {
+  ConcurrentMap<Uuid, Uuid, UuidCompare> map =
+      ConcurrentMap<Uuid, Uuid, UuidCompare>(true);
+
+  Uuid uuid_key = Uuid::GenerateUuid();
+  Uuid uuid_value = Uuid::GenerateUuid();
+
+  Uuid uuid_key1 = Uuid::GenerateUuid();
+  Uuid uuid_value1 = Uuid::GenerateUuid();
+
+  auto result = map.Insert(make_pair(uuid_key, uuid_value), uuid_value);
+  EXPECT_SUCCESS(result);
+
+  result = map.Insert(make_pair(uuid_key1, uuid_value1), uuid_value1);
+  EXPECT_SUCCESS(result);
+
+  auto start_time = steady_clock::now();
+
+  auto kNumThreads = 1000;
+  std::vector<std::thread> work_threads;
+  work_threads.reserve(kNumThreads);
+  size_t key_size_sum = 0;
+  atomic<uint64_t> all_threads_duration{0};
+  for (int i = 0; i < kNumThreads; i++) {
+    work_threads.emplace_back([&] {
+      Uuid value;
+      auto st_start_time = steady_clock::now();
+      for (auto i = 0; i < 100; i++) {
+        result = map.Find(uuid_key1, value);
+        EXPECT_SUCCESS(result);
+      }
+      auto st_end_time = steady_clock::now();
+
+      all_threads_duration.fetch_add(
+          duration_cast<nanoseconds>(st_end_time - st_start_time).count());
+    });
+  }
+
+  for (auto& t : work_threads) {
+    if (t.joinable()) {
+      t.join();
+    }
+  }
+
+  auto end_time = steady_clock::now();
+
+  std::cout << "Threads Find Time taken (ms): " << all_threads_duration / 10e6
+            << " ms" << std::endl;
+
+  auto ms = duration_cast<milliseconds>(end_time - start_time);
+  std::cout << "Time taken (ms): " << ms.count() << " ms" << std::endl;
 
   vector<Uuid> keys;
   result = map.Keys(keys);

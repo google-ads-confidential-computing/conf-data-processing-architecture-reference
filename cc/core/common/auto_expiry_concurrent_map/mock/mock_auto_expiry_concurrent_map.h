@@ -33,11 +33,12 @@ class MockAutoExpiryConcurrentMap
       bool block_entry_while_eviction,
       std::function<void(TKey&, TValue&, std::function<void(bool)>)>
           on_before_element_deletion_callback,
-      const std::shared_ptr<AsyncExecutorInterface>& async_executor)
+      const std::shared_ptr<AsyncExecutorInterface>& async_executor,
+      bool use_read_lock = false)
       : common::AutoExpiryConcurrentMap<TKey, TValue, TCompare>(
             map_entry_lifetime_seconds, extend_entry_lifetime_on_access,
             block_entry_while_eviction, on_before_element_deletion_callback,
-            async_executor) {}
+            async_executor, use_read_lock) {}
 
   auto& GetUnderlyingConcurrentMap() {
     return AutoExpiryConcurrentMap<TKey, TValue, TCompare>::concurrent_map_;

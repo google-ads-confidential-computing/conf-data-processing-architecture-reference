@@ -198,8 +198,8 @@ public abstract class KeyDbBaseTest {
             .collect(toImmutableList());
 
     // Then
-    assertThat(db.listRecentKeys(DEFAULT_SET_NAME, Duration.ZERO)
-        .collect(toImmutableList())).isEmpty();
+    assertThat(db.listRecentKeys(DEFAULT_SET_NAME, Duration.ZERO).collect(toImmutableList()))
+        .isEmpty();
     assertThat(keys0).hasSize(3);
     assertThat(keys1).hasSize(2);
     assertThat(keys2).hasSize(1);
@@ -256,11 +256,11 @@ public abstract class KeyDbBaseTest {
   }
 
   private static EncryptionKey fakeEncryptionKey() {
-    return FakeEncryptionKey.createBuilderWithDefaults(false).build();
+    return FakeEncryptionKey.createBuilderWithDefaults().build();
   }
 
   private static EncryptionKey fakeEncryptionKey(String setName) {
-    return FakeEncryptionKey.createBuilderWithDefaults(false).setSetName(setName).build();
+    return FakeEncryptionKey.createBuilderWithDefaults().setSetName(setName).build();
   }
 
   private static EncryptionKey fakeEncryptionKey(

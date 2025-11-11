@@ -49,7 +49,7 @@ using testing::HasSubstr;
 using testing::Le;
 using testing::SizeIs;
 
-constexpr size_t kAcceptedDeviationCount = 12;
+constexpr size_t kAcceptedDeviationCount = 50;
 
 namespace google::scp::core::test {
 

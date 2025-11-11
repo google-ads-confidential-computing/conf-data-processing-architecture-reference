@@ -35,42 +35,100 @@ provider "google" {
 }
 
 locals {
-  service_subdomain_suffix = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
-  public_key_domain        = var.environment != "prod" ? "${var.public_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.public_key_service_subdomain}.${var.parent_domain_name}"
-  private_key_domain       = "${var.private_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
+  private_key_service_addtional_environment = "${var.environment}-pre${var.environment}"
+
+  service_subdomain_suffix      = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
+  public_key_domain             = var.environment != "prod" ? "${var.public_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.public_key_service_subdomain}.${var.parent_domain_name}"
+  private_key_domain            = "${var.private_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
+  private_key_domain_additional = "${var.private_key_service_subdomain}-${local.private_key_service_addtional_environment}.${var.parent_domain_name}"
   key_sets = flatten([
     for key_set in var.key_sets_config.key_sets : key_set.name
   ])
 
-  service_domain_to_address_map = {
-    (local.public_key_domain) : module.public_key_service.loadbalancer_ip,
-    (local.private_key_domain) : module.private_key_service.loadbalancer_ip
-  }
-
-  kms_key_base_uri = "gcp-kms://${module.keygenerationservice.key_ring_id}/cryptoKeys/${var.environment}_$setName$_key_encryption_key"
-  migration_kms_key_base_uri = (var.location_new_key_ring == null
-    ? local.kms_key_base_uri
-    : "gcp-kms://${module.key_management_service[0].kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
+  service_domain_to_address_map = (
+    var.private_key_service_addon_container_image_url == ""
+    ? {
+      (local.public_key_domain) : module.public_key_service.loadbalancer_ip,
+      (local.private_key_domain) : module.private_key_service.loadbalancer_ip
+    }
+    : {
+      (local.public_key_domain) : module.public_key_service.loadbalancer_ip,
+      (local.private_key_domain) : module.private_key_service.loadbalancer_ip
+      (local.private_key_domain_additional) : module.private_key_service_addon.loadbalancer_ip
+    }
   )
+
+  # TODO: b/428770204 - Update kms base uri to the migration uri post 'generate' phase
+  kms_key_base_uri           = "gcp-kms://${module.key_management_service.kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
+  migration_kms_key_base_uri = "gcp-kms://${module.key_management_service.kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
+
   migration_peer_coordinator_kms_key_base_uri = (var.migration_peer_coordinator_kms_key_base_uri == null
     ? var.peer_coordinator_kms_key_base_uri
     : var.migration_peer_coordinator_kms_key_base_uri
   )
+
+  # Key Migration Tool Safety Preconditions
+  # TODO: b/428770204 - remove disable_key_set_acl check once its dependency has been removed
+  base_uris_are_different      = (local.kms_key_base_uri != local.migration_kms_key_base_uri)
+  peer_base_uris_are_different = (var.peer_coordinator_kms_key_base_uri != local.migration_peer_coordinator_kms_key_base_uri)
+  key_migration_tool_safe_to_generate = (var.populate_migration_key_data
+    && var.key_migration_tool_container_image_url != null
+    && var.key_migration_tool_migrator_mode == "generate"
+    && length(var.key_sets_vending_config.allowed_migrators) == 0
+    && local.base_uris_are_different
+    && local.peer_base_uris_are_different
+    && var.disable_key_set_acl
+  )
+  key_migration_tool_safe_to_migrate = (var.populate_migration_key_data
+    && var.key_migration_tool_container_image_url != null
+    && var.key_migration_tool_migrator_mode == "migrate"
+    && length(var.key_sets_vending_config.allowed_migrators) > 0
+    && !local.base_uris_are_different
+    && !local.peer_base_uris_are_different
+    && !var.disable_key_set_acl
+  )
+  key_migration_tool_safe_to_cleanup = (!var.populate_migration_key_data
+    && var.key_migration_tool_container_image_url != null
+    && var.key_migration_tool_migrator_mode == "cleanup"
+    && length(var.key_sets_vending_config.allowed_migrators) == 0
+  )
 }
 
 resource "null_resource" "has_valid_migration_configuration" {
-  # Ensures that if it is desired to populate the migration key data, that
-  # all necessary information from a new key set is provided.
+  # Ensures that if it is desired to populate the migration key data, that a
+  # migration peer kek uri is provided and a migration kek uri can be safely
+  # constructed.
   lifecycle {
     precondition {
       condition = !var.populate_migration_key_data || (
-        local.migration_peer_coordinator_kms_key_base_uri != var.peer_coordinator_kms_key_base_uri
-        && local.migration_kms_key_base_uri != local.kms_key_base_uri
+        var.migration_peer_coordinator_kms_key_base_uri != null
+        && var.location_new_key_ring != null
       )
       error_message = <<EOF
 Variable populate_migration_key_data is set to true, but the required migration
 data is not available. To enable migration, provide values for
 'location_new_key_ring' and 'migration_peer_coordinator_kms_key_base_uri'.
+EOF
+    }
+  }
+}
+
+resource "null_resource" "can_safely_run_key_migration_tool" {
+  # Ensures general safety before running the migration tool.
+  # Note: For true safety during 'migrate' mode, ALL keys or customers MUST be
+  #       in 'key_sets_vending_config.allowed_migrators'
+  lifecycle {
+    precondition {
+      condition = (!var.run_key_migration_tool
+        || local.key_migration_tool_safe_to_generate
+        || local.key_migration_tool_safe_to_migrate
+        || local.key_migration_tool_safe_to_cleanup
+      )
+      error_message = <<EOF
+Invalid configuration for running the Key Migration Tool. Please check the requirements for your chosen 'key_migration_tool_migrator_mode':
+  - 'generate': 'populate_migration_key_data' must be true AND 'key_sets_vending_config.allowed_migrators' must be empty.
+  - 'migrate': 'populate_migration_key_data' must be true AND 'key_sets_vending_config.allowed_migrators' must NOT be empty.
+  - 'cleanup': 'populate_migration_key_data' must be false AND 'key_sets_vending_config.allowed_migrators' must be empty.
 EOF
     }
   }
@@ -105,12 +163,11 @@ module "keygenerationservice" {
   zones = [
     var.primary_region_zone, var.secondary_region_zone
   ]
-  allow_stopping_for_update      = var.key_generation_allow_stopping_for_update
-  egress_internet_tag            = module.vpc.egress_internet_tag
-  key_gen_instance_force_replace = var.key_gen_instance_force_replace
+  allow_stopping_for_update = var.key_generation_allow_stopping_for_update
+  egress_internet_tag       = module.vpc.egress_internet_tag
 
   # Data args
-  key_generation_image              = var.key_generation_image
+  container_image_url               = var.key_generation_service_container_image_url
   spanner_database_name             = module.keydb.keydb_name
   spanner_instance_name             = module.keydb.keydb_instance_name
   key_generation_logging_enabled    = var.key_generation_logging_enabled
@@ -130,11 +187,22 @@ module "keygenerationservice" {
   alarms_enabled                  = var.alarms_enabled
   keydb_instance_name             = module.keydb.keydb_instance_name
   key_generation_alignment_period = var.key_generation_alignment_period
+  single_keyset_alignment_periods = var.key_generation_single_keyset_alignment_periods
   create_alert_alignment_periods  = var.key_generation_create_alert_alignment_periods
   undelivered_messages_threshold  = var.key_generation_undelivered_messages_threshold
   key_generation_error_threshold  = var.key_generation_error_threshold
 
   key_sets = local.key_sets
+
+  # An update to any of these variables will trigger the keygen instance for replacement.
+  key_gen_secrets_hash = sha256(jsonencode({
+    # TODO(b/428770204) Remove disable_key_set_acl post migration
+    disable_key_set_acl                         = var.disable_key_set_acl
+    kms_key_base_uri                            = local.kms_key_base_uri
+    migration_kms_key_base_uri                  = local.migration_kms_key_base_uri
+    peer_coordinator_kms_key_base_uri           = var.peer_coordinator_kms_key_base_uri
+    migration_peer_coordinator_kms_key_base_uri = local.migration_peer_coordinator_kms_key_base_uri
+  }))
 }
 
 ### KMS
@@ -159,15 +227,19 @@ module "key_set_acl_kek_pool" {
   key_encryption_key_id      = module.keygenerationservice.key_encryption_key_id
 
   key_sets           = toset(each.value.key_sets)
-  global_key_ring_id = var.location_new_key_ring == null ? null : module.key_management_service[0].kms_key_ring_id
+  global_key_ring_id = module.key_management_service.kms_key_ring_id
 
   allowed_operator = each.value
   pool_name        = each.key
 }
 
 ## New Key Ring
+moved {
+  from = module.key_management_service[0]
+  to   = module.key_management_service
+}
+
 module "key_management_service" {
-  count  = var.location_new_key_ring == null ? 0 : 1
   source = "../../modules/key_management_service"
 
   environment           = var.environment
@@ -186,6 +258,9 @@ module "public_key_service" {
   service_domain = local.public_key_domain
 
   source_container_image_url = var.public_key_service_container_image_url
+
+  # Migration to external managed LB
+  load_balancing_scheme = var.public_key_service_load_balancing_scheme
 
   # Cloud Run settings
   cpu_count          = var.public_key_service_cloud_run_cpu_count
@@ -232,6 +307,9 @@ module "private_key_service" {
   )
   service_domain = local.private_key_domain
 
+  # Migration to external managed LB
+  load_balancing_scheme = var.private_key_service_load_balancing_scheme
+
   allowed_invoker_service_account_emails = module.allowed_operators.all_service_accounts
   allowed_operator_user_group            = var.allowed_operator_user_group
   source_container_image_url             = var.private_key_service_container_image_url
@@ -243,13 +321,16 @@ module "private_key_service" {
   max_instance_count = var.private_key_service_cloud_run_max_instances
   min_instance_count = var.private_key_service_cloud_run_min_instances
 
-  # Spanner and access configs
+  # Spanner configs
   spanner_database_name      = module.keydb.keydb_name
   spanner_instance_name      = module.keydb.keydb_instance_name
   spanner_staleness_read_sec = var.spanner_staleness_read_sec
-  enable_cache               = var.enable_private_key_service_cache
-  cache_refresh_in_minutes   = var.private_key_service_cache_refresh_in_minutes
-  key_sets_vending_config    = var.key_sets_vending_config
+
+  # Vending parameters
+  enable_cache             = var.enable_private_key_service_cache
+  cache_refresh_in_minutes = var.private_key_service_cache_refresh_in_minutes
+  key_sets_vending_config  = var.key_sets_vending_config
+  key_sets_config          = var.key_sets_config
 
   # Alert settings
   alarms_enabled           = var.alarms_enabled
@@ -259,6 +340,7 @@ module "private_key_service" {
 
   get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
   exception_alert_threshold                         = var.private_key_service_exception_alert_threshold
+  config_read_alert_threshold                       = var.private_key_service_config_read_alert_threshold
 
   cloud_run_5xx_threshold                   = var.private_key_service_cloud_run_5xx_threshold
   cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloud_run_alert_on_memory_usage_threshold
@@ -267,6 +349,94 @@ module "private_key_service" {
   lb_5xx_threshold       = var.private_key_service_lb_5xx_threshold
   lb_5xx_ratio_threshold = var.private_key_service_lb_5xx_ratio_threshold
   lb_max_latency_ms      = var.private_key_service_lb_max_latency_ms
+}
+
+module "private_key_service_addon" {
+  count  = var.private_key_service_addon_container_image_url == "" ? 0 : 1
+  source = "../private_key_service"
+
+  environment = local.private_key_service_addtional_environment
+  project_id  = var.project_id
+  regions = concat(
+    [var.primary_region, var.secondary_region],
+    var.private_key_service_additional_regions
+  )
+
+  service_domain        = local.private_key_domain_additional
+  display_identifier    = "Pre${var.environment}"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+
+  allowed_invoker_service_account_emails = module.allowed_operators.all_service_accounts
+  allowed_operator_user_group            = var.allowed_operator_user_group
+  source_container_image_url             = var.private_key_service_addon_container_image_url
+
+  # Cloud Run settings
+  cpu_count          = var.private_key_service_cloud_run_cpu_count
+  memory_mb          = var.private_key_service_cloud_run_memory_mb
+  concurrency        = var.private_key_service_cloud_run_concurrency
+  max_instance_count = var.private_key_service_cloud_run_max_instances
+  min_instance_count = var.private_key_service_cloud_run_min_instances
+
+  # Spanner configs
+  spanner_database_name      = module.keydb.keydb_name
+  spanner_instance_name      = module.keydb.keydb_instance_name
+  spanner_staleness_read_sec = var.spanner_staleness_read_sec
+
+  # Vending parameters
+  enable_cache             = var.enable_private_key_service_cache
+  cache_refresh_in_minutes = var.private_key_service_cache_refresh_in_minutes
+  key_sets_vending_config  = var.key_sets_vending_config
+  key_sets_config          = var.key_sets_config
+
+  # Alert settings
+  alarms_enabled           = var.alarms_enabled
+  alarm_eval_period_sec    = var.private_key_service_alarm_eval_period_sec
+  alarm_duration_sec       = var.private_key_service_alarm_duration_sec
+  alert_severity_overrides = var.private_key_service_addon_alert_severity_overrides
+
+  get_encrypted_private_key_general_error_threshold = var.get_encrypted_private_key_general_error_threshold
+  exception_alert_threshold                         = var.private_key_service_exception_alert_threshold
+  config_read_alert_threshold                       = var.private_key_service_config_read_alert_threshold
+
+  cloud_run_5xx_threshold                   = var.private_key_service_cloud_run_5xx_threshold
+  cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloud_run_alert_on_memory_usage_threshold
+  cloud_run_max_execution_time_max          = var.private_key_service_cloud_run_max_execution_time_max
+
+  lb_5xx_threshold       = var.private_key_service_lb_5xx_threshold
+  lb_5xx_ratio_threshold = var.private_key_service_lb_5xx_ratio_threshold
+  lb_max_latency_ms      = var.private_key_service_lb_max_latency_ms
+}
+
+module "key_migration_tool" {
+  source = "../key_migration_tool"
+  count  = var.run_key_migration_tool ? 1 : 0
+
+  environment = var.environment
+  project_id  = var.project_id
+  region      = var.primary_region
+
+  source_container_image_url = var.key_migration_tool_container_image_url
+
+  # Cloud Run Job settings
+  cpu_count            = var.key_migration_tool_cpu_count
+  memory_mb            = var.key_migration_tool_memory_mb
+  max_retries          = var.key_migration_tool_max_retries
+  task_timeout_seconds = var.key_migration_tool_task_timeout_seconds
+
+  # Spanner and access configs
+  spanner_database_name = module.keydb.keydb_name
+  spanner_instance_name = module.keydb.keydb_instance_name
+
+  # Key Rings
+  legacy_migration_key_ring_id = module.keygenerationservice.key_ring_id
+  migration_key_ring_id        = module.key_management_service.kms_key_ring_id
+
+  # Environment variables
+  migration_kek_base_uri      = local.migration_kms_key_base_uri
+  migration_peer_kek_base_uri = local.migration_peer_coordinator_kms_key_base_uri
+  migration_key_sets          = var.key_migration_tool_key_sets
+  migrator_mode               = var.key_migration_tool_migrator_mode
+  dry_run                     = var.key_migration_tool_dry_run
 }
 
 module "domain_a_records" {
@@ -338,13 +508,6 @@ module "key_generation_max_days_ahead" {
   environment     = var.environment
   parameter_name  = "CREATE_MAX_DAYS_AHEAD"
   parameter_value = var.key_generation_max_days_ahead
-}
-
-module "key_generation_no_refresh_window" {
-  source          = "../../modules/parameters"
-  environment     = var.environment
-  parameter_name  = "NO_REFRESH_WINDOW"
-  parameter_value = var.key_generation_no_refresh_window
 }
 
 # TODO: b/428770204 - This URI should no longer be used in GCP post migration.

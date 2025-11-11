@@ -45,6 +45,7 @@ public final class SqsKeyGenerationQueue {
 
   private final SqsClient sqsClient;
   private final String queueUrl;
+
   /**
    * Max time to wait to receive messages.
    *
@@ -52,6 +53,7 @@ public final class SqsKeyGenerationQueue {
    *     https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-short-and-long-polling.html
    */
   private final int maxWaitTimeSeconds;
+
   /**
    * The "lease" length that the item receipt has. If the item is not acknowledged (deleted) within
    * this time window it will be visible on the queue again for another worker to pick up. See AWS

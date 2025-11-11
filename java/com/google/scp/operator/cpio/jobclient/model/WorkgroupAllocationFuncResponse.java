@@ -17,8 +17,8 @@
 package com.google.scp.operator.cpio.jobclient.model;
 
 import com.google.auto.value.AutoValue;
-import java.util.Optional;
 import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
+import java.util.Optional;
 
 /** A class for defining the workgroup allocation function response. */
 @AutoValue
@@ -42,9 +42,7 @@ public abstract class WorkgroupAllocationFuncResponse {
     /** Set the workgroup ID. */
     public abstract Builder setWorkgroupId(String workgroupId);
 
-    /**
-     * Set the result info upon failure of the workgroup allocation function.
-     */
+    /** Set the result info upon failure of the workgroup allocation function. */
     public abstract Builder setResultInfo(ResultInfo resultInfo);
 
     /**

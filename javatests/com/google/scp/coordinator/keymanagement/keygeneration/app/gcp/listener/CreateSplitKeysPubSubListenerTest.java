@@ -62,8 +62,7 @@ public final class CreateSplitKeysPubSubListenerTest {
             .build();
 
     CreateSplitKeysPubSubListener listener =
-        new CreateSplitKeysPubSubListener(
-            config, mockSplitKeysTask, PROJECT_ID, SUBSCRIPTION_ID);
+        new CreateSplitKeysPubSubListener(config, mockSplitKeysTask, PROJECT_ID, SUBSCRIPTION_ID);
     listener.start();
 
     verify(mockSplitKeysTask).execute();

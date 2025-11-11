@@ -56,10 +56,22 @@ class PrivateKeyClient : public PrivateKeyClientInterface {
           cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>&
           context) noexcept override;
 
+  void GetKeysetMetadata(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest,
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse>&
+          context) noexcept override;
+
   core::ExecutionResultOr<
       cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>
   ListActiveEncryptionKeysSync(
       cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest
+          request) noexcept override;
+
+  core::ExecutionResultOr<
+      cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse>
+  GetKeysetMetadataSync(
+      cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest
           request) noexcept override;
 
  protected:

@@ -22,6 +22,7 @@ pkg_files(
         ["*"],
         exclude = [
             "BUILD",
+            "*.tftest.hcl",
         ],
     ),
     prefix = "shared/customer_notifications",

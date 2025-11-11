@@ -1,5 +1,4 @@
-/*
- * Copyright 2024 Google LLC
+/* * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +33,6 @@ public final class KeySetConfigTest {
     int ttlInDays = 3333;
     int maxDaysAhead = 999;
     int overlapPeriodDays = 44;
-    boolean noRefreshWindow = true;
     String tinkTemplate = "test template";
 
     // When
@@ -46,8 +44,7 @@ public final class KeySetConfigTest {
             validityInDays,
             ttlInDays,
             maxDaysAhead,
-            overlapPeriodDays,
-            noRefreshWindow);
+            overlapPeriodDays);
 
     // Then
     assertThat(config.getName()).isEqualTo(setName);
@@ -57,6 +54,5 @@ public final class KeySetConfigTest {
     assertThat(config.getTinkTemplate()).isEqualTo(tinkTemplate);
     assertThat(config.getCreateMaxDaysAhead()).isEqualTo(maxDaysAhead);
     assertThat(config.getOverlapPeriodDays()).isEqualTo(overlapPeriodDays);
-    assertThat(config.getNoRefreshWindow()).isTrue();
   }
 }

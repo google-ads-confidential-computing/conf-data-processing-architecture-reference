@@ -20,6 +20,7 @@ import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTest
 import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.CACHE_CONTROL_MAX;
 
 import com.google.acai.TestScoped;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -29,8 +30,10 @@ import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.Ca
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.DisableActivationTime;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetConfigMap;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigCacheUsers;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.KeySetConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 
@@ -48,6 +51,12 @@ public final class InMemoryTestEnv extends AbstractModule {
     return inMemoryKeyDb;
   }
 
+  private static ImmutableMap<String, KeySetConfig> createConfigMap() {
+    var config1 = KeySetConfig.create("noOverlap", 5, 10, 0);
+    var config2 = KeySetConfig.create("overlap", 1, 8, 6);
+    return ImmutableMap.of("noOverlap", config1, "overlap", config2);
+  }
+
   @Override
   public void configure() {
     bind(Integer.class).annotatedWith(KeyLimit.class).toInstance(KEY_LIMIT);
@@ -61,5 +70,8 @@ public final class InMemoryTestEnv extends AbstractModule {
     bind(new TypeLiteral<ImmutableSet<String>>() {})
         .annotatedWith(KeySetsVendingConfigCacheUsers.class)
         .toInstance(ImmutableSet.of());
+    bind(new TypeLiteral<ImmutableMap<String, KeySetConfig>>() {})
+        .annotatedWith(KeySetConfigMap.class)
+        .toInstance(createConfigMap());
   }
 }

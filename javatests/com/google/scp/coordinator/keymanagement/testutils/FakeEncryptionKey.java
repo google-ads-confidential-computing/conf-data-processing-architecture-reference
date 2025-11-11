@@ -16,6 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.testutils;
 
+import static com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil.buildKeySplitData;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleartext;
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -25,7 +26,6 @@ import com.google.crypto.tink.PublicKeyVerify;
 import com.google.crypto.tink.hybrid.HybridConfig;
 import com.google.crypto.tink.signature.EcdsaSignKeyManager;
 import com.google.crypto.tink.signature.SignatureConfig;
-import com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
@@ -62,7 +62,7 @@ public final class FakeEncryptionKey {
     }
   }
 
-  public static EncryptionKey.Builder createBuilderWithDefaults(boolean withMigration) {
+  public static EncryptionKey.Builder createBuilderWithDefaults() {
     Random random = new Random();
     Instant now = Instant.now();
     EncryptionKeyType keyType =
@@ -71,14 +71,11 @@ public final class FakeEncryptionKey {
     // This is the URI for the owner of this EncryptionKey.
     // It must match to one of the URIs in the key split data.
     String encryptionKeyUri = UUID.randomUUID().toString();
-    String migrationEncryptionKeyUri = UUID.randomUUID().toString();
     EncryptionKey baseKey =
         setPublicKeys(EncryptionKey.newBuilder())
             .setKeyId(UUID.randomUUID().toString())
             .setJsonEncodedKeyset(UUID.randomUUID().toString())
-            .setMigrationJsonEncodedKeyset(withMigration ? UUID.randomUUID().toString() : "")
             .setKeyEncryptionKeyUri(encryptionKeyUri)
-            .setMigrationKeyEncryptionKeyUri(withMigration ? migrationEncryptionKeyUri : "")
             .setCreationTime(now.toEpochMilli())
             .setActivationTime(now.toEpochMilli())
             .setExpirationTime(now.plus(Duration.ofDays(7)).toEpochMilli())
@@ -86,17 +83,11 @@ public final class FakeEncryptionKey {
             .setKeyType(keyType.name())
             .build();
     try {
-      EncryptionKey keyWithSignatures =
-          KeySplitDataUtil.addKeySplitData(
-              KeySplitDataUtil.addKeySplitData(
-                  baseKey,
-                  encryptionKeyUri,
-                  withMigration ? Optional.of(migrationEncryptionKeyUri) : Optional.empty(),
-                  Optional.of(PUBLIC_KEY_SIGN)),
-              UUID.randomUUID().toString(),
-              withMigration ? Optional.of(migrationEncryptionKeyUri) : Optional.empty(),
-              Optional.empty());
-      return keyWithSignatures.toBuilder();
+      return baseKey.toBuilder()
+          .addKeySplitData(
+              buildKeySplitData(baseKey, encryptionKeyUri, Optional.of(PUBLIC_KEY_SIGN)))
+          .addKeySplitData(
+              buildKeySplitData(baseKey, UUID.randomUUID().toString(), Optional.empty()));
     } catch (GeneralSecurityException e) {
       throw new IllegalStateException("Signature failure");
     }
@@ -107,17 +98,47 @@ public final class FakeEncryptionKey {
    * active and expire in the future.
    */
   public static EncryptionKey create() {
-    return createBuilderWithDefaults(false).build();
+    return createBuilderWithDefaults().build();
   }
 
+  /**
+   * Creates a key with realistic timestamps but fake key materials. The generated key will be
+   * active and expire in the future. The migration key fields are populated.
+   */
   public static EncryptionKey createWithMigration() {
-    return createBuilderWithDefaults(true).build();
+    String migrationEncryptionKeyUri = UUID.randomUUID().toString();
+    EncryptionKey baseKey =
+        createBuilderWithDefaults()
+            .setMigrationJsonEncodedKeyset(UUID.randomUUID().toString())
+            .setMigrationKeyEncryptionKeyUri(migrationEncryptionKeyUri)
+            .build();
+
+    try {
+      return baseKey.toBuilder()
+          .addMigrationKeySplitData(
+              buildKeySplitData(baseKey, migrationEncryptionKeyUri, Optional.of(PUBLIC_KEY_SIGN)))
+          .addMigrationKeySplitData(
+              buildKeySplitData(baseKey, UUID.randomUUID().toString(), Optional.empty()))
+          .build();
+    } catch (GeneralSecurityException e) {
+      throw new IllegalStateException("Signature failure");
+    }
   }
 
   /** Creates a key which actives and expires at the specified time. */
   public static EncryptionKey withActivationAndExpirationTimes(
       Instant activationTime, Instant expirationTime) {
     return create().toBuilder()
+        .setActivationTime(activationTime.toEpochMilli())
+        .setExpirationTime(expirationTime.toEpochMilli())
+        .build();
+  }
+
+  /** Creates a key which actives and expires at the specified time plus setName. */
+  public static EncryptionKey withActivationAndExpirationTimes(
+      String setName, Instant activationTime, Instant expirationTime) {
+    return create().toBuilder()
+        .setSetName(setName)
         .setActivationTime(activationTime.toEpochMilli())
         .setExpirationTime(expirationTime.toEpochMilli())
         .build();
@@ -150,7 +171,7 @@ public final class FakeEncryptionKey {
   }
 
   public static EncryptionKey withKeyId(String keyId) {
-    return createBuilderWithDefaults(false).setKeyId(keyId).build();
+    return createBuilderWithDefaults().setKeyId(keyId).build();
   }
 
   private static EncryptionKey.Builder setPublicKeys(EncryptionKey.Builder encryptionKey) {

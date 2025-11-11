@@ -176,7 +176,6 @@ public final class GcpMetricClient implements MetricClient {
         resourceLabels.put("zone", zone);
         resourceLabels.put("project_id", projectId);
 
-
         MonitoredResource resource =
             MonitoredResource.newBuilder()
                 .setType("gce_instance")

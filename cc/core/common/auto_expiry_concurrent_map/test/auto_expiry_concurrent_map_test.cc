@@ -122,6 +122,44 @@ TEST_F(AutoExpiryConcurrentMapTest, InsertingNewElementExtendOnAccessEnabled) {
 }
 
 TEST_F(AutoExpiryConcurrentMapTest,
+       InsertingNewElementExtendOnAccessEnabledWithConstAccessor) {
+  MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
+      cache_lifetime_, true, true, on_before_element_deletion_callback_,
+      mock_async_executor_, true);
+
+  auto entry = make_shared<EmptyEntry>();
+  auto pair = make_pair(3, entry);
+  EXPECT_SUCCESS(auto_expiry_map.Run());
+  EXPECT_SUCCESS(auto_expiry_map.Insert(pair, entry));
+  EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+
+  shared_ptr<UnderlyingEntry> underlying_entry;
+  auto_expiry_map.GetUnderlyingConcurrentMap().Find(3, underlying_entry);
+
+  underlying_entry->being_evicted = true;
+  uint64_t current_expiration = underlying_entry->expiration_time.load();
+  EXPECT_NE(current_expiration, 0);
+
+  EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_AUTO_EXPIRY_CONCURRENT_MAP_ENTRY_BEING_DELETED)));
+
+  underlying_entry->being_evicted = false;
+
+  auto current_clock = (TimeProvider::GetSteadyTimestampInNanoseconds() +
+                        seconds(cache_lifetime_))
+                           .count();
+
+  EXPECT_THAT(auto_expiry_map.Insert(pair, entry),
+              ResultIs(FailureExecutionResult(
+                  errors::SC_CONCURRENT_MAP_ENTRY_ALREADY_EXISTS)));
+
+  EXPECT_GE(underlying_entry->expiration_time.load(), current_clock);
+}
+
+TEST_F(AutoExpiryConcurrentMapTest,
        InsertingNewElementExtendOnAccessEnabledBlockingDisabled) {
   MockAutoExpiryConcurrentMap<int, shared_ptr<EmptyEntry>> auto_expiry_map(
       cache_lifetime_, true, false, on_before_element_deletion_callback_,

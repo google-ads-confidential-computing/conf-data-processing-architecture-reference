@@ -52,17 +52,22 @@ public abstract class TransactionRequest {
 
   // Id of the transaction.
   public abstract UUID transactionId();
+
   // ad-tech origin where reports will be sent
   public abstract String attributionReportTo();
+
   // List of Privacy budgeting units
   public abstract ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits();
+
   // Timestamp of when the transaction expires.
   public abstract Timestamp timeout();
+
   // The secret of the transaction.
   public abstract String transactionSecret();
 
   // Number of privacy budget units to consume for each key in the transaction
   public abstract Integer privacyBudgetLimit();
+
   // List of privacy budget units whose budget has exhausted
   private ImmutableList<PrivacyBudgetUnit> exhaustedPrivacyBudgetUnits;
 }

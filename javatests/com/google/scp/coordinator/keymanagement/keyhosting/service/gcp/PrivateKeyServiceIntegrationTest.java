@@ -17,11 +17,14 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.withActivationAndExpirationTimes;
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.SPANNER_KEY_TABLE_NAME;
 import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import static com.google.scp.shared.api.model.Code.OK;
 import static com.google.scp.shared.testutils.common.HttpRequestUtil.executeRequestWithRetry;
+import static java.time.Instant.now;
+import static java.time.temporal.ChronoUnit.DAYS;
 
 import com.google.acai.Acai;
 import com.google.cloud.spanner.DatabaseClient;
@@ -34,6 +37,7 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.Ke
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyServiceCloudFunctionContainer;
+import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActiveEncryptionKeysResponseProto.GetActiveEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.testutils.gcp.GcpMultiCoordinatorTestEnvModule;
@@ -59,14 +63,32 @@ public final class PrivateKeyServiceIntegrationTest {
   @Rule public Acai acai = new Acai(GcpMultiCoordinatorTestEnvModule.class);
 
   private static final HttpClient client = HttpClient.newHttpClient();
-  private static final String correctPath = "/v1alpha/encryptionKeys/";
-  private static final String incorrectPath = "/v1alpha/wrongPath/";
 
+  // GetEncryptionKeys v1alpha
+  private static final String correctPathAlpha = "/v1alpha/encryptionKeys/";
+  private static final String incorrectPathAlpha = "/v1alpha/wrongPath/";
+
+  // GetEncryptionKeys v1beta
+  private static final String correctPathBeta = "/v1beta/encryptionKeys/";
+  private static final String incorrectPathBeta = "/v1beta/wrongPath/";
+
+  // ListRecentEncryptionKeys v1alpha
   private static final String correctListRecentKeysPath =
       "/v1alpha/encryptionKeys:recent?maxAgeSeconds=999";
   private static final String uncompletedListRecentKeysPath = "/v1alpha/encryptionKeys:recent";
   private static final String incorrectListRecentKeysPath =
       "/v1alpha/encryptionKeys:wrong?maxAgeSeconds=999";
+
+  // GetActiveKeys v1beta
+  private static final String CORRECT_ACTIVE_KEYS =
+      "/v1beta/sets/%s/activeKeys?startEpochMillis=%d&endEpochMillis=%d";
+  private static final String INCORRECT_ACTIVE_KEYS =
+      "/v1beta/sets/%s/activeKey?startEpochMillis=%d&endEpochMillis=%d";
+
+  // GetKeysetMetadata v1beta
+  private static final String CORRECT_KEY_METADATA = "/v1beta/sets/%s/keysetMetadata";
+  private static final String INCORRECT_KEY_METADATA = "/v1beta/sets/%s/keysetMeta";
+
   @Inject @KeyDbClient private DatabaseClient dbClient;
   @Inject private SpannerKeyDb keyDb;
 
@@ -78,16 +100,23 @@ public final class PrivateKeyServiceIntegrationTest {
     dbClient.write(ImmutableList.of(Mutation.delete(SPANNER_KEY_TABLE_NAME, KeySet.all())));
   }
 
+  // GetEncryptionKeys v1alpha & v1beta
   @Test(timeout = 25_000)
-  public void getEncryptionKeys_success() throws ServiceException {
+  public void getEncryptionKeys_alphaSuccess() throws ServiceException {
+    getEncryptionKeysSuccess(correctPathAlpha);
+  }
+
+  @Test(timeout = 25_000)
+  public void getEncryptionKeys_betaSuccess() throws ServiceException {
+    getEncryptionKeysSuccess(correctPathBeta);
+  }
+
+  private void getEncryptionKeysSuccess(String path) throws ServiceException {
     EncryptionKey encryptionKey = FakeEncryptionKey.create();
 
     keyDb.createKey(encryptionKey);
     HttpRequest getRequest =
-        HttpRequest.newBuilder()
-            .uri(getFunctionUri(correctPath + encryptionKey.getKeyId()))
-            .GET()
-            .build();
+        HttpRequest.newBuilder().uri(getFunctionUri(path + encryptionKey.getKeyId())).GET().build();
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
 
@@ -99,10 +128,18 @@ public final class PrivateKeyServiceIntegrationTest {
   }
 
   @Test(timeout = 25_000)
-  public void getEncryptionKeys_notFound() {
-    HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(correctPath + "invalid")).GET().build();
+  public void getEncryptionKeys_alphaNotFoundTest() {
+    getEncryptionKeysNotFound(correctPathAlpha);
+  }
 
+  @Test(timeout = 25_000)
+  public void getEncryptionKeys_betaNotFoundTest() {
+    getEncryptionKeysNotFound(correctPathBeta);
+  }
+
+  public void getEncryptionKeysNotFound(String path) {
+    HttpRequest getRequest =
+        HttpRequest.newBuilder().uri(getFunctionUri(path + "invalid")).GET().build();
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
 
     assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
@@ -114,107 +151,89 @@ public final class PrivateKeyServiceIntegrationTest {
   }
 
   @Test(timeout = 25_000)
-  public void getEncryptionKeys_wrongPath() {
-    HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(incorrectPath)).GET().build();
-
-    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-
-    assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
-
-    ErrorResponse response = ErrorUtil.parseErrorResponse(httpResponse.body());
-    assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("Resource not found");
-    assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");
+  public void getEncryptionKeys_alphaWrongPath() {
+    getEncryptionKeysWrongPath(incorrectPathAlpha);
   }
 
   @Test(timeout = 25_000)
-  public void getEncryptionKeys_wrongMethod() {
-    HttpRequest getRequest =
-        HttpRequest.newBuilder()
-            .uri(getFunctionUri(correctPath))
-            .POST(BodyPublishers.noBody())
-            .build();
+  public void getEncryptionKeys_betaWrongPath() {
+    getEncryptionKeysWrongPath(incorrectPathBeta);
+  }
+
+  public void getEncryptionKeysWrongPath(String path) {
+    HttpRequest getRequest = HttpRequest.newBuilder().uri(getFunctionUri(path)).GET().build();
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-
-    assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
-    assertThat(httpResponse.headers().map().containsKey("cache-control")).isFalse();
-
-    ErrorResponse response = ErrorUtil.parseErrorResponse(httpResponse.body());
-    assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("Resource not found");
-    assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");
+    verifyNotFoundResponse(httpResponse);
   }
 
   @Test(timeout = 25_000)
-  public void getRecentKeys_success() throws IOException, ServiceException {
+  public void getEncryptionKeys_alphaWrongMethod() {
+    getEncryptionKeysWrongMethod(correctPathAlpha);
+  }
+
+  @Test(timeout = 25_000)
+  public void getEncryptionKeys_betaWrongMethod() {
+    getEncryptionKeysWrongMethod(correctPathBeta);
+  }
+
+  public void getEncryptionKeysWrongMethod(String path) {
+    HttpRequest getRequest =
+        HttpRequest.newBuilder().uri(getFunctionUri(path)).POST(BodyPublishers.noBody()).build();
+
+    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
+    verifyNotFoundResponse(httpResponse);
+  }
+
+  // ListRecentEncryptionKeys v1alpha
+  @Test(timeout = 25_000)
+  public void listRecentKeys_returnsDbKeysTest() throws IOException, ServiceException {
     keyDb.createKey(FakeEncryptionKey.create());
     keyDb.createKey(FakeEncryptionKey.create());
-    System.out.println("\n  test out: ");
+    assertThat(listRecentKeys().getKeysList()).hasSize(2);
+  }
+
+  @Test(timeout = 25_000)
+  public void listRecentKeys_emptyListTest() throws IOException {
+    assertThat(listRecentKeys().getKeysList()).hasSize(0);
+  }
+
+  private ListRecentEncryptionKeysResponse listRecentKeys() throws IOException {
     HttpRequest getRequest =
         HttpRequest.newBuilder().uri(getFunctionUri(correctListRecentKeysPath)).GET().build();
-
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
 
     assertThat(httpResponse.statusCode()).isEqualTo(OK.getHttpStatusCode());
 
-    ListRecentEncryptionKeysResponse.Builder builder =
-        ListRecentEncryptionKeysResponse.newBuilder();
+    var builder = ListRecentEncryptionKeysResponse.newBuilder();
     JsonFormat.parser().merge(httpResponse.body(), builder);
-    ListRecentEncryptionKeysResponse response = builder.build();
-    assertThat(response.getKeysList()).hasSize(2);
+    return builder.build();
   }
 
   @Test(timeout = 25_000)
-  public void listRecentKeys_emptyList() throws IOException {
-    HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(correctListRecentKeysPath)).GET().build();
-
-    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-
-    assertThat(httpResponse.statusCode()).isEqualTo(OK.getHttpStatusCode());
-
-    ListRecentEncryptionKeysResponse.Builder builder =
-        ListRecentEncryptionKeysResponse.newBuilder();
-    JsonFormat.parser().merge(httpResponse.body(), builder);
-    ListRecentEncryptionKeysResponse response = builder.build();
-    assertThat(response.getKeysList()).hasSize(0);
-  }
-
-  @Test(timeout = 25_000)
-  public void listRecentKeys_missingMaxAgeSeconds() throws IOException {
+  public void listRecentKeys_missingMaxAgeSeconds() {
     HttpRequest getRequest =
         HttpRequest.newBuilder().uri(getFunctionUri(uncompletedListRecentKeysPath)).GET().build();
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
     assertThat(httpResponse.statusCode()).isEqualTo(INVALID_ARGUMENT.getHttpStatusCode());
 
-    ErrorResponse.Builder builder = ErrorResponse.newBuilder();
-    JsonFormat.parser().merge(httpResponse.body(), builder);
-    ErrorResponse response = builder.build();
+    ErrorResponse response = ErrorUtil.parseErrorResponse(httpResponse.body());
     assertThat(response.getCode()).isEqualTo(INVALID_ARGUMENT.getRpcStatusCode());
     assertThat(response.getMessage()).contains("maxAgeSeconds query parameter is required.");
   }
 
   @Test(timeout = 25_000)
-  public void listRecentKeys_wrongPath() throws IOException {
+  public void listRecentKeys_wrongPath() {
     HttpRequest getRequest =
         HttpRequest.newBuilder().uri(getFunctionUri(incorrectListRecentKeysPath)).GET().build();
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-    assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
-
-    ErrorResponse.Builder builder = ErrorResponse.newBuilder();
-    JsonFormat.parser().merge(httpResponse.body(), builder);
-    ErrorResponse response = builder.build();
-    assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("Resource not found");
-    assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");
+    verifyNotFoundResponse(httpResponse);
   }
 
   @Test(timeout = 25_000)
-  public void listRecentKeys_wrongMethod() throws IOException {
+  public void listRecentKeys_wrongMethod() {
     HttpRequest getRequest =
         HttpRequest.newBuilder()
             .uri(getFunctionUri(correctListRecentKeysPath))
@@ -222,12 +241,92 @@ public final class PrivateKeyServiceIntegrationTest {
             .build();
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
+    verifyNotFoundResponse(httpResponse);
+  }
+
+  // GetActiveEncryptionKeys v1beta
+  @Test(timeout = 25_000)
+  public void getActiveKeys_wrongPath() {
+    var now = now();
+    var start = now.minus(25, DAYS).toEpochMilli();
+    var end = now.plusMillis(10000).toEpochMilli();
+    String endpoint = String.format(INCORRECT_ACTIVE_KEYS, "valid", start, end);
+    HttpRequest getRequest = HttpRequest.newBuilder().uri(getFunctionUri(endpoint)).GET().build();
+
+    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
+    verifyNotFoundResponse(httpResponse);
+  }
+
+  @Test(timeout = 25_000)
+  public void getActiveKeys_returnsEmptyListTest() throws IOException {
+    var now = now();
+    var start = now.minus(25, DAYS).toEpochMilli();
+    var end = now.plusMillis(10000).toEpochMilli();
+    assertThat(getActiveKeys("set", start, end).getKeysList()).hasSize(0);
+  }
+
+  @Test(timeout = 25_000)
+  public void getActiveKeys_returnsCorrectKeysTest() throws Exception {
+    var now = now();
+    var key1 =
+        withActivationAndExpirationTimes("different", now.minus(4, DAYS), now.minus(2, DAYS));
+    var key2 = withActivationAndExpirationTimes("correct", now.minus(4, DAYS), now.minus(2, DAYS));
+    var key3 = withActivationAndExpirationTimes("correct", now.plus(2, DAYS), now.plus(4, DAYS));
+    var key4 =
+        withActivationAndExpirationTimes("correct", now.minus(30, DAYS), now.minus(28, DAYS));
+    keyDb.createKey(key1);
+    keyDb.createKey(key2);
+    keyDb.createKey(key3);
+    keyDb.createKey(key4);
+
+    var start = now.minus(25, DAYS).toEpochMilli();
+    var end = now.plusMillis(10000).toEpochMilli();
+
+    var keys = getActiveKeys("correct", start, end).getKeysList();
+    assertThat(keys).hasSize(1);
+    assertThat(keys.getFirst().getName()).isEqualTo("encryptionKeys/" + key2.getKeyId());
+  }
+
+  private GetActiveEncryptionKeysResponse getActiveKeys(String setName, long start, long end)
+      throws IOException {
+    String endpoint = String.format(CORRECT_ACTIVE_KEYS, setName, start, end);
+    HttpRequest getRequest = HttpRequest.newBuilder().uri(getFunctionUri(endpoint)).GET().build();
+    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
+
+    assertThat(httpResponse.statusCode()).isEqualTo(OK.getHttpStatusCode());
+
+    var builder = GetActiveEncryptionKeysResponse.newBuilder();
+    JsonFormat.parser().merge(httpResponse.body(), builder);
+    return builder.build();
+  }
+
+  // GetKeysetMetadata v1beta
+  // TODO(b/444026189): determine how to set environment variable to test this endpoint
+  @Test(timeout = 25_000)
+  public void getKeysetMetadata_wrongPathTest() {
+    String endpoint = String.format(INCORRECT_KEY_METADATA, "overlap");
+    HttpRequest getRequest = HttpRequest.newBuilder().uri(getFunctionUri(endpoint)).GET().build();
+    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
+    verifyNotFoundResponse(httpResponse);
+  }
+
+  @Test(timeout = 25_000)
+  public void getKeysetMetadata_missingSetNameTest() {
+    String endpoint = String.format(CORRECT_KEY_METADATA, "not-there");
+    HttpRequest getRequest = HttpRequest.newBuilder().uri(getFunctionUri(endpoint)).GET().build();
+    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
+
+    assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
+    ErrorResponse response = ErrorUtil.parseErrorResponse(httpResponse.body());
+    assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
+    assertThat(response.getMessage()).contains("Do not have config");
+  }
+
+  private static void verifyNotFoundResponse(HttpResponse<String> httpResponse) {
     assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
     assertThat(httpResponse.headers().map().containsKey("cache-control")).isFalse();
 
-    ErrorResponse.Builder builder = ErrorResponse.newBuilder();
-    JsonFormat.parser().merge(httpResponse.body(), builder);
-    ErrorResponse response = builder.build();
+    ErrorResponse response = ErrorUtil.parseErrorResponse(httpResponse.body());
     assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
     assertThat(response.getMessage()).contains("Resource not found");
     assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");

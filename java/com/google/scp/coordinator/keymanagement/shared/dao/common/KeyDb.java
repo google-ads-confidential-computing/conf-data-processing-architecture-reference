@@ -86,8 +86,7 @@ public interface KeyDb {
    * @param end keys returned must have activation time before (inclusive)
    */
   ImmutableList<EncryptionKey> getActiveKeys(
-      String setName, int keyLimit, Instant start, Instant end)
-      throws ServiceException;
+      String setName, int keyLimit, Instant start, Instant end) throws ServiceException;
 
   /** Returns all keys in the database without explicit ordering */
   ImmutableList<EncryptionKey> getAllKeys() throws ServiceException;

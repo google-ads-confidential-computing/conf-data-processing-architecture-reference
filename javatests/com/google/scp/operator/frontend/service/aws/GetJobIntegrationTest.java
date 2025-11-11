@@ -58,7 +58,9 @@ public final class GetJobIntegrationTest {
 
   @Test(timeout = 120_000)
   public void getJob_success()
-      throws JsonProcessingException, JobMetadataDbException, JobKeyExistsException,
+      throws JsonProcessingException,
+          JobMetadataDbException,
+          JobKeyExistsException,
           InvalidProtocolBufferException {
     JobMetadata jobMetadata =
         JobGenerator.createFakeJobMetadata("1").toBuilder().clearRecordVersion().build();

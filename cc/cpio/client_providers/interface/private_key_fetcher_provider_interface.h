@@ -142,6 +142,20 @@ struct PrivateKeyFetchingResponse {
   std::vector<std::shared_ptr<EncryptionKey>> encryption_keys;
 };
 
+/// Request for fetching private keyset metadata.
+struct KeysetMetadataFetchingRequest {
+  /// Endpoint to surface the private keys.
+  std::shared_ptr<std::string> private_key_endpoint;
+
+  /// The name of the keyset.
+  std::shared_ptr<std::string> keyset_name;
+};
+
+/// Response for fetching private keyset metadata.
+struct KeysetMetadataFetchingResponse {
+  int active_key_count;
+};
+
 /**
  * @brief Interface responsible for fetching private key.
  */
@@ -156,6 +170,15 @@ class PrivateKeyFetcherProviderInterface : public core::ServiceInterface {
   virtual void FetchPrivateKey(
       core::AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>&
           context) noexcept = 0;
+
+  /**
+   * @brief
+   *
+   * @param context
+   */
+  virtual void FetchKeysetMetadata(
+      core::AsyncContext<KeysetMetadataFetchingRequest,
+                         KeysetMetadataFetchingResponse>& context) noexcept = 0;
 };
 
 class PrivateKeyFetcherProviderFactory {

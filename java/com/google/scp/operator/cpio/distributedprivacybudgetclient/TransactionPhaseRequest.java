@@ -42,8 +42,10 @@ public abstract class TransactionPhaseRequest {
 
   // Id of the transaction.
   public abstract UUID transactionId();
+
   // The transaction phase to be executed.
   public abstract TransactionPhase transactionPhase();
+
   // The last execution time stamp of any phases of a transaction.
   public abstract Timestamp lastExecutionTimestamp();
 }

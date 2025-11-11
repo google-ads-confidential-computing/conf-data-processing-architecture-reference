@@ -46,10 +46,6 @@ using std::shared_ptr;
 using std::string;
 using std::placeholders::_1;
 
-namespace {
-constexpr char kPrivateKeyFetcherProvider[] = "PrivateKeyFetcherProvider";
-}  // namespace
-
 namespace google::scp::cpio::client_providers {
 ExecutionResult PrivateKeyFetcherProvider::Init() noexcept {
   if (!http_client_) {
@@ -76,82 +72,26 @@ void PrivateKeyFetcherProvider::FetchPrivateKey(
   AsyncContext<PrivateKeyFetchingRequest, HttpRequest>
       sign_http_request_context(
           private_key_fetching_context.request,
-          bind(&PrivateKeyFetcherProvider::SignHttpRequestCallback, this,
-               private_key_fetching_context, _1),
+          bind(&PrivateKeyFetcherProvider::SignHttpRequestCallback<
+                   PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>,
+               this, private_key_fetching_context, _1),
           private_key_fetching_context);
 
   SignHttpRequest(sign_http_request_context);
 }
 
-void PrivateKeyFetcherProvider::SignHttpRequestCallback(
-    AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>&
-        private_key_fetching_context,
-    AsyncContext<PrivateKeyFetchingRequest, HttpRequest>&
-        sign_http_request_context) noexcept {
-  auto execution_result = sign_http_request_context.result;
-  if (!execution_result.Successful()) {
-    SCP_ERROR_CONTEXT(
-        kPrivateKeyFetcherProvider, private_key_fetching_context,
-        execution_result, "Failed to sign http request for endpoint %s.",
-        private_key_fetching_context.request->key_endpoint->endpoint().c_str());
-    private_key_fetching_context.result = execution_result;
-    private_key_fetching_context.Finish();
-    return;
-  }
+void PrivateKeyFetcherProvider::FetchKeysetMetadata(
+    AsyncContext<KeysetMetadataFetchingRequest, KeysetMetadataFetchingResponse>&
+        keyset_metadata_fetching_context) noexcept {
+  AsyncContext<KeysetMetadataFetchingRequest, HttpRequest>
+      sign_http_request_context(
+          keyset_metadata_fetching_context.request,
+          bind(&PrivateKeyFetcherProvider::SignHttpRequestCallback<
+                   KeysetMetadataFetchingRequest,
+                   KeysetMetadataFetchingResponse>,
+               this, keyset_metadata_fetching_context, _1),
+          keyset_metadata_fetching_context);
 
-  AsyncContext<HttpRequest, HttpResponse> http_client_context(
-      std::move(sign_http_request_context.response),
-      bind(&PrivateKeyFetcherProvider::PrivateKeyFetchingCallback, this,
-           private_key_fetching_context, _1),
-      private_key_fetching_context);
-  SCP_DEBUG_CONTEXT(kPrivateKeyFetcherProvider, private_key_fetching_context,
-                    "Starting to fetch private key split.");
-  execution_result = http_client_->PerformRequest(http_client_context);
-  if (!execution_result.Successful()) {
-    SCP_ERROR_CONTEXT(
-        kPrivateKeyFetcherProvider, private_key_fetching_context,
-        execution_result,
-        "Failed to perform sign http request to reach endpoint %s.",
-        private_key_fetching_context.request->key_endpoint->endpoint().c_str());
-    private_key_fetching_context.result = execution_result;
-    private_key_fetching_context.Finish();
-  }
-}
-
-void PrivateKeyFetcherProvider::PrivateKeyFetchingCallback(
-    AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>&
-        private_key_fetching_context,
-    AsyncContext<HttpRequest, HttpResponse>& http_client_context) noexcept {
-  private_key_fetching_context.result = http_client_context.result;
-  if (!http_client_context.result.Successful()) {
-    SCP_ERROR_CONTEXT(
-        kPrivateKeyFetcherProvider, private_key_fetching_context,
-        private_key_fetching_context.result,
-        "Failed to fetch private key from endpoint %s.",
-        private_key_fetching_context.request->key_endpoint->endpoint().c_str());
-    private_key_fetching_context.Finish();
-    return;
-  }
-
-  PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
-      http_client_context.response->body, response);
-  if (!result.Successful()) {
-    SCP_ERROR_CONTEXT(
-        kPrivateKeyFetcherProvider, private_key_fetching_context,
-        private_key_fetching_context.result,
-        "Failed to parse private key from endpoint %s.",
-        private_key_fetching_context.request->key_endpoint->endpoint().c_str());
-    private_key_fetching_context.result = result;
-    private_key_fetching_context.Finish();
-    return;
-  }
-  SCP_DEBUG_CONTEXT(
-      kPrivateKeyFetcherProvider, private_key_fetching_context,
-      "Successfully obtained private key split from endpoint %s.",
-      private_key_fetching_context.request->key_endpoint->endpoint().c_str());
-  private_key_fetching_context.response =
-      make_shared<PrivateKeyFetchingResponse>(response);
-  private_key_fetching_context.Finish();
+  SignHttpRequest(sign_http_request_context);
 }
 }  // namespace google::scp::cpio::client_providers

@@ -75,16 +75,16 @@ public abstract class ApiGatewayHandler<Request, Response>
     } catch (ServiceException exception) {
       logger.warn("ServiceException occurred during handling, returning error response", exception);
       return createApiGatewayResponseFromProto(
-          /* bodyObject = */ toErrorResponse(exception),
-          /* httpStatusCode = */ exception.getErrorCode().getHttpStatusCode(),
-          /* headers = */ allHeaders());
+          /* bodyObject= */ toErrorResponse(exception),
+          /* httpStatusCode= */ exception.getErrorCode().getHttpStatusCode(),
+          /* headers= */ allHeaders());
     } catch (Exception exception) {
       ServiceException serviceException = ServiceException.ofUnknownException(exception);
       logger.warn("Exception occurred during handling, returning error response", serviceException);
       return createApiGatewayResponseFromProto(
-          /* bodyObject = */ toErrorResponse(serviceException),
-          /* httpStatusCode = */ serviceException.getErrorCode().getHttpStatusCode(),
-          /* headers = */ allHeaders());
+          /* bodyObject= */ toErrorResponse(serviceException),
+          /* httpStatusCode= */ serviceException.getErrorCode().getHttpStatusCode(),
+          /* headers= */ allHeaders());
     }
   }
 

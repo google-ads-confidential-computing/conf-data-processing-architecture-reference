@@ -111,7 +111,7 @@ variable "spanner_custom_configuration_read_replica_location" {
 # Key Generation Variables.
 ################################################################################
 
-variable "key_generation_image" {
+variable "key_generation_service_container_image_url" {
   description = "The Key Generation Application docker image."
   type        = string
 }
@@ -152,11 +152,6 @@ variable "key_generation_max_days_ahead" {
     condition     = var.key_generation_max_days_ahead > 1
     error_message = "Must be greater than 1."
   }
-}
-
-variable "key_generation_no_refresh_window" {
-  description = "Determines if there is a refresh window (implicit overlap) used during key generation."
-  type        = bool
 }
 
 variable "key_generation_cron_schedule" {
@@ -222,14 +217,14 @@ variable "key_generation_alignment_period" {
   }
 }
 
-variable "key_generation_create_alert_alignment_periods" {
-  description = "Total number of key generation alignment periods that need to pass without a create to alert."
+variable "key_generation_single_keyset_alignment_periods" {
+  description = "Total number of alignment periods a keyset needs to fail before alerting."
   type        = number
 }
 
-variable "key_gen_instance_force_replace" {
-  description = "Whether to force key generation instance replacement for every deployment."
-  type        = bool
+variable "key_generation_create_alert_alignment_periods" {
+  description = "Total number of key generation alignment periods that need to pass without a create to alert."
+  type        = number
 }
 
 variable "peer_coordinator_kms_key_uri" {
@@ -323,6 +318,11 @@ variable "public_key_service_container_image_url" {
   nullable    = false
 }
 
+variable "public_key_service_load_balancing_scheme" {
+  description = "Whether the Public KS will be used with internal or external load balancing."
+  type        = string
+}
+
 variable "public_key_service_cr_regions" {
   description = "Additional regions beyond primary and secondary that Public KS will run in."
   type        = list(string)
@@ -373,6 +373,18 @@ variable "private_key_service_container_image_url" {
   nullable    = false
 }
 
+variable "private_key_service_addon_container_image_url" {
+  description = "The full path (registry + tag) to the container image used to deploy an additional Private Key Service."
+  type        = string
+  nullable    = false
+}
+
+variable "private_key_service_addon_alert_severity_overrides" {
+  description = "Alerts severity overrides for the addon Private Key Service."
+  type        = map(string)
+  default     = {}
+}
+
 variable "private_key_service_cloud_run_cpu_count" {
   description = "Number of cpus to allocate for private key service cloud run instance."
   type        = number
@@ -393,7 +405,11 @@ variable "private_key_service_cache_refresh_in_minutes" {
   type        = number
 }
 
-### EKS
+variable "private_key_service_load_balancing_scheme" {
+  description = "Whether the Private KS will be used with internal or external load balancing."
+  type        = string
+}
+
 variable "private_key_service_cloud_run_memory_mb" {
   description = "Memory size in MB for private key service cloud run."
   type        = number
@@ -546,7 +562,6 @@ variable "key_sets_config" {
     key_sets[].ttl_in_days           (optional(number)) - Number of days the generated keys will be kept in the database. If set to 0, the keys will never be deleted.
     key_sets[].create_max_days_ahead (optional(number)) - Number of days ahead that a key can be created
     key_sets[].overlap_period_days   (optional(number)) - Number of days each consecutive active set should overlap
-    key_sets[].no_refresh_window     (optional(bool)) - Determines if there is a refresh window (implicit overlap) when generating keys
   EOT
   type = object({
     key_sets = list(object({
@@ -557,7 +572,6 @@ variable "key_sets_config" {
       ttl_in_days           = number
       create_max_days_ahead = optional(number)
       overlap_period_days   = optional(number)
-      no_refresh_window     = optional(bool)
     }))
   })
 }
@@ -569,6 +583,11 @@ variable "get_encrypted_private_key_general_error_threshold" {
 
 variable "private_key_service_exception_alert_threshold" {
   description = "Private KS exception count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "private_key_service_config_read_alert_threshold" {
+  description = "Private KS config read error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
@@ -598,7 +617,6 @@ variable "populate_migration_key_data" {
   Note: This should only should only be used in preparation for or during a migration.
   EOT
   type        = string
-  nullable    = true
 }
 
 variable "key_sets_vending_config" {
@@ -616,7 +634,75 @@ variable "key_sets_vending_config" {
 }
 
 variable "migration_peer_coordinator_kms_key_base_uri" {
-  description = "Migration kms key base url from peer coordinator."
+  description = "Migration kms key base url from the peer coordinator."
   type        = string
-  nullable    = true
+}
+
+variable "key_migration_tool_container_image_url" {
+  description = "The full path (registry + tag) to the container image used to deploy the Key Migration Tool."
+  type        = string
+}
+
+variable "key_migration_tool_cpu_count" {
+  description = "How many CPUs to give to the migration tool's instance. Supported values are 1,2,4 and 8"
+  type        = number
+  nullable    = false
+}
+
+variable "key_migration_tool_memory_mb" {
+  description = "How much memory in MB to give to the migration tool's instance. e.g. 256."
+  type        = number
+  nullable    = false
+}
+
+variable "key_migration_tool_max_retries" {
+  description = "How many times to retry a failed task in the migration tool."
+  type        = number
+  nullable    = false
+}
+
+variable "key_migration_tool_task_timeout_seconds" {
+  description = <<EOF
+  The maximum amount of time in seconds that the migration tool job is allowed to run for each try.
+  The maximum run time will be `key_migration_tool_timeout_seconds * key_migration_tool_max_retries`.
+  EOF
+  type        = number
+  nullable    = false
+}
+
+variable "key_migration_tool_migrator_mode" {
+  description = <<EOF
+  The migration tool's mode:
+      'generate': Creates migration key data for keys and
+                  then populated those fields in the database.
+      'migrate': Updates the database by overwriting the original key material.
+      'cleanup': Removes the migration key data from the database migration columns.
+  EOF
+  type        = string
+}
+
+variable "key_migration_tool_dry_run" {
+  description = "When true, no database updates will be made."
+  type        = bool
+  nullable    = false
+}
+
+variable "run_key_migration_tool" {
+  description = "Enables the Key Migration Tool."
+  type        = bool
+  nullable    = false
+}
+
+variable "key_migration_tool_key_sets" {
+  description = <<EOT
+  Configuration for controlling what key set should be migrated.
+
+  Attributes:
+    allowed_keysets (list(string)) - The list of individual key set specified
+    for the migration tool to act upon.
+  EOT
+  type = object({
+    allowed_keysets = list(string)
+  })
+  nullable = false
 }

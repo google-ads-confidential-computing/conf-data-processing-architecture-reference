@@ -37,6 +37,8 @@
 #include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 #include "public/cpio/utils/sync_utils/src/sync_utils.h"
 
+using google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest;
+using google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse;
 using google::cmrt::sdk::private_key_service::v1::
     ListActiveEncryptionKeysRequest;
 using google::cmrt::sdk::private_key_service::v1::
@@ -76,7 +78,7 @@ ExecutionResult PrivateKeyClient::CreatePrivateKeyClientProvider() noexcept {
   if (!execution_result.Successful()) {
     SCP_ERROR(kPrivateKeyClient, kZeroUuid, execution_result,
               "Failed to get http client.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
   shared_ptr<RoleCredentialsProviderInterface> role_credentials_provider;
   execution_result = GlobalCpio::GetGlobalCpio()->GetRoleCredentialsProvider(
@@ -84,7 +86,7 @@ ExecutionResult PrivateKeyClient::CreatePrivateKeyClientProvider() noexcept {
   if (!execution_result.Successful()) {
     SCP_ERROR(kPrivateKeyClient, kZeroUuid, execution_result,
               "Failed to get role credentials provider.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
   shared_ptr<AuthTokenProviderInterface> auth_token_provider;
   execution_result =
@@ -92,7 +94,7 @@ ExecutionResult PrivateKeyClient::CreatePrivateKeyClientProvider() noexcept {
   if (!execution_result.Successful()) {
     SCP_ERROR(kPrivateKeyClient, kZeroUuid, execution_result,
               "Failed to get role auth token provider.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
   shared_ptr<AsyncExecutorInterface> io_async_executor;
   execution_result =
@@ -100,7 +102,7 @@ ExecutionResult PrivateKeyClient::CreatePrivateKeyClientProvider() noexcept {
   if (!execution_result.Successful()) {
     SCP_ERROR(kPrivateKeyClient, kZeroUuid, execution_result,
               "Failed to get IOAsyncExecutor.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
   shared_ptr<AsyncExecutorInterface> cpu_async_executor;
   execution_result =
@@ -108,7 +110,7 @@ ExecutionResult PrivateKeyClient::CreatePrivateKeyClientProvider() noexcept {
   if (!execution_result.Successful()) {
     SCP_ERROR(kPrivateKeyClient, kZeroUuid, execution_result,
               "Failed to get CpuAsyncExecutor.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
   private_key_client_provider_ = PrivateKeyClientProviderFactory::Create(
       options_, http_client, role_credentials_provider, auth_token_provider,
@@ -164,7 +166,8 @@ PrivateKeyClient::ListPrivateKeysSync(ListPrivateKeysRequest request) noexcept {
       SyncUtils::AsyncToSync2<ListPrivateKeysRequest, ListPrivateKeysResponse>(
           bind(&PrivateKeyClient::ListPrivateKeys, this, _1), move(request),
           response);
-  RETURN_AND_LOG_IF_FAILURE(execution_result, kPrivateKeyClient, kZeroUuid,
+  RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
+                            kPrivateKeyClient, kZeroUuid,
                             "Failed to list private keys.");
   return response;
 }
@@ -172,6 +175,7 @@ PrivateKeyClient::ListPrivateKeysSync(ListPrivateKeysRequest request) noexcept {
 void PrivateKeyClient::ListActiveEncryptionKeys(
     AsyncContext<ListActiveEncryptionKeysRequest,
                  ListActiveEncryptionKeysResponse>& context) noexcept {
+  context.setConvertToPublicError(true);
   private_key_client_provider_->ListActiveEncryptionKeys(context);
 }
 
@@ -184,8 +188,32 @@ PrivateKeyClient::ListActiveEncryptionKeysSync(
                               ListActiveEncryptionKeysResponse>(
           bind(&PrivateKeyClient::ListActiveEncryptionKeys, this, _1),
           move(request), response);
-  RETURN_AND_LOG_IF_FAILURE(execution_result, kPrivateKeyClient, kZeroUuid,
+  RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
+                            kPrivateKeyClient, kZeroUuid,
                             "Failed to list active encryption keys.");
+  return response;
+}
+
+void PrivateKeyClient::GetKeysetMetadata(
+    AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>&
+        context) noexcept {
+  context.setConvertToPublicError(true);
+  private_key_client_provider_->GetKeysetMetadata(context);
+}
+
+core::ExecutionResultOr<
+    cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse>
+PrivateKeyClient::GetKeysetMetadataSync(
+    cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest
+        request) noexcept {
+  GetKeysetMetadataResponse response;
+  auto execution_result = SyncUtils::AsyncToSync2<GetKeysetMetadataRequest,
+                                                  GetKeysetMetadataResponse>(
+      bind(&PrivateKeyClient::GetKeysetMetadata, this, _1), move(request),
+      response);
+  RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
+                            kPrivateKeyClient, kZeroUuid,
+                            "Failed to get keyset metadata.");
   return response;
 }
 

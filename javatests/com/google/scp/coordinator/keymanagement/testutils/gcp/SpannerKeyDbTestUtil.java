@@ -20,6 +20,7 @@ import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEn
 import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_DB_NAME;
 import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_ENDPOINT;
 import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_INSTANCE_ID;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.createBuilderWithDefaults;
 
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
@@ -68,6 +69,10 @@ public class SpannerKeyDbTestUtil {
   public static void putKeyWithExpiration(SpannerKeyDb keyDb, Instant expirationTime)
       throws ServiceException {
     putItem(keyDb, FakeEncryptionKey.withExpirationTime(expirationTime));
+  }
+
+  public static void putKeyWithNoRotation(SpannerKeyDb keyDb) throws ServiceException {
+    putItem(keyDb, createBuilderWithDefaults().clearExpirationTime().clearTtlTime().build());
   }
 
   /**

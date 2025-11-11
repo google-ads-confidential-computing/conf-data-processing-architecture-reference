@@ -72,6 +72,12 @@ class PrivateKeyClientProvider : public PrivateKeyClientProviderInterface {
           cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>&
           context) noexcept override;
 
+  void GetKeysetMetadata(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest,
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse>&
+          get_keyset_metadata_context) noexcept override;
+
  protected:
   /// The overrall status of the whole ListPrivateKeys call.
   struct ListPrivateKeysStatus {
@@ -117,7 +123,7 @@ class PrivateKeyClientProvider : public PrivateKeyClientProviderInterface {
    * @param uri_index endpoint index in endpoints vector.
    *
    */
-  virtual void OnFetchPrivateKeyCallback(
+  void OnFetchPrivateKeyCallback(
       core::AsyncContext<
           cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest,
           cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>&
@@ -127,6 +133,14 @@ class PrivateKeyClientProvider : public PrivateKeyClientProviderInterface {
       std::shared_ptr<ListPrivateKeysStatus> list_keys_status,
       size_t uri_index) noexcept;
 
+  void OnFetchMetadataCallback(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest,
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse>&
+          get_keyset_metadata_context,
+      core::AsyncContext<KeysetMetadataFetchingRequest,
+                         KeysetMetadataFetchingResponse>&
+          fetch_keyset_metadata_context) noexcept;
   /**
    * @brief Is called after FetchPrivateKey is completed.
    *

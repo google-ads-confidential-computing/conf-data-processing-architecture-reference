@@ -18,17 +18,13 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
-import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestHeaderParsingUtil;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class KeyMigrationVendingUtil {
   private static final Logger logger = LoggerFactory.getLogger(KeyMigrationVendingUtil.class);
-  private static final String AUTH_HEADER_EMAIL_FIELD = "email";
   private static final String METRIC_SCOPE = "migration_vending/";
 
   // Indicates if a key was vended with or without migration data.
@@ -52,7 +48,7 @@ public final class KeyMigrationVendingUtil {
    * migration key data substituted, based on the provided configuration.
    *
    * @param encryptionKey the key to be vended.
-   * @param request the context of the incoming request.
+   * @param email the email associated with the incoming request.
    * @param allowedMigrators a set of strings containing service account emails or key set names
    *     that are approved for migration.
    * @implNote <b>WARNING</b>: For performance reasons, JWT signatures from requests are not
@@ -61,17 +57,9 @@ public final class KeyMigrationVendingUtil {
    */
   public static EncryptionKey vendAccordingToConfig(
       EncryptionKey encryptionKey,
-      RequestContext request,
+      String email,
       ImmutableSet<String> allowedMigrators,
       LogMetricHelper logMetricHelper) {
-    // Break out early if migration vending is disabled.
-    if (allowedMigrators.isEmpty()) {
-      return clearMigrationData(encryptionKey);
-    }
-
-    // Capture the caller email early for logging purposes.
-    Optional<String> callerEmail = RequestHeaderParsingUtil.getCallerEmail(request);
-    String email = callerEmail.orElse("unknown");
     String keyId = encryptionKey.getKeyId();
     String setName = encryptionKey.getSetName();
 
@@ -105,7 +93,7 @@ public final class KeyMigrationVendingUtil {
       return vendMigrationData(encryptionKey);
     }
     // Validate callers for migration key vending.
-    if (callerEmail.isPresent() && allowedMigrators.contains(email)) {
+    if (allowedMigrators.contains(email)) {
       if (!hasMigrationData) {
         logger.info(
             format(
@@ -128,10 +116,6 @@ public final class KeyMigrationVendingUtil {
       return vendMigrationData(encryptionKey);
     }
     // Caller or key set is not allow listed for migration.
-    if (!hasMigrationData) {
-      // Not an error and may be expected but logged for visibility.
-      logger.info("The migration disallowed KeyID {} is missing migration data.", keyId);
-    }
     logger.info(
         format(
             logMetricHelper,

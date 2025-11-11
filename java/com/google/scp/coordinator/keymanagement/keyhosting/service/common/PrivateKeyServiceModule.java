@@ -22,6 +22,7 @@ import com.google.inject.multibindings.ProvidesIntoMap;
 import com.google.inject.multibindings.StringMapKey;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.GetActiveEncryptionKeysTask;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.GetEncryptedPrivateKeyTask;
+import com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.GetKeysetMetadataTask;
 import com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.ListRecentEncryptionKeysTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import java.util.List;
@@ -44,8 +45,12 @@ public class PrivateKeyServiceModule extends AbstractModule {
   List<ApiTask> provideV1BetaTasks(
       GetEncryptedPrivateKeyTask getEncryptedPrivateKeyTask,
       ListRecentEncryptionKeysTask listRecentEncryptionKeysTask,
-      GetActiveEncryptionKeysTask getActiveEncryptionKeysTask) {
+      GetActiveEncryptionKeysTask getActiveEncryptionKeysTask,
+      GetKeysetMetadataTask getKeysetMetadataTask) {
     return ImmutableList.of(
-        getEncryptedPrivateKeyTask, listRecentEncryptionKeysTask, getActiveEncryptionKeysTask);
+        getEncryptedPrivateKeyTask,
+        listRecentEncryptionKeysTask,
+        getActiveEncryptionKeysTask,
+        getKeysetMetadataTask);
   }
 }

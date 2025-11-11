@@ -111,12 +111,13 @@ public final class GcsBlobStorageClientIntegrationTest {
     String bucketName = GCP_BUCKET + "2";
     gcsStorage.create(BucketInfo.newBuilder(bucketName).build());
 
-    BlobStorageClientException exception = assertThrows(
-        BlobStorageClientException.class,
-        () ->
-            gcsBlobStorageClient.getBlob(
-                DataLocation.ofBlobStoreDataLocation(
-                    BlobStoreDataLocation.create(bucketName, "NonExistentKey"))));
+    BlobStorageClientException exception =
+        assertThrows(
+            BlobStorageClientException.class,
+            () ->
+                gcsBlobStorageClient.getBlob(
+                    DataLocation.ofBlobStoreDataLocation(
+                        BlobStoreDataLocation.create(bucketName, "NonExistentKey"))));
     assertThat(exception.getReason()).isEqualTo(ErrorReason.BLOB_NOT_FOUND);
   }
 

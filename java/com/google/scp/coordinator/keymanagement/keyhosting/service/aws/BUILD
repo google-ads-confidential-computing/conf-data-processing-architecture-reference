@@ -56,6 +56,7 @@ java_library(
         "//java/external:aws_auth",
         "//java/external:aws_http_client_spi",
         "//java/external:aws_url_connection_client",
+        "//java/external:guava",
         "//java/external:guice",
     ],
 )

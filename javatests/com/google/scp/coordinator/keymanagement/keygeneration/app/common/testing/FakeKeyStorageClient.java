@@ -16,13 +16,14 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.app.common.testing;
 
+import static com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil.buildKeySplitData;
+
 import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.PublicKeySign;
 import com.google.crypto.tink.PublicKeyVerify;
 import com.google.crypto.tink.signature.EcdsaSignKeyManager;
 import com.google.crypto.tink.signature.SignatureConfig;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
-import com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil;
 import com.google.scp.coordinator.keymanagement.testutils.FakeDataKeyUtil;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -73,12 +74,14 @@ public class FakeKeyStorageClient implements KeyStorageClient {
     }
 
     try {
-      Optional<String> migrationKekUri =
-          migrationEncryptedKeySplit.isPresent()
-              ? Optional.of(MIGRATION_KEK_URI)
-              : Optional.empty();
-      return KeySplitDataUtil.addKeySplitData(
-          encryptionKey, KEK_URI, migrationKekUri, Optional.of(PUBLIC_KEY_SIGN));
+      EncryptionKey.Builder signedKey = encryptionKey.toBuilder();
+      signedKey.addKeySplitData(
+          buildKeySplitData(encryptionKey, KEK_URI, Optional.of(PUBLIC_KEY_SIGN)));
+      if (migrationEncryptedKeySplit.isPresent()) {
+        signedKey.addMigrationKeySplitData(
+            buildKeySplitData(encryptionKey, MIGRATION_KEK_URI, Optional.of(PUBLIC_KEY_SIGN)));
+      }
+      return signedKey.build();
     } catch (GeneralSecurityException e) {
       throw new KeyStorageServiceException("Encryption Key Signature Key error", e);
     }

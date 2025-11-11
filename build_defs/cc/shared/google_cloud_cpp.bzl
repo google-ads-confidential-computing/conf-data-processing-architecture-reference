@@ -20,7 +20,7 @@ def import_google_cloud_cpp():
     maybe(
         http_archive,
         name = "com_github_googleapis_google_cloud_cpp",
-        sha256 = "1d51910cb4419f6100d8b9df6bccd33477d09f50e378f12b06dae0f137ed7bc6",
-        strip_prefix = "google-cloud-cpp-2.28.0",
-        url = "https://github.com/googleapis/google-cloud-cpp/archive/v2.28.0.tar.gz",
+        sha256 = "2072880320cbd5a4690d6bbaa6e4c4b1dd32be22b2ff42b0cbe30db4b2642df4",
+        strip_prefix = "google-cloud-cpp-2.41.0",
+        url = "https://github.com/googleapis/google-cloud-cpp/archive/v2.41.0.tar.gz",
     )

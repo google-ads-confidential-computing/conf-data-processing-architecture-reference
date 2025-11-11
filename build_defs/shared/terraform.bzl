@@ -37,3 +37,14 @@ exports_files(["terraform"])
         sha256 = "ab1358e73a81096bbe04201ef403a32e0765c5f6e360692d170d32d0889a4871",
         url = "https://releases.hashicorp.com/terraform/1.9.0/terraform_1.9.0_linux_amd64.zip",
     )
+
+    maybe(
+        http_archive,
+        name = "terraform_1_12_0",
+        build_file_content = """
+package(default_visibility = ["//visibility:public"])
+exports_files(["terraform"])
+""",
+        sha256 = "c71fd5d500a7e4d869bf5d12176c72d1dfc00440b862116797694361671f77c8",
+        url = "https://releases.hashicorp.com/terraform/1.12.0/terraform_1.12.0_linux_amd64.zip",
+    )

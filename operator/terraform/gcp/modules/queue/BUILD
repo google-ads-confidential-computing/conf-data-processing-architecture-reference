@@ -20,7 +20,10 @@ pkg_files(
     name = "queue",
     srcs = glob(
         ["*"],
-        exclude = ["BUILD"],
+        exclude = [
+            "BUILD",
+            "*.tftest.hcl",
+        ],
     ),
     prefix = "queue",
 )

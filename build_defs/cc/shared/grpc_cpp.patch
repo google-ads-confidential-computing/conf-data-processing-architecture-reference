@@ -1,0 +1,412 @@
+diff --git a/src/core/BUILD b/src/core/BUILD
+index f65a41fbe3..268e5ed6f1 100644
+--- a/src/core/BUILD
++++ b/src/core/BUILD
+@@ -4489,0 +4490 @@ grpc_cc_library(
++        "status_conversion",
+@@ -4587,0 +4589 @@ grpc_cc_library(
++        "status_conversion",
+diff --git a/src/core/lib/security/credentials/gcp_service_account_identity/gcp_service_account_identity_credentials.cc b/src/core/lib/security/credentials/gcp_service_account_identity/gcp_service_account_identity_credentials.cc
+index 31d00e7bfd..27617d5658 100644
+--- a/src/core/lib/security/credentials/gcp_service_account_identity/gcp_service_account_identity_credentials.cc
++++ b/src/core/lib/security/credentials/gcp_service_account_identity/gcp_service_account_identity_credentials.cc
+@@ -28,0 +29 @@
++#include "src/core/lib/security/credentials/token_fetcher/token_fetcher_credentials.h"
+@@ -45,27 +46,2 @@ namespace grpc_core {
+-// State held for a pending HTTP request.
+-class JwtTokenFetcherCallCredentials::HttpFetchRequest final
+-    : public TokenFetcherCredentials::FetchRequest {
+- public:
+-  HttpFetchRequest(
+-      JwtTokenFetcherCallCredentials* creds, Timestamp deadline,
+-      absl::AnyInvocable<
+-          void(absl::StatusOr<RefCountedPtr<TokenFetcherCredentials::Token>>)>
+-          on_done)
+-      : on_done_(std::move(on_done)) {
+-    GRPC_CLOSURE_INIT(&on_http_response_, OnHttpResponse, this, nullptr);
+-    Ref().release();  // Ref held by HTTP request callback.
+-    http_request_ = creds->StartHttpRequest(creds->pollent(), deadline,
+-                                            &response_, &on_http_response_);
+-  }
+-
+-  ~HttpFetchRequest() override { grpc_http_response_destroy(&response_); }
+-
+-  void Orphan() override {
+-    http_request_.reset();
+-    Unref();
+-  }
+-
+- private:
+-  static void OnHttpResponse(void* arg, grpc_error_handle error) {
+-    RefCountedPtr<HttpFetchRequest> self(static_cast<HttpFetchRequest*>(arg));
+-    if (!error.ok()) {
++OrphanablePtr<TokenFetcherCredentials::FetchRequest>
++JwtTokenFetcherCallCredentials::FetchToken(
+@@ -76,72 +52 @@ class JwtTokenFetcherCallCredentials::HttpFetchRequest final
+-      self->on_done_(absl::UnavailableError(StatusToString(error)));
+-      return;
+-    }
+-    if (self->response_.status != 200) {
+-      grpc_status_code status_code =
+-          grpc_http2_status_to_grpc_status(self->response_.status);
+-      if (status_code != GRPC_STATUS_UNAVAILABLE) {
+-        status_code = GRPC_STATUS_UNAUTHENTICATED;
+-      }
+-      self->on_done_(absl::Status(static_cast<absl::StatusCode>(status_code),
+-                                  absl::StrCat("JWT fetch failed with status ",
+-                                               self->response_.status)));
+-      return;
+-    }
+-    absl::string_view body(self->response_.body, self->response_.body_length);
+-    // Parse JWT token based on https://datatracker.ietf.org/doc/html/rfc7519.
+-    // We don't do full verification here, just enough to extract the
+-    // expiration time.
+-    // First, split the 3 '.'-delimited parts.
+-    std::vector<absl::string_view> parts = absl::StrSplit(body, '.');
+-    if (parts.size() != 3) {
+-      self->on_done_(absl::UnauthenticatedError("error parsing JWT token"));
+-      return;
+-    }
+-    // Base64-decode the payload.
+-    std::string payload;
+-    if (!absl::WebSafeBase64Unescape(parts[1], &payload)) {
+-      self->on_done_(absl::UnauthenticatedError("error parsing JWT token"));
+-      return;
+-    }
+-    // Parse as JSON.
+-    auto json = JsonParse(payload);
+-    if (!json.ok()) {
+-      self->on_done_(absl::UnauthenticatedError("error parsing JWT token"));
+-      return;
+-    }
+-    // Extract "exp" field.
+-    struct ParsedPayload {
+-      uint64_t exp = 0;
+-
+-      static const JsonLoaderInterface* JsonLoader(const JsonArgs&) {
+-        static const auto kJsonLoader = JsonObjectLoader<ParsedPayload>()
+-                                            .Field("exp", &ParsedPayload::exp)
+-                                            .Finish();
+-        return kJsonLoader;
+-      }
+-    };
+-    auto parsed_payload = LoadFromJson<ParsedPayload>(*json, JsonArgs(), "");
+-    if (!parsed_payload.ok()) {
+-      self->on_done_(absl::UnauthenticatedError("error parsing JWT token"));
+-      return;
+-    }
+-    gpr_timespec ts = gpr_time_0(GPR_CLOCK_REALTIME);
+-    ts.tv_sec = parsed_payload->exp;
+-    Timestamp expiration_time = Timestamp::FromTimespecRoundDown(ts);
+-    // Return token object.
+-    self->on_done_(MakeRefCounted<Token>(
+-        Slice::FromCopiedString(absl::StrCat("Bearer ", body)),
+-        expiration_time));
+-  }
+-
+-  OrphanablePtr<HttpRequest> http_request_;
+-  grpc_closure on_http_response_;
+-  grpc_http_response response_;
+-  absl::AnyInvocable<void(
+-      absl::StatusOr<RefCountedPtr<TokenFetcherCredentials::Token>>)>
+-      on_done_;
+-};
+-
+-OrphanablePtr<TokenFetcherCredentials::FetchRequest>
+-JwtTokenFetcherCallCredentials::FetchToken(
+-    Timestamp deadline,
++  Timestamp deadline,
+@@ -151 +56,56 @@ JwtTokenFetcherCallCredentials::FetchToken(
+-  return MakeOrphanable<HttpFetchRequest>(this, deadline, std::move(on_done));
++  return MakeOrphanable<HttpTokenFetcherCredentials::HttpFetchRequest>(
++      this, deadline,
++      [on_done = std::move(on_done)](
++          absl::StatusOr<grpc_http_response> response) mutable {
++        if (!response.ok()) {
++          on_done(response.status());
++          return;
++        }
++        absl::string_view body(response->body, response->body_length);
++        // Parse JWT token based on
++        // https://datatracker.ietf.org/doc/html/rfc7519. We don't do full
++        // verification here, just enough to extract the expiration time. First,
++        // split the 3 '.'-delimited parts.
++        std::vector<absl::string_view> parts = absl::StrSplit(body, '.');
++        if (parts.size() != 3) {
++          on_done(absl::UnauthenticatedError("error parsing JWT token"));
++          return;
++        }
++        // Base64-decode the payload.
++        std::string payload;
++        if (!absl::WebSafeBase64Unescape(parts[1], &payload)) {
++          on_done(absl::UnauthenticatedError("error parsing JWT token"));
++          return;
++        }
++        // Parse as JSON.
++        auto json = JsonParse(payload);
++        if (!json.ok()) {
++          on_done(absl::UnauthenticatedError("error parsing JWT token"));
++          return;
++        }
++        // Extract "exp" field.
++        struct ParsedPayload {
++          uint64_t exp = 0;
++
++          static const JsonLoaderInterface* JsonLoader(const JsonArgs&) {
++            static const auto kJsonLoader =
++                JsonObjectLoader<ParsedPayload>()
++                    .Field("exp", &ParsedPayload::exp)
++                    .Finish();
++            return kJsonLoader;
++          }
++        };
++        auto parsed_payload =
++            LoadFromJson<ParsedPayload>(*json, JsonArgs(), "");
++        if (!parsed_payload.ok()) {
++          on_done(absl::UnauthenticatedError("error parsing JWT token"));
++          return;
++        }
++        gpr_timespec ts = gpr_time_0(GPR_CLOCK_REALTIME);
++        ts.tv_sec = parsed_payload->exp;
++        Timestamp expiration_time = Timestamp::FromTimespecRoundDown(ts);
++        // Return token object.
++        on_done(MakeRefCounted<Token>(
++            Slice::FromCopiedString(absl::StrCat("Bearer ", body)),
++            expiration_time));
++      });
+diff --git a/src/core/lib/security/credentials/gcp_service_account_identity/gcp_service_account_identity_credentials.h b/src/core/lib/security/credentials/gcp_service_account_identity/gcp_service_account_identity_credentials.h
+index 7e3dfaa2ab..68151fd81c 100644
+--- a/src/core/lib/security/credentials/gcp_service_account_identity/gcp_service_account_identity_credentials.h
++++ b/src/core/lib/security/credentials/gcp_service_account_identity/gcp_service_account_identity_credentials.h
+@@ -43 +43 @@ namespace grpc_core {
+-class JwtTokenFetcherCallCredentials : public TokenFetcherCredentials {
++class JwtTokenFetcherCallCredentials : public HttpTokenFetcherCredentials {
+@@ -47,2 +47 @@ class JwtTokenFetcherCallCredentials : public TokenFetcherCredentials {
+-      absl::AnyInvocable<
+-          void(absl::StatusOr<RefCountedPtr<TokenFetcherCredentials::Token>>)>
++      absl::AnyInvocable<void(absl::StatusOr<RefCountedPtr<TokenFetcherCredentials::Token>>)>
+@@ -50,7 +48,0 @@ class JwtTokenFetcherCallCredentials : public TokenFetcherCredentials {
+-
+- private:
+-  class HttpFetchRequest;
+-
+-  virtual OrphanablePtr<HttpRequest> StartHttpRequest(
+-      grpc_polling_entity* pollent, Timestamp deadline,
+-      grpc_http_response* response, grpc_closure* on_complete) = 0;
+diff --git a/src/core/lib/security/credentials/oauth2/oauth2_credentials.cc b/src/core/lib/security/credentials/oauth2/oauth2_credentials.cc
+index 0e7f7eb33c..5fadc42d5a 100644
+--- a/src/core/lib/security/credentials/oauth2/oauth2_credentials.cc
++++ b/src/core/lib/security/credentials/oauth2/oauth2_credentials.cc
+@@ -24,0 +25 @@
++#include <grpc/status.h>
+@@ -54,0 +56 @@
++#include "src/core/lib/transport/status_conversion.h"
+@@ -212,53 +213,0 @@ namespace grpc_core {
+-
+-// State held for a pending HTTP request.
+-class Oauth2TokenFetcherCredentials::HttpFetchRequest final
+-    : public TokenFetcherCredentials::FetchRequest {
+- public:
+-  HttpFetchRequest(
+-      Oauth2TokenFetcherCredentials* creds, Timestamp deadline,
+-      absl::AnyInvocable<
+-          void(absl::StatusOr<RefCountedPtr<TokenFetcherCredentials::Token>>)>
+-          on_done)
+-      : on_done_(std::move(on_done)) {
+-    GRPC_CLOSURE_INIT(&on_http_response_, OnHttpResponse, this, nullptr);
+-    Ref().release();  // Ref held by HTTP request callback.
+-    http_request_ = creds->StartHttpRequest(creds->pollent(), deadline,
+-                                            &response_, &on_http_response_);
+-  }
+-
+-  ~HttpFetchRequest() override { grpc_http_response_destroy(&response_); }
+-
+-  void Orphan() override {
+-    http_request_.reset();
+-    Unref();
+-  }
+-
+- private:
+-  static void OnHttpResponse(void* arg, grpc_error_handle error) {
+-    RefCountedPtr<HttpFetchRequest> self(static_cast<HttpFetchRequest*>(arg));
+-    if (!error.ok()) {
+-      self->on_done_(std::move(error));
+-      return;
+-    }
+-    // Parse oauth2 token.
+-    absl::optional<Slice> access_token_value;
+-    Duration token_lifetime;
+-    grpc_credentials_status status =
+-        grpc_oauth2_token_fetcher_credentials_parse_server_response(
+-            &self->response_, &access_token_value, &token_lifetime);
+-    if (status != GRPC_CREDENTIALS_OK) {
+-      self->on_done_(absl::UnavailableError("error parsing oauth2 token"));
+-      return;
+-    }
+-    self->on_done_(MakeRefCounted<Token>(std::move(*access_token_value),
+-                                         Timestamp::Now() + token_lifetime));
+-  }
+-
+-  OrphanablePtr<HttpRequest> http_request_;
+-  grpc_closure on_http_response_;
+-  grpc_http_response response_;
+-  absl::AnyInvocable<void(
+-      absl::StatusOr<RefCountedPtr<TokenFetcherCredentials::Token>>)>
+-      on_done_;
+-};
+-
+@@ -280 +229,21 @@ Oauth2TokenFetcherCredentials::FetchToken(
+-  return MakeOrphanable<HttpFetchRequest>(this, deadline, std::move(on_done));
++  return MakeOrphanable<HttpTokenFetcherCredentials::HttpFetchRequest>(
++      this, deadline,
++      [on_done = std::move(on_done)](
++          absl::StatusOr<grpc_http_response> response) mutable {
++        if (!response.ok()) {
++          on_done(response.status());
++          return;
++        }
++        // Parse oauth2 token.
++        absl::optional<Slice> access_token_value;
++        Duration token_lifetime;
++        grpc_credentials_status status =
++            grpc_oauth2_token_fetcher_credentials_parse_server_response(
++                &(*response), &access_token_value, &token_lifetime);
++        if (status != GRPC_CREDENTIALS_OK) {
++          on_done(absl::UnavailableError("error parsing oauth2 token"));
++          return;
++        }
++        on_done(MakeRefCounted<Token>(std::move(*access_token_value),
++                                      Timestamp::Now() + token_lifetime));
++      });
+diff --git a/src/core/lib/security/credentials/oauth2/oauth2_credentials.h b/src/core/lib/security/credentials/oauth2/oauth2_credentials.h
+index 5cba69234d..863f356f94 100644
+--- a/src/core/lib/security/credentials/oauth2/oauth2_credentials.h
++++ b/src/core/lib/security/credentials/oauth2/oauth2_credentials.h
+@@ -93 +93 @@ namespace grpc_core {
+-class Oauth2TokenFetcherCredentials : public TokenFetcherCredentials {
++class Oauth2TokenFetcherCredentials : public HttpTokenFetcherCredentials {
+@@ -105,4 +104,0 @@ class Oauth2TokenFetcherCredentials : public TokenFetcherCredentials {
+-  virtual OrphanablePtr<HttpRequest> StartHttpRequest(
+-      grpc_polling_entity* pollent, Timestamp deadline,
+-      grpc_http_response* response, grpc_closure* on_complete) = 0;
+-
+@@ -110,2 +105,0 @@ class Oauth2TokenFetcherCredentials : public TokenFetcherCredentials {
+-  class HttpFetchRequest;
+-
+diff --git a/src/core/lib/security/credentials/token_fetcher/token_fetcher_credentials.cc b/src/core/lib/security/credentials/token_fetcher/token_fetcher_credentials.cc
+index 66fb470c3f..f0b9c6f668 100644
+--- a/src/core/lib/security/credentials/token_fetcher/token_fetcher_credentials.cc
++++ b/src/core/lib/security/credentials/token_fetcher/token_fetcher_credentials.cc
+@@ -26,0 +27 @@
++#include "src/core/lib/transport/status_conversion.h"
+@@ -304,0 +306,41 @@ TokenFetcherCredentials::GetRequestMetadata(
++//
++// HttpTokenFetcherCredentials
++//
++
++HttpTokenFetcherCredentials::HttpFetchRequest::HttpFetchRequest(
++    HttpTokenFetcherCredentials* creds, Timestamp deadline,
++    absl::AnyInvocable<void(absl::StatusOr<grpc_http_response>)> on_done)
++    : on_done_(std::move(on_done)) {
++  GRPC_CLOSURE_INIT(&on_http_response_, OnHttpResponse, this, nullptr);
++  Ref().release();  // Ref held by HTTP request callback.
++  http_request_ = creds->StartHttpRequest(creds->pollent(), deadline,
++                                          &response_, &on_http_response_);
++}
++
++void HttpTokenFetcherCredentials::HttpFetchRequest::Orphan() {
++  http_request_.reset();
++  Unref();
++}
++
++void HttpTokenFetcherCredentials::HttpFetchRequest::OnHttpResponse(
++    void* arg, grpc_error_handle error) {
++  RefCountedPtr<HttpFetchRequest> self(static_cast<HttpFetchRequest*>(arg));
++  if (!error.ok()) {
++    self->on_done_(absl::UnavailableError(StatusToString(error)));
++    return;
++  }
++  if (self->response_.status != 200) {
++    grpc_status_code status_code =
++        grpc_http2_status_to_grpc_status(self->response_.status);
++    if (status_code != GRPC_STATUS_UNAVAILABLE) {
++      status_code = GRPC_STATUS_UNAUTHENTICATED;
++    }
++    self->on_done_(
++        absl::Status(static_cast<absl::StatusCode>(status_code),
++                     absl::StrCat("HTTP token fetch failed with status ",
++                                  self->response_.status)));
++    return;
++  }
++  self->on_done_(self->response_);
++}
++
+diff --git a/src/core/lib/security/credentials/token_fetcher/token_fetcher_credentials.h b/src/core/lib/security/credentials/token_fetcher/token_fetcher_credentials.h
+index 9f0afc1a91..f34e66e2a4 100644
+--- a/src/core/lib/security/credentials/token_fetcher/token_fetcher_credentials.h
++++ b/src/core/lib/security/credentials/token_fetcher/token_fetcher_credentials.h
+@@ -178,0 +179,29 @@ class TokenFetcherCredentials : public grpc_call_credentials {
++// A base class for fetching tokens via an HTTP request.
++class HttpTokenFetcherCredentials : public TokenFetcherCredentials {
++ public:
++  virtual OrphanablePtr<HttpRequest> StartHttpRequest(grpc_polling_entity* pollent,
++                                                      Timestamp deadline,
++                                                      grpc_http_response* response,
++                                                      grpc_closure* on_complete) = 0;
++
++ protected:
++  // State held for a pending HTTP request.
++  class HttpFetchRequest : public TokenFetcherCredentials::FetchRequest {
++   public:
++    // The given callback should assume the http response status has already
++    // been checked and handle the token parsing.
++    HttpFetchRequest(HttpTokenFetcherCredentials* creds, Timestamp deadline,
++                     absl::AnyInvocable<void(absl::StatusOr<grpc_http_response>)> on_done);
++    ~HttpFetchRequest() override { grpc_http_response_destroy(&response_); }
++
++    void Orphan() override;
++
++   private:
++    static void OnHttpResponse(void* arg, grpc_error_handle error);
++    OrphanablePtr<HttpRequest> http_request_;
++    grpc_closure on_http_response_;
++    grpc_http_response response_;
++    absl::AnyInvocable<void(absl::StatusOr<grpc_http_response>)> on_done_;
++  };
++};
++
+diff --git a/test/core/security/credentials_test.cc b/test/core/security/credentials_test.cc
+index d70fd4cb96..91c2cadaf5 100644
+--- a/test/core/security/credentials_test.cc
++++ b/test/core/security/credentials_test.cc
+@@ -813 +813,2 @@ TEST_F(CredentialsTest, TestComputeEngineCredsFailure) {
+-      absl::UnavailableError("error parsing oauth2 token"), {});
++      absl::UnauthenticatedError("HTTP token fetch failed with status 403"),
++      {});
+@@ -906 +907,2 @@ TEST_F(CredentialsTest, TestRefreshTokenCredsFailure) {
+-      absl::UnavailableError("error parsing oauth2 token"), {});
++      absl::UnauthenticatedError("HTTP token fetch failed with status 403"),
++      {});
+@@ -1167,2 +1169,2 @@ TEST_F(CredentialsTest, TestStsCredsTokenFileNotFound) {
+-      absl::InternalError(
+-          "Failed to load file: /some/completely/random/path due to "
++      absl::UnavailableError(
++          "INTERNAL:Failed to load file: /some/completely/random/path due to "
+@@ -1239,2 +1241,3 @@ TEST_F(CredentialsTest, TestStsCredsLoadTokenFailure) {
+-      absl::InternalError("Failed to load file: invalid_path due to "
+-                          "error(fdopen): No such file or directory"),
++      absl::UnavailableError(
++          "INTERNAL:Failed to load file: invalid_path due to "
++          "error(fdopen): No such file or directory"),
+@@ -1275 +1278,2 @@ TEST_F(CredentialsTest, TestStsCredsHttpFailure) {
+-      absl::UnavailableError("error parsing oauth2 token"), {});
++      absl::UnauthenticatedError("HTTP token fetch failed with status 403"),
++      {});
+@@ -4573 +4577 @@ TEST_F(GcpServiceAccountIdentityCredentialsTest, FailsWithHttpStatus429) {
+-      absl::UnavailableError("JWT fetch failed with status 429"), "");
++      absl::UnavailableError("HTTP token fetch failed with status 429"), "");
+@@ -4590 +4594,2 @@ TEST_F(GcpServiceAccountIdentityCredentialsTest, FailsWithHttpStatus400) {
+-      absl::UnauthenticatedError("JWT fetch failed with status 400"), "");
++      absl::UnauthenticatedError("HTTP token fetch failed with status 400"),
++      "");
+--

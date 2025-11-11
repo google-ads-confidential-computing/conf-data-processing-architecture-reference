@@ -19,9 +19,9 @@ package com.google.scp.coordinator.keymanagement.testutils;
 import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.KEY_LIMIT;
 
 import com.google.inject.AbstractModule;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.aws.testing.LocalGetEncryptionKeyHostingServiceModule;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.aws.testing.LocalPublicKeyHostingServiceModule;
-import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.shared.testutils.aws.AwsIntegrationTestModule;
 
 /**

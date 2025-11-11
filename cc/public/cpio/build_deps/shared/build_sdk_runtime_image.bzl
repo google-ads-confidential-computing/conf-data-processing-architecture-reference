@@ -76,7 +76,7 @@ def build_sdk_runtime_image(
         cmd =
             select(
                 {
-                    Label("//cc/public/cpio/build_deps/shared:reproducible_build_config"): "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code.tar)  $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s %s %s" % (container_name, "%s:%s.tar" % (native.package_name(), container_name), "--//cc/cpio/server/interface:is_test_server=" + str(is_test_server), "--//cc/public/cpio/interface:platform=" + platform, "--//cc/public/cpio/interface:run_inside_tee=" + str(inside_tee)),
+                    Label("//cc/public/cpio/build_deps/shared:reproducible_build_config"): "./$(location //cc/public/tools:build_reproducible_container_image.sh) $@ $(location //:source_code.tar)  $(location //cc/tools/build:prebuilt_cc_build_container_image.tar) %s %s %s %s" % (container_name, "%s:%s.tar" % (native.package_name(), container_name), "--//cc/public/cpio/interface:platform=" + platform, "--//cc/public/cpio/interface:run_inside_tee=" + str(inside_tee)),
                     Label("//cc/public/cpio/build_deps/shared:non_reproducible_build_config"): "",
                 },
                 no_match_error = "Please provide reproducible_build flag",

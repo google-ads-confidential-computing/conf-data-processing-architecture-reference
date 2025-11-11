@@ -105,12 +105,12 @@ module "operator_service" {
   collector_send_batch_timeout     = var.collector_send_batch_timeout
   collector_queue_size             = var.collector_queue_size
 
-  collector_exceed_cpu_usage_alarm     = var.collector_exceed_cpu_usage_alarm
-  collector_exceed_memory_usage_alarm  = var.collector_exceed_memory_usage_alarm
-  collector_export_error_alarm         = var.collector_export_error_alarm
-  collector_run_error_alarm            = var.collector_run_error_alarm
-  collector_crash_error_alarm          = var.collector_crash_error_alarm
-  worker_exporting_metrics_error_alarm = var.worker_exporting_metrics_error_alarm
+  collector_exceed_cpu_usage_alarm       = var.collector_exceed_cpu_usage_alarm
+  collector_exceed_memory_usage_alarm    = var.collector_exceed_memory_usage_alarm
+  collector_export_error_alarm           = var.collector_export_error_alarm
+  collector_startup_error_alarm          = var.collector_startup_error_alarm
+  collector_crash_error_alarm            = var.collector_crash_error_alarm
+  export_metric_to_collector_error_alarm = var.export_metric_to_collector_error_alarm
 
   # Frontend Service
   create_frontend_service_cloud_function                          = var.create_frontend_service_cloud_function

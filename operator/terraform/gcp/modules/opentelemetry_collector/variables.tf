@@ -134,8 +134,8 @@ variable "collector_export_error_alarm" {
   })
 }
 
-variable "collector_run_error_alarm" {
-  description = "Configuration for the collector run error alarm."
+variable "collector_startup_error_alarm" {
+  description = "Configuration for the collector startup error alarm."
   type = object({
     enable_alarm : bool,
     duration_sec : number,
@@ -158,8 +158,8 @@ variable "collector_crash_error_alarm" {
   })
 }
 
-variable "worker_exporting_metrics_error_alarm" {
-  description = "Configuration for the worker exporting metrics error alarm."
+variable "export_metric_to_collector_error_alarm" {
+  description = "Configuration for the server exporting metrics error alarm."
   type = object({
     enable_alarm : bool,
     duration_sec : number,
@@ -170,7 +170,7 @@ variable "worker_exporting_metrics_error_alarm" {
   })
 }
 
-variable "collector_queue_size_ratio_alarm" {
+variable "collector_queue_size_alarm" {
   description = "Configuration for the collector queue size alarm."
   type = object({
     enable_alarm : bool,
@@ -182,8 +182,8 @@ variable "collector_queue_size_ratio_alarm" {
   })
 }
 
-variable "collector_send_metric_points_ratio_alarm" {
-  description = "Configuration for the collector send metric points ratio alarm."
+variable "collector_send_metric_failure_rate_alarm" {
+  description = "Configuration for the collector send metric failure alarm."
   type = object({
     enable_alarm : bool,
     duration_sec : number,
@@ -194,8 +194,8 @@ variable "collector_send_metric_points_ratio_alarm" {
   })
 }
 
-variable "collector_refuse_metric_points_ratio_alarm" {
-  description = "Configuration for the collector refuse metric points ratio alarm."
+variable "collector_refuse_metric_rate_alarm" {
+  description = "Configuration for the collector refuse metric alarm."
   type = object({
     enable_alarm : bool,
     duration_sec : number,

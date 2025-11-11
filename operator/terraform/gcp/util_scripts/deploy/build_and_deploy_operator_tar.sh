@@ -28,6 +28,7 @@ print_usage() {
 }
 
 setup() {
+    set -x
     # Clear and recreate environment path
     rm -rf "$ENV_PATH"
     mkdir -p "$ENV_PATH"
@@ -40,7 +41,8 @@ setup() {
     tar xzf "$TAR_FILE" -C "$ENV_PATH/../.."
 
     # copy terraform files from original to environment path
-    cp -r -T "$ORIGINAL_TERRAFORM_PATH" "$ENV_PATH"
+    # rsync will create the $ENV_PATH folder so we use the parent directory ".."
+    rsync -av --exclude '*.tftest.hcl' -L "$ORIGINAL_TERRAFORM_PATH" "$ENV_PATH/.."
 
     # create java folder for storing jar files later on
     mkdir -p "$ENV_PATH/../../java"

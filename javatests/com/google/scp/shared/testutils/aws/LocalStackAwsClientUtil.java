@@ -145,6 +145,7 @@ public final class LocalStackAwsClientUtil {
         .dynamoDbClient(createDynamoDbClient(localStack))
         .build();
   }
+
   /**
    * Returns an AWS DynamoDB Streams client configured to use the specified localStack container.
    */

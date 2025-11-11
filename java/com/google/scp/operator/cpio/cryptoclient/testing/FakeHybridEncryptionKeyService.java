@@ -30,9 +30,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Fake {@code HybridEncryptionKeyService} that returns hybrid decryption keys. Keys returned by getKey
- * will be consistent between multiple invocations for the same key id (tied to the lifespan of the
- * service). Can be set to throw exceptions and saves the last hybridEncryptionKeyId it was called with.
+ * Fake {@code HybridEncryptionKeyService} that returns hybrid decryption keys. Keys returned by
+ * getKey will be consistent between multiple invocations for the same key id (tied to the lifespan
+ * of the service). Can be set to throw exceptions and saves the last hybridEncryptionKeyId it was
+ * called with.
  */
 public final class FakeHybridEncryptionKeyService implements HybridEncryptionKeyService {
 
@@ -73,9 +74,7 @@ public final class FakeHybridEncryptionKeyService implements HybridEncryptionKey
     lastKeyIdUsed = keyId;
 
     try {
-      return getKeysetHandle(keyId)
-          .getPublicKeysetHandle()
-          .getPrimitive(HybridEncrypt.class);
+      return getKeysetHandle(keyId).getPublicKeysetHandle().getPrimitive(HybridEncrypt.class);
     } catch (GeneralSecurityException e) {
       throw new IllegalStateException("Unexpected key generation error", e);
     }

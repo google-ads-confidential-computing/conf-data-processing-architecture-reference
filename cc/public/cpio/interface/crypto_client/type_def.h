@@ -27,6 +27,9 @@ namespace google::scp::cpio {
 /// Configurations for CryptoClient.
 struct CryptoClientOptions {
   virtual ~CryptoClientOptions() = default;
+
+  bool cache_tink_primitives = false;
+  bool use_read_lock_for_cache_read = false;
 };
 
 // Request for aead decryption using streaming API

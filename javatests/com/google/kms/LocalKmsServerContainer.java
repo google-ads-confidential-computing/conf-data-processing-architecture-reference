@@ -16,6 +16,8 @@
 
 package com.google.kms;
 
+import static com.google.scp.shared.testutils.common.TestConstants.TEST_DOCKER_IMAGE_NAME;
+
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -69,7 +71,7 @@ public final class LocalKmsServerContainer extends GenericContainer<LocalKmsServ
       String serverFileName, String serverJarPath, String serverClassTarget) {
     LocalKmsServerContainer container =
         new LocalKmsServerContainer(
-            DockerImageName.parse("openjdk:21-jdk-slim"),
+            DockerImageName.parse(TEST_DOCKER_IMAGE_NAME),
             serverFileName,
             serverJarPath,
             serverClassTarget);

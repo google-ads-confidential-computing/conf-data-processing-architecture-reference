@@ -37,23 +37,20 @@ public final class GetEncryptedKeyCache extends KeyDbCache<String, EncryptionKey
   private final LoadingCache<String, Boolean> missingKeyCache;
 
   @Inject
-  public GetEncryptedKeyCache(
-      KeyDb keyDb, LogMetricHelper logMetricHelper) {
-    super(
-        CacheBuilder.newBuilder().maximumSize(2000),
-        "getEncryptedKeyCache",
-        logMetricHelper);
+  public GetEncryptedKeyCache(KeyDb keyDb, LogMetricHelper logMetricHelper) {
+    super(CacheBuilder.newBuilder().maximumSize(2000), "getEncryptedKeyCache", logMetricHelper);
     this.keyDb = keyDb;
-    this.missingKeyCache = CacheBuilder.newBuilder()
-        .maximumSize(1000)
-        .expireAfterAccess(2, TimeUnit.HOURS)
-        .build(
-            // Never used
-            new CacheLoader<>() {
-              public Boolean load(String key) {
-                return true;
-              }
-            });
+    this.missingKeyCache =
+        CacheBuilder.newBuilder()
+            .maximumSize(1000)
+            .expireAfterAccess(2, TimeUnit.HOURS)
+            .build(
+                // Never used
+                new CacheLoader<>() {
+                  public Boolean load(String key) {
+                    return true;
+                  }
+                });
   }
 
   @Override

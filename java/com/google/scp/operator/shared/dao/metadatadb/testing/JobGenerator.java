@@ -358,7 +358,7 @@ public final class JobGenerator {
             RESULT_INFO_SHARED.getResultMetadata().entrySet().stream()
                 .collect(
                     toImmutableMap(Map.Entry::getKey, entry -> attributeValueS(entry.getValue()))));
-    }
+  }
 
   private static AttributeValue attributeValueS(String s) {
     return new AttributeValue().withS(s);

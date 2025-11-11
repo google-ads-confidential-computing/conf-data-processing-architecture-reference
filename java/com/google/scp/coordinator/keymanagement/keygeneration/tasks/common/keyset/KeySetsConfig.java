@@ -29,10 +29,10 @@ import java.util.Optional;
  */
 @AutoValue
 @JsonDeserialize(builder = KeySetsConfig.Builder.class)
-abstract class KeySetsConfig {
+public abstract class KeySetsConfig {
 
   @JsonProperty("key_sets")
-  abstract List<KeySet> keySets();
+  public abstract List<KeySet> keySets();
 
   @AutoValue.Builder
   abstract static class Builder {
@@ -50,14 +50,14 @@ abstract class KeySetsConfig {
 
   @AutoValue
   @JsonDeserialize(builder = KeySet.Builder.class)
-  abstract static class KeySet {
+  public abstract static class KeySet {
 
     @JsonProperty("name")
-    abstract String name();
+    public abstract String name();
 
-    abstract Optional<Integer> count();
+    public abstract Optional<Integer> count();
 
-    abstract Optional<Integer> validityInDays();
+    public abstract Optional<Integer> validityInDays();
 
     abstract Optional<Integer> ttlInDays();
 
@@ -65,9 +65,8 @@ abstract class KeySetsConfig {
 
     abstract Optional<Integer> createMaxDaysAhead();
 
-    abstract Optional<Integer> overlapPeriodDays();
+    public abstract Optional<Integer> overlapPeriodDays();
 
-    abstract Optional<Boolean> noRefreshWindow();
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     @AutoValue.Builder
@@ -110,13 +109,6 @@ abstract class KeySetsConfig {
       }
 
       abstract Builder overlapPeriodDays(Optional<Integer> overlapPeriodDays);
-
-      @JsonProperty("no_refresh_window")
-      Builder noRefreshWindow(Boolean noRefreshWindow) {
-        return noRefreshWindow(Optional.ofNullable(noRefreshWindow));
-      }
-
-      abstract Builder noRefreshWindow(Optional<Boolean> overlapPeriodDays);
 
       @JsonProperty("tink_template")
       Builder tinkTemplate(String tinkTemplate) {

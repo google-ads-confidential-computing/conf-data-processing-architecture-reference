@@ -41,8 +41,8 @@ public abstract class KeyDbCache<K, V> {
       CacheBuilder<Object, Object> cacheBuilder,
       String methodName,
       LogMetricHelper logMetricHelper) {
-    this.keyCache = cacheBuilder
-        .build(
+    this.keyCache =
+        cacheBuilder.build(
             CacheLoader.asyncReloading(
                 new CacheLoader<>() {
                   public V load(K key) throws ServiceException {

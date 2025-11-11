@@ -34,6 +34,8 @@
 #include "public/cpio/interface/private_key_client/type_def.h"
 #include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 
+using google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest;
+using google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse;
 using google::cmrt::sdk::private_key_service::v1::
     ListActiveEncryptionKeysRequest;
 using google::cmrt::sdk::private_key_service::v1::
@@ -129,6 +131,21 @@ TEST_F(PrivateKeyClientTest, ListPrivateKeysSyncFailureConvertToPublicError) {
       });
   EXPECT_EQ(client_->ListPrivateKeysSync(ListPrivateKeysRequest()).result(),
             FailureExecutionResult(SC_CPIO_INVALID_ARGUMENT));
+}
+
+TEST_F(PrivateKeyClientTest, GetKeysetMetadataSyncSuccess) {
+  EXPECT_CALL(*client_->GetPrivateKeyClientProvider(), GetKeysetMetadata)
+      .WillOnce([=](AsyncContext<GetKeysetMetadataRequest,
+                                 GetKeysetMetadataResponse>& context) {
+        GetKeysetMetadataResponse response;
+        response.set_active_key_count(5);
+        context.response = make_shared<GetKeysetMetadataResponse>(response);
+        context.result = SuccessExecutionResult();
+        context.Finish();
+      });
+  auto result_or = client_->GetKeysetMetadataSync(GetKeysetMetadataRequest());
+  EXPECT_SUCCESS(result_or.result());
+  EXPECT_EQ(result_or->active_key_count(), 5);
 }
 
 TEST_F(PrivateKeyClientTest,

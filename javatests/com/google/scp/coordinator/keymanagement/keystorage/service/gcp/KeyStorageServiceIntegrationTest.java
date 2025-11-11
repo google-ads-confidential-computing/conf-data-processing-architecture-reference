@@ -36,7 +36,6 @@ import com.google.kms.LocalKmsServerContainer;
 import com.google.protobuf.ByteString;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
-import com.google.scp.coordinator.keymanagement.testutils.FakeKmsClient;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageCloudFunctionContainerWithKms;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.TestLocalKmsServerContainer;
 import com.google.scp.coordinator.testutils.gcp.GcpMultiCoordinatorTestEnvModule;

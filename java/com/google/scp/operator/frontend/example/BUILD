@@ -24,6 +24,6 @@ java_library(
         "//java/external:apache_httpcore",
         "//java/external:google_truth",
         "//java/external:jackson_databind",
-        "@com_google_protobuf//java/util",
+        "//java/external:protobuf_java_util",
     ],
 )

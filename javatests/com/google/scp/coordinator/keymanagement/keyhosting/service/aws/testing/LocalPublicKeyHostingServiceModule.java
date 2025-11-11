@@ -78,11 +78,11 @@ public final class LocalPublicKeyHostingServiceModule extends AbstractModule {
         LAMBDA_JAR_KEY,
         ImmutableMap.of(
             /* k0= */ "KEYSTORE_TABLE_NAME",
-            /* v0=*/ tableName,
-            /* k1=*/ "AWS_REGION",
-            /* v1=*/ getRegionName(),
-            /* k2=*/ "KEYSTORE_ENDPOINT_OVERRIDE",
-            /* v2=*/ String.format("http://%s:4566", getLocalStackHostname(localStack))));
+            /* v0= */ tableName,
+            /* k1= */ "AWS_REGION",
+            /* v1= */ getRegionName(),
+            /* k2= */ "KEYSTORE_ENDPOINT_OVERRIDE",
+            /* v2= */ String.format("http://%s:4566", getLocalStackHostname(localStack))));
   }
 
   @Provides

@@ -40,6 +40,7 @@ public final class LocalSimpleWorkerRunner {
   private LocalSimpleWorkerRunner(String[] args) {
     updateArgs(args);
   }
+
   /**
    * Creates an aggregation worker runner from a path where runner stores the worker results. By
    * default all the input and output are expected under the rootDir. To specify or override the

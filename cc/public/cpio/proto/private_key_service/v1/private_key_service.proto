@@ -142,3 +142,21 @@ message ListActiveEncryptionKeysResponse {
   // Returned key set name.
   optional string key_set_name = 3;
 }
+
+// Request to get keyset metadata for a key set.
+message GetKeysetMetadataRequest {
+  // Url endpoint of the private key vending service.
+  // It is the base url, the version number and "/keysetMetadata" will be
+  // appended automatically internally.
+  string private_key_endpoint = 1;
+
+  // Keyset name to request the metadata.
+  string keyset_name = 2;
+}
+
+message GetKeysetMetadataResponse {
+  // The execution result.
+  scp.core.proto.ExecutionResult result = 1;
+  // The active key count at one time.
+  int32 active_key_count = 2;
+}

@@ -76,7 +76,8 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       @KeyEncryptionKeyBaseUri String keyEncryptionKeyBaseUri,
       @MigrationKeyEncryptionKeyBaseUri String migrationKeyEncryptionKeyBaseUri,
       @PeerCoordinatorKeyEncryptionKeyBaseUri String peerCoordinatorKeyEncryptionKeyBaseUri,
-      @MigrationPeerCoordinatorKeyEncryptionKeyBaseUri String migrationPeerCoordinatorKeyEncryptionKeyBaseUri,
+      @MigrationPeerCoordinatorKeyEncryptionKeyBaseUri
+          String migrationPeerCoordinatorKeyEncryptionKeyBaseUri,
       @KmsAeadClient KmsClient kmsClient,
       @MigrationKmsAeadClient KmsClient migrationKmsClient,
       @PeerKmsAeadClient KmsClient peerKmsClient,
@@ -91,7 +92,8 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
     this.keyEncryptionKeyBaseUri = keyEncryptionKeyBaseUri;
     this.migrationKeyEncryptionKeyBaseUri = migrationKeyEncryptionKeyBaseUri;
     this.peerCoordinatorKeyEncryptionKeyBaseUri = peerCoordinatorKeyEncryptionKeyBaseUri;
-    this.migrationPeerCoordinatorKeyEncryptionKeyBaseUri = migrationPeerCoordinatorKeyEncryptionKeyBaseUri;
+    this.migrationPeerCoordinatorKeyEncryptionKeyBaseUri =
+        migrationPeerCoordinatorKeyEncryptionKeyBaseUri;
     this.kmsClient = kmsClient;
     this.migrationKmsClient = migrationKmsClient;
     this.peerKmsClient = peerKmsClient;
@@ -103,7 +105,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
    * The actual key generation process. Performs the necessary encryption key generation and
    * splitting, key storage request, and database persistence with signatures.
    *
-   * @see CreateSplitKeyTaskBase#createSplitKey(String, String, int, int, int, boolean, Instant)
+   * @see CreateSplitKeyTaskBase#createSplitKey(String, String, int, int, int, Instant)
    */
   public void createSplitKey(
       String setName,
@@ -111,7 +113,6 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       int count,
       int validityInDays,
       int ttlInDays,
-      boolean noRefreshWindow,
       Instant activation)
       throws ServiceException {
     createSplitKeyBase(
@@ -120,7 +121,6 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
         count,
         validityInDays,
         ttlInDays,
-        noRefreshWindow,
         activation,
         Optional.empty(),
         populateMigrationDataProvider.get());
@@ -135,11 +135,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
   protected String encryptPeerCoordinatorSplit(
       String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKeyMaterial)
       throws ServiceException {
-    return encryptPeerCoordinatorSplit(
-        setName,
-        keySplit,
-        publicKeyMaterial,
-        false);
+    return encryptPeerCoordinatorSplit(setName, keySplit, publicKeyMaterial, false);
   }
 
   /**
@@ -152,22 +148,18 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKeyMaterial)
       throws ServiceException {
     return encryptPeerCoordinatorSplit(
-        setName,
-        keySplit,
-        publicKeyMaterial,
-        populateMigrationDataProvider.get());
+        setName, keySplit, publicKeyMaterial, populateMigrationDataProvider.get());
   }
 
-  /**
-   * Encrypt CoordinatorB KeySplit using Peer Coordinator KMS Key.
-   */
+  /** Encrypt CoordinatorB KeySplit using Peer Coordinator KMS Key. */
   private String encryptPeerCoordinatorSplit(
       String setName, ByteString keySplit, String publicKeyMaterial, Boolean useMigrationData)
       throws ServiceException {
     try {
-      Aead aead = useMigrationData
-          ? getMigrationPeerAead(getMigrationPeerCoordinatorKmsKeyBaseUri(setName))
-          : getPeerAead(getPeerCoordinatorKmsKeyBaseUri(setName));
+      Aead aead =
+          useMigrationData
+              ? getMigrationPeerAead(getMigrationPeerCoordinatorKmsKeyBaseUri(setName))
+              : getPeerAead(getPeerCoordinatorKmsKeyBaseUri(setName));
       return Base64.getEncoder()
           .encodeToString(
               aead.encrypt(keySplit.toByteArray(), Base64.getDecoder().decode(publicKeyMaterial)));
@@ -232,14 +224,19 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
    */
   @Override
   protected EncryptionKey sendKeySplitToPeerCoordinator(
-      EncryptionKey unsignedCoordinatorBKey, String encryptedKeySplitB, Optional<String> encryptedMigrationKeySplitB, Optional<DataKey> dataKey)
+      EncryptionKey unsignedCoordinatorBKey,
+      String encryptedKeySplitB,
+      Optional<String> encryptedMigrationKeySplitB,
+      Optional<DataKey> dataKey)
       throws ServiceException {
     try {
-      return keyStorageClient.createKey(unsignedCoordinatorBKey, encryptedKeySplitB, encryptedMigrationKeySplitB);
+      return keyStorageClient.createKey(
+          unsignedCoordinatorBKey, encryptedKeySplitB, encryptedMigrationKeySplitB);
     } catch (KeyStorageServiceException e) {
+      var setName = unsignedCoordinatorBKey.getSetName();
       logger.error(
           logMetricHelper.format(
-              "key_generation/error", ImmutableMap.of("errorReason", e.getMessage())));
+              "error", ImmutableMap.of("setName", setName, "errorReason", e.getMessage())));
       throw new ServiceException(
           Code.INVALID_ARGUMENT, "Key Storage Service failed to validate, sign, and store key", e);
     }

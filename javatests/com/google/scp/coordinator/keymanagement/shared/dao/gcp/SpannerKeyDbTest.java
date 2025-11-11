@@ -25,6 +25,7 @@ import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyD
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.putItem;
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.putKeyWithActivationAndExpirationTimes;
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.putKeyWithExpiration;
+import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.putKeyWithNoRotation;
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.putNItemsRandomValues;
 import static com.google.scp.shared.api.model.Code.ALREADY_EXISTS;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
@@ -295,7 +296,7 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
   @Test
   public void getKey_success() throws ServiceException {
     EncryptionKey expectedKey =
-        FakeEncryptionKey.createBuilderWithDefaults(false)
+        FakeEncryptionKey.createBuilderWithDefaults()
             // SpannerKeyDb returns times based off seconds
             .setExpirationTime(Instant.now().plus(7, DAYS).toEpochMilli())
             .setActivationTime(Instant.now().toEpochMilli())
@@ -406,8 +407,7 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
     // sort order of SpannerKeyDb matches other implementations.
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, 5)).isInOrder(getActiveKeysComparator());
 
-    assertThat(keyDb.listAllKeysForSetName(DEFAULT_SET_NAME))
-        .isInOrder(getActiveKeysComparator());
+    assertThat(keyDb.listAllKeysForSetName(DEFAULT_SET_NAME)).isInOrder(getActiveKeysComparator());
   }
 
   @Test
@@ -465,6 +465,40 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
         .isEqualTo(start.plus(Duration.ofHours(5)).toEpochMilli());
     assertThat(keys.getFirst().getExpirationTime())
         .isEqualTo(end.plus(Duration.ofHours(5)).toEpochMilli());
+  }
+
+  @Test
+  public void getActiveKeysByRange_excludeNeverActiveKeysTest() throws ServiceException {
+    var now = Instant.now();
+    var start = now.minus(Duration.ofHours(10));
+    var end = now.plus(Duration.ofHours(10));
+
+    // Never active
+    putKeyWithActivationAndExpirationTimes(keyDb, now, now);
+    putKeyWithActivationAndExpirationTimes(keyDb, now, now);
+
+    // Valid Key
+    putKeyWithActivationAndExpirationTimes(keyDb, start, end);
+
+    awaitAndAssertActiveKeyByRangeCount(keyDb, start, end);
+
+    var keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, 10, start, end);
+    assertThat(keys).hasSize(1);
+    assertThat(keys.getFirst().getActivationTime()).isEqualTo(start.toEpochMilli());
+    assertThat(keys.getFirst().getExpirationTime()).isEqualTo(end.toEpochMilli());
+  }
+
+  @Test
+  public void getActiveKeysByRange_noRotationTest() throws ServiceException {
+    var now = Instant.now();
+    var start = now.minus(Duration.ofHours(10));
+    var end = now.plus(Duration.ofHours(10));
+
+    putKeyWithNoRotation(keyDb);
+    awaitAndAssertActiveKeyByRangeCount(keyDb, start, end);
+
+    var keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, 10, start, end);
+    assertThat(keys).hasSize(1);
   }
 
   @Test

@@ -26,8 +26,11 @@ class MockCryptoClientWithOverrides : public CryptoClient {
  public:
   MockCryptoClientWithOverrides(
       const std::shared_ptr<CryptoClientOptions>& options)
-      : CryptoClient(options) {
+      : CryptoClient(options) {}
+
+  core::ExecutionResult Init() noexcept override {
     crypto_client_provider_ = std::make_shared<MockCryptoClient>();
+    return crypto_client_provider_->Init();
   }
 
   std::shared_ptr<MockCryptoClient> GetCryptoClientProvider() {

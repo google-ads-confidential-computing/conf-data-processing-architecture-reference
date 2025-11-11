@@ -18,9 +18,6 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
@@ -28,7 +25,6 @@ import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import java.util.Base64;
-import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -66,28 +62,24 @@ public class KeyMigrationVendingUtilTest {
     // When
     EncryptionKey vendedKey =
         KeyMigrationVendingUtil.vendAccordingToConfig(
-            TEST_KEY_WITH_MIGRATION_DATA, request, allowedMigrators, logMetricHelper);
+            TEST_KEY_WITH_MIGRATION_DATA, APPROVED_CALLER, allowedMigrators, logMetricHelper);
 
     // Then
     verifyUsesMigrationEncryptionData(vendedKey);
-    verify(request).getFirstHeader("Authorization");
   }
 
   @Test
   public void vendAccordingToConfig_approvedCaller_vendsMigrationKey() {
     // Given
     ImmutableSet<String> allowedMigrators = ImmutableSet.of(APPROVED_CALLER);
-    String fakeJwt = createFakeJwt(APPROVED_CALLER);
-    doReturn(Optional.of("Bearer: " + fakeJwt)).when(request).getFirstHeader("Authorization");
 
     // When
     EncryptionKey vendedKey =
         KeyMigrationVendingUtil.vendAccordingToConfig(
-            TEST_KEY_WITH_MIGRATION_DATA, request, allowedMigrators, logMetricHelper);
+            TEST_KEY_WITH_MIGRATION_DATA, APPROVED_CALLER, allowedMigrators, logMetricHelper);
 
     // Then
     verifyUsesMigrationEncryptionData(vendedKey);
-    verify(request).getFirstHeader("Authorization");
   }
 
   @Test
@@ -98,76 +90,27 @@ public class KeyMigrationVendingUtilTest {
     // When
     EncryptionKey vendedKey =
         KeyMigrationVendingUtil.vendAccordingToConfig(
-            TEST_KEY_WITH_MIGRATION_DATA, request, allowedMigrators, logMetricHelper);
+            TEST_KEY_WITH_MIGRATION_DATA, APPROVED_CALLER, allowedMigrators, logMetricHelper);
 
     // Then
     verifyUsesBaseEncryptionData(TEST_KEY_WITH_MIGRATION_DATA, vendedKey);
-    verify(request).getFirstHeader("Authorization");
   }
 
   @Test
   public void vendAccordingToConfig_noApprovedCallers_vendsStandardKey() {
     // Given
     ImmutableSet<String> allowedMigrators = ImmutableSet.of(APPROVED_CALLER);
-    String fakeJwt = createFakeJwt("unapproved-caller@google.com");
-    doReturn(Optional.of("Bearer: " + fakeJwt)).when(request).getFirstHeader("Authorization");
 
     // When
     EncryptionKey vendedKey =
         KeyMigrationVendingUtil.vendAccordingToConfig(
-            TEST_KEY_WITH_MIGRATION_DATA, request, allowedMigrators, logMetricHelper);
+            TEST_KEY_WITH_MIGRATION_DATA,
+            "unapproved-caller@google.com",
+            allowedMigrators,
+            logMetricHelper);
 
     // Then
     verifyUsesBaseEncryptionData(TEST_KEY_WITH_MIGRATION_DATA, vendedKey);
-    verify(request).getFirstHeader("Authorization");
-  }
-
-  @Test
-  public void vendAccordingToConfig_noAuthHeader_vendsStandardKey() {
-    // Given
-    ImmutableSet<String> allowedMigrators = ImmutableSet.of(APPROVED_CALLER);
-    doReturn(Optional.empty()).when(request).getFirstHeader("Authorization");
-
-    // When
-    EncryptionKey vendedKey =
-        KeyMigrationVendingUtil.vendAccordingToConfig(
-            TEST_KEY_WITH_MIGRATION_DATA, request, allowedMigrators, logMetricHelper);
-
-    // Then
-    verifyUsesBaseEncryptionData(TEST_KEY_WITH_MIGRATION_DATA, vendedKey);
-    verify(request).getFirstHeader("Authorization");
-  }
-
-  @Test
-  public void vendAccordingToConfig_malformedAuthHeader_vendsStandardKey() {
-    // Given
-    ImmutableSet<String> allowedMigrators = ImmutableSet.of(APPROVED_CALLER);
-    doReturn(Optional.of("not a bearer token")).when(request).getFirstHeader("Authorization");
-
-    // When
-    EncryptionKey vendedKey =
-        KeyMigrationVendingUtil.vendAccordingToConfig(
-            TEST_KEY_WITH_MIGRATION_DATA, request, allowedMigrators, logMetricHelper);
-
-    // Then
-    verifyUsesBaseEncryptionData(TEST_KEY_WITH_MIGRATION_DATA, vendedKey);
-    verify(request).getFirstHeader("Authorization");
-  }
-
-  @Test
-  public void vendAccordingToConfig_malformedJwt_vendsStandardKey() {
-    // Given
-    ImmutableSet<String> allowedMigrators = ImmutableSet.of(APPROVED_CALLER);
-    doReturn(Optional.of("Bearer: not.a.jwt")).when(request).getFirstHeader("Authorization");
-
-    // When
-    EncryptionKey vendedKey =
-        KeyMigrationVendingUtil.vendAccordingToConfig(
-            TEST_KEY_WITH_MIGRATION_DATA, request, allowedMigrators, logMetricHelper);
-
-    // Then
-    verifyUsesBaseEncryptionData(TEST_KEY_WITH_MIGRATION_DATA, vendedKey);
-    verify(request).getFirstHeader("Authorization");
   }
 
   @Test
@@ -178,11 +121,10 @@ public class KeyMigrationVendingUtilTest {
     // When
     EncryptionKey vendedKey =
         KeyMigrationVendingUtil.vendAccordingToConfig(
-            TEST_KEY_WITHOUT_MIGRATION_DATA, request, allowedMigrators, logMetricHelper);
+            TEST_KEY_WITHOUT_MIGRATION_DATA, APPROVED_CALLER, allowedMigrators, logMetricHelper);
 
     // Then
     verifyUsesBaseEncryptionData(TEST_KEY_WITHOUT_MIGRATION_DATA, vendedKey);
-    verify(request).getFirstHeader("Authorization");
   }
 
   @Test
@@ -193,11 +135,10 @@ public class KeyMigrationVendingUtilTest {
     // When
     EncryptionKey vendedKey =
         KeyMigrationVendingUtil.vendAccordingToConfig(
-            TEST_KEY_WITH_MIGRATION_DATA, request, allowedMigrators, logMetricHelper);
+            TEST_KEY_WITH_MIGRATION_DATA, APPROVED_CALLER, allowedMigrators, logMetricHelper);
 
     // Then
     verifyUsesBaseEncryptionData(TEST_KEY_WITH_MIGRATION_DATA, vendedKey);
-    verify(request, never()).getFirstHeader("Authorization");
   }
 
   @Test
@@ -209,13 +150,12 @@ public class KeyMigrationVendingUtilTest {
     EncryptionKey vendedKey =
         KeyMigrationVendingUtil.vendAccordingToConfig(
             TEST_KEY_WITH_MIGRATION_DATA.toBuilder().clearMigrationKeySplitData().build(),
-            request,
+            APPROVED_CALLER,
             allowedMigrators,
             logMetricHelper);
 
     // Then
     verifyUsesBaseEncryptionData(TEST_KEY_WITH_MIGRATION_DATA, vendedKey);
-    verify(request).getFirstHeader("Authorization");
   }
 
   /** Creates a fake JWT string with a given email claim for testing. */

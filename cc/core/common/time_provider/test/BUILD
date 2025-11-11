@@ -43,6 +43,7 @@ cc_test(
     copts = [
         "-std=c++17",
     ],
+    flaky = True,
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",

@@ -40,6 +40,7 @@ using google::scp::core::HttpMethod;
 using google::scp::core::HttpRequest;
 using google::scp::core::HttpResponse;
 using google::scp::core::errors::GetErrorMessage;
+using google::scp::core::errors::SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_JSON;
 using google::scp::core::errors::
     SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_PUBLIC_KEYSET_HANDLE_JSON;
 using google::scp::core::errors::
@@ -87,7 +88,33 @@ namespace google::scp::cpio::client_providers::test {
 
 class PrivateKeyFetchingClientUtilsTest : public ScpTestBase {};
 
-TEST_F(PrivateKeyFetchingClientUtilsTest, ParsePrivateKeySuccess) {
+TEST_F(PrivateKeyFetchingClientUtilsTest,
+       ParseFetchingResponseActiveKeyCountSuccess) {
+  string bytes_str = R"({
+        "activeKeyCount": 5
+    })";
+  KeysetMetadataFetchingResponse response;
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
+      BytesBuffer(bytes_str), response);
+
+  EXPECT_SUCCESS(result);
+  EXPECT_EQ(response.active_key_count, 5);
+}
+
+TEST_F(PrivateKeyFetchingClientUtilsTest,
+       ParseFetchingResponseActiveKeyCountFailure) {
+  string bytes_str = R"({
+        "activeKeyCount":
+    })";
+  KeysetMetadataFetchingResponse response;
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
+      BytesBuffer(bytes_str), response);
+
+  EXPECT_THAT(result, ResultIs(FailureExecutionResult(
+                          SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_JSON)));
+}
+
+TEST_F(PrivateKeyFetchingClientUtilsTest, ParseFetchingResponseSuccess) {
   string bytes_str = absl::StrFormat(R"({
         "name": "encryptionKeys/123456",
         "encryptionKeyType": "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT",
@@ -112,7 +139,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, ParsePrivateKeySuccess) {
     })",
                                      kPublicKeyJson);
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_SUCCESS(result);
@@ -169,7 +196,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, CreateKeysetReaderFailure) {
         ]
     })";
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_THAT(
@@ -202,7 +229,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, CreateKeysetHandleFailure) {
         ]
     })";
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_THAT(
@@ -237,7 +264,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithInvalidKeyData) {
                                      kPublicKeyJson);
 
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_THAT(result,
@@ -271,7 +298,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithInvalidKeyDataNoKeyUri) {
                                      kPublicKeyJson);
 
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_THAT(result,
@@ -305,7 +332,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithInvalidKeyType) {
                                      kPublicKeyJson);
 
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   auto failure_result = FailureExecutionResult(
@@ -338,7 +365,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithNameNotFound) {
                                      kPublicKeyJson);
 
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_THAT(result,
@@ -371,7 +398,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithExpirationTimeNotFound) {
                                      kPublicKeyJson);
 
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_THAT(result,
@@ -404,7 +431,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithActivationTimeNotFound) {
                                      kPublicKeyJson);
 
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_THAT(result,
@@ -437,7 +464,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, FailedWithCreationTimeNotFound) {
                                      kPublicKeyJson);
 
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_THAT(result,
@@ -474,7 +501,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, ParseMultiplePrivateKeysSuccess) {
                      key_2 + one_key_without_name + "]}";
 
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_SUCCESS(result);
@@ -484,7 +511,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest, ParseMultiplePrivateKeysSuccess) {
 }
 
 TEST_F(PrivateKeyFetchingClientUtilsTest,
-       ParsePrivateKeyWithoutPublicKeySuccessWithoutSetName) {
+       ParseFetchingResponseWithoutPublicKeySuccessWithoutSetName) {
   string bytes_str = R"({
         "name": "encryptionKeys/123456",
         "encryptionKeyType": "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT",
@@ -508,7 +535,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest,
         ]
     })";
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_SUCCESS(result);
@@ -534,7 +561,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest,
 }
 
 TEST_F(PrivateKeyFetchingClientUtilsTest,
-       ParsePrivateKeyWithoutPublicKeySuccessWithSetName) {
+       ParseFetchingResponseWithoutPublicKeySuccessWithSetName) {
   string bytes_str = R"({
         "name": "encryptionKeys/123456",
         "encryptionKeyType": "MULTI_PARTY_HYBRID_EVEN_KEYSPLIT",
@@ -559,7 +586,7 @@ TEST_F(PrivateKeyFetchingClientUtilsTest,
         ]
     })";
   PrivateKeyFetchingResponse response;
-  auto result = PrivateKeyFetchingClientUtils::ParsePrivateKey(
+  auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
       BytesBuffer(bytes_str), response);
 
   EXPECT_SUCCESS(result);

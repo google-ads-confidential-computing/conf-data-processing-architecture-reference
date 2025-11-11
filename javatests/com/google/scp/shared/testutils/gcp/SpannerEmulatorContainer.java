@@ -28,6 +28,7 @@ public final class SpannerEmulatorContainer extends GenericContainer<SpannerEmul
 
   /** The value of the spanner emulator's GRPC port. */
   public static final int GRPC_PORT = 9010;
+
   /** The value of the spanner emulator's HTTP port. */
   public static final int HTTP_PORT = 9050;
 

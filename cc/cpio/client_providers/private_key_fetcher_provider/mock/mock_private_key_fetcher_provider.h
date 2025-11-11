@@ -48,5 +48,10 @@ class MockPrivateKeyFetcherProvider
               ((core::AsyncContext<PrivateKeyFetchingRequest,
                                    PrivateKeyFetchingResponse>&)),
               (noexcept, override));
+
+  MOCK_METHOD(void, FetchKeysetMetadata,
+              ((core::AsyncContext<KeysetMetadataFetchingRequest,
+                                   KeysetMetadataFetchingResponse>&)),
+              (noexcept, override));
 };
 }  // namespace google::scp::cpio::client_providers::mock

@@ -54,6 +54,7 @@ public class CreateKeysTask {
   private final KeyDb keyDb;
   private final Aead kmsKeyAead;
   private final String keyEncryptionKeyUri;
+
   /**
    * Amount of time a key must be valid for to not be refreshed. Keys that expire before (now +
    * keyRefreshWindow) should be replaced with a new key.

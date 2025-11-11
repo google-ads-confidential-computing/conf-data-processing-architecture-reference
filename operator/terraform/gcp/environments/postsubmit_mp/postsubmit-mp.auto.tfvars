@@ -23,6 +23,30 @@ max_worker_instances             = 2
 alarms_enabled                   = true
 alarms_notification_email        = "fakeemail@google.com"
 
+# The default workgroup configs applied to all workgroups, this overrides the worker_image and other configurations in this file.
+default_workgroup_configs = {
+  worker_image                  = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:postsubmit"
+  max_job_num_attempts          = 2
+  max_job_processing_time       = 600
+  instance_disk_image           = "projects/confidential-space-images/global/images/confidential-space-251000"
+  worker_logging_enabled        = true
+  worker_container_log_redirect = true
+  worker_instance_force_replace = false
+  instance_type                 = "n2d-standard-2"
+  worker_restart_policy         = "Always"
+}
+# Individual workgroup configs and overrides
+workgroup_configs = {
+  "scp-postsubmit-wg" = {
+    max_worker_instances = 2
+  },
+}
+# Set the default workgroup to legacy worker, and use the targeted workgroup in the e2e test to dispatch jobs to workers in different workgroups.
+initial_workgroup = ""
+# Do this later for delete legacy worker
+# enable_legacy_worker = false
+
+
 enable_job_completion_notifications = true
 
 enable_job_completion_notifications_per_job           = true
@@ -86,7 +110,7 @@ collector_crash_error_alarm = {
   severity : "moderate",
   auto_close_sec : 1800
 }
-collector_run_error_alarm = {
+collector_startup_error_alarm = {
   enable_alarm : true,
   duration_sec : 300,
   alignment_period_sec : 600,
@@ -94,7 +118,7 @@ collector_run_error_alarm = {
   severity : "moderate",
   auto_close_sec : 1800
 }
-worker_exporting_metrics_error_alarm = {
+export_metric_to_collector_error_alarm = {
   enable_alarm : true,
   duration_sec : 300,
   alignment_period_sec : 600,
@@ -102,23 +126,23 @@ worker_exporting_metrics_error_alarm = {
   severity : "moderate",
   auto_close_sec : 1800
 }
-collector_queue_size_ratio_alarm = {
+collector_queue_size_alarm = {
   enable_alarm : true,
   duration_sec : 300,
   alignment_period_sec : 600,
-  threshold : 0.8,
+  threshold : 2000, # 2k. The capacity is 5K.
   severity : "moderate",
   auto_close_sec : 1800
 }
-collector_send_metric_points_ratio_alarm = {
+collector_send_metric_failure_rate_alarm = {
   enable_alarm : true,
   duration_sec : 300,
   alignment_period_sec : 600,
-  threshold : 0.05,
+  threshold : 5,
   severity : "moderate",
   auto_close_sec : 1800
 }
-collector_refuse_metric_points_ratio_alarm = {
+collector_refuse_metric_rate_alarm = {
   enable_alarm : true,
   duration_sec : 300,
   alignment_period_sec : 600,
@@ -139,7 +163,7 @@ instance_disk_image_family = {
   image_family  = "confidential-space"
 }
 # Needs to be a stable image for proper coordinator attestation
-instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-241000"
+instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-251000"
 
 vpcsc_compatible = true
 

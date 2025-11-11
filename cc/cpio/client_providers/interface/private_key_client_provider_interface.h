@@ -38,7 +38,6 @@ class PrivateKeyClientProviderInterface : public core::ServiceInterface {
    * @brief Fetches list of private keys by ids.
    *
    * @param context context of the operation.
-   * @return ExecutionResult result of the operation.
    */
   virtual void ListPrivateKeys(
       core::AsyncContext<
@@ -49,12 +48,22 @@ class PrivateKeyClientProviderInterface : public core::ServiceInterface {
    * @brief Fetches list of active encryption keys in a keyset.
    *
    * @param context context of the operation.
-   * @return ExecutionResult result of the operation.
    */
   virtual void ListActiveEncryptionKeys(
       core::AsyncContext<
           cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest,
           cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>&
+          context) noexcept = 0;
+
+  /**
+   * @brief Get the Keyset Metadata object by keyset.
+   *
+   * @param context context of the operation.
+   */
+  virtual void GetKeysetMetadata(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest,
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse>&
           context) noexcept = 0;
 };
 

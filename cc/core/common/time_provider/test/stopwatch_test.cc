@@ -38,7 +38,7 @@ TEST(StopwatchTest, TimeShouldElapse) {
   // It could take longer than the 120 depending on how busy the machine is.
   // But we just want to make sure that it's within the expected range.
   EXPECT_LT(duration_cast<milliseconds>(elapsed).count(),
-            milliseconds(150).count());
+            milliseconds(200).count());
 }
 
 TEST(StopwatchTest, ShouldBeAbleToReuseStopWatch) {
@@ -52,7 +52,7 @@ TEST(StopwatchTest, ShouldBeAbleToReuseStopWatch) {
   // It could take longer than the 120 depending on how busy the machine is.
   // But we just want to make sure that it's within the expected range.
   EXPECT_LT(duration_cast<milliseconds>(elapsed).count(),
-            milliseconds(150).count());
+            milliseconds(200).count());
 
   // Start and stop again
   sw.Start();
@@ -64,6 +64,6 @@ TEST(StopwatchTest, ShouldBeAbleToReuseStopWatch) {
   // It could take longer than the 120 depending on how busy the machine is.
   // But we just want to make sure that it's within the expected range.
   EXPECT_LT(duration_cast<milliseconds>(elapsed).count(),
-            milliseconds(150).count());
+            milliseconds(200).count());
 }
 }  // namespace google::scp::core::common::test

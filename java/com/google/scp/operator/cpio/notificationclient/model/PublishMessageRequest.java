@@ -30,8 +30,7 @@ public abstract class PublishMessageRequest {
 
   /** Returns a new instance of the builder for this class. */
   public static Builder builder() {
-    return new AutoValue_PublishMessageRequest.Builder()
-      .setMessageAttributes(ImmutableMap.of());
+    return new AutoValue_PublishMessageRequest.Builder().setMessageAttributes(ImmutableMap.of());
   }
 
   /** Returns a new builder instance from a {@code PublishMessageRequest} instance. */
@@ -60,7 +59,7 @@ public abstract class PublishMessageRequest {
     public abstract Builder setMessageAttributes(ImmutableMap<String, String> messageAttributes);
 
     /** Set the message topic name (destination). */
-    public abstract  Builder setNotificationTopic(String topicName);
+    public abstract Builder setNotificationTopic(String topicName);
 
     /** Creates a new instance of the {@code PublishMessageRequest} class from the builder. */
     public abstract PublishMessageRequest build();

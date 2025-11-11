@@ -28,7 +28,6 @@ cc_test(
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/server/interface:server_interface_lib",
-        "//cc/cpio/server/interface/job_service:job_service_interface_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/interface:type_def",
         "//cc/public/cpio/mock/instance_client:instance_client_mock",

@@ -50,7 +50,7 @@ public final class KeySetsConfigTest {
             + "{\"name\": \"set2\"},"
             + "{\"name\": \"set3\", \"tink_template\": \"my-template\", \"validity_in_days\": 1,"
             + " \"count\": 1, \"ttl_in_days\": 1, \"create_max_days_ahead\":66,"
-            + " \"overlap_period_days\":22, \"no_refresh_window\":true"
+            + " \"overlap_period_days\":22"
             + "}]}";
 
     // When
@@ -75,7 +75,6 @@ public final class KeySetsConfigTest {
                             .ttlInDays(1)
                             .createMaxDaysAhead(66)
                             .overlapPeriodDays(22)
-                            .noRefreshWindow(true)
                             .build()))
                 .build());
   }

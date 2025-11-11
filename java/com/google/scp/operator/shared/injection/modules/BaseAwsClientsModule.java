@@ -144,6 +144,7 @@ public abstract class BaseAwsClientsModule extends AbstractModule {
   public PricingClient providesPricingClient() {
     return initializeClient(PricingClient.builder());
   }
+
   /**
    * Initializes the actual client based on the Client/BuilderType, ie. ClientType = S3Client,
    * BuilderType = S3Client.builder()

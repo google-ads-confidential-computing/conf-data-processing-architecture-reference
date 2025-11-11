@@ -30,7 +30,7 @@ cc_library(
         "//cc/public/cpio/interface/private_key_client:type_def",
         "//cc/public/cpio/proto/private_key_service/v1:private_key_service_cc_proto",
         "@com_google_absl//absl/strings",
-        "@tink_cc//:json_keyset_reader",
+        "@tink_cc//tink:json_keyset_reader",
     ],
 )
 

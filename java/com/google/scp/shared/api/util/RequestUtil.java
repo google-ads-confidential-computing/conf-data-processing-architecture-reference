@@ -62,16 +62,16 @@ public final class RequestUtil {
       throws ServiceException {
     if (!expectedMethod.name().equals(methodToValidate)) {
       throw new ServiceException(
-          /* code = */ INVALID_ARGUMENT,
-          /* reason = */ INVALID_HTTP_METHOD.name(),
-          /* message = */ String.format("Unsupported method: '%s'", methodToValidate));
+          /* code= */ INVALID_ARGUMENT,
+          /* reason= */ INVALID_HTTP_METHOD.name(),
+          /* message= */ String.format("Unsupported method: '%s'", methodToValidate));
     }
   }
 
   private static ServiceException newInvalidPathException(String message) {
     return new ServiceException(
-        /* code = */ INVALID_ARGUMENT,
-        /* reason = */ INVALID_URL_PATH_OR_VARIABLE.name(),
-        /* message = */ message);
+        /* code= */ INVALID_ARGUMENT,
+        /* reason= */ INVALID_URL_PATH_OR_VARIABLE.name(),
+        /* message= */ message);
   }
 }

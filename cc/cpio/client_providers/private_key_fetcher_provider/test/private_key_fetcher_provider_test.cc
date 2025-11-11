@@ -62,15 +62,17 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
+namespace google::scp::cpio::client_providers::test {
 namespace {
 constexpr char kKeyId[] = "123";
 constexpr char kRegion[] = "region";
 constexpr char kPrivateKeyBaseUri[] = "http://private_key/privateKeys";
+constexpr char kKeysetName[] = "test_keyset";
+constexpr char kGetKeysetMetadata[] = "/keysetMetadata";
 constexpr char kPublicKeyJson[] =
     R"({\"key\":[{\"keyData\":{\"keyMaterialType\":\"ASYMMETRIC_PUBLIC\",\"typeUrl\":\"type.googleapis.com/google.crypto.tink.HpkePublicKey\",\"value\":\"EgYIARABGAMaIEMQ7pfYjMHwiKVXbHerDPXDrHl/PZUTnGyEtUKcWWYq\"},\"keyId\":123,\"outputPrefixType\":\"RAW\",\"status\":\"ENABLED\"}],\"primaryKeyId\":123})";  // NOLINT
 }  // namespace
 
-namespace google::scp::cpio::client_providers::test {
 class PrivateKeyFetcherProviderTest : public ScpTestBase {
  protected:
   PrivateKeyFetcherProviderTest()
@@ -80,6 +82,8 @@ class PrivateKeyFetcherProviderTest : public ScpTestBase {
                 http_client_)) {
     private_key_fetcher_provider_->signed_http_request_mock->path =
         make_shared<string>(string(kPrivateKeyBaseUri) + "/" + string(kKeyId));
+    private_key_fetcher_provider_->keyset_metadata_request_mock->path =
+        make_shared<string>(string(kPrivateKeyBaseUri) + kGetKeysetMetadata);
     EXPECT_SUCCESS(private_key_fetcher_provider_->Init());
     EXPECT_SUCCESS(private_key_fetcher_provider_->Run());
     request_ = make_shared<PrivateKeyFetchingRequest>();
@@ -87,6 +91,11 @@ class PrivateKeyFetcherProviderTest : public ScpTestBase {
     request_->key_endpoint = make_shared<PrivateKeyEndpoint>();
     request_->key_endpoint->set_endpoint(kPrivateKeyBaseUri);
     request_->key_endpoint->set_key_service_region(kRegion);
+
+    keyset_metadata_request_ = make_shared<KeysetMetadataFetchingRequest>();
+    keyset_metadata_request_->private_key_endpoint =
+        make_shared<string>(kPrivateKeyBaseUri);
+    keyset_metadata_request_->keyset_name = make_shared<string>(kKeysetName);
   }
 
   ~PrivateKeyFetcherProviderTest() {
@@ -113,6 +122,7 @@ class PrivateKeyFetcherProviderTest : public ScpTestBase {
   unique_ptr<MockPrivateKeyFetcherProviderWithOverrides>
       private_key_fetcher_provider_;
   shared_ptr<PrivateKeyFetchingRequest> request_;
+  shared_ptr<KeysetMetadataFetchingRequest> keyset_metadata_request_;
 };
 
 TEST_F(PrivateKeyFetcherProviderTest, MissingHttpClient) {
@@ -122,6 +132,41 @@ TEST_F(PrivateKeyFetcherProviderTest, MissingHttpClient) {
   EXPECT_THAT(private_key_fetcher_provider_->Init(),
               ResultIs(FailureExecutionResult(
                   SC_PRIVATE_KEY_FETCHER_PROVIDER_HTTP_CLIENT_NOT_FOUND)));
+}
+
+TEST_F(PrivateKeyFetcherProviderTest, FetchKeysetMetadata) {
+  MockRequest(string(kPrivateKeyBaseUri) + kGetKeysetMetadata);
+  MockResponse(R"({"activeKeyCount": 5})");
+
+  atomic<bool> condition = false;
+
+  AsyncContext<KeysetMetadataFetchingRequest, KeysetMetadataFetchingResponse>
+      context(keyset_metadata_request_,
+              [&](AsyncContext<KeysetMetadataFetchingRequest,
+                               KeysetMetadataFetchingResponse>& context) {
+                EXPECT_SUCCESS(context.result);
+                EXPECT_EQ(context.response->active_key_count, 5);
+                condition = true;
+                return SuccessExecutionResult();
+              });
+  private_key_fetcher_provider_->FetchKeysetMetadata(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
+TEST_F(PrivateKeyFetcherProviderTest, FailedToFetchKeysetMetadata) {
+  ExecutionResult result = FailureExecutionResult(SC_UNKNOWN);
+  http_client_->http_get_result_mock = result;
+
+  atomic<bool> condition = false;
+  AsyncContext<KeysetMetadataFetchingRequest, KeysetMetadataFetchingResponse>
+      context(move(keyset_metadata_request_),
+              [&](AsyncContext<KeysetMetadataFetchingRequest,
+                               KeysetMetadataFetchingResponse>& context) {
+                EXPECT_THAT(context.result, ResultIs(result));
+                condition = true;
+              });
+  private_key_fetcher_provider_->FetchKeysetMetadata(context);
+  WaitUntil([&]() { return condition.load(); });
 }
 
 TEST_F(PrivateKeyFetcherProviderTest, FetchPrivateKey) {

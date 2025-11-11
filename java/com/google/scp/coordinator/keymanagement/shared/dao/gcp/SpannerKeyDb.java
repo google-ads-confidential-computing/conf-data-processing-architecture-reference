@@ -98,16 +98,23 @@ public final class SpannerKeyDb implements KeyDb {
         Statement.newBuilder(
                 "SELECT * FROM "
                     + TABLE_NAME
+                    // 1) either expiry is null (no rotation) OR
+                    //    expiry after startParam and activation
                     + " WHERE ("
                     + EXPIRY_TIME_COLUMN
-                    + " IS NULL OR "
+                    + " IS NULL OR ("
                     + EXPIRY_TIME_COLUMN
-                    + " > @startParam) AND ("
+                    + " > @startParam AND "
+                    + EXPIRY_TIME_COLUMN
+                    + " > "
                     + ACTIVATION_TIME_COLUMN
-                    + " is NULL OR "
+                    + ")) "
+                    // 2) activation before endParam
+                    + " AND ("
                     + ACTIVATION_TIME_COLUMN
-                    + " <= @endParam)"
-                    // Filter keys with matching set name, if it's the default set, includes keys
+                    + " <= @endParam "
+                    + ")"
+                    // 3) Filter keys with matching set name, if it's the default set, includes keys
                     // with null set name.
                     + " AND (SetName = @setName"
                     + " OR (@setName = @defaultSetName AND SetName IS NULL))"
@@ -230,9 +237,7 @@ public final class SpannerKeyDb implements KeyDb {
                     + " ORDER BY "
                     + NATURAL_ORDERING)
             .bind("nowParam")
-            .to(
-                ofTimeSecondsAndNanos(
-                    maxCreation.getEpochSecond(), maxCreation.getNano()))
+            .to(ofTimeSecondsAndNanos(maxCreation.getEpochSecond(), maxCreation.getNano()))
             .bind("defaultSetName")
             .to(KeyDb.DEFAULT_SET_NAME)
             .bind("setName")
@@ -371,8 +376,7 @@ public final class SpannerKeyDb implements KeyDb {
     // TTL is saved in seconds, however Spanner requires a timestamp
     Timestamp ttlTime =
         key.hasTtlTime()
-            ? ofTimeSecondsAndNanos(
-                TimeUnit.SECONDS.convert(key.getTtlTime(), TimeUnit.SECONDS), 0)
+            ? ofTimeSecondsAndNanos(TimeUnit.SECONDS.convert(key.getTtlTime(), TimeUnit.SECONDS), 0)
             : null;
     Timestamp activationTime =
         Timestamp.ofTimeMicroseconds(

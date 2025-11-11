@@ -154,7 +154,7 @@ public final class AwsConsumePrivacyBudgetHandler
   protected APIGatewayProxyResponseEvent toApiGatewayResponse(
       ConsumePrivacyBudgetResponse response) {
     return createApiGatewayResponse(
-        response, /* httpStatusCode = */ OK.getHttpStatusCode(), allHeaders());
+        response, /* httpStatusCode= */ OK.getHttpStatusCode(), allHeaders());
   }
 
   /**

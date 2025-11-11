@@ -30,6 +30,7 @@ import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClien
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpInstanceName;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectId;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpZone;
+import com.google.scp.shared.clients.configclient.model.GetParameterRequest;
 
 /** Defines dependencies to be used in the GCP Lifecycle Client. */
 public final class GcpLifecycleModule extends LifecycleModule {
@@ -56,7 +57,15 @@ public final class GcpLifecycleModule extends LifecycleModule {
   @WorkerManagedInstanceGroupName
   public String provideManagedInstanceGroupName(ParameterClient parameterClient)
       throws ParameterClientException {
-    return parameterClient.getParameter(WORKER_MANAGED_INSTANCE_GROUP_NAME.name()).orElse("");
+    return parameterClient
+        .getParameter(
+            GetParameterRequest.builder()
+                .setParamName(WORKER_MANAGED_INSTANCE_GROUP_NAME.name())
+                .setParamPrefix(GetParameterRequest.SCP_PARAM_PREFIX)
+                .setIncludeEnvironmentPrefix(true)
+                .setIncludeWorkgroupPrefix(true)
+                .build())
+        .orElse("");
   }
 
   /** Provides the GCP Instance URL. */

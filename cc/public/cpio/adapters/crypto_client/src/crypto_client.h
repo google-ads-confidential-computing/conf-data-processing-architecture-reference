@@ -31,10 +31,7 @@ namespace google::scp::cpio {
  */
 class CryptoClient : public CryptoClientInterface {
  public:
-  explicit CryptoClient(
-      const std::shared_ptr<CryptoClientOptions>& options,
-      const std::shared_ptr<scp::core::AsyncExecutorInterface>& async_executor =
-          nullptr);
+  explicit CryptoClient(const std::shared_ptr<CryptoClientOptions>& options);
 
   core::ExecutionResult Init() noexcept override;
 

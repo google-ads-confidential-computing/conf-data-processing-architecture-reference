@@ -84,7 +84,7 @@ class GcpKmsClientProvider : public KmsClientProviderInterface {
   GetOrCreateGcpKeyManagementServiceClient(
       const cmrt::sdk::kms_service::v1::DecryptRequest& request) noexcept;
 
-  bool ShouldRetryOnStatus(google::cloud::StatusCode status_code) noexcept;
+  bool ShouldRetryOnStatus(google::cloud::Status status) noexcept;
 
   bool IsStatusCodeRetriable(google::cloud::StatusCode status_code) noexcept;
 

@@ -148,6 +148,18 @@ variable "private_key_service_container_image_url" {
   nullable    = false
 }
 
+variable "private_key_service_addon_container_image_url" {
+  description = "The full path (registry + tag) to the container image used to deploy an addon Private Key Service."
+  type        = string
+  nullable    = false
+}
+
+variable "private_key_service_addon_alert_severity_overrides" {
+  description = "Alerts severity overrides for the addon Private Key Service."
+  type        = map(string)
+  nullable    = false
+}
+
 variable "private_key_service_cloud_run_cpu_count" {
   description = "Number of cpus to allocate for private key service cloud run instance."
   type        = number
@@ -158,7 +170,11 @@ variable "private_key_service_cloud_run_concurrency" {
   type        = number
 }
 
-### EKS
+variable "private_key_service_load_balancing_scheme" {
+  description = "Whether the Private KS will be used with internal or external load balancing."
+  type        = string
+}
+
 variable "private_key_service_cloud_run_memory_mb" {
   description = "Memory size in MB for private key service cloud run."
   type        = number
@@ -185,17 +201,17 @@ variable "private_key_service_cache_refresh_in_minutes" {
 }
 
 ### Key Storage
-variable "key_storage_service_cloudfunction_memory_mb" {
+variable "key_storage_service_memory_mb" {
   description = "Memory size in MB for key storage cloud function."
   type        = number
 }
 
-variable "key_storage_service_cloudfunction_min_instances" {
+variable "key_storage_service_min_instances" {
   description = "The minimum number of function instances that may coexist at a given time."
   type        = number
 }
 
-variable "key_storage_service_cloudfunction_max_instances" {
+variable "key_storage_service_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
 }
@@ -208,6 +224,11 @@ variable "location_new_key_ring" {
 
 variable "key_storage_service_container_image_url" {
   description = "The full path (registry + tag) to the container image used to deploy Key Storage Service."
+  type        = string
+}
+
+variable "key_storage_service_load_balancing_scheme" {
+  description = "Whether the Key Storage Service will be used with internal or external load balancing."
   type        = string
 }
 
@@ -290,17 +311,17 @@ variable "key_storage_service_alarm_eval_period_sec" {
   type        = string
 }
 
-variable "key_storage_service_cloudfunction_max_execution_time_max" {
+variable "key_storage_service_cloud_run_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number
 }
 
-variable "key_storage_service_cloudfunction_5xx_threshold" {
+variable "key_storage_service_cloud_run_5xx_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "key_storage_service_cloudfunction_alert_on_memory_usage_threshold" {
+variable "key_storage_service_cloud_run_alert_on_memory_usage_threshold" {
   description = "Memory usage of the Cloud Function should be higher than this value to alert."
   type        = number
 }
@@ -379,6 +400,11 @@ variable "private_key_service_exception_alert_threshold" {
   type        = number
 }
 
+variable "private_key_service_config_read_alert_threshold" {
+  description = "Private KS config read error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
 variable "alert_severity_overrides" {
   description = "Alerts severity overrides."
   type        = map(string)
@@ -391,20 +417,24 @@ variable "key_sets_config" {
   Note: For backward compatibility, if a config is not defined. A default key set with name = "" is created.
 
   Attributes:
-    key_sets                    (list) - The list of individual key set configuration, one for each unique key set.
-    key_sets[].name             (string) - The unique set name for the key set, the value should be a valid URL path segment (e.g. ^[a-zA-Z0-9\\-\\._~]+$).
-    key_sets[].tink_template    (optional(string)) - The Tink template to be used for key generation.
-    key_sets[].count            (optional(number)) - The number of keys to be generated.
-    key_sets[].validity_in_days (optional(number)) - Number of days the generated keys will be valid. If set to 0, the keys will never expire.
-    key_sets[].ttl_in_days      (optional(number)) - Number of days the generated keys will be kept in the database. If set to 0, the keys will never be deleted.
+    key_sets                         (list) - The list of individual key set configuration, one for each unique key set.
+    key_sets[].name                  (string) - The unique set name for the key set, the value should be a valid URL path segment (e.g. ^[a-zA-Z0-9\\-\\._~]+$).
+    key_sets[].tink_template         (optional(string)) - The Tink template to be used for key generation.
+    key_sets[].count                 (optional(number)) - The number of keys to be generated.
+    key_sets[].validity_in_days      (optional(number)) - Number of days the generated keys will be valid. If set to 0, the keys will never expire.
+    key_sets[].ttl_in_days           (optional(number)) - Number of days the generated keys will be kept in the database. If set to 0, the keys will never be deleted.
+    key_sets[].create_max_days_ahead (optional(number)) - Number of days ahead that a key can be created
+    key_sets[].overlap_period_days   (optional(number)) - Number of days each consecutive active set should overlap
   EOT
   type = object({
     key_sets = list(object({
-      name             = string
-      tink_template    = string
-      count            = number
-      validity_in_days = number
-      ttl_in_days      = number
+      name                  = string
+      tink_template         = string
+      count                 = number
+      validity_in_days      = number
+      ttl_in_days           = number
+      create_max_days_ahead = optional(number)
+      overlap_period_days   = optional(number)
     }))
   })
 }
@@ -439,4 +469,77 @@ variable "key_sets_vending_config" {
     allowed_migrators = list(string)
     cache_users       = optional(list(string))
   })
+}
+
+variable "migration_peer_coordinator_kms_key_base_uri" {
+  description = "Migration kms key base url from the peer coordinator."
+  type        = string
+}
+
+variable "key_migration_tool_container_image_url" {
+  description = "The full path (registry + tag) to the container image used to deploy the Key Migration Tool."
+  type        = string
+}
+
+variable "key_migration_tool_cpu_count" {
+  description = "How many CPUs to give to the migration tool's instance. Supported values are 1,2,4 and 8"
+  type        = number
+  nullable    = false
+}
+
+variable "key_migration_tool_memory_mb" {
+  description = "How much memory in MB to give to the migration tool's instance. e.g. 256."
+  type        = number
+  nullable    = false
+}
+
+variable "key_migration_tool_max_retries" {
+  description = "How many times to retry a failed task in the migration tool."
+  type        = number
+  nullable    = false
+}
+
+variable "key_migration_tool_task_timeout_seconds" {
+  description = <<EOF
+  The maximum amount of time in seconds that the migration tool job is allowed to run for each try.
+  The maximum run time will be `key_migration_tool_timeout_seconds * key_migration_tool_max_retries`.
+  EOF
+  type        = number
+  nullable    = false
+}
+
+variable "key_migration_tool_migrator_mode" {
+  description = <<EOF
+  The migration tool's mode:
+      'generate': Creates migration key data for keys and
+                  then populated those fields in the database.
+      'migrate': Updates the database by overwriting the original key material.
+      'cleanup': Removes the migration key data from the database migration columns.
+  EOF
+  type        = string
+}
+
+variable "key_migration_tool_dry_run" {
+  description = "When true, no database updates will be made."
+  type        = bool
+  nullable    = false
+}
+
+variable "run_key_migration_tool" {
+  type     = bool
+  nullable = false
+}
+
+variable "key_migration_tool_key_sets" {
+  description = <<EOT
+  Configuration for controlling what key set should be migrated.
+
+  Attributes:
+    allowed_keysets (list(string)) - The list of individual key set specified
+    for the migration tool to act upon.
+  EOT
+  type = object({
+    allowed_keysets = list(string)
+  })
+  nullable = false
 }

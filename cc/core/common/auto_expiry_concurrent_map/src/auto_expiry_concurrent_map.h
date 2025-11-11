@@ -137,6 +137,8 @@ class AutoExpiryConcurrentMap : public ServiceInterface {
    * @param on_before_element_deletion_callback The callback to be called
    * right before removing the element from the map.
    * @param async_executor An instance to the async executor.
+   * @param use_read_lock temporal flag for ConcurrentMap to use
+   * const_accessor for Find().
    *
    * Dev Notes:
    * The MockAsyncExecutor will not work with AutoExpiryConcurrentMap at this
@@ -148,7 +150,8 @@ class AutoExpiryConcurrentMap : public ServiceInterface {
       bool block_entry_while_eviction,
       std::function<void(TKey&, TValue&, std::function<void(bool)>)>
           on_before_element_deletion_callback,
-      const std::shared_ptr<AsyncExecutorInterface>& async_executor)
+      const std::shared_ptr<AsyncExecutorInterface>& async_executor,
+      bool use_read_lock = false)
       : map_entry_lifetime_seconds_(map_entry_lifetime_seconds),
         extend_entry_lifetime_on_access_(extend_entry_lifetime_on_access),
         block_entry_while_eviction_(block_entry_while_eviction),
@@ -157,7 +160,10 @@ class AutoExpiryConcurrentMap : public ServiceInterface {
         async_executor_(async_executor),
         pending_garbage_collection_callbacks_(0),
         is_running_(false),
-        activity_id_(Uuid::GenerateUuid()) {}
+        activity_id_(Uuid::GenerateUuid()),
+        concurrent_map_(
+            ConcurrentMap<TKey, std::shared_ptr<AutoExpiryConcurrentMapEntry>,
+                          TCompare>(use_read_lock)) {}
 
   ExecutionResult Init() noexcept override { return SuccessExecutionResult(); }
 

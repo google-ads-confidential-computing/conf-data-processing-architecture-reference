@@ -42,7 +42,6 @@ java_library(
         "//java/external:slf4j_simple",
         "//operator/protos/shared/backend:java_proto",
         "//operator/protos/shared/backend/jobnotification:job_notification_event_java_proto",
-        "@com_google_protobuf//java/core",
     ],
 )
 

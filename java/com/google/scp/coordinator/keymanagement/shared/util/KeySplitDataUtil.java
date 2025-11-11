@@ -19,7 +19,6 @@ package com.google.scp.coordinator.keymanagement.shared.util;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.crypto.tink.PublicKeySign;
 import com.google.crypto.tink.PublicKeyVerify;
@@ -38,36 +37,6 @@ import java.util.Optional;
  */
 public final class KeySplitDataUtil {
   private KeySplitDataUtil() {}
-
-  /**
-   * Adds the a key split data containing the specified encryption key uri and signature if
-   * signature key is provided. Naively appends to the list, without consideration for possible
-   * duplicates.
-   */
-  public static EncryptionKey addKeySplitData(
-      EncryptionKey encryptionKey,
-      String keyEncryptionKeyUri,
-      Optional<String> migrationKeyEncryptionKeyUri,
-      Optional<PublicKeySign> signatureKey)
-      throws GeneralSecurityException {
-    ImmutableList<KeySplitData> keySplitDataList =
-        ImmutableList.<KeySplitData>builder()
-            .addAll(encryptionKey.getKeySplitDataList())
-            .add(buildKeySplitData(encryptionKey, keyEncryptionKeyUri, signatureKey))
-            .build();
-    ImmutableList.Builder<KeySplitData> migrationKeySplitDataList = ImmutableList.builder();
-    if (migrationKeyEncryptionKeyUri.isPresent()) {
-      migrationKeySplitDataList
-          .addAll(encryptionKey.getMigrationKeySplitDataList())
-          .add(buildKeySplitData(encryptionKey, migrationKeyEncryptionKeyUri.get(), signatureKey));
-    }
-    return encryptionKey.toBuilder()
-        .clearKeySplitData()
-        .addAllKeySplitData(keySplitDataList)
-        .clearMigrationKeySplitData()
-        .addAllMigrationKeySplitData(migrationKeySplitDataList.build())
-        .build();
-  }
 
   /**
    * Given a map of coordinators (named by their key encryption key uri) to a {@code
@@ -108,7 +77,11 @@ public final class KeySplitDataUtil {
     }
   }
 
-  private static KeySplitData buildKeySplitData(
+  /**
+   * Creates the {@link KeySplitData} containing the specified encryption key uri and signature if
+   * signature key is provided.
+   */
+  public static KeySplitData buildKeySplitData(
       EncryptionKey encryptionKey, String keyEncryptionKeyUri, Optional<PublicKeySign> signatureKey)
       throws GeneralSecurityException {
     KeySplitData.Builder keySplitData =

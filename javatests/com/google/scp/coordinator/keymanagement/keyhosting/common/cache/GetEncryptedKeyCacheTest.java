@@ -40,10 +40,8 @@ public class GetEncryptedKeyCacheTest {
 
   private static final String KEY = "key";
   private static final LogMetricHelper LOG_METRIC_HELPER = new LogMetricHelper("test");
-  private static final EncryptionKey ENCRYPTION_KEY = EncryptionKey.newBuilder()
-      .setKeyId("keyId")
-      .setKeyType("keyType")
-      .build();
+  private static final EncryptionKey ENCRYPTION_KEY =
+      EncryptionKey.newBuilder().setKeyId("keyId").setKeyType("keyType").build();
   private static final ServiceException SERVICE_EXCEPTION =
       new ServiceException(Code.NOT_FOUND, "errorReason", "msg");
 

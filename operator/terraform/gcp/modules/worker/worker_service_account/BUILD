@@ -22,6 +22,7 @@ pkg_files(
         ["*"],
         exclude = [
             "BUILD",
+            "*.tftest.hcl",
         ],
     ),
     prefix = "worker/worker_service_account",

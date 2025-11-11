@@ -31,7 +31,6 @@ public abstract class KeySetConfig {
    * @param validityInDays the validity of the keys in number of days.
    * @param ttlInDays the TTL of the keys in number of days.
    * @param createMaxDaysAhead number of days ahead allowed to create next active set
-   * @param overlapPeriodDays used to create overlapping keys
    */
   public static KeySetConfig create(
       String name,
@@ -40,8 +39,7 @@ public abstract class KeySetConfig {
       int validityInDays,
       int ttlInDays,
       int createMaxDaysAhead,
-      int overlapPeriodDays,
-      boolean noRefreshWindow) {
+      int overlapPeriodDays) {
     return new AutoValue_KeySetConfig(
         name,
         tinkTemplate,
@@ -49,8 +47,7 @@ public abstract class KeySetConfig {
         validityInDays,
         ttlInDays,
         createMaxDaysAhead,
-        overlapPeriodDays,
-        noRefreshWindow);
+        overlapPeriodDays);
   }
 
   /* Returns the name of the key set. */
@@ -73,7 +70,4 @@ public abstract class KeySetConfig {
 
   /* Returns number of days active keys can overlap. */
   public abstract int getOverlapPeriodDays();
-
-  /* Returns number of days active keys can overlap. */
-  public abstract boolean getNoRefreshWindow();
 }

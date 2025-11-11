@@ -38,5 +38,6 @@ java_library(
         "//java/external:guice",
         "//java/external:testcontainers",
         "//javatests/com/google/scp/shared/gcp:constants",
+        "//javatests/com/google/scp/shared/testutils/common",
     ],
 )

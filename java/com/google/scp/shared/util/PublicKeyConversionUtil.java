@@ -44,10 +44,8 @@ public final class PublicKeyConversionUtil {
    * public key KeysetHandle.
    *
    * @deprecated Direct handling of raw key materials is discouraged, consider Tink alternatives.
-   *
-   * <p>Used for transforming a KeysetHandle into a format that can be used without Tink (e.g. to be
-   * used by web browsers).
-   *
+   *     <p>Used for transforming a KeysetHandle into a format that can be used without Tink (e.g.
+   *     to be used by web browsers).
    * @param keysetHandle a KeysetHandle representing a single asymmetric public key, throwwing if a
    *     different type of key is encountered.
    */
@@ -67,9 +65,8 @@ public final class PublicKeyConversionUtil {
    * of an Enabled, Asymmetric, Hpke key with the parameters defined in {@link KeyParams}.
    *
    * @deprecated Direct handling of raw key materials is discouraged, consider Tink alternatives.
-   *
-   * <p>Useful for reconstructing PublicKeys returned from the public key API (i.e. inverting the
-   * operation done in {@link #getPublicKey(KeysetHandle)})
+   *     <p>Useful for reconstructing PublicKeys returned from the public key API (i.e. inverting
+   *     the operation done in {@link #getPublicKey(KeysetHandle)})
    */
   @Deprecated
   public static KeysetHandle getKeysetHandle(String rawPublicKey) throws GeneralSecurityException {

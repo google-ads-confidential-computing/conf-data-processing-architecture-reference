@@ -21,9 +21,11 @@ output "frontend_service_cloudfunction_url" {
 
 output "frontend_cloud_run_information" {
   value = toset([
-    for region, service_name in module.cloud_run_fe : {
-      region       = region
-      service_name = service_name
+    for region, cloud_run_module in module.cloud_run_fe : {
+      region = region
+      # This isn't actually the service_name, but dependent modules may
+      # need it named this way
+      service_name = cloud_run_module
     }
   ])
   description = "A set of object containing the Cloud Run region and service name."

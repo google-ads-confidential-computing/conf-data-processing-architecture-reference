@@ -36,6 +36,10 @@ class MockPrivateKeyFetcherProviderWithOverrides
       core::SuccessExecutionResult();
   std::shared_ptr<core::HttpRequest> signed_http_request_mock =
       std::make_shared<core::HttpRequest>();
+  core::ExecutionResult keyset_metadata_result_mock =
+      core::SuccessExecutionResult();
+  std::shared_ptr<core::HttpRequest> keyset_metadata_request_mock =
+      std::make_shared<core::HttpRequest>();
 
  private:
   void SignHttpRequest(
@@ -45,6 +49,20 @@ class MockPrivateKeyFetcherProviderWithOverrides
     sign_http_request_context.response = signed_http_request_mock;
     sign_http_request_context.Finish();
     return sign_http_request_context.result;
+  }
+
+  void SignHttpRequest(
+      core::AsyncContext<KeysetMetadataFetchingRequest, core::HttpRequest>&
+          sign_http_request_context) noexcept override {
+    sign_http_request_context.result = keyset_metadata_result_mock;
+    sign_http_request_context.response = keyset_metadata_request_mock;
+    sign_http_request_context.Finish();
+    return sign_http_request_context.result;
+  }
+
+  std::shared_ptr<core::HttpRequest> CreateHttpRequest(
+      const KeysetMetadataFetchingRequest& request) noexcept override {
+    return std::make_shared<core::HttpRequest>();
   }
 
   std::shared_ptr<core::HttpRequest> CreateHttpRequest(

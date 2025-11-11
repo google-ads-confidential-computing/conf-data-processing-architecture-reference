@@ -14,8 +14,6 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_test")
 
-# package(default_visibility = ["//cc:scp_cc_internal_pkg"])
-
 cc_test(
     name = "sampled_macros_test",
     size = "large",
@@ -31,6 +29,8 @@ cc_test(
 cc_test(
     name = "periodic_macros_test",
     srcs = ["periodic_macros_test.cc"],
+    flaky = True,
+    tags = ["exclusive"],  # This test relies on timing, and becomes flaky when the machine is busy, so we run it in isolation to make sure it's given enough cycles.
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/common/global_logger/src:global_logger_lib",

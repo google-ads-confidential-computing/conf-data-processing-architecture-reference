@@ -45,6 +45,6 @@ cc_library(
         ],
     deps = [
         "//cc:cc_base_include_dir",
-        "@tink_cc//:input_stream",
+        "@tink_cc//tink:input_stream",
     ],
 )

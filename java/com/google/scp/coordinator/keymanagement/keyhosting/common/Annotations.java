@@ -74,4 +74,10 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface KeySetsVendingConfigCacheUsers {}
+
+  /** Guice binding annotation for the key sets config JSON string. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface KeySetConfigMap {}
 }

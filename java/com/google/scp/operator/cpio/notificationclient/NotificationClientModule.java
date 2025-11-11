@@ -18,9 +18,7 @@ package com.google.scp.operator.cpio.notificationclient;
 
 import com.google.inject.AbstractModule;
 
-/**
- * Module class which binds NotificationClient to the actual implementation used by the service.
- */
+/** Module class which binds NotificationClient to the actual implementation used by the service. */
 public abstract class NotificationClientModule extends AbstractModule {
 
   /** Returns a {@code Class} object for the notification client implementation. */

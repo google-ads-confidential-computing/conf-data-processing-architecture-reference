@@ -17,7 +17,6 @@
 package com.google.scp.operator.cpio.blobstorageclient.model;
 
 import com.google.auto.value.AutoValue;
-import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 
 /** Represents the metadata of a blob. */
 @AutoValue

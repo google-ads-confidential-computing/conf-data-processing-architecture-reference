@@ -70,6 +70,17 @@ class PrivateKeyClientInterface : public core::ServiceInterface {
                           request) noexcept = 0;
 
   /**
+   * @brief Get the Keyset Metadata object by keyset.
+   *
+   * @param context request to get keyset metadata
+   */
+  virtual void GetKeysetMetadata(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest,
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse>&
+          context) noexcept = 0;
+
+  /**
    * @brief List all active encryption keys in a key set.
    * The encryption key is already decrypted by using KMS and can be used to
    * decrypt the payload directly.
@@ -93,6 +104,19 @@ class PrivateKeyClientInterface : public core::ServiceInterface {
       cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysResponse>
   ListActiveEncryptionKeysSync(
       cmrt::sdk::private_key_service::v1::ListActiveEncryptionKeysRequest
+          request) noexcept = 0;
+
+  /**
+   * @brief Get the Keyset Metadata Sync object
+   *
+   * @param request GetKeysetMetadataRequest
+   * @return core::ExecutionResultOr<
+   * cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse>
+   */
+  virtual core::ExecutionResultOr<
+      cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse>
+  GetKeysetMetadataSync(
+      cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest
           request) noexcept = 0;
 };
 

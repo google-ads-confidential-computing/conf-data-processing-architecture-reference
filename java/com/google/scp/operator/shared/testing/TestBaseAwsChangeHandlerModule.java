@@ -31,11 +31,11 @@ public final class TestBaseAwsChangeHandlerModule extends BaseAwsChangeHandlerMo
   public static ImmutableList<FakeJobMetadataChangeHandler> jobMetadataChangeHandlers =
       ImmutableList.of(
           // The first FakeJobMetadataChangeHandler will not handle any events
-          new FakeJobMetadataChangeHandler(/*canHandle=*/ false),
+          new FakeJobMetadataChangeHandler(/* canHandle= */ false),
           // The second FakeJobMetadataChangeHandler will handle events
-          new FakeJobMetadataChangeHandler(/*canHandle=*/ true),
+          new FakeJobMetadataChangeHandler(/* canHandle= */ true),
           // The third FakeJobMetadataChangeHandler will handle events
-          new FakeJobMetadataChangeHandler(/*canHandle=*/ true));
+          new FakeJobMetadataChangeHandler(/* canHandle= */ true));
 
   @Override
   public ImmutableList<Class<? extends JobMetadataChangeHandler>> getChangeHandlerImpls() {

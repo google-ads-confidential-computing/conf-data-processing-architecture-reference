@@ -95,10 +95,8 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
     response.setBody(
         ListRecentEncryptionKeysResponse.newBuilder()
             .addAllKeys(
-                keys
-                    .map(
-                        key ->
-                            vendAccordingToConfig(key, request, allowedMigrators, logMetricHelper))
+                keys.map(
+                        key -> vendAccordingToConfig(key, email, allowedMigrators, logMetricHelper))
                     .map(EncryptionKeyConverter::toApiEncryptionKey)
                     .collect(toImmutableList())));
   }
@@ -108,9 +106,7 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
     if (isCacheEnabled(email, setName)) {
       var expiryTimeCutoff = Instant.now().minus(maxAge).toEpochMilli();
       ImmutableList<EncryptionKey> keys = cache.get(setName);
-      return keys
-          .stream()
-          .filter(key -> isKeyRecent(key, expiryTimeCutoff));
+      return keys.stream().filter(key -> isKeyRecent(key, expiryTimeCutoff));
     }
 
     return keyDb.listRecentKeys(setName, maxAge);
@@ -120,9 +116,8 @@ public class ListRecentEncryptionKeysTask extends ApiTask {
   // CREATED_AT_COLUMN >= @NowParam AND ... AND
   // (EXPIRY_TIME_COLUMN >= @nowParam OR EXPIRY_TIME_COLUMN IS NULL)
   private static Boolean isKeyRecent(EncryptionKey key, long epochMilliCutoff) {
-    return
-        key.getCreationTime() >= epochMilliCutoff &&
-            (!key.hasExpirationTime() || key.getExpirationTime() >= epochMilliCutoff);
+    return key.getCreationTime() >= epochMilliCutoff
+        && (!key.hasExpirationTime() || key.getExpirationTime() >= epochMilliCutoff);
   }
 
   private static Duration getMaxAage(RequestContext request) throws ServiceException {

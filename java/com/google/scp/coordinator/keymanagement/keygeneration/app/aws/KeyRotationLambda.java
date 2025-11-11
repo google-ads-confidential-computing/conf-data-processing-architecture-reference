@@ -64,6 +64,7 @@ public final class KeyRotationLambda implements RequestHandler<ScheduledEvent, S
   private static final String endpointOverrideName = "KEYSTORE_ENDPOINT_OVERRIDE";
   private final AwsKmsV2Client kmsClient;
   private final DynamoDbClient ddbClient;
+
   /** Environment variable map. */
   private final Map<String, String> env;
 

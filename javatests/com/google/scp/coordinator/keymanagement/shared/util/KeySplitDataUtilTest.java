@@ -34,7 +34,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,54 +53,44 @@ public final class KeySplitDataUtilTest {
 
   /** Tests format of added keysplit data */
   @Test
-  public void addKeySplitData_correctKeySplitData() throws GeneralSecurityException {
-    EncryptionKey baseKey = FakeEncryptionKey.create();
-    int numKeySplitData = baseKey.getKeySplitDataList().size();
+  public void buildKeySplitData_correctKeySplitData() throws GeneralSecurityException {
+    EncryptionKey baseKey = FakeEncryptionKey.create().toBuilder().clearKeySplitData().build();
     KeysetHandle keysetHandle = KeysetHandle.generateNew(EcdsaSignKeyManager.ecdsaP256Template());
     PublicKeySign publicKeySign = keysetHandle.getPrimitive(PublicKeySign.class);
     PublicKeyVerify publicKeyVerify =
         keysetHandle.getPublicKeysetHandle().getPrimitive(PublicKeyVerify.class);
 
-    EncryptionKey finalKey =
-        KeySplitDataUtil.addKeySplitData(
-            baseKey, "blah", Optional.empty(), Optional.of(publicKeySign));
-    // assumes that the new keysplitdata is added at the end of the list
-    List<KeySplitData> fromOriginalKeySplitData =
-        finalKey.getKeySplitDataList().subList(0, numKeySplitData);
-    KeySplitData newKeySplitData = finalKey.getKeySplitData(numKeySplitData);
-
-    assertThat(fromOriginalKeySplitData).isEqualTo(baseKey.getKeySplitDataList());
-    assertThat(newKeySplitData.getKeySplitKeyEncryptionKeyUri()).isEqualTo("blah");
+    KeySplitData keySplitData =
+        KeySplitDataUtil.buildKeySplitData(baseKey, "kek-uri", Optional.of(publicKeySign));
+    assertThat(keySplitData.getKeySplitKeyEncryptionKeyUri()).isEqualTo("kek-uri");
 
     // ${key_id}|${iso 8601 creation_time}|${public_key_material}
-    Instant creationTime = Instant.ofEpochMilli(finalKey.getCreationTime());
+    Instant creationTime = Instant.ofEpochMilli(baseKey.getCreationTime());
     byte[] expectedMessage =
         Joiner.on("|")
-            .join(finalKey.getKeyId(), creationTime.toString(), finalKey.getPublicKeyMaterial())
+            .join(baseKey.getKeyId(), creationTime.toString(), baseKey.getPublicKeyMaterial())
             .getBytes(StandardCharsets.UTF_8);
     // should throw if key fails to verify
     publicKeyVerify.verify(
-        Base64.getDecoder().decode(newKeySplitData.getPublicKeySignature()), expectedMessage);
+        Base64.getDecoder().decode(keySplitData.getPublicKeySignature()), expectedMessage);
   }
 
   /** Tests format of added keysplit data if there is no signature */
   @Test
-  public void addKeySplitData_correctNoSignature() throws GeneralSecurityException {
+  public void buildKeySplitData_correctNoSignature() throws GeneralSecurityException {
     EncryptionKey baseKey = FakeEncryptionKey.create().toBuilder().clearKeySplitData().build();
-    int numKeySplitData = baseKey.getKeySplitDataList().size();
 
-    EncryptionKey finalKey =
-        KeySplitDataUtil.addKeySplitData(baseKey, "blah", Optional.empty(), Optional.empty());
-    KeySplitData newKeySplitData = finalKey.getKeySplitData(0);
+    KeySplitData keySplitData =
+        KeySplitDataUtil.buildKeySplitData(baseKey, "kek-uri", Optional.empty());
 
-    assertThat(newKeySplitData.getKeySplitKeyEncryptionKeyUri()).isEqualTo("blah");
-    assertThat(newKeySplitData.getPublicKeySignature()).isEmpty();
+    assertThat(keySplitData.getKeySplitKeyEncryptionKeyUri()).isEqualTo("kek-uri");
+    assertThat(keySplitData.getPublicKeySignature()).isEmpty();
   }
 
   /** Tests that the signatures added can be verified */
   @Test
-  public void addKeySplitData_roundtrip() throws GeneralSecurityException {
-    EncryptionKey baseKey = FakeEncryptionKey.create();
+  public void buildKeySplitData_roundtrip() throws GeneralSecurityException {
+    EncryptionKey baseKey = FakeEncryptionKey.create().toBuilder().clearKeySplitData().build();
     ImmutableMap<String, KeysetHandle> keysetHandles =
         Stream.generate(KeySplitDataUtilTest::unsafeCreateKeysetHandle)
             .limit(10)
@@ -115,16 +104,16 @@ public final class KeySplitDataUtilTest {
                     Map.Entry::<String, KeysetHandle>getKey,
                     entry -> getPublicKeyVerify(entry.getValue())));
 
-    EncryptionKey finalKey = baseKey;
+    EncryptionKey.Builder finalKey = baseKey.toBuilder();
     for (Map.Entry<String, KeysetHandle> keysetHandle : keysetHandles.entrySet()) {
       PublicKeySign publicKeySign = keysetHandle.getValue().getPrimitive(PublicKeySign.class);
-      finalKey =
-          KeySplitDataUtil.addKeySplitData(
-              finalKey, keysetHandle.getKey(), Optional.empty(), Optional.of(publicKeySign));
+      finalKey.addKeySplitData(
+          KeySplitDataUtil.buildKeySplitData(
+              baseKey, keysetHandle.getKey(), Optional.of(publicKeySign)));
     }
 
     // should throw if keys fail to verify
-    KeySplitDataUtil.verifyEncryptionKeySignatures(finalKey, publicKeyVerifiers);
+    KeySplitDataUtil.verifyEncryptionKeySignatures(finalKey.build(), publicKeyVerifiers);
   }
 
   /** Should throw if a signature is invalid */
@@ -136,7 +125,9 @@ public final class KeySplitDataUtilTest {
         keysetHandle.getPublicKeysetHandle().getPrimitive(PublicKeyVerify.class);
 
     EncryptionKey finalKey =
-        KeySplitDataUtil.addKeySplitData(baseKey, "blah", Optional.empty(), Optional.empty());
+        baseKey.toBuilder()
+            .addKeySplitData(KeySplitDataUtil.buildKeySplitData(baseKey, "blah", Optional.empty()))
+            .build();
 
     GeneralSecurityException ex =
         assertThrows(

@@ -37,18 +37,13 @@ public class AllKeysForSetNameCache extends KeyDbCache<String, ImmutableList<Enc
 
   @Inject
   public AllKeysForSetNameCache(
-      KeyDb keyDb,
-      @CacheRefreshInMinutes Integer cacheRefresh,
-      LogMetricHelper logMetricHelper) {
+      KeyDb keyDb, @CacheRefreshInMinutes Integer cacheRefresh, LogMetricHelper logMetricHelper) {
     this(keyDb, cacheRefresh, MINUTES, logMetricHelper);
   }
 
   @VisibleForTesting
   AllKeysForSetNameCache(
-      KeyDb keyDb,
-      Integer cacheRefresh,
-      TimeUnit timeUnit,
-      LogMetricHelper logMetricHelper) {
+      KeyDb keyDb, Integer cacheRefresh, TimeUnit timeUnit, LogMetricHelper logMetricHelper) {
     super(
         CacheBuilder.newBuilder().refreshAfterWrite(cacheRefresh, timeUnit).maximumSize(200),
         "allKeysForSetNameCache",

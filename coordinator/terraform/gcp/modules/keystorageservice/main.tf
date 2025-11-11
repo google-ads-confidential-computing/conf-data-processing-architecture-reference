@@ -53,9 +53,9 @@ module "cloud_run" {
   source_container_image_url = var.source_container_image_url
   concurrency                = 2
   cpu_count                  = 2
-  min_instance_count         = var.key_storage_service_cloudfunction_min_instances
-  max_instance_count         = var.key_storage_service_cloudfunction_max_instances
-  memory_mb                  = var.key_storage_cloudfunction_memory
+  min_instance_count         = var.key_storage_service_min_instances
+  max_instance_count         = var.key_storage_service_max_instances
+  memory_mb                  = var.key_storage_memory
 
   environment_variables = {
     PROJECT_ID                  = var.project_id
@@ -70,13 +70,14 @@ module "cloud_run" {
 
   # Alert settings
   alarms_enabled           = var.alarms_enabled
+  alert_name_suffix        = "Key Storage Service"
   alarm_eval_period_sec    = var.alarm_eval_period_sec
   alarm_duration_sec       = var.alarm_duration_sec
   alert_severity_overrides = var.key_storage_severity_map
 
-  cloud_run_5xx_threshold                   = var.cloudfunction_5xx_threshold
-  cloud_run_alert_on_memory_usage_threshold = var.cloudfunction_alert_on_memory_usage_threshold
-  cloud_run_max_execution_time_max          = var.cloudfunction_max_execution_time_max
+  cloud_run_5xx_threshold                   = var.cloud_run_5xx_threshold
+  cloud_run_alert_on_memory_usage_threshold = var.cloud_run_alert_on_memory_usage_threshold
+  cloud_run_max_execution_time_max          = var.cloud_run_max_execution_time_max
 }
 
 locals {
@@ -96,6 +97,9 @@ module "load_balancer" {
   service_id      = local.service_id
   ssl_cert_id     = "key-ss"
   monitoring_name = "Key Storage Service"
+
+  # Migration to external managed LB
+  load_balancing_scheme = var.load_balancing_scheme
 
   enable_cdn                    = false
   cdn_default_ttl_seconds       = 30

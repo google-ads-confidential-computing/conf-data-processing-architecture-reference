@@ -19,9 +19,19 @@ output "workgroup_id" {
   description = "Workgroup where this service is deployed."
 }
 
+output "worker_instance_group_name" {
+  value       = module.autoscaling.worker_managed_instance_group_name
+  description = "The name of the worker instance group."
+}
+
 output "jobqueue_pubsub_topic_id" {
   value       = module.jobqueue.jobqueue_pubsub_topic_id
   description = "The id of the pubsub job queue topic."
+}
+
+output "jobqueue_pubsub_topic_name" {
+  value       = module.jobqueue.jobqueue_pubsub_topic_name
+  description = "The name of the pubsub job queue topic."
 }
 
 output "jobqueue_pubsub_sub_id" {

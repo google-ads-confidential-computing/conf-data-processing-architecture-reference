@@ -31,6 +31,7 @@ public final class WorkerScaleInHttpFunction extends WorkerScaleInHttpFunctionBa
   public WorkerScaleInHttpFunction(Injector injector) {
     this(injector.getInstance(WorkerScaleInRequestHandler.class));
   }
+
   /** Creates a new instance of the {@code WorkerScaleInHttpFunction} class from request handler. */
   public WorkerScaleInHttpFunction(WorkerScaleInRequestHandler workerScaleInRequestHandler) {
     super(workerScaleInRequestHandler);

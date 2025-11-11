@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-resource "google_monitoring_alert_policy" "collector_exceed_cpu_usage_alarm" {
+resource "google_monitoring_alert_policy" "collector_exceed_cpu_usage_alert" {
   count        = var.collector_exceed_cpu_usage_alarm.enable_alarm ? 1 : 0
   display_name = "${var.environment} Collector CPU Usage Too High"
   combiner     = "OR"
   conditions {
-    display_name = "CPU Usage Too High"
+    display_name = "Collector CPU Usage Too High"
     condition_threshold {
       filter          = "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${google_compute_region_instance_group_manager.collector_instance.name}\""
       duration        = "${var.collector_exceed_cpu_usage_alarm.duration_sec}s"
@@ -69,7 +69,7 @@ resource "google_logging_metric" "collector_export_error_metric" {
 
 resource "google_monitoring_alert_policy" "collector_export_error_alert" {
   count        = var.collector_export_error_alarm.enable_alarm ? 1 : 0
-  display_name = "${var.environment} Collector Exporting Metric Data Error Alert"
+  display_name = "${var.environment} Collector Exporting Metric Data Error"
   combiner     = "OR"
   conditions {
     display_name = "Collector Exporting Errors"
@@ -103,10 +103,13 @@ resource "google_monitoring_alert_policy" "collector_export_error_alert" {
   }
 }
 
-resource "google_logging_metric" "collector_run_error_metric" {
-  name        = "${var.environment}-collector-run-error-counter"
-  filter      = "resource.type=\"gce_instance\" AND jsonPayload.message=~\".*collector server run finished with error.*\""
-  description = "Error counter of failed to run collector"
+resource "google_logging_metric" "collector_startup_error_metric" {
+  name        = "${var.environment}-collector-startup-error-counter"
+  filter      = <<-EOT
+  resource.type="gce_instance" AND
+  (jsonPayload.message=~".*collector server run finished with error.*" OR jsonPayload.message=~".*Failed to start otelcol-contrib.service.*")
+  EOT
+  description = "Error counter of failed to startup collector"
 
   metric_descriptor {
     metric_kind = "DELTA"
@@ -122,45 +125,49 @@ resource "google_logging_metric" "collector_run_error_metric" {
   }
 }
 
-resource "google_monitoring_alert_policy" "collector_run_error_alert" {
-  count        = var.collector_run_error_alarm.enable_alarm ? 1 : 0
-  display_name = "${var.environment} Collector Run Error Alert"
+resource "google_monitoring_alert_policy" "collector_startup_error_alert" {
+  count        = var.collector_startup_error_alarm.enable_alarm ? 1 : 0
+  display_name = "${var.environment} Collector Startup Error Rate Too High"
   combiner     = "OR"
   conditions {
-    display_name = "Collector Running Errors"
+    display_name = "Collector Startup Error Too High"
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.collector_run_error_metric.name}\" AND resource.type=\"gce_instance\""
-      duration        = "${var.collector_run_error_alarm.duration_sec}s"
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.collector_startup_error_metric.name}\" AND resource.type=\"gce_instance\""
+      duration        = "${var.collector_startup_error_alarm.duration_sec}s"
       comparison      = "COMPARISON_GT"
-      threshold_value = var.collector_run_error_alarm.threshold
+      threshold_value = var.collector_startup_error_alarm.threshold
       trigger {
         count = 1
       }
       aggregations {
-        alignment_period   = "${var.collector_run_error_alarm.alignment_period_sec}s"
-        per_series_aligner = "ALIGN_SUM"
+        alignment_period     = "${var.collector_startup_error_alarm.alignment_period_sec}s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
       }
     }
   }
 
   lifecycle {
     replace_triggered_by = [
-      google_logging_metric.collector_run_error_metric
+      google_logging_metric.collector_startup_error_metric
     ]
   }
   user_labels = {
     environment = var.environment
-    severity    = var.collector_run_error_alarm.severity
+    severity    = var.collector_startup_error_alarm.severity
   }
   alert_strategy {
-    auto_close           = "${var.collector_run_error_alarm.auto_close_sec}s"
+    auto_close           = "${var.collector_startup_error_alarm.auto_close_sec}s"
     notification_prompts = ["OPENED"]
   }
 }
 
 resource "google_logging_metric" "collector_crash_error_metric" {
   name        = "${var.environment}-collector-crash-error-counter"
-  filter      = "resource.type=\"gce_instance\" AND jsonPayload.MESSAGE=~\".*otelcol-contrib.service: Failed with result 'exit-code'.*\""
+  filter      = <<-EOT
+  resource.type="gce_instance" AND
+  jsonPayload.MESSAGE=~".*otelcol-contrib.service: Failed with result 'exit-code'.*"
+  EOT
   description = "Error counter of collector server crash"
 
   metric_descriptor {
@@ -179,10 +186,10 @@ resource "google_logging_metric" "collector_crash_error_metric" {
 
 resource "google_monitoring_alert_policy" "collector_crash_error_alert" {
   count        = var.collector_crash_error_alarm.enable_alarm ? 1 : 0
-  display_name = "${var.environment} Collector Crash Error Alert"
+  display_name = "${var.environment} Collector Crash Error Rate Too High"
   combiner     = "OR"
   conditions {
-    display_name = "Collector Crash Errors"
+    display_name = "Collector Crash Error Too High"
     condition_threshold {
       filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.collector_crash_error_metric.name}\" AND resource.type=\"gce_instance\""
       duration        = "${var.collector_crash_error_alarm.duration_sec}s"
@@ -192,8 +199,9 @@ resource "google_monitoring_alert_policy" "collector_crash_error_alert" {
         count = 1
       }
       aggregations {
-        alignment_period   = "${var.collector_crash_error_alarm.alignment_period_sec}s"
-        per_series_aligner = "ALIGN_SUM"
+        alignment_period     = "${var.collector_crash_error_alarm.alignment_period_sec}s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
       }
     }
   }
@@ -213,9 +221,12 @@ resource "google_monitoring_alert_policy" "collector_crash_error_alert" {
   }
 }
 
-resource "google_logging_metric" "worker_export_metric_error_metric" {
-  name        = "${var.environment}-worker-export-metric-error-counter"
-  filter      = "resource.type=\"gce_instance\" AND (jsonPayload.MESSAGE=~\".*WARNING: Failed to export metrics.*\" OR jsonPayload.MESSAGE=~\".*Export() failed:*\")"
+resource "google_logging_metric" "server_export_metric_error_metric" {
+  name        = "${var.environment}-server-export-metric-error-counter"
+  filter      = <<-EOT
+  resource.type="gce_instance" AND
+  (jsonPayload.MESSAGE=~".*Failed to export metrics.*" OR jsonPayload.MESSAGE=~".*Export() failed.*" OR jsonPayload.MESSAGE=~".*[OTLP HTTP Client] Export failed.*")
+  EOT
   description = "Error counter of exporting metric data from worker to collector container"
 
   metric_descriptor {
@@ -233,22 +244,22 @@ resource "google_logging_metric" "worker_export_metric_error_metric" {
   }
 }
 
-resource "google_monitoring_alert_policy" "worker_export_metric_error_alert" {
-  count        = var.worker_exporting_metrics_error_alarm.enable_alarm ? 1 : 0
-  display_name = "${var.environment} Worker Exporting Metrics to Collector Error Alert"
+resource "google_monitoring_alert_policy" "export_metric_to_collector_error_alert" {
+  count        = var.export_metric_to_collector_error_alarm.enable_alarm ? 1 : 0
+  display_name = "${var.environment} Export Metric to Collector Error Rate Too High"
   combiner     = "OR"
   conditions {
-    display_name = "Worker Exporting Metrics To Collector Errors"
+    display_name = "Export Metric to Collector Error Too High"
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.worker_export_metric_error_metric.name}\" AND resource.type=\"gce_instance\""
-      duration        = "${var.worker_exporting_metrics_error_alarm.duration_sec}s"
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.server_export_metric_error_metric.name}\" AND resource.type=\"gce_instance\""
+      duration        = "${var.export_metric_to_collector_error_alarm.duration_sec}s"
       comparison      = "COMPARISON_GT"
-      threshold_value = var.worker_exporting_metrics_error_alarm.threshold
+      threshold_value = var.export_metric_to_collector_error_alarm.threshold
       trigger {
         count = 1
       }
       aggregations {
-        alignment_period   = "${var.worker_exporting_metrics_error_alarm.alignment_period_sec}s"
+        alignment_period   = "${var.export_metric_to_collector_error_alarm.alignment_period_sec}s"
         per_series_aligner = "ALIGN_SUM"
       }
     }
@@ -256,15 +267,15 @@ resource "google_monitoring_alert_policy" "worker_export_metric_error_alert" {
 
   lifecycle {
     replace_triggered_by = [
-      google_logging_metric.worker_export_metric_error_metric
+      google_logging_metric.server_export_metric_error_metric
     ]
   }
   user_labels = {
     environment = var.environment
-    severity    = var.worker_exporting_metrics_error_alarm.severity
+    severity    = var.export_metric_to_collector_error_alarm.severity
   }
   alert_strategy {
-    auto_close           = "${var.worker_exporting_metrics_error_alarm.auto_close_sec}s"
+    auto_close           = "${var.export_metric_to_collector_error_alarm.auto_close_sec}s"
     notification_prompts = ["OPENED"]
   }
 }
@@ -359,7 +370,7 @@ resource "google_monitoring_dashboard" "opentelemetry_metrics_dashboard" {
                           "metric.label.\"Validator\""
                         ]
                       },
-                      "filter" : "metric.type=\"logging.googleapis.com/user/${google_logging_metric.collector_run_error_metric.name}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${google_compute_region_instance_group_manager.collector_instance.name}\"",
+                      "filter" : "metric.type=\"logging.googleapis.com/user/${google_logging_metric.collector_startup_error_metric.name}\" resource.type=\"gce_instance\" metadata.system_labels.\"instance_group\"=\"${google_compute_region_instance_group_manager.collector_instance.name}\"",
                       "secondaryAggregation" : {
                         "alignmentPeriod" : "60s",
                       }
@@ -425,7 +436,7 @@ resource "google_monitoring_dashboard" "opentelemetry_metrics_dashboard" {
                         "perSeriesAligner" : "ALIGN_SUM",
                         "crossSeriesReducer" : "REDUCE_SUM",
                       },
-                      "filter" : "metric.type=\"logging.googleapis.com/user/${google_logging_metric.worker_export_metric_error_metric.name}\" resource.type=\"gce_instance\" metadata.user_labels.\"environment\"=\"${var.environment}\"",
+                      "filter" : "metric.type=\"logging.googleapis.com/user/${google_logging_metric.server_export_metric_error_metric.name}\" resource.type=\"gce_instance\" metadata.user_labels.\"environment\"=\"${var.environment}\"",
                       "secondaryAggregation" : {
                         "alignmentPeriod" : "60s",
                       }

@@ -56,7 +56,8 @@ public class GetActivePublicKeysTask extends ApiTask {
       @KeyLimit Integer keyLimit,
       @CacheControlMaximum Long cacheControlMaximum,
       LogMetricHelper logMetricHelper) {
-    super("GET",
+    super(
+        "GET",
         Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/publicKeys(?<raw>:raw)?"),
         "GetActivePublicKeys",
         "v1Beta",

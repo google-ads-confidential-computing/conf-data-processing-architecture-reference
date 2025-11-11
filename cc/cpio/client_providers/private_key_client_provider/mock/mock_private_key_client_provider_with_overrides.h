@@ -58,6 +58,14 @@ class MockPrivateKeyClientProviderWithOverrides
 
   core::ExecutionResult list_private_keys_by_ids_result_mock;
 
+  void GetKeysetMetadata(
+      core::AsyncContext<
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest,
+          cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse>&
+          context) noexcept override {
+    return PrivateKeyClientProvider::GetKeysetMetadata(context);
+  }
+
   void ListPrivateKeys(
       core::AsyncContext<
           cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest,

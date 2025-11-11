@@ -133,6 +133,7 @@ java_test(
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//java/com/google/scp/shared/api/model",

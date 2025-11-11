@@ -20,7 +20,10 @@ pkg_files(
     name = "cc_operator_service",
     srcs = glob(
         ["*"],
-        exclude = ["BUILD"],
+        exclude = [
+            "BUILD",
+            "*.tftest.hcl",
+        ],
     ),
     prefix = "cc_operator_service",
 )

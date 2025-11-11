@@ -95,6 +95,7 @@ public interface JobMetadataDb {
     public JobMetadataConflictException(Throwable cause) {
       super(cause);
     }
+
     /**
      * Creates a new instance of the {@code JobMetadataConflictException} class from a message
      * String.

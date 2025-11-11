@@ -90,7 +90,7 @@ public abstract class SplitKeyGenerationIntegrationTestBase {
             .mapToObj(
                 unused -> {
                   try {
-                    return FakeEncryptionKey.createBuilderWithDefaults(false)
+                    return FakeEncryptionKey.createBuilderWithDefaults()
                         .setKeyId(sequenceKeyIdFactory.getNextKeyId(keyDbA))
                         .setExpirationTime(expirationTime.toEpochMilli())
                         .build();
@@ -116,12 +116,12 @@ public abstract class SplitKeyGenerationIntegrationTestBase {
     // Check when active keys expire, there are enough replacement keys.
     for (var key : keyDbA.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)) {
       assertThat(
-          keyDbA.getActiveKeys(
-              DEFAULT_SET_NAME, KEY_COUNT, Instant.ofEpochMilli(key.getExpirationTime())))
+              keyDbA.getActiveKeys(
+                  DEFAULT_SET_NAME, KEY_COUNT, Instant.ofEpochMilli(key.getExpirationTime())))
           .hasSize(KEY_COUNT);
       assertThat(
-          keyDbB.getActiveKeys(
-              DEFAULT_SET_NAME, KEY_COUNT, Instant.ofEpochMilli(key.getExpirationTime())))
+              keyDbB.getActiveKeys(
+                  DEFAULT_SET_NAME, KEY_COUNT, Instant.ofEpochMilli(key.getExpirationTime())))
           .hasSize(KEY_COUNT);
     }
   }

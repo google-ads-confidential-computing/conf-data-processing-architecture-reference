@@ -25,15 +25,14 @@ public class RequestContextUtil {
 
   public static String getRequestParameter(RequestContext request, String param)
       throws ServiceException {
-    return
-        request
-            .getFirstQueryParameter(param)
-            .orElseThrow(
-                () ->
-                    new ServiceException(
-                        Code.INVALID_ARGUMENT,
-                        SharedErrorReason.INVALID_ARGUMENT.name(),
-                        String.format("%s query parameter is required.", param)));
+    return request
+        .getFirstQueryParameter(param)
+        .orElseThrow(
+            () ->
+                new ServiceException(
+                    Code.INVALID_ARGUMENT,
+                    SharedErrorReason.INVALID_ARGUMENT.name(),
+                    String.format("%s query parameter is required.", param)));
   }
 
   public static long getPositiveNumberRequestValue(RequestContext request, String param)

@@ -23,5 +23,6 @@ import com.google.scp.operator.cpio.notificationclient.model.PublishMessageReque
 public final class LocalNotificationClient implements NotificationClient {
 
   @Override
-  public void publishMessage(PublishMessageRequest publishMessageRequest) throws NotificationClientException {}
+  public void publishMessage(PublishMessageRequest publishMessageRequest)
+      throws NotificationClientException {}
 }

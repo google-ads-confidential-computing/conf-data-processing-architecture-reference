@@ -36,8 +36,7 @@ public class EncryptionKeyConverterTest {
   public void toApiEncryptionKey_hasPrivateKeyMaterial_singleKey() {
     String encryptionKeyUri = UUID.randomUUID().toString();
     ImmutableList<KeySplitData> keySplitData =
-        ImmutableList.of(
-            FakeEncryptionKey.createKeySplitData(encryptionKeyUri));
+        ImmutableList.of(FakeEncryptionKey.createKeySplitData(encryptionKeyUri));
     var storageKey =
         FakeEncryptionKey.create().toBuilder()
             .setKeyEncryptionKeyUri(encryptionKeyUri)

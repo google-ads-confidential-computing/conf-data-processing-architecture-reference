@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import static com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer.startContainerAndConnectToSpannerWithEnvs;
+import static java.time.Duration.ofDays;
 import static java.time.Instant.now;
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -37,6 +38,7 @@ import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfi
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbTestModule;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActiveEncryptionKeysResponseProto.GetActiveEncryptionKeysResponse;
+import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetKeysetMetadataResponseProto.GetKeysetMetadataResponse;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -72,8 +74,9 @@ public final class PrivateKeyServiceTest {
           createKey("test-set", -7),
           createKey("test-set", -14),
           createKey("test-set", -21),
-          createKey("test-set-2", 7),
-          createKey("test-set-2", -7));
+          createKey("test-set-2", -7),
+          createKey("test-set-2", 0),
+          createKey("test-set-2", 7));
 
   @Rule public final Acai acai = new Acai(TestModule.class);
 
@@ -110,7 +113,6 @@ public final class PrivateKeyServiceTest {
     getNonExistingKeyTest("v1alpha");
   }
 
-
   @Test
   public void v1betaGetEncryptionKey_nonExistingKey_returnsNotFound() throws Exception {
     getNonExistingKeyTest("v1beta");
@@ -125,7 +127,7 @@ public final class PrivateKeyServiceTest {
   @Test
   public void v1alphaListRecentEncryptionKeys_happyPath_returnsExpected() throws Exception {
     // Given
-    var daysInSecs = Duration.ofDays(8).toSeconds();
+    var daysInSecs = ofDays(8).toSeconds();
     String endpoint = "/v1alpha/encryptionKeys:recent?maxAgeSeconds=" + daysInSecs;
 
     // When
@@ -143,32 +145,32 @@ public final class PrivateKeyServiceTest {
 
   @Test
   public void v1betaListRecentEncryptionKeys_emptySetName_returnsExpected() throws Exception {
-    listRecentEncryptionKeysTest("",Duration.ofDays(7), 0);
-    listRecentEncryptionKeysTest("", Duration.ofDays(8), 1);
-    listRecentEncryptionKeysTest("", Duration.ofDays(15), 2);
+    listRecentEncryptionKeysTest("", ofDays(7), 0);
+    listRecentEncryptionKeysTest("", ofDays(8), 1);
+    listRecentEncryptionKeysTest("", ofDays(15), 2);
   }
 
   @Test
   public void v1betaListRecentEncryptionKeys_specificSetName_returnsExpected() throws Exception {
-    listRecentEncryptionKeysTest("test-set", Duration.ofDays(7), 0);
-    listRecentEncryptionKeysTest("test-set", Duration.ofDays(8), 1);
-    listRecentEncryptionKeysTest("test-set", Duration.ofDays(15), 2);
-    listRecentEncryptionKeysTest("test-set", Duration.ofDays(22), 3);
+    listRecentEncryptionKeysTest("test-set", ofDays(7), 0);
+    listRecentEncryptionKeysTest("test-set", ofDays(8), 1);
+    listRecentEncryptionKeysTest("test-set", ofDays(15), 2);
+    listRecentEncryptionKeysTest("test-set", ofDays(22), 3);
   }
 
   @Test
   public void v1betaListRecentEncryptionKeys_setName2_returnsExpected() throws Exception {
-    listRecentEncryptionKeysTest("test-set-2", Duration.ofDays(1), 1);
-    listRecentEncryptionKeysTest("test-set-2", Duration.ofDays(8), 2);
+    listRecentEncryptionKeysTest("test-set-2", ofDays(1), 2);
+    listRecentEncryptionKeysTest("test-set-2", ofDays(8), 3);
   }
 
   @Test
   public void v1betaListRecentEncryptionKeys_badKeySet_returnsNothing() throws Exception {
-    listRecentEncryptionKeysTest("does-not-exist-test-set", Duration.ofDays(25), 0);
+    listRecentEncryptionKeysTest("does-not-exist-test-set", ofDays(25), 0);
   }
 
-  private void listRecentEncryptionKeysTest(
-      String setName, Duration expiry, int expectedSize) throws Exception {
+  private void listRecentEncryptionKeysTest(String setName, Duration expiry, int expectedSize)
+      throws Exception {
     var daysInSecs = expiry.toSeconds();
     String endpoint =
         String.format(
@@ -191,7 +193,7 @@ public final class PrivateKeyServiceTest {
   @Test
   public void v1betaGetActiveEncryptionKeys_specificSetName_returnsExpected() throws Exception {
     var now = now();
-    var start = now.minusMillis(10000).toEpochMilli();
+    var start = now.minus(1, DAYS).minusMillis(10000).toEpochMilli();
     var end = now.plusMillis(10000).toEpochMilli();
     getActiveKeysValidation("test-set-2", start, end, 1);
   }
@@ -200,8 +202,8 @@ public final class PrivateKeyServiceTest {
   public void v1betaGetActiveEncryptionKeys_largeTimeRange_returnsAllKeys() throws Exception {
     var now = now();
     var start = now.minus(15, DAYS).toEpochMilli();
-    var end = now.plusMillis(10000).toEpochMilli();
-    getActiveKeysValidation("test-set-2", start, end, 2);
+    var end = now.plus(10, DAYS).toEpochMilli();
+    getActiveKeysValidation("test-set-2", start, end, 3);
   }
 
   @Test
@@ -217,9 +219,7 @@ public final class PrivateKeyServiceTest {
     String endpoint =
         String.format(
             "/v1beta/sets/%s/activeKeys?startEpochMillis=%d&endEpochMillis=%d",
-            setName,
-            start,
-            end);
+            setName, start, end);
 
     // When
     GetActiveEncryptionKeysResponse keys = getActiveEncryptionKeys(endpoint);
@@ -252,9 +252,25 @@ public final class PrivateKeyServiceTest {
     var now = now();
     var start = now.toEpochMilli();
     var end = now.minus(1, DAYS).toEpochMilli();
-    var endpoint = String.format(
-        "/v1beta/sets/test-set-2/activeKeys?startEpochMillis=%d&endEpochMillis=%d", start, end);
+    var endpoint =
+        String.format(
+            "/v1beta/sets/test-set-2/activeKeys?startEpochMillis=%d&endEpochMillis=%d", start, end);
     invalidArgumentTest(endpoint);
+  }
+
+  @Test
+  public void v1betaGetKeysetMetadata_noOverlap_returnsExpected() throws Exception {
+    getActiveKeysetMetadataValidation("noOverlap", 5);
+  }
+
+  @Test
+  public void v1betaGetKeysetMetadata_overlap_returnsExpected() throws Exception {
+    getActiveKeysetMetadataValidation("overlap", 4);
+  }
+
+  private void getActiveKeysetMetadataValidation(String setName, int expected) throws Exception {
+    String endpoint = String.format("/v1beta/sets/%s/keysetMetadata", setName);
+    assertThat(getMetadata(endpoint).getActiveKeyCount()).isEqualTo(expected);
   }
 
   private void invalidArgumentTest(String endpoint) throws Exception {
@@ -264,58 +280,49 @@ public final class PrivateKeyServiceTest {
   }
 
   private EncryptionKeyProto.EncryptionKey getEncryptionKey(String endpoint) throws IOException {
-    HttpClientBuilder builder =
-        HttpClients.custom()
-            .setDefaultRequestConfig(
-                // Prevent HTTP client library from stripping empty path params.
-                RequestConfig.custom().setNormalizeUri(false).build());
-    try (CloseableHttpClient client = builder.build()) {
-      HttpResponse response =
-          client.execute(
-              new HttpGet(String.format("http://%s%s", container.getEmulatorEndpoint(), endpoint)));
-      String body = EntityUtils.toString(response.getEntity());
-      EncryptionKeyProto.EncryptionKey.Builder keysBuilder =
-          EncryptionKeyProto.EncryptionKey.newBuilder();
-      JsonFormat.parser().merge(body, keysBuilder);
-      return keysBuilder.build();
-    }
+    String body = getHttpBody(endpoint);
+    EncryptionKeyProto.EncryptionKey.Builder keysBuilder =
+        EncryptionKeyProto.EncryptionKey.newBuilder();
+    JsonFormat.parser().merge(body, keysBuilder);
+    return keysBuilder.build();
   }
 
   private ListRecentEncryptionKeysResponse listRecentEncryptionKeys(String endpoint)
       throws IOException {
-    HttpClientBuilder builder =
-        HttpClients.custom()
-            .setDefaultRequestConfig(
-                // Prevent HTTP client library from stripping empty path params.
-                RequestConfig.custom().setNormalizeUri(false).build());
-    try (CloseableHttpClient client = builder.build()) {
-      HttpResponse response =
-          client.execute(
-              new HttpGet(String.format("http://%s%s", container.getEmulatorEndpoint(), endpoint)));
-      String body = EntityUtils.toString(response.getEntity());
-      ListRecentEncryptionKeysResponse.Builder keysBuilder =
-          ListRecentEncryptionKeysResponse.newBuilder();
-      JsonFormat.parser().merge(body, keysBuilder);
-      return keysBuilder.build();
-    }
+    String body = getHttpBody(endpoint);
+    ListRecentEncryptionKeysResponse.Builder keysBuilder =
+        ListRecentEncryptionKeysResponse.newBuilder();
+    JsonFormat.parser().merge(body, keysBuilder);
+    return keysBuilder.build();
   }
 
   private GetActiveEncryptionKeysResponse getActiveEncryptionKeys(String endpoint)
       throws IOException {
+    String body = getHttpBody(endpoint);
+    GetActiveEncryptionKeysResponse.Builder keysBuilder =
+        GetActiveEncryptionKeysResponse.newBuilder();
+    JsonFormat.parser().merge(body, keysBuilder);
+    return keysBuilder.build();
+  }
+
+  private GetKeysetMetadataResponse getMetadata(String endpoint) throws IOException {
+    String body = getHttpBody(endpoint);
+    var countBuilder = GetKeysetMetadataResponse.newBuilder();
+    JsonFormat.parser().merge(body, countBuilder);
+    return countBuilder.build();
+  }
+
+  private String getHttpBody(String endpoint) throws IOException {
     HttpClientBuilder builder =
         HttpClients.custom()
             .setDefaultRequestConfig(
                 // Prevent HTTP client library from stripping empty path params.
                 RequestConfig.custom().setNormalizeUri(false).build());
     try (CloseableHttpClient client = builder.build()) {
-      HttpResponse response =
+      var response =
           client.execute(
               new HttpGet(String.format("http://%s%s", container.getEmulatorEndpoint(), endpoint)));
-      String body = EntityUtils.toString(response.getEntity());
-      GetActiveEncryptionKeysResponse.Builder keysBuilder =
-          GetActiveEncryptionKeysResponse.newBuilder();
-      JsonFormat.parser().merge(body, keysBuilder);
-      return keysBuilder.build();
+      return EntityUtils.toString(response.getEntity());
     }
   }
 
@@ -326,25 +333,48 @@ public final class PrivateKeyServiceTest {
                 // Prevent HTTP client library from stripping empty path params.
                 RequestConfig.custom().setNormalizeUri(false).build());
     try (CloseableHttpClient client = builder.build()) {
-      return
-          client.execute(
-              new HttpGet(String.format("http://%s%s", container.getEmulatorEndpoint(), endpoint)));
+      return client.execute(
+          new HttpGet(String.format("http://%s%s", container.getEmulatorEndpoint(), endpoint)));
     }
   }
 
   private static EncryptionKey createKey(String setName, int expiryPlusDays) {
-    var expirationEpochMilli = now().plus(Duration.ofDays(expiryPlusDays)).toEpochMilli();
     var builder = FakeEncryptionKey.create().toBuilder();
     if (setName != null) {
       builder.setSetName(setName);
     }
-    return builder.setExpirationTime(expirationEpochMilli).build();
+    var activationEpochMilli = now().plus(ofDays(expiryPlusDays - 1)).toEpochMilli();
+    var expirationEpochMilli = now().plus(ofDays(expiryPlusDays)).toEpochMilli();
+    return builder
+        .setActivationTime(activationEpochMilli)
+        .setExpirationTime(expirationEpochMilli)
+        .build();
   }
 
   private static final class TestModule extends AbstractModule {
     @Override
     protected void configure() {
       install(new SpannerKeyDbTestModule());
+    }
+
+    private static String keySetConfigEnvVar() {
+      return """
+      {
+        "key_sets": [
+          {
+            "name": "noOverlap",
+            "count": 5,
+            "validity_in_days": 10
+          },
+          {
+            "name": "overlap",
+            "count": 1,
+            "validity_in_days": 8,
+            "overlap_period_days": 6
+          }
+        ]
+      }
+      """;
     }
 
     @Singleton
@@ -362,6 +392,7 @@ public final class PrivateKeyServiceTest {
                       "SPANNER_INSTANCE", keyDbConfig.spannerInstanceId(),
                       "SPANNER_DATABASE", keyDbConfig.spannerDbName(),
                       "PROJECT_ID", keyDbConfig.gcpProjectId(),
+                      "KEY_SETS_CONFIG", keySetConfigEnvVar(),
                       "READ_STALENESS_SEC", "2")),
               "PrivateKeyService_deploy.jar",
               "java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/",

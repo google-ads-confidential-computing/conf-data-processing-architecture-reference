@@ -73,7 +73,6 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
-        false,
         Instant.now());
 
     task.createSplitKey(
@@ -82,7 +81,6 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
-        false,
         Instant.now());
 
     List<String> keys = sortKeysById();
@@ -114,7 +112,6 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
-        false,
         Instant.now());
 
     keys = sortKeysById();
@@ -148,7 +145,6 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
-        false,
         Instant.now());
 
     keys = sortKeysById();
@@ -177,7 +173,6 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
-        false,
         Instant.now());
 
     keys = sortKeysById();
@@ -203,7 +198,6 @@ public class AwsSeqIdCreateSplitKeyTaskTest extends AwsCreateSplitKeyTaskTestBas
           keysToCreate,
           expectedExpiryInDays,
           expectedTtlInDays,
-          false,
           Instant.now());
     } catch (ServiceException e) {
       List<String> keys = sortKeysById();

@@ -34,7 +34,7 @@ cc_library(
         "//cc/public/cpio/interface/kms_client:type_def",
         "//cc/public/cpio/interface/kms_client/aws:type_def",
         "@aws_sdk_cpp//:kms",
-        "@tink_cc",
+        "@tink_cc//tink:tink_cc",
     ],
 )
 
@@ -70,7 +70,7 @@ cc_library(
         "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/interface/kms_client:type_def",
         "@aws_sdk_cpp//:kms",
-        "@tink_cc",
+        "@tink_cc//tink:tink_cc",
     ],
 )
 

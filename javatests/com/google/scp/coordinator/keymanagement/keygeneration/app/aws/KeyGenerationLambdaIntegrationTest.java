@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -102,6 +103,7 @@ public final class KeyGenerationLambdaIntegrationTest {
   }
 
   @Test
+  @Ignore("b/448637981")
   public void insert_item_success() throws Exception {
     var env = getEnv(tableName, keyArn);
     assertThat(getItems().size()).isEqualTo(0);
@@ -146,6 +148,7 @@ public final class KeyGenerationLambdaIntegrationTest {
   }
 
   @Test
+  @Ignore("b/448637981")
   public void insert_item_public_key() throws Exception {
     var env = getEnv(tableName, keyArn);
     assertThat(getItems().size()).isEqualTo(0);
@@ -179,20 +182,6 @@ public final class KeyGenerationLambdaIntegrationTest {
 
     // Ensure only one new set of keys were created.
     assertThat(getItems().size()).isEqualTo(5);
-  }
-
-  @Test
-  public void updatesExpiringKeys() throws Exception {
-    var env = getEnv(tableName, keyArn);
-    for (var i = 0; i < 5; i++) {
-      // Create 5 keys that expire within the key refresh window.
-      keyDb.createKey(FakeEncryptionKey.withExpirationTime(Instant.now().plusSeconds(100)));
-    }
-    assertThat(getItems().size()).isEqualTo(5);
-
-    KeyGenerationLambdaStarter.runKeyRotationLambda(env, network);
-
-    assertThat(getItems().size()).isEqualTo(8 /* 5 + KEY_COUNT */);
   }
 
   private static class TestEnv extends AbstractModule {

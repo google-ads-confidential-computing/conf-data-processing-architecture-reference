@@ -94,8 +94,7 @@ constexpr char kKeyData[] = "keyData";
 constexpr char kPublicKeySignature[] = "publicKeySignature";
 constexpr char kKeyEncryptionKeyUri[] = "keyEncryptionKeyUri";
 constexpr char kKeyMaterial[] = "keyMaterial";
-constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
-constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
+constexpr char kKeysetActiveKeyCount[] = "activeKeyCount";
 }  // namespace
 
 namespace google::scp::cpio::client_providers {
@@ -109,7 +108,7 @@ ExecutionResultOr<string> PrivateKeyFetchingClientUtils::ExtractKeyId(
       SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_RESOURCE_NAME);
 }
 
-ExecutionResult PrivateKeyFetchingClientUtils::ParsePrivateKey(
+ExecutionResult PrivateKeyFetchingClientUtils::ParseFetchingResponse(
     const core::BytesBuffer& body,
     PrivateKeyFetchingResponse& response) noexcept {
   try {
@@ -134,6 +133,33 @@ ExecutionResult PrivateKeyFetchingClientUtils::ParsePrivateKey(
               e.what());
     return execution_result;
   }
+  return SuccessExecutionResult();
+}
+
+ExecutionResult PrivateKeyFetchingClientUtils::ParseFetchingResponse(
+    const core::BytesBuffer& body,
+    KeysetMetadataFetchingResponse& response) noexcept {
+  /**
+   * KeysetMetadata http response example:
+   *
+   *  Response Body
+   *    {"activeKeyCount":5}
+   *
+   */
+  try {
+    auto json_response =
+        nlohmann::json::parse(body.bytes->begin(), body.bytes->end());
+    response.active_key_count =
+        json_response.find(kKeysetActiveKeyCount).value().get<int>();
+  } catch (std::exception& e) {
+    auto execution_result = core::FailureExecutionResult(
+        core::errors::SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_JSON);
+    SCP_ERROR(kPrivateKeyFetcherProviderUtils, core::common::kZeroUuid,
+              execution_result, "Failed to parse keyset metadata Json: %s.",
+              e.what());
+    return execution_result;
+  }
+
   return SuccessExecutionResult();
 }
 

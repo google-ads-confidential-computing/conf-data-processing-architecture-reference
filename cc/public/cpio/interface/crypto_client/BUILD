@@ -39,8 +39,8 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/public/cpio/interface:type_def",
         "//cc/public/cpio/proto/crypto_service/v1:crypto_service_cc_proto",
-        "@tink_cc//:input_stream",
-        "@tink_cc//:output_stream",
+        "@tink_cc//tink:input_stream",
+        "@tink_cc//tink:output_stream",
     ],
 )
 
@@ -55,6 +55,7 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
         "//cc/cpio/client_providers/crypto_client_provider/src:crypto_client_provider_lib",
+        "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
         "//cc/public/cpio/adapters/common:adapter_utils",
         "//cc/public/cpio/interface:type_def",
         "//cc/public/cpio/proto/crypto_service/v1:crypto_service_cc_proto",

@@ -36,6 +36,8 @@
 
 using google::cmrt::sdk::kms_service::v1::DecryptRequest;
 using google::cmrt::sdk::kms_service::v1::DecryptResponse;
+using google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest;
+using google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse;
 using google::cmrt::sdk::private_key_service::v1::
     ListActiveEncryptionKeysRequest;
 using google::cmrt::sdk::private_key_service::v1::
@@ -80,6 +82,60 @@ ExecutionResult PrivateKeyClientProvider::Run() noexcept {
 
 ExecutionResult PrivateKeyClientProvider::Stop() noexcept {
   return SuccessExecutionResult();
+}
+
+void PrivateKeyClientProvider::GetKeysetMetadata(
+    core::AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>&
+        get_keyset_metadata_context) noexcept {
+  if (get_keyset_metadata_context.request->keyset_name().empty() ||
+      get_keyset_metadata_context.request->private_key_endpoint().empty()) {
+    get_keyset_metadata_context.result =
+        FailureExecutionResult(SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST);
+    SCP_ERROR_CONTEXT(kPrivateKeyClientProvider, get_keyset_metadata_context,
+                      get_keyset_metadata_context.result,
+                      "keyset_name or private_key_endpoint cannot be empty.");
+    get_keyset_metadata_context.Finish();
+    return;
+  }
+
+  auto request = make_shared<KeysetMetadataFetchingRequest>();
+  request->keyset_name =
+      make_shared<string>(get_keyset_metadata_context.request->keyset_name());
+  request->private_key_endpoint = make_shared<string>(
+      get_keyset_metadata_context.request->private_key_endpoint());
+  AsyncContext<KeysetMetadataFetchingRequest, KeysetMetadataFetchingResponse>
+      fetch_keyset_metadata_context(
+          move(request),
+          bind(&PrivateKeyClientProvider::OnFetchMetadataCallback, this,
+               get_keyset_metadata_context, _1),
+          get_keyset_metadata_context);
+
+  private_key_fetcher_->FetchKeysetMetadata(fetch_keyset_metadata_context);
+}
+
+void PrivateKeyClientProvider::OnFetchMetadataCallback(
+    AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>&
+        get_keyset_metadata_context,
+    AsyncContext<KeysetMetadataFetchingRequest, KeysetMetadataFetchingResponse>&
+        fetch_keyset_metadata_context) noexcept {
+  if (!fetch_keyset_metadata_context.result.Successful()) {
+    SCP_ERROR_CONTEXT(
+        kPrivateKeyClientProvider, get_keyset_metadata_context,
+        fetch_keyset_metadata_context.result,
+        "Failed to fetch the keyset metadata for keyset %s.",
+        get_keyset_metadata_context.request->keyset_name().c_str());
+    get_keyset_metadata_context.result = fetch_keyset_metadata_context.result;
+    get_keyset_metadata_context.Finish();
+    return;
+  }
+
+  GetKeysetMetadataResponse response;
+  response.set_active_key_count(
+      fetch_keyset_metadata_context.response->active_key_count);
+  get_keyset_metadata_context.response =
+      make_shared<GetKeysetMetadataResponse>(response);
+  get_keyset_metadata_context.result = SuccessExecutionResult();
+  get_keyset_metadata_context.Finish();
 }
 
 void PrivateKeyClientProvider::ListPrivateKeys(
@@ -549,6 +605,10 @@ static shared_ptr<KmsClientOptions> CreateKmsClientOptions(
   kms_client_options->gcp_kms_client_retry_total_retries =
       options->gcp_kms_client_retry_total_retries;
 
+  // Temporary flag to use the new GCP Error Code Converter. This is for KMS
+  // Client only.
+  kms_client_options->enable_new_gcp_error_code_converter =
+      options->enable_new_gcp_error_code_converter;
   return kms_client_options;
 }
 

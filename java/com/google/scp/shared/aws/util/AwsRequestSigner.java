@@ -46,6 +46,7 @@ import software.amazon.awssdk.utils.StringInputStream;
  */
 public final class AwsRequestSigner {
   private AwsRequestSigner() {}
+
   /**
    * Clones an Apache HTTP request using the AWS signature V4 process, adding AWS headers.
    *
@@ -116,6 +117,7 @@ public final class AwsRequestSigner {
   private static SdkHttpFullRequest changePort(SdkHttpFullRequest request, int port) {
     return request.toBuilder().port(port).build();
   }
+
   /**
    * Consumes the input stream on the provided HTTP request (if it exists) and returns it as a
    * string. Returns empty Optional if there is no body associated with the request.

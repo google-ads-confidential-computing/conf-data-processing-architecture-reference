@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-TF_BIN="${TF_BIN:-terraform_1_9_0}"
+TF_BIN="${TF_BIN:-terraform_1_12_0}"
 
 set -eu
 

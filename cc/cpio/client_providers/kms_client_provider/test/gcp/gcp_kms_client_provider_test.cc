@@ -32,6 +32,7 @@
 #include "core/utils/src/base64.h"
 #include "cpio/client_providers/kms_client_provider/mock/gcp/mock_gcp_key_management_service_client.h"
 #include "cpio/client_providers/kms_client_provider/src/gcp/error_codes.h"
+#include "cpio/common/src/gcp/error_codes.h"
 #include "google/cloud/status.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 
@@ -56,6 +57,7 @@ using google::scp::core::errors::
     SC_GCP_KMS_CLIENT_PROVIDER_CIPHERTEXT_NOT_FOUND;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_KEY_ARN_NOT_FOUND;
+using google::scp::core::errors::SC_GCP_PERMISSION_DENIED;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::TestLoggingUtils;
@@ -121,6 +123,7 @@ class GcpKmsClientProviderTest
     options->enable_gcp_kms_client_cache = false;
     options->enable_gcp_kms_client_retries = true;
     options->gcp_kms_client_retry_total_retries = kGcpKmsDecryptTotalRetries;
+    options->enable_new_gcp_error_code_converter = false;
     mock_gcp_kms_factory_ = make_shared<MockGcpKmsFactory>();
     EXPECT_SUCCESS(io_async_executor_->Init());
     EXPECT_SUCCESS(io_async_executor_->Run());
@@ -502,6 +505,29 @@ TEST_F(GcpKmsClientProviderTest, ShouldNotRetryKmsDecryptUponFailure) {
 
   DecryptFailure(client_.get(), kWipProvider,
                  SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);
+}
+
+TEST_F(GcpKmsClientProviderTest,
+       ShouldNotRetryKmsDecryptUponFailureAndReturnGcpErrorCode) {
+  auto options = make_shared<KmsClientOptions>();
+  options->enable_gcp_kms_client_retries = true;
+  options->enable_new_gcp_error_code_converter = true;
+  auto client = make_unique<GcpKmsClientProvider>(
+      io_async_executor_, cpu_async_executor_, options, mock_gcp_kms_factory_);
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
+  EXPECT_CALL(*mock_gcp_kms_factory_, CreateGcpKeyManagementServiceClient(
+                                          kWipProvider, kServiceAccount))
+      .Times(Exactly(1))
+      .WillOnce(Return(mock_gcp_key_management_service_client_));
+  ExpectCallDecryptWithFailures(
+      mock_gcp_key_management_service_client_,
+      /* failure_return_times */ 1,
+      StatusCode::kPermissionDenied);  // Non-retryable code
+
+  DecryptFailure(client.get(), kWipProvider, SC_GCP_PERMISSION_DENIED);
+
+  EXPECT_SUCCESS(client->Stop());
 }
 
 TEST_F(GcpKmsClientProviderTest, ShouldNotRetryKmsDecryptIfRetriesDisabled) {

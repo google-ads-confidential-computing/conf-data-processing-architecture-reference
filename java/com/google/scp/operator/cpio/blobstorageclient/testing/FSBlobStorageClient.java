@@ -134,7 +134,6 @@ public class FSBlobStorageClient implements BlobStorageClient {
     deleteBlob(location);
   }
 
-
   @Override
   public BlobMetadata getBlobMetadata(DataLocation location) {
     throw new UnsupportedOperationException();

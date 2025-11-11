@@ -168,6 +168,7 @@ using google::scp::core::errors::
 using google::scp::core::errors::
     SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_ENCRYPTION_ALGORITHM;
 using google::scp::core::utils::Base64Decode;
+using google::scp::cpio::CryptoClientOptions;
 using std::bind;
 using std::istream;
 using std::isxdigit;
@@ -425,25 +426,25 @@ CryptoClientProvider::CryptoClientProvider(
             kPrimitiveWithCacheLifetimeSeconds,
             true /* extend_entry_lifetime_on_access */,
             true /* block_entry_while_eviction */, on_garbage_collection_func,
-            async_executor);
+            async_executor, options_->use_read_lock_for_cache_read);
     hybrid_decrypt_primitive_cache_ =
         make_unique<AutoExpiryConcurrentMap<string, shared_ptr<HybridDecrypt>>>(
             kPrimitiveWithCacheLifetimeSeconds,
             true /* extend_entry_lifetime_on_access */,
             true /* block_entry_while_eviction */, on_garbage_collection_func,
-            async_executor);
+            async_executor, options_->use_read_lock_for_cache_read);
     mac_primitive_cache_ =
         make_unique<AutoExpiryConcurrentMap<string, shared_ptr<Mac>>>(
             kPrimitiveWithCacheLifetimeSeconds,
             true /* extend_entry_lifetime_on_access */,
             true /* block_entry_while_eviction */, on_garbage_collection_func,
-            async_executor);
+            async_executor, options_->use_read_lock_for_cache_read);
     aead_primitive_cache_ =
         make_unique<AutoExpiryConcurrentMap<string, shared_ptr<Aead>>>(
             kPrimitiveWithCacheLifetimeSeconds,
             true /* extend_entry_lifetime_on_access */,
             true /* block_entry_while_eviction */, on_garbage_collection_func,
-            async_executor);
+            async_executor, options_->use_read_lock_for_cache_read);
   }
 }
 

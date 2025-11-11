@@ -210,8 +210,8 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
     vendMigrationKeyValidation(ImmutableSet.of(SET_NAME), MIGRATION_KEYSET);
   }
 
-  private void vendMigrationKeyValidation(
-      ImmutableSet<String> allowedMigrators, String keySet) throws Exception {
+  private void vendMigrationKeyValidation(ImmutableSet<String> allowedMigrators, String keySet)
+      throws Exception {
     // When
     var taskWithMigrators =
         new GetEncryptedPrivateKeyTask(
@@ -227,7 +227,7 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
     // Then
     EncryptionKeyProto.EncryptionKey responseKey = getResponseKey();
     assertThat(responseKey.getKeyData(0).getKeyMaterial()).isEqualTo(keySet);
-    verify(request, times(2)).getFirstHeader("Authorization");
+    verify(request, times(1)).getFirstHeader("Authorization");
   }
 
   /** Helper to extract the response body and parse it into an EncryptionKey proto. */

@@ -73,6 +73,7 @@ using testing::Return;
 using testing::SetArgPointee;
 using testing::UnorderedElementsAre;
 
+namespace google::scp::cpio::client_providers::test {
 namespace {
 constexpr char kAccountIdentity[] = "accountIdentity";
 constexpr char kRegion[] = "us-east-1";
@@ -91,12 +92,13 @@ constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
 constexpr char kKeySetNameSuffix[] = "/sets";
 constexpr char kListKeysByTimeUri[] = ":recent";
 constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
-constexpr char kActiveKeysSuffix[] = "activeKeys";
+constexpr char kActiveKeysSuffix[] = "/activeKeys";
 constexpr char kActiveKeyQueryTimeRangePattern[] =
     "startEpochMillis=%d&endEpochMillis=%d";
+constexpr char kKeysetTestName[] = "test-keyset";
+constexpr char kKeysetMetadataUrlSuffix[] = "/keysetMetadata";
 }  // namespace
 
-namespace google::scp::cpio::client_providers::test {
 class GcpPrivateKeyFetcherProviderTest : public ScpTestBase {
  protected:
   GcpPrivateKeyFetcherProviderTest()
@@ -116,6 +118,12 @@ class GcpPrivateKeyFetcherProviderTest : public ScpTestBase {
     endpoint->set_account_identity(kAccountIdentity);
     endpoint->set_gcp_cloud_function_url(kPrivateKeyCloudfunctionUri);
     request_->key_endpoint = move(endpoint);
+
+    keyset_metadata_request_ = make_shared<KeysetMetadataFetchingRequest>();
+    keyset_metadata_request_->private_key_endpoint =
+        make_shared<string>(kPrivateKeyBaseUri);
+    keyset_metadata_request_->keyset_name =
+        make_shared<string>(kKeysetTestName);
   }
 
   ~GcpPrivateKeyFetcherProviderTest() {
@@ -138,6 +146,7 @@ class GcpPrivateKeyFetcherProviderTest : public ScpTestBase {
   shared_ptr<MockAuthTokenProvider> credentials_provider_;
   unique_ptr<GcpPrivateKeyFetcherProvider> gcp_private_key_fetcher_provider_;
   shared_ptr<PrivateKeyFetchingRequest> request_;
+  shared_ptr<KeysetMetadataFetchingRequest> keyset_metadata_request_;
 };
 
 TEST_F(GcpPrivateKeyFetcherProviderTest, MissingHttpClient) {
@@ -162,6 +171,43 @@ TEST_F(GcpPrivateKeyFetcherProviderTest, MissingCredentialsProvider) {
 MATCHER_P(TargetAudienceUriEquals, expected_target_audience_uri, "") {
   return ExplainMatchResult(*arg.request->token_target_audience_uri,
                             expected_target_audience_uri, result_listener);
+}
+
+TEST_F(GcpPrivateKeyFetcherProviderTest, SignHttpRequestForKeysetMetadata) {
+  atomic<bool> condition = false;
+
+  EXPECT_CALL(*credentials_provider_,
+              GetSessionTokenForTargetAudience(
+                  TargetAudienceUriEquals(kPrivateKeyBaseUri)))
+      .WillOnce([=](AsyncContext<GetSessionTokenForTargetAudienceRequest,
+                                 GetSessionTokenResponse>& context) {
+        context.response = make_shared<GetSessionTokenResponse>();
+        context.response->session_token =
+            make_shared<string>(kSessionTokenMock);
+        context.result = SuccessExecutionResult();
+        context.Finish();
+      });
+
+  AsyncContext<KeysetMetadataFetchingRequest, HttpRequest> context(
+      keyset_metadata_request_,
+      [&](AsyncContext<KeysetMetadataFetchingRequest, HttpRequest>& context) {
+        EXPECT_SUCCESS(context.result);
+        const auto& signed_request = *context.response;
+        EXPECT_EQ(signed_request.method, HttpMethod::GET);
+        EXPECT_THAT(signed_request.headers,
+                    Pointee(UnorderedElementsAre(Pair(
+                        kAuthorizationHeaderKey,
+                        absl::StrCat(kBearerTokenPrefix, kSessionTokenMock)))));
+        string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberBetaSuffix,
+                                  kKeySetNameSuffix, "/", kKeysetTestName,
+                                  kKeysetMetadataUrlSuffix);
+        EXPECT_EQ(*signed_request.path, uri);
+        condition = true;
+        return SuccessExecutionResult();
+      });
+
+  gcp_private_key_fetcher_provider_->SignHttpRequest(context);
+  WaitUntil([&]() { return condition.load(); });
 }
 
 TEST_F(GcpPrivateKeyFetcherProviderTest, SignHttpRequestForKeyId) {
@@ -329,15 +375,14 @@ TEST_F(GcpPrivateKeyFetcherProviderTest,
       [&](AsyncContext<PrivateKeyFetchingRequest, HttpRequest>& context) {
         EXPECT_SUCCESS(context.result);
         const auto& signed_request_ = *context.response;
-
         EXPECT_EQ(signed_request_.method, HttpMethod::GET);
         EXPECT_THAT(signed_request_.headers,
                     Pointee(UnorderedElementsAre(Pair(
                         kAuthorizationHeaderKey,
                         absl::StrCat(kBearerTokenPrefix, kSessionTokenMock)))));
         string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberBetaSuffix,
-                                  kEncryptionKeyUrlSuffix, kKeySetNameSuffix,
-                                  "/", kKeySetName, "/", kActiveKeysSuffix);
+                                  kKeySetNameSuffix, "/", kKeySetName,
+                                  kActiveKeysSuffix);
         string query =
             absl::StrFormat(kActiveKeyQueryTimeRangePattern, 1111, 2222);
         EXPECT_EQ(*signed_request_.path, uri);
@@ -388,8 +433,8 @@ TEST_F(GcpPrivateKeyFetcherProviderTest,
                         kAuthorizationHeaderKey,
                         absl::StrCat(kBearerTokenPrefix, kSessionTokenMock)))));
         string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberBetaSuffix,
-                                  kEncryptionKeyUrlSuffix, kKeySetNameSuffix,
-                                  "/", kKeySetName, "/", kActiveKeysSuffix);
+                                  kKeySetNameSuffix, "/", kKeySetName,
+                                  kActiveKeysSuffix);
         EXPECT_EQ(*signed_request_.path, uri);
 
         // Extracts the start_time and end_time values from the query.

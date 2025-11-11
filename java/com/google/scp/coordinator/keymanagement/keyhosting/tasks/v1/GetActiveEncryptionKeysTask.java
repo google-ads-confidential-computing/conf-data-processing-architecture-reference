@@ -94,10 +94,8 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
     response.setBody(
         GetActiveEncryptionKeysResponse.newBuilder()
             .addAllKeys(
-                keys
-                    .map(
-                        key ->
-                            vendAccordingToConfig(key, request, allowedMigrators, logMetricHelper))
+                keys.map(
+                        key -> vendAccordingToConfig(key, email, allowedMigrators, logMetricHelper))
                     .map(EncryptionKeyConverter::toApiEncryptionKey)
                     .collect(toImmutableList())));
   }
@@ -115,9 +113,8 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
   // ACTIVATION_COLUMN <= @NowParam AND ... AND
   // (EXPIRY_TIME_COLUMN > @nowParam OR EXPIRY_TIME_COLUMN IS NULL)
   private static Boolean isKeyActive(EncryptionKey key, long startMilli, long endMilli) {
-    return
-        key.getActivationTime() <= endMilli &&
-            (key.getExpirationTime() == 0 || key.getExpirationTime() > startMilli);
+    return key.getActivationTime() <= endMilli
+        && (key.getExpirationTime() == 0 || key.getExpirationTime() > startMilli);
   }
 
   private boolean isCacheEnabled(String email, String setName) {

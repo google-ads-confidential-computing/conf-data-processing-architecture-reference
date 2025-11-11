@@ -38,7 +38,6 @@ public interface CreateSplitKeyTask {
    * @param count the number of keys is ensured to be active.
    * @param validityInDays the number of days each key should be active/valid for before expiring.
    * @param ttlInDays the number of days each key should be stored in the database.
-   * @param noRefreshWindow determines if there is a refresh window when generating keys
    * @param activation the instant when the key should be active for encryption.
    */
   void createSplitKey(
@@ -47,19 +46,17 @@ public interface CreateSplitKeyTask {
       int count,
       int validityInDays,
       int ttlInDays,
-      boolean noRefreshWindow,
       Instant activation)
       throws ServiceException;
 
   /**
    * Ensures {@code numDesiredKeys} active keys are currently available by creating new immediately
-   * active keys to meet that number. For each active key, ensures that there is a corresponding
-   * replacement key that will be active {@link #KEY_REFRESH_WINDOW_DAYS} before the former expires.
+   * active keys to meet that number.
    *
    * <p>The created immediately active keys expire in {@code validityInDays} days and will be in the
-   * key database for {@code ttlInDays} days. The subsequent replacement keys will be active {@link
-   * #KEY_REFRESH_WINDOW_DAYS} before a currently active key expires, the replacement key will also
-   * expire in {@code validityInDays} and in the key database for {@code ttlInDays} days.
+   * key database for {@code ttlInDays} days. The subsequent replacement keys will be active when
+   * the currently active key expires, the replacement key will also expire in {@code
+   * validityInDays} and in the key database for {@code ttlInDays} days.
    *
    * @param setName the name of the key set the keys belong to.
    * @param tinkTemplate the Tink template used for key generation.
@@ -68,7 +65,6 @@ public interface CreateSplitKeyTask {
    * @param ttlInDays the number of days each key should be stored in the database.
    * @param createMaxDaysAhead the number of days ahead that a key can be created
    * @param overlapPeriodDays the number of days each consecutive active set should overlap
-   * @param noRefreshWindow determines if there is a refresh window when generating keys
    */
   void create(
       String setName,
@@ -77,7 +73,6 @@ public interface CreateSplitKeyTask {
       int validityInDays,
       int ttlInDays,
       int createMaxDaysAhead,
-      int overlapPeriodDays,
-      boolean noRefreshWindow)
+      int overlapPeriodDays)
       throws ServiceException;
 }

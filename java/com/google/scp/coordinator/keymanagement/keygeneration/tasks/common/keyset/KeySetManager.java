@@ -33,7 +33,6 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationCreateMaxDaysAhead;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationKeyCount;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationNoRefreshWindow;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationTtlInDays;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationValidityInDays;
 import com.google.scp.shared.util.KeyParams;
@@ -55,7 +54,6 @@ public final class KeySetManager {
   private final int defaultValidityInDays;
   private final int defaultTtlInDays;
   private final int defaultCreateMaxDaysAhead;
-  private final boolean defaultNoRefreshWindow;
   private final String defaultTemplate;
   private final Duration configCacheDuration;
   private final ImmutableList<KeySetConfig> defaultConfig;
@@ -67,13 +65,11 @@ public final class KeySetManager {
       @KeyGenerationValidityInDays Integer validityInDays,
       @KeyGenerationTtlInDays Integer ttlInDays,
       @KeyGenerationCreateMaxDaysAhead Integer createMaxDaysAhead,
-      @KeyGenerationNoRefreshWindow Boolean noRefreshWindow,
       ConfigCacheDuration configCacheDuration) {
     defaultCount = count;
     defaultValidityInDays = validityInDays;
     defaultTtlInDays = ttlInDays;
     defaultCreateMaxDaysAhead = createMaxDaysAhead;
-    defaultNoRefreshWindow = noRefreshWindow;
     defaultTemplate = KeyParams.DEFAULT_TINK_TEMPLATE;
     this.configCacheDuration = configCacheDuration.value;
     configFetcher = createFetcher(configProvider);
@@ -86,8 +82,7 @@ public final class KeySetManager {
                 defaultValidityInDays,
                 defaultTtlInDays,
                 defaultCreateMaxDaysAhead,
-                DEFAULT_OVERLAP_PERIOD_DAYS,
-                defaultNoRefreshWindow));
+                DEFAULT_OVERLAP_PERIOD_DAYS));
   }
 
   /** Returns all key set configurations. */
@@ -106,8 +101,7 @@ public final class KeySetManager {
                     keySet.validityInDays().orElse(defaultValidityInDays),
                     keySet.ttlInDays().orElse(defaultTtlInDays),
                     keySet.createMaxDaysAhead().orElse(defaultCreateMaxDaysAhead),
-                    keySet.overlapPeriodDays().orElse(DEFAULT_OVERLAP_PERIOD_DAYS),
-                    keySet.noRefreshWindow().orElse(defaultNoRefreshWindow)))
+                    keySet.overlapPeriodDays().orElse(DEFAULT_OVERLAP_PERIOD_DAYS)))
         .collect(toImmutableList());
   }
 

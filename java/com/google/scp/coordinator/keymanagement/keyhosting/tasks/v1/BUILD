@@ -28,6 +28,7 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/converter",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
+        "//java/com/google/scp/coordinator/keymanagement/shared/model",
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/exception",

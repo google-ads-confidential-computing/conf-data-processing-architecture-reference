@@ -40,6 +40,8 @@
 
 using google::cmrt::sdk::kms_service::v1::DecryptRequest;
 using google::cmrt::sdk::kms_service::v1::DecryptResponse;
+using google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest;
+using google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse;
 using google::cmrt::sdk::private_key_service::v1::
     ListActiveEncryptionKeysRequest;
 using google::cmrt::sdk::private_key_service::v1::
@@ -377,6 +379,110 @@ class PrivateKeyClientProviderTest : public ScpTestBase {
   shared_ptr<ListActiveEncryptionKeysRequest>
       list_active_encryption_keys_request_;
 };
+
+TEST_F(PrivateKeyClientProviderTest, GetKeysetMetadataSuccess) {
+  EXPECT_CALL(*mock_private_key_fetcher, FetchKeysetMetadata)
+      .WillOnce([=](AsyncContext<KeysetMetadataFetchingRequest,
+                                 KeysetMetadataFetchingResponse>& context) {
+        EXPECT_THAT(*context.request->keyset_name, kTestKeySetName);
+        EXPECT_THAT(*context.request->private_key_endpoint, kTestEndpoint1);
+        KeysetMetadataFetchingResponse response;
+        response.active_key_count = 5;
+        context.response =
+            make_shared<KeysetMetadataFetchingResponse>(response);
+        context.result = SuccessExecutionResult();
+        context.Finish();
+        return SuccessExecutionResult();
+      });
+
+  GetKeysetMetadataRequest keyset_metadata_request;
+  keyset_metadata_request.set_keyset_name(kTestKeySetName);
+  keyset_metadata_request.set_private_key_endpoint(kTestEndpoint1);
+
+  atomic<size_t> response_count = 0;
+  AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>
+      keyset_metadata_context(
+          make_shared<GetKeysetMetadataRequest>(keyset_metadata_request),
+          [&](AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>&
+                  context) {
+            EXPECT_THAT(context.response->active_key_count(), 5);
+            EXPECT_SUCCESS(context.result);
+            response_count.fetch_add(1);
+          });
+
+  private_key_client_provider->GetKeysetMetadata(keyset_metadata_context);
+  WaitUntil([&]() { return response_count.load() == 1; });
+}
+
+TEST_F(PrivateKeyClientProviderTest, GetKeysetMetadataFailure) {
+  EXPECT_CALL(*mock_private_key_fetcher, FetchKeysetMetadata)
+      .WillOnce([=](AsyncContext<KeysetMetadataFetchingRequest,
+                                 KeysetMetadataFetchingResponse>& context) {
+        EXPECT_THAT(*context.request->keyset_name, kTestKeySetName);
+        EXPECT_THAT(*context.request->private_key_endpoint, kTestEndpoint1);
+        context.result = FailureExecutionResult(SC_UNKNOWN);
+        context.Finish();
+        return SuccessExecutionResult();
+      });
+
+  GetKeysetMetadataRequest keyset_metadata_request;
+  keyset_metadata_request.set_keyset_name(kTestKeySetName);
+  keyset_metadata_request.set_private_key_endpoint(kTestEndpoint1);
+
+  atomic<size_t> response_count = 0;
+  AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>
+      keyset_metadata_context(
+          make_shared<GetKeysetMetadataRequest>(keyset_metadata_request),
+          [&](AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>&
+                  context) {
+            EXPECT_THAT(context.result,
+                        ResultIs(FailureExecutionResult(SC_UNKNOWN)));
+            response_count.fetch_add(1);
+          });
+
+  private_key_client_provider->GetKeysetMetadata(keyset_metadata_context);
+  WaitUntil([&]() { return response_count.load() == 1; });
+}
+
+TEST_F(PrivateKeyClientProviderTest, GetKeysetMetadataFailedWithEmptyEndpoint) {
+  GetKeysetMetadataRequest keyset_metadata_request;
+  keyset_metadata_request.set_keyset_name(kTestKeySetName);
+
+  atomic<size_t> response_count = 0;
+  AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>
+      keyset_metadata_context(
+          make_shared<GetKeysetMetadataRequest>(keyset_metadata_request),
+          [&](AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>&
+                  context) {
+            EXPECT_THAT(context.result,
+                        ResultIs(FailureExecutionResult(
+                            SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST)));
+            response_count.fetch_add(1);
+          });
+
+  private_key_client_provider->GetKeysetMetadata(keyset_metadata_context);
+  WaitUntil([&]() { return response_count.load() == 1; });
+}
+
+TEST_F(PrivateKeyClientProviderTest, GetKeysetMetadataFailedWithEmptyKeyset) {
+  GetKeysetMetadataRequest keyset_metadata_request;
+  keyset_metadata_request.set_private_key_endpoint(kTestEndpoint1);
+
+  atomic<size_t> response_count = 0;
+  AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>
+      keyset_metadata_context(
+          make_shared<GetKeysetMetadataRequest>(keyset_metadata_request),
+          [&](AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>&
+                  context) {
+            EXPECT_THAT(context.result,
+                        ResultIs(FailureExecutionResult(
+                            SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST)));
+            response_count.fetch_add(1);
+          });
+
+  private_key_client_provider->GetKeysetMetadata(keyset_metadata_context);
+  WaitUntil([&]() { return response_count.load() == 1; });
+}
 
 TEST_F(PrivateKeyClientProviderTest, ListPrivateKeysByIdsSuccess) {
   auto mock_result = SuccessExecutionResult();

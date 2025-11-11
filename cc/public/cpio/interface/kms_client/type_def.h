@@ -34,6 +34,9 @@ struct KmsClientOptions {
   std::chrono::milliseconds gcp_kms_client_retry_initial_interval =
       std::chrono::milliseconds(100);
   std::size_t gcp_kms_client_retry_total_retries = 4;
+
+  // Temporary flag to use the new GCP Error Code Converter.
+  bool enable_new_gcp_error_code_converter = false;
 };
 }  // namespace google::scp::cpio
 

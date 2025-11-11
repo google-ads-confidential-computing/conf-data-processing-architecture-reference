@@ -59,8 +59,7 @@ public final class ActuateKeySetTask {
             config.getValidityInDays(),
             config.getTtlInDays(),
             config.getCreateMaxDaysAhead(),
-            config.getOverlapPeriodDays(),
-            config.getNoRefreshWindow());
+            config.getOverlapPeriodDays());
       } catch (Exception exception) {
         if (exception instanceof InterruptedException) {
           Thread.currentThread().interrupt();
@@ -73,6 +72,6 @@ public final class ActuateKeySetTask {
 
   private String format(String setName, String errorReason) {
     return logMetricHelper.format(
-        "key_generation/error", ImmutableMap.of("setName", setName, "errorReason", errorReason));
+        "error", ImmutableMap.of("setName", setName, "errorReason", errorReason));
   }
 }

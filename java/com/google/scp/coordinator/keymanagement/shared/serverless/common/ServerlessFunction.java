@@ -52,16 +52,17 @@ public abstract class ServerlessFunction extends AbstractModule {
 
   private Injector injector() {
     if (INJECTOR == null) {
-      INJECTOR = Guice.createInjector(
-          new AbstractModule() {
-            @Override
-            protected void configure() {
-              // Binder that maps base URLs to API tasks that each services an endpoint.
-              MapBinder.newMapBinder(
-                  binder(), new TypeLiteral<String>() {}, new TypeLiteral<List<ApiTask>>() {});
-              install(ServerlessFunction.this);
-            }
-          });
+      INJECTOR =
+          Guice.createInjector(
+              new AbstractModule() {
+                @Override
+                protected void configure() {
+                  // Binder that maps base URLs to API tasks that each services an endpoint.
+                  MapBinder.newMapBinder(
+                      binder(), new TypeLiteral<String>() {}, new TypeLiteral<List<ApiTask>>() {});
+                  install(ServerlessFunction.this);
+                }
+              });
     }
     return INJECTOR;
   }

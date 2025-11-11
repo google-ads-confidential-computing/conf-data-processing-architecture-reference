@@ -24,6 +24,7 @@
 #include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
 #include "core/utils/src/base64.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "cpio/common/src/gcp/gcp_utils.h"
 #include "google/cloud/kms/key_management_client.h"
 #include "google/cloud/status.h"
 #include "public/cpio/interface/kms_client/type_def.h"
@@ -56,6 +57,7 @@ using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_CLOUD_UNAVAILABLE;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_KEY_ARN_NOT_FOUND;
 using google::scp::core::utils::Base64Decode;
+using google::scp::cpio::common::GcpUtils;
 using std::bind;
 using std::make_shared;
 using std::move;
@@ -179,10 +181,9 @@ GcpKmsClientProvider::GetOrCreateGcpKeyManagementServiceClient(
   return client_found;
 }
 
-bool GcpKmsClientProvider::ShouldRetryOnStatus(
-    cloud::StatusCode status_code) noexcept {
+bool GcpKmsClientProvider::ShouldRetryOnStatus(cloud::Status status) noexcept {
   return kms_client_options_->enable_gcp_kms_client_retries &&
-         IsStatusCodeRetriable(status_code);
+         IsStatusCodeRetriable(status.code());
 }
 
 bool GcpKmsClientProvider::IsStatusCodeRetriable(
@@ -214,25 +215,30 @@ void GcpKmsClientProvider::AeadDecrypt(
 
   auto response_or = gcp_kms->Decrypt(req);
   if (!response_or) {
-    if (ShouldRetryOnStatus(response_or.status().code())) {
+    const auto status = response_or.status();
+    if (ShouldRetryOnStatus(status)) {
       SCP_INFO_CONTEXT(kGcpKmsClientProvider, decrypt_context,
                        "Decryption failed with RETRYABLE code %s and error "
                        "message %s. Retry attempt: %d",
-                       StatusCodeToString(response_or.status().code()).c_str(),
-                       response_or.status().message().c_str(),
-                       decrypt_context.retry_count);
+                       StatusCodeToString(status.code()).c_str(),
+                       status.message().c_str(), decrypt_context.retry_count);
       auto execution_result =
           RetryExecutionResult(SC_GCP_KMS_CLIENT_PROVIDER_CLOUD_UNAVAILABLE);
       FinishContext(execution_result, decrypt_context, cpu_async_executor_);
       return;
     }
 
-    auto execution_result =
-        FailureExecutionResult(SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);
+    ExecutionResult execution_result;
+    if (kms_client_options_->enable_new_gcp_error_code_converter) {
+      execution_result = GcpUtils::GcpErrorConverter(status);
+    } else {
+      execution_result =
+          FailureExecutionResult(SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);
+    }
     SCP_ERROR_CONTEXT(kGcpKmsClientProvider, decrypt_context, execution_result,
                       "Decryption failed with code %s and error message %s.",
-                      StatusCodeToString(response_or.status().code()).c_str(),
-                      response_or.status().message().c_str());
+                      StatusCodeToString(status.code()).c_str(),
+                      status.message().c_str());
     FinishContext(execution_result, decrypt_context, cpu_async_executor_);
     return;
   }

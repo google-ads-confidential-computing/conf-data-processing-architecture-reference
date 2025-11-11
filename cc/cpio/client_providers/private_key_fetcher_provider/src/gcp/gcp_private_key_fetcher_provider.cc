@@ -51,14 +51,12 @@ using std::vector;
 using std::placeholders::_1;
 
 namespace {
-constexpr char kGcpPrivateKeyFetcherProvider[] = "GcpPrivateKeyFetcherProvider";
-constexpr char kAuthorizationHeaderKey[] = "Authorization";
-constexpr char kBearerTokenPrefix[] = "Bearer ";
 constexpr char kVersionNumberBetaSuffix[] = "/v1beta";
 constexpr char kVersionNumberSuffix[] = "/v1";
 constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
 constexpr char kActiveEncryptionKeyUrlSuffix[] = "/activeKeys";
-constexpr char kKeySetName[] = "sets";
+constexpr char kKeysetMetadataUrlSuffix[] = "/keysetMetadata";
+constexpr char kKeySetPrefix[] = "/sets";
 constexpr char kListKeysByTimeUri[] = ":recent";
 constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
 constexpr char kActiveKeyQueryTimeRangePattern[] =
@@ -82,6 +80,34 @@ ExecutionResult GcpPrivateKeyFetcherProvider::Init() noexcept {
 }
 
 void GcpPrivateKeyFetcherProvider::SignHttpRequest(
+    core::AsyncContext<KeysetMetadataFetchingRequest, core::HttpRequest>&
+        sign_request_context) noexcept {
+  auto request = make_shared<GetSessionTokenForTargetAudienceRequest>();
+  request->token_target_audience_uri =
+      sign_request_context.request->private_key_endpoint;
+  AsyncContext<GetSessionTokenForTargetAudienceRequest, GetSessionTokenResponse>
+      get_token_context(
+          move(request),
+          bind(&GcpPrivateKeyFetcherProvider::OnGetSessionTokenCallback<
+                   KeysetMetadataFetchingRequest>,
+               this, sign_request_context, _1),
+          sign_request_context);
+
+  auth_token_provider_->GetSessionTokenForTargetAudience(get_token_context);
+}
+
+shared_ptr<core::HttpRequest> GcpPrivateKeyFetcherProvider::CreateHttpRequest(
+    const KeysetMetadataFetchingRequest& request) noexcept {
+  auto http_request = make_shared<HttpRequest>();
+  http_request->method = HttpMethod::GET;
+  string full_uri = absl::StrCat(
+      *request.private_key_endpoint, kVersionNumberBetaSuffix, kKeySetPrefix,
+      "/", *request.keyset_name, kKeysetMetadataUrlSuffix);
+  http_request->path = make_shared<Uri>(full_uri);
+  return http_request;
+}
+
+void GcpPrivateKeyFetcherProvider::SignHttpRequest(
     AsyncContext<PrivateKeyFetchingRequest, core::HttpRequest>&
         sign_request_context) noexcept {
   auto request = make_shared<GetSessionTokenForTargetAudienceRequest>();
@@ -91,38 +117,12 @@ void GcpPrivateKeyFetcherProvider::SignHttpRequest(
   AsyncContext<GetSessionTokenForTargetAudienceRequest, GetSessionTokenResponse>
       get_token_context(
           move(request),
-          bind(&GcpPrivateKeyFetcherProvider::OnGetSessionTokenCallback, this,
-               sign_request_context, _1),
+          bind(&GcpPrivateKeyFetcherProvider::OnGetSessionTokenCallback<
+                   PrivateKeyFetchingRequest>,
+               this, sign_request_context, _1),
           sign_request_context);
 
   auth_token_provider_->GetSessionTokenForTargetAudience(get_token_context);
-}
-
-void GcpPrivateKeyFetcherProvider::OnGetSessionTokenCallback(
-    AsyncContext<PrivateKeyFetchingRequest, core::HttpRequest>&
-        sign_request_context,
-    AsyncContext<GetSessionTokenForTargetAudienceRequest,
-                 GetSessionTokenResponse>& get_token_context) noexcept {
-  if (!get_token_context.result.Successful()) {
-    SCP_ERROR_CONTEXT(
-        kGcpPrivateKeyFetcherProvider, sign_request_context,
-        get_token_context.result,
-        "Failed to get the access token for audience target %s.",
-        get_token_context.request->token_target_audience_uri->c_str());
-    sign_request_context.result = get_token_context.result;
-    sign_request_context.Finish();
-    return;
-  }
-
-  const auto& access_token = *get_token_context.response->session_token;
-  auto http_request = CreateHttpRequest(*sign_request_context.request);
-  http_request->headers = make_shared<core::HttpHeaders>();
-  http_request->headers->insert(
-      {string(kAuthorizationHeaderKey),
-       absl::StrCat(kBearerTokenPrefix, access_token)});
-  sign_request_context.response = move(http_request);
-  sign_request_context.result = SuccessExecutionResult();
-  sign_request_context.Finish();
 }
 
 shared_ptr<HttpRequest> GcpPrivateKeyFetcherProvider::CreateHttpRequest(
@@ -145,9 +145,9 @@ shared_ptr<HttpRequest> GcpPrivateKeyFetcherProvider::CreateHttpRequest(
   }
   if ((!request.key_id || request.key_id->empty()) &&
       request.max_age_seconds == 0) {
-    base_uri = absl::StrCat(
-        endpoint, kVersionNumberBetaSuffix, kEncryptionKeyUrlSuffix, "/",
-        kKeySetName, "/", *request.key_set_name, kActiveEncryptionKeyUrlSuffix);
+    base_uri =
+        absl::StrCat(endpoint, kVersionNumberBetaSuffix, kKeySetPrefix, "/",
+                     *request.key_set_name, kActiveEncryptionKeyUrlSuffix);
     http_request->path = make_shared<Uri>(base_uri);
     http_request->query = make_shared<string>(absl::StrFormat(
         kActiveKeyQueryTimeRangePattern, request.active_key_query_start_time_ms,
@@ -155,7 +155,7 @@ shared_ptr<HttpRequest> GcpPrivateKeyFetcherProvider::CreateHttpRequest(
     return http_request;
   }
   base_uri =
-      absl::StrCat(endpoint, kVersionNumberBetaSuffix, "/", kKeySetName, "/");
+      absl::StrCat(endpoint, kVersionNumberBetaSuffix, kKeySetPrefix, "/");
   if (request.key_set_name) {
     absl::StrAppend(&base_uri, *request.key_set_name);
   }

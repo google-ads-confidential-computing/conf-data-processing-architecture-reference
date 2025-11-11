@@ -143,10 +143,7 @@ public final class GcsBlobStorageClient implements BlobStorageClient {
                 "Blob not found. Bucket: %s Key: %s", blobLocation.bucket(), blobLocation.key());
         throw new BlobStorageClientException(errorMessage, ErrorReason.BLOB_NOT_FOUND);
       }
-      return BlobMetadata.builder()
-          .setDataLocation(location)
-          .setSize(blob.getSize())
-          .build();
+      return BlobMetadata.builder().setDataLocation(location).setSize(blob.getSize()).build();
     } catch (BlobStorageClientException e) {
       throw e;
     } catch (Exception e) {

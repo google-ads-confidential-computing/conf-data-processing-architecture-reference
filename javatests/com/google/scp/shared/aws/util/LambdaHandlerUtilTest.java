@@ -52,10 +52,10 @@ public final class LambdaHandlerUtilTest {
     String publicKey = randomUUID().toString();
     Map<String, String> testHeaders =
         ImmutableMap.of(
-            /* k0=*/ "header0",
-            /* v0=*/ randomUUID().toString(),
-            /* k1=*/ "header1",
-            /* v1=*/ randomUUID().toString());
+            /* k0= */ "header0",
+            /* v0= */ randomUUID().toString(),
+            /* k1= */ "header1",
+            /* v1= */ randomUUID().toString());
 
     GetActivePublicKeysResponse response = getRandomActiveKeysResponse(keyId, publicKey);
 
@@ -95,9 +95,9 @@ public final class LambdaHandlerUtilTest {
     assertThat(lambdaResponse.getBody())
         .isEqualTo(
             expectedErrorResponseBody(
-                /* code = */ UNKNOWN.getRpcStatusCode(),
-                /* message = */ "test_error",
-                /* reason = */ "SERVICE_ERROR"));
+                /* code= */ UNKNOWN.getRpcStatusCode(),
+                /* message= */ "test_error",
+                /* reason= */ "SERVICE_ERROR"));
     assertThat(lambdaResponse.getStatusCode()).isEqualTo(UNKNOWN.getHttpStatusCode());
   }
 

@@ -22,6 +22,7 @@ pkg_files(
         ["*"],
         exclude = [
             "BUILD",
+            "*.tftest.hcl",
         ],
     ),
     prefix = "cc_custom_monitoring",

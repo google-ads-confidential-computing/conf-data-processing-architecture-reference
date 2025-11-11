@@ -611,18 +611,14 @@ alias(
     actual = "@maven//:com_google_api_gax_grpc",
 )
 
-# The protobuf version 24.4 is not available in maven yet.
-# Use protobuf_java from com_google_protobuf repo directly.
 alias(
     name = "protobuf_java",
-    actual = "@com_google_protobuf//:protobuf_java",
+    actual = "@maven//:com_google_protobuf_protobuf_java",
 )
 
-# The protobuf version 24.4 is not available in maven yet.
-# Use protobuf_java_util from com_google_protobuf repo directly.
 alias(
     name = "protobuf_java_util",
-    actual = "@com_google_protobuf//:protobuf_java_util",
+    actual = "@maven//:com_google_protobuf_protobuf_java_util",
 )
 
 alias(

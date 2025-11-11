@@ -48,6 +48,11 @@ variable "allowed_wip_service_accounts" {
   default     = []
 }
 
+variable "load_balancing_scheme" {
+  description = "Whether the backend will be used with internal or external load balancing."
+  type        = string
+}
+
 ################################################################################
 # Function Variables
 ################################################################################
@@ -57,17 +62,17 @@ variable "source_container_image_url" {
   type        = string
 }
 
-variable "key_storage_cloudfunction_memory" {
+variable "key_storage_memory" {
   type        = number
   description = "Memory size in MB for cloud function."
 }
 
-variable "key_storage_service_cloudfunction_min_instances" {
+variable "key_storage_service_min_instances" {
   description = "The minimum number of function instances that may coexist at a given time."
   type        = number
 }
 
-variable "key_storage_service_cloudfunction_max_instances" {
+variable "key_storage_service_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
 }
@@ -106,17 +111,17 @@ variable "alarm_duration_sec" {
   type        = string
 }
 
-variable "cloudfunction_max_execution_time_max" {
+variable "cloud_run_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number
 }
 
-variable "cloudfunction_5xx_threshold" {
+variable "cloud_run_5xx_threshold" {
   description = "Cloud Function 5xx error count greater than this to send alarm. Example: 0."
   type        = number
 }
 
-variable "cloudfunction_alert_on_memory_usage_threshold" {
+variable "cloud_run_alert_on_memory_usage_threshold" {
   description = "Memory usage of the Cloud Function should be higher than this value to alert."
   type        = number
 }

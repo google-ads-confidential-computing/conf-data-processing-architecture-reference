@@ -26,7 +26,9 @@
 #include "core/interface/errors.h"
 #include "core/utils/src/error_utils.h"
 #include "cpio/client_providers/crypto_client_provider/src/crypto_client_provider.h"
+#include "cpio/client_providers/global_cpio/src/global_cpio.h"
 #include "public/core/interface/execution_result.h"
+#include "public/core/interface/execution_result_macros.h"
 #include "public/cpio/adapters/common/adapter_utils.h"
 #include "public/cpio/proto/crypto_service/v1/crypto_service.pb.h"
 #include "public/cpio/utils/sync_utils/src/sync_utils.h"
@@ -44,12 +46,14 @@ using google::cmrt::sdk::crypto_service::v1::HpkeDecryptResponse;
 using google::cmrt::sdk::crypto_service::v1::HpkeEncryptRequest;
 using google::cmrt::sdk::crypto_service::v1::HpkeEncryptResponse;
 using google::scp::core::AsyncContext;
+using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::utils::ConvertToPublicExecutionResult;
 using google::scp::cpio::client_providers::CryptoClientProvider;
+using google::scp::cpio::client_providers::GlobalCpio;
 using std::bind;
 using std::make_shared;
 using std::make_unique;
@@ -63,15 +67,24 @@ constexpr char kCryptoClient[] = "CryptoClient";
 }
 
 namespace google::scp::cpio {
-CryptoClient::CryptoClient(
-    const std::shared_ptr<CryptoClientOptions>& options,
-    const std::shared_ptr<scp::core::AsyncExecutorInterface>& async_executor)
-    : options_(options) {
-  crypto_client_provider_ =
-      make_shared<CryptoClientProvider>(options, async_executor);
-}
+CryptoClient::CryptoClient(const std::shared_ptr<CryptoClientOptions>& options)
+    : options_(options) {}
 
 ExecutionResult CryptoClient::Init() noexcept {
+  if (options_->cache_tink_primitives) {
+    shared_ptr<AsyncExecutorInterface> cpu_async_executor;
+    auto execution_result =
+        GlobalCpio::GetGlobalCpio()->GetCpuAsyncExecutor(cpu_async_executor);
+    if (!execution_result.Successful()) {
+      SCP_ERROR(kCryptoClient, kZeroUuid, execution_result,
+                "Failed to get CpuAsyncExecutor.");
+      return ConvertToPublicExecutionResult(execution_result);
+    }
+    crypto_client_provider_ =
+        make_shared<CryptoClientProvider>(options_, cpu_async_executor);
+  } else {
+    crypto_client_provider_ = make_shared<CryptoClientProvider>(options_);
+  }
   return ConvertToPublicExecutionResult(crypto_client_provider_->Init());
 }
 
@@ -124,9 +137,7 @@ ExecutionResultOr<unique_ptr<OutputStream>> CryptoClient::AeadEncryptStreamSync(
 }
 
 std::unique_ptr<CryptoClientInterface> CryptoClientFactory::Create(
-    CryptoClientOptions options,
-    const std::shared_ptr<scp::core::AsyncExecutorInterface>& async_executor) {
-  return make_unique<CryptoClient>(make_shared<CryptoClientOptions>(options),
-                                   async_executor);
+    CryptoClientOptions options) {
+  return make_unique<CryptoClient>(make_shared<CryptoClientOptions>(options));
 }
 }  // namespace google::scp::cpio

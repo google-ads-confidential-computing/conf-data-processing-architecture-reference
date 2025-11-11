@@ -19,15 +19,14 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.aws.testing.Sp
 import com.google.scp.coordinator.keymanagement.keygeneration.app.aws.testing.SplitKeyGenerationStarter;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.aws.testing.SplitKeyQueueTestHelper;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyIdTypeName;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.aws.testing.LocalPublicKeyHostingServiceModule;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.aws.testing.MultiLocalGetEncryptionKeyHostingServiceModule;
 import com.google.scp.coordinator.keymanagement.keyhosting.service.aws.testing.MultiLocalListRecentEncryptionKeysHostingServiceModule;
-import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.keystorage.service.aws.testing.KeyStorageServiceKeysProviderModule;
 import com.google.scp.coordinator.keymanagement.keystorage.service.aws.testing.LocalKeyStorageServiceModule;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbTableName;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDb;
-import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.aws.Annotations.CoordinatorAEncryptionKeySignatureAlgorithm;
 import com.google.scp.coordinator.keymanagement.testutils.aws.Annotations.CoordinatorAEncryptionKeySignatureKeyId;
 import com.google.scp.coordinator.keymanagement.testutils.aws.Annotations.CoordinatorAKeyDbTableName;

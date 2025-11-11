@@ -54,7 +54,8 @@ public class GetEncryptionKeyApiGatewayHandler
   public GetEncryptionKeyApiGatewayHandler() {
     Injector injector = Guice.createInjector(new AwsKeyServiceModule());
     this.keyService = injector.getInstance(KeyService.class);
-    Boolean disableActivationTime = injector.getInstance(Key.get(Boolean.class, DisableActivationTime.class));
+    Boolean disableActivationTime =
+        injector.getInstance(Key.get(Boolean.class, DisableActivationTime.class));
     this.disableActivationTime = disableActivationTime == null ? false : disableActivationTime;
   }
 

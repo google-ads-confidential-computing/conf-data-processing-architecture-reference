@@ -16,6 +16,8 @@
 
 package com.google.scp.shared.testutils.gcp;
 
+import static com.google.scp.shared.testutils.common.TestConstants.TEST_DOCKER_IMAGE_NAME;
+
 import java.util.Map;
 import java.util.Optional;
 import org.testcontainers.containers.GenericContainer;
@@ -56,7 +58,7 @@ public final class CloudFunctionEmulatorContainer
       String functionFilename, String functionJarPath, String functionClassTarget) {
     var container =
         new CloudFunctionEmulatorContainer(
-            DockerImageName.parse("openjdk:21-jdk-slim"),
+            DockerImageName.parse(TEST_DOCKER_IMAGE_NAME),
             functionFilename,
             functionJarPath,
             functionClassTarget);
@@ -89,7 +91,7 @@ public final class CloudFunctionEmulatorContainer
       String functionClassTarget) {
     CloudFunctionEmulatorContainer container =
         new CloudFunctionEmulatorContainer(
-                DockerImageName.parse("openjdk:21-jdk-slim"),
+                DockerImageName.parse(TEST_DOCKER_IMAGE_NAME),
                 functionFilename,
                 functionJarPath,
                 functionClassTarget)
@@ -125,7 +127,7 @@ public final class CloudFunctionEmulatorContainer
       String functionClassTarget) {
     var container =
         new CloudFunctionEmulatorContainer(
-                DockerImageName.parse("openjdk:21-jdk-slim"),
+                DockerImageName.parse(TEST_DOCKER_IMAGE_NAME),
                 functionFilename,
                 functionJarPath,
                 functionClassTarget)
@@ -175,7 +177,7 @@ public final class CloudFunctionEmulatorContainer
       String functionClassTarget) {
     var container =
         new CloudFunctionEmulatorContainer(
-                DockerImageName.parse("openjdk:21-jdk-slim"),
+                DockerImageName.parse(TEST_DOCKER_IMAGE_NAME),
                 functionFilename,
                 functionJarPath,
                 functionClassTarget)

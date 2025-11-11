@@ -40,7 +40,6 @@ public final class KeySetManagerTest {
   private static final int TEST_VALIDITY_IN_DAYS = new Random().nextInt();
   private static final int TEST_TTL_IN_DAYS = new Random().nextInt();
   private static final int TEST_CREATE_MAX_DAYS_AHEAD = new Random().nextInt();
-  private static final boolean TEST_NO_REFRESH_WINDOW = true;
   private static final ConfigCacheDuration TEST_CACHE_DURATION =
       ConfigCacheDuration.of(Duration.ofSeconds(1));
 
@@ -86,11 +85,15 @@ public final class KeySetManagerTest {
   public void testGetConfigs_multipleKeySetsInConfig_returnsExpected() {
     // Given
     String config =
-        "{\"key_sets\":["
-            + "{\"name\":\"set1\"},"
-            + "{\"name\":\"set2\"},"
-            + "{\"name\":\"set3\"}"
-            + "]}";
+        """
+        {
+          "key_sets": [
+            { "name": "set1" },
+            { "name": "set2" },
+            { "name": "set3" }
+          ]
+        }
+        """;
     KeySetManager manager = createKeySetManager(config);
 
     // When
@@ -99,18 +102,21 @@ public final class KeySetManagerTest {
     // Then
     assertThat(configs)
         .containsExactly(
-            createKeySetConfig("set1"),
-            createKeySetConfig("set2"),
-            createKeySetConfig("set3"));
+            createKeySetConfig("set1"), createKeySetConfig("set2"), createKeySetConfig("set3"));
   }
 
   @Test
   public void testGetConfigs_configChanged_returnsRefreshed() throws Exception {
     // Given
-    Iterator<Optional<String>> jsons =
-        Stream.of("{\"key_sets\":[{\"name\":\"v1\"}]}", "{\"key_sets\":[{\"name\":\"v2\"}]}")
-            .map(Optional::of)
-            .iterator();
+    String config1 =
+        """
+        { "key_sets": [{ "name": "v1" }] }
+        """;
+    String config2 =
+        """
+        { "key_sets": [{ "name": "v2" }] }
+        """;
+    Iterator<Optional<String>> jsons = Stream.of(config1, config2).map(Optional::of).iterator();
     KeySetManager manager = createKeySetManagerProvider(jsons::next);
 
     // When
@@ -125,10 +131,15 @@ public final class KeySetManagerTest {
   @Test
   public void testGetConfigs_configChanged_returnsUnexpiredCache() throws Exception {
     // Given
-    Iterator<Optional<String>> jsons =
-        Stream.of("{\"key_sets\":[{\"name\":\"v1\"}]}", "{\"key_sets\":[{\"name\":\"v2\"}]}")
-            .map(Optional::of)
-            .iterator();
+    String config1 =
+        """
+        { "key_sets": [{ "name": "v1" }] }
+        """;
+    String config2 =
+        """
+        { "key_sets": [{ "name": "v2" }] }
+        """;
+    Iterator<Optional<String>> jsons = Stream.of(config1, config2).map(Optional::of).iterator();
     KeySetManager manager = createKeySetManagerProvider(jsons::next);
 
     // When
@@ -144,12 +155,21 @@ public final class KeySetManagerTest {
   public void testGetConfigs_configWithNulls_returnsExpected() {
     // Given
     String config =
-        "{\"key_sets\":["
-            + "{\"name\":\"test_set\", \"tink_template\":null, \"count\":null,"
-            + " \"validity_in_days\":null, \"ttl_in_days\":null,"
-            + " \"create_max_days_ahead\":null, \"overlap_period_days\":null,"
-            + " \"no_refresh_window\":null"
-            + "}]}";
+        """
+        {
+          "key_sets": [
+            {
+              "name": "test_set",
+              "tink_template": null,
+              "count": null,
+              "validity_in_days": null,
+              "ttl_in_days": null,
+              "create_max_days_ahead": null,
+              "overlap_period_days": null
+            }
+          ]
+        }
+        """;
     KeySetManager manager = createKeySetManager(config);
 
     // When
@@ -163,12 +183,21 @@ public final class KeySetManagerTest {
   public void testGetConfigs_allValuesSet_returnsExpected() {
     // Given
     String config =
-        "{\"key_sets\":["
-            + "{\"name\":\"set1\", \"tink_template\":\"test_template\", \"count\":5,"
-            + " \"validity_in_days\":0, \"ttl_in_days\":0, "
-            + " \"create_max_days_ahead\":13, \"overlap_period_days\":24,"
-            + " \"no_refresh_window\":true"
-            + "}]}";
+        """
+        {
+          "key_sets": [
+            {
+              "name": "set1",
+              "tink_template": "test_template",
+              "count": 5,
+              "validity_in_days": 0,
+              "ttl_in_days": 0,
+              "create_max_days_ahead": 13,
+              "overlap_period_days": 24
+            }
+          ]
+        }
+        """;
     KeySetManager manager = createKeySetManager(config);
 
     // When
@@ -176,7 +205,7 @@ public final class KeySetManagerTest {
 
     // Then
     assertThat(configs)
-        .containsExactly(KeySetConfig.create("set1", "test_template", 5, 0, 0, 13, 24, true));
+        .containsExactly(KeySetConfig.create("set1", "test_template", 5, 0, 0, 13, 24));
   }
 
   private static KeySetManager createKeySetManager(String config) {
@@ -186,7 +215,6 @@ public final class KeySetManagerTest {
         TEST_VALIDITY_IN_DAYS,
         TEST_TTL_IN_DAYS,
         TEST_CREATE_MAX_DAYS_AHEAD,
-        false,
         new ConfigCacheDuration());
   }
 
@@ -198,7 +226,6 @@ public final class KeySetManagerTest {
         TEST_VALIDITY_IN_DAYS,
         TEST_TTL_IN_DAYS,
         TEST_CREATE_MAX_DAYS_AHEAD,
-        false,
         TEST_CACHE_DURATION);
   }
 
@@ -210,7 +237,6 @@ public final class KeySetManagerTest {
         TEST_VALIDITY_IN_DAYS,
         TEST_TTL_IN_DAYS,
         TEST_CREATE_MAX_DAYS_AHEAD,
-        0,
-        false);
+        0);
   }
 }

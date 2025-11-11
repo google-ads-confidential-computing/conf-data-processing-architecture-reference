@@ -40,7 +40,10 @@ alias(
 java_binary(
     name = "LocalKmsServerContainer",
     srcs = ["LocalKmsServerContainer.java"],
-    deps = ["//java/external:testcontainers"],
+    deps = [
+        "//java/external:testcontainers",
+        "//javatests/com/google/scp/shared/testutils/common",
+    ],
 )
 
 java_binary(

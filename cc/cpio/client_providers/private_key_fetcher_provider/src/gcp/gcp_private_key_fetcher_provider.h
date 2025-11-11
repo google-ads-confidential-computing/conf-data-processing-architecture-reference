@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "core/interface/async_context.h"
 #include "cpio/client_providers/interface/auth_token_provider_interface.h"
@@ -52,21 +53,56 @@ class GcpPrivateKeyFetcherProvider : public PrivateKeyFetcherProvider {
   std::shared_ptr<core::HttpRequest> CreateHttpRequest(
       const PrivateKeyFetchingRequest& request) noexcept override;
 
+  void SignHttpRequest(
+      core::AsyncContext<KeysetMetadataFetchingRequest, core::HttpRequest>&
+          sign_http_request_context) noexcept override;
+
+  std::shared_ptr<core::HttpRequest> CreateHttpRequest(
+      const KeysetMetadataFetchingRequest& request) noexcept override;
+
  private:
   /**
    * @brief Is called after auth_token_provider GetSessionToken() for session
    * token is completed
    *
-   * @param sign_http_request_context the context for sign http request.
-   * @param get_session_token the context of get session token.
+   * @tparam FetchingRequestType the type of the fetching reqeust, either
+   * KeysetMetadataFetchingRequest or PrivateKeyFetchingRequest
+   * @param sign_request_context the context for sign http request.
+   * @param get_token_context the context of get session token.
    */
+  template <typename FetchingRequestType>
   void OnGetSessionTokenCallback(
-      core::AsyncContext<PrivateKeyFetchingRequest, core::HttpRequest>&
-          sign_http_request_context,
+      core::AsyncContext<FetchingRequestType, core::HttpRequest>&
+          sign_request_context,
       core::AsyncContext<GetSessionTokenForTargetAudienceRequest,
-                         GetSessionTokenResponse>& get_session_token) noexcept;
+                         GetSessionTokenResponse>& get_token_context) noexcept {
+    if (!get_token_context.result.Successful()) {
+      SCP_ERROR_CONTEXT(
+          kGcpPrivateKeyFetcherProvider, sign_request_context,
+          get_token_context.result,
+          "Failed to get the access token for audience target %s.",
+          get_token_context.request->token_target_audience_uri->c_str());
+      sign_request_context.result = get_token_context.result;
+      sign_request_context.Finish();
+      return;
+    }
+
+    const auto& access_token = *get_token_context.response->session_token;
+    auto http_request = CreateHttpRequest(*sign_request_context.request);
+    http_request->headers = std::make_shared<core::HttpHeaders>();
+    http_request->headers->insert(
+        {std::string(kAuthorizationHeaderKey),
+         absl::StrCat(kBearerTokenPrefix, access_token)});
+    sign_request_context.response = std::move(http_request);
+    sign_request_context.result = core::SuccessExecutionResult();
+    sign_request_context.Finish();
+  }
 
   // Auth token provider.
   std::shared_ptr<AuthTokenProviderInterface> auth_token_provider_;
+  static constexpr char kGcpPrivateKeyFetcherProvider[] =
+      "GcpPrivateKeyFetcherProvider";
+  static constexpr char kAuthorizationHeaderKey[] = "Authorization";
+  static constexpr char kBearerTokenPrefix[] = "Bearer ";
 };
 }  // namespace google::scp::cpio::client_providers

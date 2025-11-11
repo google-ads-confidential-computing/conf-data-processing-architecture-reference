@@ -33,5 +33,4 @@ final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   @interface GcpNotificationClientPublisher {}
-
 }

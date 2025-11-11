@@ -23,7 +23,6 @@ import com.google.crypto.tink.CleartextKeysetHandle;
 import com.google.crypto.tink.HybridDecrypt;
 import com.google.crypto.tink.HybridEncrypt;
 import com.google.crypto.tink.JsonKeysetReader;
-import com.google.crypto.tink.KeyTemplates;
 import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.hybrid.HybridConfig;
 import org.junit.BeforeClass;

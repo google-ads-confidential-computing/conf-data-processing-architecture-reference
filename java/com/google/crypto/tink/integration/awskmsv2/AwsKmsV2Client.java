@@ -68,6 +68,7 @@ public final class AwsKmsV2Client implements com.google.crypto.tink.KmsClient {
     }
     return keyUri == null && uri.toLowerCase(Locale.US).startsWith(PREFIX);
   }
+
   /**
    * Loads AWS credentials from an AWS profile file.
    *

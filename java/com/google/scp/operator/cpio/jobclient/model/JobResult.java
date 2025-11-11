@@ -45,7 +45,7 @@ public abstract class JobResult {
   @JsonProperty("result_info")
   public abstract ResultInfo resultInfo();
 
-  /** Topic id of the notification queue. Please note there is no existence check on this topic.*/
+  /** Topic id of the notification queue. Please note there is no existence check on this topic. */
   @JsonProperty("topic_id")
   public abstract Optional<String> topicId();
 

@@ -16,14 +16,13 @@
 
 package com.google.scp.coordinator.keymanagement.shared.dao.gcp;
 
+import com.google.api.gax.retrying.RetrySettings;
+import com.google.api.gax.rpc.StatusCode.Code;
 import com.google.cloud.NoCredentials;
 import com.google.cloud.spanner.DatabaseClient;
 import com.google.cloud.spanner.DatabaseId;
 import com.google.cloud.spanner.InstanceId;
 import com.google.cloud.spanner.LazySpannerInitializer;
-import com.google.api.gax.retrying.RetrySettings;
-import com.google.api.gax.rpc.StatusCode.Code;
-import org.threeten.bp.Duration;
 import com.google.cloud.spanner.Spanner;
 import com.google.cloud.spanner.SpannerOptions;
 import com.google.inject.AbstractModule;
@@ -31,6 +30,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
+import org.threeten.bp.Duration;
 
 /** Module for spanner key db. */
 public final class SpannerKeyDbModule extends AbstractModule {
@@ -61,7 +61,10 @@ public final class SpannerKeyDbModule extends AbstractModule {
     } else {
       spannerOptions.setHost(endpointUrl);
     }
-    spannerOptions.getSpannerStubSettingsBuilder().executeSqlSettings().setRetryableCodes(Code.DEADLINE_EXCEEDED)
+    spannerOptions
+        .getSpannerStubSettingsBuilder()
+        .executeSqlSettings()
+        .setRetryableCodes(Code.DEADLINE_EXCEEDED)
         .setRetrySettings(
             RetrySettings.newBuilder()
                 // Configure retry delay settings.
@@ -81,7 +84,8 @@ public final class SpannerKeyDbModule extends AbstractModule {
                 // Controls the change of timeout for each retry.
                 .setRpcTimeoutMultiplier(1.0)
                 // The timeout for all calls (first call + all retries).
-                .setTotalTimeout(Duration.ofSeconds(60)).build());
+                .setTotalTimeout(Duration.ofSeconds(60))
+                .build());
     Spanner spanner = spannerOptions.build().getService();
     InstanceId instanceId = InstanceId.of(config.gcpProjectId(), config.spannerInstanceId());
     DatabaseId databaseId = DatabaseId.of(instanceId, config.spannerDbName());

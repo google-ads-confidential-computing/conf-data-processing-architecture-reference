@@ -195,8 +195,7 @@ public final class PublicKeyServiceTest {
     assertThat(keys.getKeys(0).getKeyOneofCase()).isEqualTo(KeyOneofCase.HPKE_PUBLIC_KEY);
   }
 
-  private GetActivePublicKeysResponse getActivePublicKeys(String endpoint)
-      throws IOException {
+  private GetActivePublicKeysResponse getActivePublicKeys(String endpoint) throws IOException {
     HttpClientBuilder builder =
         HttpClients.custom()
             .setDefaultRequestConfig(

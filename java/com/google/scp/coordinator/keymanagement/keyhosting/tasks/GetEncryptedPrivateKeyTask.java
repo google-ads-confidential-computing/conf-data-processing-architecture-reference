@@ -93,7 +93,7 @@ public class GetEncryptedPrivateKeyTask extends ApiTask {
     String id = matcher.group("id");
     try {
       EncryptionKey vendedEncryptionKey =
-          vendAccordingToConfig(getKey(id, email), request, allowedMigrators, logMetricHelper);
+          vendAccordingToConfig(getKey(id, email), email, allowedMigrators, logMetricHelper);
       response.setBody(toApiEncryptionKey(vendedEncryptionKey));
     } catch (ServiceException e) {
       logger.error(

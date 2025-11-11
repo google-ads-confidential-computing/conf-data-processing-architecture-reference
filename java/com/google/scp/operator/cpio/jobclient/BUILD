@@ -37,12 +37,12 @@ java_library(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
+        "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
         "//operator/protos/shared/backend:java_proto",
         "//operator/protos/shared/backend/jobnotification:job_notification_event_java_proto",
         "//operator/protos/shared/backend/jobqueue:java_proto",
         "//operator/protos/shared/backend/metadatadb:java_proto",
-        "@com_google_protobuf//java/core",
     ],
 )
 
@@ -99,13 +99,12 @@ java_library(
         "//java/external:jackson_core",
         "//java/external:jackson_databind",
         "//java/external:javax_inject",
+        "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
         "//operator/protos/shared/backend:java_proto",
         "//operator/protos/shared/backend/jobnotification:job_notification_event_java_proto",
         "//operator/protos/shared/backend/jobqueue:java_proto",
         "//operator/protos/shared/backend/metadatadb:java_proto",
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf//java/core",
     ],
 )
 
@@ -150,11 +149,11 @@ java_library(
         "//java/external:jackson_core",
         "//java/external:jackson_databind",
         "//java/external:javax_inject",
+        "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
         "//operator/protos/shared/backend:java_proto",
         "//operator/protos/shared/backend/jobnotification:job_notification_event_java_proto",
         "//operator/protos/shared/backend/jobqueue:java_proto",
         "//operator/protos/shared/backend/metadatadb:java_proto",
-        "@com_google_protobuf//java/core",
     ],
 )

@@ -37,8 +37,10 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 public final class AsgCapacityModule extends AbstractModule {
   /** Name of environment variable for the SQS job queue */
   private static final String AWS_SQS_URL_ENV_VAR = "AWS_SQS_URL";
+
   /** Environment variable for the Autoscaling group name */
   private static final String ASG_NAME_ENV_VAR = "ASG_NAME";
+
   /** Environment variable for the Autoscaling scaling ratio */
   private static final String SCALING_RATIO_ENV_VAR = "SCALING_RATIO";
 

@@ -19,6 +19,6 @@ def bazel_rules_java():
     maybe(
         http_archive,
         name = "rules_java",
-        url = "https://github.com/bazelbuild/rules_java/releases/download/6.0.0/rules_java-6.0.0.tar.gz",
-        sha256 = "469b7f3b580b4fcf8112f4d6d0d5a4ce8e1ad5e21fee67d8e8335d5f8b3debab",
+        url = "https://github.com/bazelbuild/rules_java/releases/download/8.4.0/rules_java-8.4.0.tar.gz",
+        sha256 = "aff2f902f660928ea566e3002f46fc19caa496427c8a264ce578934dd10ef103",
     )

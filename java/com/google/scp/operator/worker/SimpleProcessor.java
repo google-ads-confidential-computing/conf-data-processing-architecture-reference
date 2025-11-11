@@ -24,14 +24,8 @@ import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.Retu
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
-import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;
-import com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
-import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient;
-import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetClientException;
-import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetServiceException;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
@@ -65,8 +59,6 @@ import org.slf4j.LoggerFactory;
 public class SimpleProcessor implements JobProcessor {
 
   public static final String RESULT_SUCCESS_MESSAGE = "Aggregation job successfully processed";
-  public static final String INSUFFICIENT_BUDGET_MESSAGE =
-      "Insufficient privacy budget. Missing units: ";
   public static final String METRIC_NAMESPACE = "scp/simpleprocessor";
   private static final Logger logger = LoggerFactory.getLogger(SimpleProcessor.class);
 
@@ -74,7 +66,6 @@ public class SimpleProcessor implements JobProcessor {
   private final ReportDecrypter reportDecrypter;
   private final ResultLogger resultLogger;
   private final Clock clock;
-  private final DistributedPrivacyBudgetClient distributedPrivacyBudgetClient;
   private final MetricClient metricClient;
   private final ParameterClient parameterClient;
   private final boolean enableRemoteAggregationMetrics;
@@ -85,7 +76,6 @@ public class SimpleProcessor implements JobProcessor {
       ReportDecrypter reportDecrypter,
       ResultLogger resultLogger,
       Clock clock,
-      DistributedPrivacyBudgetClient distributedPrivacyBudgetClient,
       MetricClient metricClient,
       ParameterClient parameterClient,
       @EnableRemoteMetricAggregation boolean enableRemoteMetricAggregation)
@@ -94,7 +84,6 @@ public class SimpleProcessor implements JobProcessor {
     this.reportDecrypter = reportDecrypter;
     this.resultLogger = resultLogger;
     this.clock = clock;
-    this.distributedPrivacyBudgetClient = distributedPrivacyBudgetClient;
     this.metricClient = metricClient;
     this.parameterClient = parameterClient;
     this.enableRemoteAggregationMetrics = enableRemoteMetricAggregation;
@@ -127,19 +116,11 @@ public class SimpleProcessor implements JobProcessor {
 
       // Add results with errors to list to create error summary and aggregate present reports.
       ArrayList<DecryptionResult> resultsWithErrors = new ArrayList<>();
-      ArrayList<PrivacyBudgetUnit> privacyBudgetUnits = new ArrayList<>();
       var validatedReports =
           decryptionResults
               .peek(result -> addToErrors(result, resultsWithErrors))
               .map(DecryptionResult::report)
               .filter(Optional::isPresent)
-              .peek(
-                  result ->
-                      privacyBudgetUnits.add(
-                          PrivacyBudgetUnit.builder()
-                              .privacyBudgetKey(result.get().privacyBudgetKey().key())
-                              .reportingWindow(result.get().originalReportTime())
-                              .build()))
               .map(Optional::get);
 
       // Map facts
@@ -150,9 +131,7 @@ public class SimpleProcessor implements JobProcessor {
       ErrorSummary errorSummary =
           ErrorSummaryAggregator.createErrorSummary(ImmutableList.copyOf(resultsWithErrors));
 
-      return verifyPrivacyBudget(job, ImmutableList.copyOf(privacyBudgetUnits), errorSummary)
-          .orElse(
-              jobResultBuilder
+      return jobResultBuilder
                   .setResultInfo(
                       ResultInfo.newBuilder()
                           .setReturnCode(SUCCESS.name())
@@ -160,7 +139,7 @@ public class SimpleProcessor implements JobProcessor {
                           .setErrorSummary(errorSummary)
                           .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
                           .build())
-                  .build());
+                  .build();
     } catch (RecordReadException e) {
       // Error occurred in data read
       logger.error("Exception occurred during input data read. Reporting processing failure.", e);
@@ -180,17 +159,6 @@ public class SimpleProcessor implements JobProcessor {
           .setResultInfo(
               ResultInfo.newBuilder()
                   .setReturnCode(OUTPUT_DATAWRITE_FAILED.name())
-                  .setReturnMessage(Throwables.getStackTraceAsString(e))
-                  .setErrorSummary(ErrorSummary.getDefaultInstance())
-                  .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                  .build())
-          .build();
-    } catch (DistributedPrivacyBudgetServiceException | DistributedPrivacyBudgetClientException e) {
-      // Error occurred in PBS client or service
-      return jobResultBuilder
-          .setResultInfo(
-              ResultInfo.newBuilder()
-                  .setReturnCode(UNSPECIFIED_ERROR.name())
                   .setReturnMessage(Throwables.getStackTraceAsString(e))
                   .setErrorSummary(ErrorSummary.getDefaultInstance())
                   .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
@@ -223,46 +191,5 @@ public class SimpleProcessor implements JobProcessor {
     if (decryptionResult.report().isEmpty()) {
       resultsWithErrors.add(decryptionResult);
     }
-  }
-
-  private Optional<JobResult> verifyPrivacyBudget(
-      Job job, ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits, ErrorSummary errorSummary)
-      throws DistributedPrivacyBudgetClientException, DistributedPrivacyBudgetServiceException {
-    JobResult.Builder jobResultBuilder = JobResult.builder().setJobKey(job.jobKey());
-
-    ImmutableList<PrivacyBudgetUnit> exhaustedPrivacyBudgetUnits = ImmutableList.of();
-    try {
-      String attributionReportTo =
-          job.requestInfo().getJobParameters().get("attribution_report_to");
-      ConsumePrivacyBudgetResponse consumePrivacyBudgetResponse =
-          this.distributedPrivacyBudgetClient.consumePrivacyBudget(
-              ConsumePrivacyBudgetRequest.builder()
-                  .privacyBudgetUnits(privacyBudgetUnits)
-                  .attributionReportTo(attributionReportTo)
-                  .build());
-      exhaustedPrivacyBudgetUnits = consumePrivacyBudgetResponse.exhaustedPrivacyBudgetUnits();
-    } catch (DistributedPrivacyBudgetClientException | DistributedPrivacyBudgetServiceException e) {
-      logger.error("Exception occurred when consuming privacy budget.");
-      throw e;
-    }
-
-    if (!exhaustedPrivacyBudgetUnits.isEmpty()) {
-      // Truncate the message in order to not overflow the result table.
-      String messageWithUnits = INSUFFICIENT_BUDGET_MESSAGE + exhaustedPrivacyBudgetUnits;
-      String errorMessage =
-          messageWithUnits.substring(0, Math.min(1000, messageWithUnits.length()));
-      return Optional.of(
-          jobResultBuilder
-              .setResultInfo(
-                  ResultInfo.newBuilder()
-                      // TODO(b/218508112): Do not use internal error, have a dedicated code.
-                      .setReturnCode(INTERNAL_ERROR.name())
-                      .setReturnMessage(errorMessage)
-                      .setErrorSummary(errorSummary)
-                      .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                      .build())
-              .build());
-    }
-    return Optional.empty();
   }
 }

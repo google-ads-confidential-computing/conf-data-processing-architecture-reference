@@ -26,6 +26,8 @@ public enum KeyManagementErrorReason {
   UNSUPPORTED_OPERATION,
   /** Error when requested KeyId is not found */
   MISSING_KEY,
+  /** Error when requested SetName is not found */
+  MISSING_SET_NAME,
   /** Error when requested Key is not active */
   KEY_NOT_ACTIVE,
   /** Error when IllegalArgumentException occurs unexpectedly */

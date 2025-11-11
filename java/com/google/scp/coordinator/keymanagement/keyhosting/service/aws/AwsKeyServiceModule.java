@@ -19,10 +19,14 @@ package com.google.scp.coordinator.keymanagement.keyhosting.service.aws;
 import static com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbRegion;
 import static com.google.scp.coordinator.keymanagement.shared.dao.aws.Annotations.DynamoKeyDbTableName;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
+import com.google.inject.TypeLiteral;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.DisableActivationTime;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetConfigMap;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.KeySetConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.aws.DynamoKeyDbModule;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
@@ -113,5 +117,8 @@ public final class AwsKeyServiceModule extends AbstractModule {
     bind(Boolean.class)
         .annotatedWith(DisableActivationTime.class)
         .toInstance(getDisableActivationTime());
+    bind(new TypeLiteral<ImmutableMap<String, KeySetConfig>>() {})
+        .annotatedWith(KeySetConfigMap.class)
+        .toInstance(ImmutableMap.of());
   }
 }

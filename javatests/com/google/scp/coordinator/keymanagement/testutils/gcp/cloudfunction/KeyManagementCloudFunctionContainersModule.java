@@ -82,8 +82,7 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
   @Singleton
   @PublicKeyCloudFunctionContainer
   public CloudFunctionEmulatorContainer getFunctionContainer(
-      SpannerKeyDbConfig keyDbConfig,
-      SpannerEmulatorContainer spannerEmulatorContainer) {
+      SpannerKeyDbConfig keyDbConfig, SpannerEmulatorContainer spannerEmulatorContainer) {
     return startContainerAndConnectToSpannerWithEnvs(
         spannerEmulatorContainer,
         Optional.of(
@@ -115,8 +114,8 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
   }
 
   /**
-   * Starts and provides a container for Private Key Cloud Function Integration tests. Note: This
-   * is for Coordinator B.
+   * Starts and provides a container for Private Key Cloud Function Integration tests. Note: This is
+   * for Coordinator B.
    */
   @Provides
   @Singleton
@@ -172,15 +171,15 @@ public class KeyManagementCloudFunctionContainersModule extends AbstractModule {
             KMS_ENDPOINT_ENV_VAR_NAME,
             "http://"
                 + container
-                .getContainerInfo()
-                .getNetworkSettings()
-                .getNetworks()
-                .entrySet()
-                .stream()
-                .findFirst()
-                .get()
-                .getValue()
-                .getIpAddress()
+                    .getContainerInfo()
+                    .getNetworkSettings()
+                    .getNetworks()
+                    .entrySet()
+                    .stream()
+                    .findFirst()
+                    .get()
+                    .getValue()
+                    .getIpAddress()
                 + ":"
                 + container.getHttpPort()));
   }

@@ -43,7 +43,8 @@ public class RequestHeaderParsingUtilTest {
     String payload = String.format("{\"email\":\"%s\"}", email);
     String encodedPayload = Base64.getUrlEncoder().encodeToString(payload.getBytes());
     String jwt = String.format("header.%s.signature", encodedPayload);
-    when(mockRequestContext.getFirstHeader("Authorization")).thenReturn(Optional.of("Bearer " + jwt));
+    when(mockRequestContext.getFirstHeader("Authorization"))
+        .thenReturn(Optional.of("Bearer " + jwt));
 
     Optional<String> result = RequestHeaderParsingUtil.getCallerEmail(mockRequestContext);
 
@@ -63,7 +64,8 @@ public class RequestHeaderParsingUtilTest {
   @Test
   public void getCallerEmail_jwtWrongNumberOfParts_returnsEmpty() {
     String jwt = "justonepart";
-    when(mockRequestContext.getFirstHeader("Authorization")).thenReturn(Optional.of("Bearer " + jwt));
+    when(mockRequestContext.getFirstHeader("Authorization"))
+        .thenReturn(Optional.of("Bearer " + jwt));
 
     Optional<String> result = RequestHeaderParsingUtil.getCallerEmail(mockRequestContext);
 
@@ -73,7 +75,8 @@ public class RequestHeaderParsingUtilTest {
   @Test
   public void getCallerEmail_badBase64Payload_returnsEmpty() {
     String jwt = "header.not-valid-base64.signature";
-    when(mockRequestContext.getFirstHeader("Authorization")).thenReturn(Optional.of("Bearer " + jwt));
+    when(mockRequestContext.getFirstHeader("Authorization"))
+        .thenReturn(Optional.of("Bearer " + jwt));
 
     Optional<String> result = RequestHeaderParsingUtil.getCallerEmail(mockRequestContext);
 
@@ -85,7 +88,8 @@ public class RequestHeaderParsingUtilTest {
     String payload = "this is not json";
     String encodedPayload = Base64.getUrlEncoder().encodeToString(payload.getBytes());
     String jwt = String.format("header.%s.signature", encodedPayload);
-    when(mockRequestContext.getFirstHeader("Authorization")).thenReturn(Optional.of("Bearer " + jwt));
+    when(mockRequestContext.getFirstHeader("Authorization"))
+        .thenReturn(Optional.of("Bearer " + jwt));
 
     Optional<String> result = RequestHeaderParsingUtil.getCallerEmail(mockRequestContext);
 
@@ -97,7 +101,8 @@ public class RequestHeaderParsingUtilTest {
     String payload = "{\"some_other_field\":\"value\"}";
     String encodedPayload = Base64.getUrlEncoder().encodeToString(payload.getBytes());
     String jwt = String.format("header.%s.signature", encodedPayload);
-    when(mockRequestContext.getFirstHeader("Authorization")).thenReturn(Optional.of("Bearer " + jwt));
+    when(mockRequestContext.getFirstHeader("Authorization"))
+        .thenReturn(Optional.of("Bearer " + jwt));
 
     Optional<String> result = RequestHeaderParsingUtil.getCallerEmail(mockRequestContext);
 

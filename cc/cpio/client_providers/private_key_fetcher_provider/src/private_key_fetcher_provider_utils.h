@@ -51,9 +51,20 @@ class PrivateKeyFetchingClientUtils {
    * @param[out] response PrivateKeyFetchingResponse response object.
    * @return core::ExecutionResult
    */
-  static core::ExecutionResult ParsePrivateKey(
+  static core::ExecutionResult ParseFetchingResponse(
       const core::BytesBuffer& body,
       PrivateKeyFetchingResponse& response) noexcept;
+
+  /**
+   * @brief Parse keyset metadata from BytesBuffer
+   *
+   * @param[in] body BytesBuffer body from http response.
+   * @param[out] response KeysetMetadataFetchingResponse response object.
+   * @return core::ExecutionResult
+   */
+  static core::ExecutionResult ParseFetchingResponse(
+      const core::BytesBuffer& body,
+      KeysetMetadataFetchingResponse& response) noexcept;
 
  protected:
   /**

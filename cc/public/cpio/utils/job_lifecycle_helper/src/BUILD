@@ -31,8 +31,6 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_lib",
         "//cc/cpio/server/interface:server_interface_lib",
-        "//cc/cpio/server/interface/auto_scaling_service:auto_scaling_service_interface_lib",
-        "//cc/cpio/server/interface/job_service:job_service_interface_lib",
         "//cc/public/cpio/interface:type_def",
         "//cc/public/cpio/interface/auto_scaling_client",
         "//cc/public/cpio/interface/job_client",

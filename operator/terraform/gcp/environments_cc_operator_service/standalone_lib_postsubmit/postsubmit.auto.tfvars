@@ -37,7 +37,7 @@ instance_disk_image_family = {
   image_family  = "confidential-space"
 }
 # Needs to be a stable image for proper coordinator attestation
-instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-241000"
+instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-251000"
 # SA allow listed in coordinator attestation, as well as worker identity
 user_provided_worker_sa_email        = "s-lib-postsubmit-worker@admcloud-adtech1.iam.gserviceaccount.com"
 spanner_database_deletion_protection = false

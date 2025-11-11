@@ -75,8 +75,8 @@ public class PublicKeyApiGatewayHandler
     headers.putAll(allHeaders());
 
     return createApiGatewayResponseFromProto(
-        /* bodyObject = */ response.getActivePublicKeysResponse(),
-        /* httpStatusCode = */ OK.getHttpStatusCode(),
-        /* headers = */ headers.build());
+        /* bodyObject= */ response.getActivePublicKeysResponse(),
+        /* httpStatusCode= */ OK.getHttpStatusCode(),
+        /* headers= */ headers.build());
   }
 }

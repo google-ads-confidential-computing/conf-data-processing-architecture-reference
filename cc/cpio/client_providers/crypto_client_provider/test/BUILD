@@ -32,7 +32,7 @@ cc_test(
         "@com_google_googletest//:gtest_main",
         "@tink_cc//proto:hpke_cc_proto",
         "@tink_cc//proto:tink_cc_proto",
-        "@tink_cc//subtle",
-        "@tink_cc//util:secret_data",
+        "@tink_cc//tink/subtle",
+        "@tink_cc//tink/util:secret_data",
     ],
 )

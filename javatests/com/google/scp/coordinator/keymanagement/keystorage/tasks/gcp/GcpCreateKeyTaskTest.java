@@ -87,8 +87,7 @@ public class GcpCreateKeyTaskTest {
     createKey_success_base(KEK_URI, KEK_URI);
   }
 
-  public void createKey_success_base(String keyEncryptionKeyUri, String baseUrl)
-      throws Exception {
+  public void createKey_success_base(String keyEncryptionKeyUri, String baseUrl) throws Exception {
     String publicKey = "123456";
     String privateKeySplit = "privateKeySplit";
     var encryptedPrivateKeySplit =
@@ -319,7 +318,7 @@ public class GcpCreateKeyTaskTest {
     // keyDb.getActiveKeys always uses the empty string as the default key set.
     if (setName.isEmpty()) {
       com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto
-          .EncryptionKey
+              .EncryptionKey
           resultPublic = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT).getFirst();
       assertThat(resultPublic.getKeyId()).isEqualTo(keyId);
       assertThat(resultPublic.getPublicKey()).isEqualTo(key.getPublicKey());
@@ -344,10 +343,8 @@ public class GcpCreateKeyTaskTest {
 
     // Migration data should be empty since it was missing from the input migration EncryptionKey
     assertThat(resultPrivate.getMigrationJsonEncodedKeyset()).isEqualTo("");
-    assertThat(resultPrivate.getMigrationKeyEncryptionKeyUri())
-        .isEqualTo("");
-    assertThat(resultPrivate.getMigrationKeySplitDataList().size())
-        .isEqualTo(0);
+    assertThat(resultPrivate.getMigrationKeyEncryptionKeyUri()).isEqualTo("");
+    assertThat(resultPrivate.getMigrationKeySplitDataList().size()).isEqualTo(0);
   }
 
   @Test

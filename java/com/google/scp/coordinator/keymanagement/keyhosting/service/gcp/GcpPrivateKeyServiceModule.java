@@ -20,13 +20,20 @@ import static com.google.scp.shared.gcp.util.JsonHelper.getField;
 import static com.google.scp.shared.gcp.util.JsonHelper.parseJson;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyset.KeySetsConfig;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetConfigMap;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigCacheUsers;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.KeySetConfig;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,14 +45,18 @@ import org.slf4j.LoggerFactory;
 public final class GcpPrivateKeyServiceModule extends AbstractModule {
 
   private static final Logger logger = LoggerFactory.getLogger(GcpPrivateKeyServiceModule.class);
+  private static final int DEFAULT_OVERLAP_PERIOD_DAYS = 0;
+
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+  private static final String PKS_CONFIG_READ_ERROR = "configReadError";
+  private static final String KEY_SETS_CONFIG_ENV_VAR = "KEY_SETS_CONFIG";
   private static final String KEY_SETS_VENDING_CONFIG_ENV_VAR = "KEY_SETS_VENDING_CONFIG";
   private static final String VENDING_CONFIG_ALLOWED_MIGRATORS = "allowed_migrators";
   private static final String VENDING_CONFIG_CACHE_USERS = "cache_users";
 
   private static ImmutableSet<String> parseConfigString(
-      String configString,
-      String fieldName,
-      LogMetricHelper logHelper) {
+      String configString, String fieldName, LogMetricHelper logHelper) {
     ImmutableSet.Builder<String> configBuilder = ImmutableSet.builder();
     try {
       JsonNode configNode = parseJson(configString);
@@ -59,8 +70,7 @@ public final class GcpPrivateKeyServiceModule extends AbstractModule {
         configBuilder.add(node.asText());
       }
     } catch (RuntimeException e) {
-      logger.warn(
-          logHelper.format(fieldName, ImmutableMap.of("errorReason", e.getMessage())));
+      logger.warn(logHelper.format(fieldName, ImmutableMap.of("errorReason", e.getMessage())));
     }
     return configBuilder.build();
   }
@@ -74,6 +84,44 @@ public final class GcpPrivateKeyServiceModule extends AbstractModule {
     return Optional.ofNullable(System.getenv(KEY_SETS_VENDING_CONFIG_ENV_VAR))
         .map(configString -> parseConfigString(configString, fieldName, logHelper))
         .orElse(ImmutableSet.of());
+  }
+
+  @Provides
+  @Singleton
+  @KeySetConfigMap
+  ImmutableMap<String, KeySetConfig> readKeySetsConfig() {
+    var logHelper = new LogMetricHelper("private_ks_module");
+    try {
+      var keySetsJson = System.getenv(KEY_SETS_CONFIG_ENV_VAR);
+      var keySetsConfig = OBJECT_MAPPER.readValue(keySetsJson, KeySetsConfig.class);
+
+      logger.info("Private KS keyset configs: {}.", keySetsConfig);
+      ImmutableMap.Builder<String, KeySetConfig> configBuilder = ImmutableMap.builder();
+      for (var keySet : keySetsConfig.keySets()) {
+        try {
+          // Only care about name, count, validityInDays, overlapPeriodDays
+          configBuilder.put(
+              keySet.name(),
+              KeySetConfig.create(
+                  keySet.name(),
+                  keySet.count().orElseThrow(),
+                  keySet.validityInDays().orElseThrow(),
+                  keySet.overlapPeriodDays().orElse(DEFAULT_OVERLAP_PERIOD_DAYS)));
+        } catch (NoSuchElementException e) {
+          logger.error(
+              logHelper.format(
+                  PKS_CONFIG_READ_ERROR,
+                  ImmutableMap.of("keySet", keySet.name(), "errorReason", e.getMessage())));
+        }
+      }
+      return configBuilder.build();
+    } catch (Exception e) {
+      logger.error(
+          logHelper.format(
+              PKS_CONFIG_READ_ERROR,
+              ImmutableMap.of("keySet", "all", "errorReason", e.getMessage())));
+      return ImmutableMap.of();
+    }
   }
 
   @Override

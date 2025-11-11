@@ -18,6 +18,7 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil.buildKeySplitData;
 import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleartext;
 import static java.time.temporal.ChronoUnit.DAYS;
@@ -36,7 +37,6 @@ import com.google.protobuf.ByteString;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
-import com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
@@ -143,18 +143,17 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int validityInDays,
       int ttlInDays,
       int createMaxDaysAhead,
-      int overlapPeriodDays,
-      boolean noRefreshWindow)
+      int overlapPeriodDays)
       throws ServiceException {
     LOGGER.info(logMetricHelper.format("create", ImmutableMap.of("setName", setName)));
-    create(setName,
+    create(
+        setName,
         tinkTemplate,
         numDesiredKeys,
         validityInDays,
         ttlInDays,
         createMaxDaysAhead,
         overlapPeriodDays,
-        noRefreshWindow,
         Instant.now());
   }
 
@@ -167,7 +166,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int ttlInDays,
       int createMaxDaysAhead,
       int overlapPeriodDays,
-      boolean noRefreshWindow,
       Instant now)
       throws ServiceException {
     if (overlapPeriodDays < 0) {
@@ -202,7 +200,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
           numDesiredKeys - activeKeys.size(),
           validityInDays,
           ttlInDays,
-          noRefreshWindow,
           now);
     }
     activeKeys = keyDb.getActiveKeys(setName, numDesiredKeys, now);
@@ -251,10 +248,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             numDesiredKeys - actual,
             validityInDays,
             ttlInDays,
-            noRefreshWindow,
-            expiration
-                .minus(noRefreshWindow ? 0 : KEY_REFRESH_WINDOW_DAYS, DAYS)
-                .minus(overlapPeriodDays, DAYS));
+            expiration.minus(overlapPeriodDays, DAYS));
       }
       actual = keyDb.getActiveKeys(setName, numDesiredKeys, expiration).size();
       if (actual < numDesiredKeys) {
@@ -283,7 +277,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int count,
       int validityInDays,
       int ttlInDays,
-      boolean noRefreshWindow,
       Instant activation,
       Optional<DataKey> dataKey,
       Boolean populateMigrationData)
@@ -295,7 +288,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
           tinkTemplate,
           validityInDays,
           ttlInDays,
-          noRefreshWindow,
           activation,
           dataKey,
           populateMigrationData,
@@ -310,7 +302,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       String tinkTemplate,
       int validityInDays,
       int ttlInDays,
-      boolean noRefreshWindow,
       Instant activation,
       Optional<DataKey> dataKey,
       Boolean populateMigrationData,
@@ -340,7 +331,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
               activation,
               validityInDays,
               ttlInDays,
-              noRefreshWindow,
               publicKeysetHandle,
               keyEncryptionKeyUri,
               migrationKeyEncryptionKeyUri,
@@ -399,7 +389,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             tinkTemplate,
             validityInDays,
             ttlInDays,
-            noRefreshWindow,
             activation,
             dataKey,
             populateMigrationData,
@@ -456,7 +445,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
   private String format(String setName, String errorReason) {
     return logMetricHelper.format(
-        "key_generation/error", ImmutableMap.of("setName", setName, "errorReason", errorReason));
+        "error", ImmutableMap.of("setName", setName, "errorReason", errorReason));
   }
 
   /**
@@ -524,7 +513,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       Instant activation,
       int validityInDays,
       int ttlInDays,
-      boolean noRefreshWindow,
       Optional<KeysetHandle> publicKeysetHandle,
       String keyEncryptionKeyUri,
       Optional<String> migrationkeyEncryptionKeyUri,
@@ -547,23 +535,22 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
           .setPublicKeyMaterial(PublicKeyConversionUtil.getPublicKey(publicKeysetHandle.get()));
     }
     if (validityInDays > 0) {
-      unsignedEncryptionKey.setExpirationTime(
-          activation
-              .plus(validityInDays, DAYS)
-              .plus(noRefreshWindow ? 0 : KEY_REFRESH_WINDOW_DAYS, DAYS)
-              .toEpochMilli());
+      unsignedEncryptionKey.setExpirationTime(activation.plus(validityInDays, DAYS).toEpochMilli());
     }
     if (ttlInDays > 0) {
-      unsignedEncryptionKey.setTtlTime(
-          activation.plus(ttlInDays, DAYS).getEpochSecond());
+      unsignedEncryptionKey.setTtlTime(activation.plus(ttlInDays, DAYS).getEpochSecond());
     }
 
     try {
-      return KeySplitDataUtil.addKeySplitData(
-          unsignedEncryptionKey.build(),
-          keyEncryptionKeyUri,
-          migrationkeyEncryptionKeyUri,
-          signatureKey);
+      EncryptionKey unsignedKey = unsignedEncryptionKey.build();
+      EncryptionKey.Builder signedEncryptionKey = unsignedKey.toBuilder();
+      signedEncryptionKey.addKeySplitData(
+          buildKeySplitData(unsignedKey, keyEncryptionKeyUri, signatureKey));
+      if (migrationkeyEncryptionKeyUri.isPresent()) {
+        signedEncryptionKey.addMigrationKeySplitData(
+            buildKeySplitData(unsignedKey, migrationkeyEncryptionKeyUri.get(), signatureKey));
+      }
+      return signedEncryptionKey.build();
     } catch (GeneralSecurityException e) {
       String msg = "Error generating public key signature";
       throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);

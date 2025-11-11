@@ -18,7 +18,6 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.aws;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTask.KEY_REFRESH_WINDOW_DAYS;
 import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
 import static java.time.Instant.now;
@@ -92,7 +91,6 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
-        false,
         now());
 
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
@@ -133,11 +131,7 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
     assertThat(key.getCreationTime()).isIn(Range.closed(now - 1000, now));
 
     // Must have expected expiration time
-    var dayInMilli =
-        now()
-            .plus(expectedExpiryInDays, DAYS)
-            .plus(KEY_REFRESH_WINDOW_DAYS, DAYS)
-            .toEpochMilli();
+    var dayInMilli = now().plus(expectedExpiryInDays, DAYS).toEpochMilli();
     assertThat(key.getExpirationTime()).isIn(Range.closed(dayInMilli - 1000, dayInMilli));
 
     // Must match expected ttl
@@ -167,7 +161,6 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
         5,
         /* expiryInDays */ 10,
         /* ttlInDays */ 20,
-        false,
         now());
 
     // Assert 5 keys were created but only 1 data key was fetched.
@@ -187,7 +180,7 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
             ServiceException.class,
             () ->
                 task.createSplitKey(
-                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, false, now()));
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
     assertThat(ex.getErrorCode()).isEqualTo(Code.INTERNAL);
@@ -209,7 +202,7 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
             keyIdFactory,
             aeadSelector,
             logMetricHelper);
-    task.createSplitKey(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 10, 20, false, now());
+    task.createSplitKey(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 10, 20, now());
 
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
     EncryptionKey key = keys.getFirst();
@@ -232,9 +225,7 @@ public class AwsCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBaseTest {
     var ex =
         assertThrows(
             ServiceException.class,
-            () ->
-                task.createSplitKey(
-                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 10, 20, false, now()));
+            () -> task.createSplitKey(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 10, 20, now()));
     assertThat(ex.getCause()).hasMessageThat().contains("eep");
   }
 

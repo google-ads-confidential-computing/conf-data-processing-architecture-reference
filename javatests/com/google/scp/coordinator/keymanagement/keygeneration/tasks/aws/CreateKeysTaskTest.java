@@ -28,8 +28,8 @@ import com.google.common.collect.Range;
 import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KeyTemplate.OutputPrefixType;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.aws.CreateKeysTask;
+import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
@@ -90,7 +90,7 @@ public class CreateKeysTaskTest {
 
   @Test
   public void createKeys_properties() throws Exception {
-    task.createKeys(/* cnt= */ 1, /* validityInDays=*/ 1, /* ttlInDays= */ 30);
+    task.createKeys(/* cnt= */ 1, /* validityInDays= */ 1, /* ttlInDays= */ 30);
 
     var keys = keyDb.getAllKeys();
 

@@ -24,8 +24,20 @@ output "private_key_service_loadbalancer_ip" {
   value = module.private_key_service.loadbalancer_ip
 }
 
+output "private_key_service_loadbalancer_ip_additional" {
+  value = (
+    var.private_key_service_addon_container_image_url == ""
+    ? module.private_key_service.loadbalancer_ip
+    : module.private_key_service_addon.loadbalancer_ip
+  )
+}
+
 output "private_key_base_url" {
   value = "https://${local.private_key_domain}"
+}
+
+output "private_key_base_url_additional" {
+  value = "https://${local.private_key_domain_additional}"
 }
 
 output "key_encryption_key_id" {

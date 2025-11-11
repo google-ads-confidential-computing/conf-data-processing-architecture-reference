@@ -62,8 +62,8 @@ java_test(
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:guice",
+        "//java/external:protobuf_java",
         "//operator/protos/shared/backend:java_proto",
-        "@com_google_protobuf//java/core",
     ],
 )
 

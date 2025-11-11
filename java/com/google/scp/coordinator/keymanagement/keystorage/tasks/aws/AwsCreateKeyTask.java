@@ -151,8 +151,10 @@ public final class AwsCreateKeyTask implements CreateKeyTask {
             .build();
     try {
       // Migrations are not currently supported in AWS.
-      return KeySplitDataUtil.addKeySplitData(
-          localKey, keyEncryptionKeyUri, Optional.empty(), signatureKey);
+      return localKey.toBuilder()
+          .addKeySplitData(
+              KeySplitDataUtil.buildKeySplitData(localKey, keyEncryptionKeyUri, signatureKey))
+          .build();
     } catch (GeneralSecurityException e) {
       String msg = "Error generating public key signature";
       throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);

@@ -74,8 +74,7 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
           FakeEncryptionKey.create().toBuilder().setSetName(TEST_SET).build(),
           FakeEncryptionKey.create().toBuilder().setSetName(TEST_SET).build(),
           FakeEncryptionKey.create().toBuilder().setSetName(TEST_SET).build(),
-          FakeEncryptionKey.create()
-              .toBuilder()
+          FakeEncryptionKey.create().toBuilder()
               .setSetName(TEST_SET_NO_ROTATION)
               .clearExpirationTime()
               .build());
@@ -113,30 +112,22 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
   @Test
   public void noStartParamThrowsExceptionTest() {
     doReturn("").when(matcher).group("name");
-    doReturn(Optional.of("50000"))
-        .when(request)
-        .getFirstQueryParameter(END_EPOCH_MILLI_PARAM);
+    doReturn(Optional.of("50000")).when(request).getFirstQueryParameter(END_EPOCH_MILLI_PARAM);
     assertThrows(ServiceException.class, () -> task.execute(matcher, request, response));
   }
 
   @Test
   public void noEndParamThrowsExceptionTest() {
     doReturn("").when(matcher).group("name");
-    doReturn(Optional.of("5"))
-        .when(request)
-        .getFirstQueryParameter(START_EPOCH_MILLI_PARAM);
+    doReturn(Optional.of("5")).when(request).getFirstQueryParameter(START_EPOCH_MILLI_PARAM);
     assertThrows(ServiceException.class, () -> task.execute(matcher, request, response));
   }
 
   @Test
   public void startAfterEndThrowsTest() {
     doReturn("").when(matcher).group("name");
-    doReturn(Optional.of("5000"))
-        .when(request)
-        .getFirstQueryParameter(START_EPOCH_MILLI_PARAM);
-    doReturn(Optional.of("500"))
-        .when(request)
-        .getFirstQueryParameter(END_EPOCH_MILLI_PARAM);
+    doReturn(Optional.of("5000")).when(request).getFirstQueryParameter(START_EPOCH_MILLI_PARAM);
+    doReturn(Optional.of("500")).when(request).getFirstQueryParameter(END_EPOCH_MILLI_PARAM);
     assertThrows(ServiceException.class, () -> task.execute(matcher, request, response));
   }
 
@@ -241,8 +232,8 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
     task.execute(matcher, request, response);
   }
 
-  private void returnAllExpectedValidation(
-      String setName, long start, long end, int expected) throws Exception {
+  private void returnAllExpectedValidation(String setName, long start, long end, int expected)
+      throws Exception {
 
     doReturn(setName).when(matcher).group("name");
     doReturn(Optional.of(String.valueOf(start)))

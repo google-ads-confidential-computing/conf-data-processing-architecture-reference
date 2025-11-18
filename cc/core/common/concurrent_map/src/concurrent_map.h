@@ -45,7 +45,7 @@ class ConcurrentMap {
    * @param use_read_lock temporal flag for ConcurrentMap to use
    * const_accessor for Find().
    */
-  explicit ConcurrentMap<TKey, TValue>(bool use_read_lock = false)
+  explicit ConcurrentMap(bool use_read_lock = false)
       : use_read_lock_(use_read_lock) {}
 
   // TODO: We might need to look into keeping the size constant.

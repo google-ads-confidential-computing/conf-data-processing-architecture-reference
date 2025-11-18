@@ -34,6 +34,7 @@ cc_library(
         "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/proto/queue_service/v1:queue_service_cc_proto",
         "@com_github_googleapis_google_cloud_cpp//:pubsub",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googleapis//google/pubsub/v1:pubsub_cc_grpc",
         "@com_google_protobuf//:protobuf",

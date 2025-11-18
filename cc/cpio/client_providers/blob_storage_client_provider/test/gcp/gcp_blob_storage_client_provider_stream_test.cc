@@ -83,7 +83,10 @@ using google::scp::core::errors::
 using google::scp::core::errors::
     SC_BLOB_STORAGE_PROVIDER_STREAM_SESSION_EXPIRED;
 using google::scp::core::errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR;
+using google::scp::core::errors::SC_GCP_DATA_LOSS;
 using google::scp::core::errors::SC_GCP_UNKNOWN;
+using google::scp::core::errors::SC_GCP_UNAUTHENTICATED;
+using google::scp::core::errors::SC_GCP_INVALID_ARGUMENT;
 using google::scp::core::errors::SC_STREAMING_CONTEXT_DONE;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
@@ -97,7 +100,6 @@ using google::scp::cpio::client_providers::mock::MockInstanceClientProvider;
 using std::make_shared;
 using std::make_tuple;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::tuple;
@@ -144,19 +146,21 @@ class GcpBlobStorageClientProviderStreamTest
       public testing::WithParamInterface<tuple<string, string>> {
  protected:
   GcpBlobStorageClientProviderStreamTest()
-      : instance_client_(make_shared<MockInstanceClientProvider>()),
+      : options_(make_shared<BlobStorageClientOptions>()),
+        instance_client_(make_shared<MockInstanceClientProvider>()),
         storage_factory_(make_shared<NiceMock<MockGcpCloudStorageFactory>>()),
         mock_client_(make_shared<NiceMock<MockClient>>()),
         real_cpu_async_executor_(make_shared<AsyncExecutor>(
             /*thread_count=*/1, /*queue_cap=*/1000)),
         real_io_async_executor_(make_shared<AsyncExecutor>(
             /*thread_count=*/1, /*queue_cap=*/1000)),
-        gcp_blob_storage_client_(make_shared<BlobStorageClientOptions>(),
-                                 instance_client_, real_cpu_async_executor_,
+        gcp_blob_storage_client_(options_, instance_client_,
+                                 real_cpu_async_executor_,
                                  real_io_async_executor_, storage_factory_) {
     ON_CALL(*storage_factory_, CreateClient)
         .WillByDefault(
             Return(make_shared<Client>(ClientFromMock(mock_client_))));
+    options_->enable_new_gcp_error_code_converter = false;
     instance_client_->instance_resource_name = kInstanceResourceName;
     get_blob_stream_context_.request = make_shared<GetBlobStreamRequest>();
     get_blob_stream_context_.process_callback = [this](auto, bool) {
@@ -197,6 +201,7 @@ class GcpBlobStorageClientProviderStreamTest
     }
   }
 
+  shared_ptr<BlobStorageClientOptions> options_;
   shared_ptr<MockInstanceClientProvider> instance_client_;
   shared_ptr<MockGcpCloudStorageFactory> storage_factory_;
   shared_ptr<MockClient> mock_client_;
@@ -306,7 +311,7 @@ StatusOr<unique_ptr<ObjectReadSource>> BuildReadResponseFromString(
         return result;
       });
   EXPECT_CALL(*mock_source, IsOpen).WillRepeatedly(Return(false));
-  return unique_ptr<ObjectReadSource>(move(mock_source));
+  return unique_ptr<ObjectReadSource>(std::move(mock_source));
 }
 
 // Builds an ObjectReadSource that contains the bytes (copied) from bytes_str.
@@ -333,7 +338,7 @@ StatusOr<unique_ptr<ObjectReadSource>> BuildReadResponseFromStringNoSize(
         return result;
       });
   EXPECT_CALL(*mock_source, IsOpen).WillRepeatedly(Return(false));
-  return unique_ptr<ObjectReadSource>(move(mock_source));
+  return unique_ptr<ObjectReadSource>(std::move(mock_source));
 }
 
 TEST_P(GcpBlobStorageClientProviderStreamTest, GetBlobStream) {
@@ -362,7 +367,7 @@ TEST_P(GcpBlobStorageClientProviderStreamTest, GetBlobStream) {
       [this, &actual_responses](auto& context, bool is_finish) {
         auto resp = context.TryGetNextResponse();
         if (resp != nullptr) {
-          actual_responses.push_back(move(*resp));
+          actual_responses.push_back(std::move(*resp));
         } else if (!context.IsMarkedDone()) {
           ADD_FAILURE();
         } else {
@@ -406,7 +411,7 @@ TEST_F(GcpBlobStorageClientProviderStreamTest, GetBlobStreamNoSizeReturned) {
       [this, &actual_responses](auto& context, bool is_finish) {
         auto resp = context.TryGetNextResponse();
         if (resp != nullptr) {
-          actual_responses.push_back(move(*resp));
+          actual_responses.push_back(std::move(*resp));
         } else if (!context.IsMarkedDone()) {
           ADD_FAILURE();
         } else {
@@ -467,7 +472,7 @@ TEST_F(GcpBlobStorageClientProviderStreamTest, GetBlobStreamMultipleResponses) {
         }
         auto resp = context.TryGetNextResponse();
         if (resp != nullptr) {
-          actual_responses.push_back(move(*resp));
+          actual_responses.push_back(std::move(*resp));
         } else if (!context.IsMarkedDone()) {
           ADD_FAILURE();
         } else {
@@ -525,7 +530,7 @@ TEST_F(GcpBlobStorageClientProviderStreamTest, GetBlobStreamByteRange) {
         }
         auto resp = context.TryGetNextResponse();
         if (resp != nullptr) {
-          actual_responses.push_back(move(*resp));
+          actual_responses.push_back(std::move(*resp));
         } else if (!context.IsMarkedDone()) {
           ADD_FAILURE();
         } else {
@@ -745,8 +750,8 @@ TEST_F(GcpBlobStorageClientProviderStreamTest, PutBlobStreamMultiplePortions) {
   request2.mutable_blob_portion()->set_data(strings[0]);
   auto request3 = *put_blob_stream_context_.request;
   request3.mutable_blob_portion()->set_data(strings[1]);
-  put_blob_stream_context_.TryPushRequest(move(request2));
-  put_blob_stream_context_.TryPushRequest(move(request3));
+  put_blob_stream_context_.TryPushRequest(std::move(request2));
+  put_blob_stream_context_.TryPushRequest(std::move(request3));
   put_blob_stream_context_.MarkDone();
 
   ExpectResumableUpload(*mock_client_, kBucketName, kBlobName, initial_str,
@@ -797,13 +802,13 @@ TEST_F(GcpBlobStorageClientProviderStreamTest,
   sleep_for(milliseconds(50));
   auto request2 = *put_blob_stream_context_.request;
   request2.mutable_blob_portion()->set_data(strings[0]);
-  put_blob_stream_context_.TryPushRequest(move(request2));
+  put_blob_stream_context_.TryPushRequest(std::move(request2));
 
   // Wait until the stream has been suspended
   sleep_for(milliseconds(50));
   auto request3 = *put_blob_stream_context_.request;
   request3.mutable_blob_portion()->set_data(strings[1]);
-  put_blob_stream_context_.TryPushRequest(move(request3));
+  put_blob_stream_context_.TryPushRequest(std::move(request3));
 
   put_blob_stream_context_.MarkDone();
 
@@ -828,11 +833,11 @@ TEST_F(GcpBlobStorageClientProviderStreamTest,
   EXPECT_CALL(*mock_client_, CreateResumableUpload)
       .WillOnce(Return(CreateResumableUploadResponse{"something"}));
   EXPECT_CALL(*mock_client_, UploadChunk)
-      .WillOnce(Return(Status(CloudStatusCode::kResourceExhausted, "fail")));
+      .WillOnce(Return(Status(CloudStatusCode::kUnauthenticated, "fail")));
 
   put_blob_stream_context_.callback = [this](auto& context) {
     EXPECT_THAT(context.result,
-                ResultIs(FailureExecutionResult(SC_GCP_UNKNOWN)));
+                ResultIs(FailureExecutionResult(SC_GCP_UNAUTHENTICATED)));
 
     finish_conditions_met_++;
   };
@@ -863,11 +868,11 @@ TEST_F(GcpBlobStorageClientProviderStreamTest,
   EXPECT_CALL(*mock_client_, UploadChunk)
       .WillOnce(Return(
           QueryResumableUploadResponse{bytes_str.length(), std::nullopt}))
-      .WillOnce(Return(Status(CloudStatusCode::kResourceExhausted, "fail")));
+      .WillOnce(Return(Status(CloudStatusCode::kInvalidArgument, "fail")));
 
   put_blob_stream_context_.callback = [this](auto& context) {
     EXPECT_THAT(context.result,
-                ResultIs(FailureExecutionResult(SC_GCP_UNKNOWN)));
+                ResultIs(FailureExecutionResult(SC_GCP_INVALID_ARGUMENT)));
 
     finish_conditions_met_++;
   };
@@ -905,6 +910,44 @@ TEST_F(GcpBlobStorageClientProviderStreamTest,
   put_blob_stream_context_.callback = [this](auto& context) {
     EXPECT_THAT(context.result, ResultIs(RetryExecutionResult(
                                     SC_BLOB_STORAGE_PROVIDER_RETRIABLE_ERROR)));
+
+    finish_conditions_met_++;
+  };
+
+  gcp_blob_storage_client_.PutBlobStream(put_blob_stream_context_);
+
+  WaitUntil([this]() { return finish_conditions_met_.load() == 1; });
+  EXPECT_TRUE(put_blob_stream_context_.IsMarkedDone());
+}
+
+TEST_F(GcpBlobStorageClientProviderStreamTest,
+       PutBlobStreamFailsIfFinalizingFailsReturnsGcpErrorCode) {
+  options_->enable_new_gcp_error_code_converter = true;
+  put_blob_stream_context_.request->mutable_blob_portion()
+      ->mutable_metadata()
+      ->set_bucket_name(kBucketName);
+  put_blob_stream_context_.request->mutable_blob_portion()
+      ->mutable_metadata()
+      ->set_blob_name(kBlobName);
+
+  string bytes_str(kUploadSize, 'a');
+  put_blob_stream_context_.request->mutable_blob_portion()->set_data(bytes_str);
+  // Place another request on the context.
+  put_blob_stream_context_.TryPushRequest(*put_blob_stream_context_.request);
+  put_blob_stream_context_.MarkDone();
+
+  EXPECT_CALL(*mock_client_, CreateResumableUpload)
+      .WillOnce(Return(CreateResumableUploadResponse{"something"}));
+  EXPECT_CALL(*mock_client_, UploadChunk)
+      .WillOnce(Return(
+          QueryResumableUploadResponse{bytes_str.length(), std::nullopt}))
+      .WillOnce(Return(
+          QueryResumableUploadResponse{bytes_str.length() * 2, std::nullopt}))
+      .WillOnce(Return(Status(CloudStatusCode::kDataLoss, "fail")));
+
+  put_blob_stream_context_.callback = [this](auto& context) {
+    EXPECT_THAT(context.result,
+                ResultIs(FailureExecutionResult(SC_GCP_DATA_LOSS)));
 
     finish_conditions_met_++;
   };

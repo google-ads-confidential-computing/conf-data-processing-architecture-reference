@@ -81,12 +81,15 @@ using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::async_executor::mock::MockAsyncExecutor;
 using google::scp::core::errors::SC_BLOB_STORAGE_PROVIDER_BLOB_PATH_NOT_FOUND;
+using google::scp::core::errors::SC_BLOB_STORAGE_PROVIDER_ERROR_GETTING_BLOB;
 using google::scp::core::errors::SC_BLOB_STORAGE_PROVIDER_INVALID_ARGS;
 using google::scp::core::errors::
     SC_BLOB_STORAGE_PROVIDER_INVALID_CACHED_CLIENT_LIFETIME;
 using google::scp::core::errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR;
 using google::scp::core::errors::SC_GCP_DATA_LOSS;
+using google::scp::core::errors::SC_GCP_INVALID_ARGUMENT;
 using google::scp::core::errors::SC_GCP_NOT_FOUND;
+using google::scp::core::errors::SC_GCP_OUT_OF_RANGE;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::ScpTestBase;
@@ -100,7 +103,6 @@ using std::get;
 using std::make_shared;
 using std::make_tuple;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::tuple;
@@ -149,7 +151,8 @@ class MockGcpCloudStorageFactory : public GcpCloudStorageFactory {
 class GcpBlobStorageClientProviderBaseTest {
  protected:
   GcpBlobStorageClientProviderBaseTest()
-      : instance_client_(make_shared<MockInstanceClientProvider>()),
+      : options_(make_shared<BlobStorageClientOptions>()),
+        instance_client_(make_shared<MockInstanceClientProvider>()),
         storage_factory_(make_shared<NiceMock<MockGcpCloudStorageFactory>>()),
         mock_gcs_client_(make_shared<NiceMock<MockClient>>()),
         // We can't use mock executor for CPU calls because
@@ -157,13 +160,13 @@ class GcpBlobStorageClientProviderBaseTest {
         // with real async executors.
         real_cpu_async_executor_(
             make_shared<AsyncExecutor>(/*thread_count=*/2, /*queue_cap=*/1000)),
-        gcp_blob_storage_client_(make_shared<BlobStorageClientOptions>(),
-                                 instance_client_, real_cpu_async_executor_,
-                                 make_shared<MockAsyncExecutor>(),
-                                 storage_factory_) {
+        gcp_blob_storage_client_(
+            options_, instance_client_, real_cpu_async_executor_,
+            make_shared<MockAsyncExecutor>(), storage_factory_) {
     ON_CALL(*storage_factory_, CreateClient)
         .WillByDefault(
             Return(make_shared<Client>(ClientFromMock(mock_gcs_client_))));
+    options_->enable_new_gcp_error_code_converter = false;
     instance_client_->instance_resource_name = kInstanceResourceName;
     get_blob_context_.request = make_shared<GetBlobRequest>();
     get_blob_context_.callback = [this](auto) { finish_called_ = true; };
@@ -189,6 +192,7 @@ class GcpBlobStorageClientProviderBaseTest {
     EXPECT_SUCCESS(real_cpu_async_executor_->Stop());
   }
 
+  shared_ptr<BlobStorageClientOptions> options_;
   shared_ptr<MockInstanceClientProvider> instance_client_;
   shared_ptr<MockGcpCloudStorageFactory> storage_factory_;
   shared_ptr<MockClient> mock_gcs_client_;
@@ -293,7 +297,7 @@ StatusOr<unique_ptr<ObjectReadSource>> BuildReadResponseFromString(
         return result;
       });
   EXPECT_CALL(*mock_source, IsOpen).WillRepeatedly(Return(false));
-  return unique_ptr<ObjectReadSource>(move(mock_source));
+  return unique_ptr<ObjectReadSource>(std::move(mock_source));
 }
 
 // Matches arg.bucket_name and arg.object_name with bucket_name and
@@ -479,7 +483,7 @@ StatusOr<unique_ptr<ObjectReadSource>> BuildBadHashReadResponse() {
     return result;
   });
   EXPECT_CALL(*mock_source, IsOpen).WillRepeatedly(Return(false));
-  return unique_ptr<ObjectReadSource>(move(mock_source));
+  return unique_ptr<ObjectReadSource>(std::move(mock_source));
 }
 
 TEST_F(GcpBlobStorageClientProviderTest, GetBlobHashMismatchFails) {
@@ -845,7 +849,7 @@ TEST_F(GcpBlobStorageClientProviderTest,
       BlobMetadata metadata;
       metadata.set_bucket_name(kBucketName1);
       metadata.set_blob_name(absl::StrCat("blob_", i));
-      expected_blobs.push_back(move(metadata));
+      expected_blobs.push_back(std::move(metadata));
     }
     EXPECT_THAT(context.response->blob_metadatas(),
                 Pointwise(BlobMetadatasEqual(), expected_blobs));
@@ -874,6 +878,31 @@ TEST_F(GcpBlobStorageClientProviderTest, ListBlobsPropagatesFailure) {
     EXPECT_THAT(context.result,
                 ResultIs(FailureExecutionResult(
                     SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR)));
+
+    finish_called_ = true;
+  };
+
+  gcp_blob_storage_client_.ListBlobsMetadata(list_blobs_context_);
+
+  WaitUntil([this]() { return finish_called_.load(); });
+}
+
+TEST_F(GcpBlobStorageClientProviderTest,
+       ListBlobsPropagatesFailureReturnGcpErrorCode) {
+  options_->enable_new_gcp_error_code_converter = true;
+  list_blobs_context_.request->mutable_blob_metadata()->set_bucket_name(
+      kBucketName1);
+  list_blobs_context_.request->mutable_blob_metadata()->set_blob_name("blob_");
+
+  EXPECT_CALL(*mock_gcs_client_,
+              ListObjects(ListObjectsRequestEqualNoOffset(kBucketName1, "blob_",
+                                                          kDefaultMaxPageSize)))
+      .WillOnce(
+          Return(ByMove(Status(CloudStatusCode::kInvalidArgument, "error"))));
+
+  list_blobs_context_.callback = [this](auto& context) {
+    EXPECT_THAT(context.result,
+                ResultIs(FailureExecutionResult(SC_GCP_INVALID_ARGUMENT)));
 
     finish_called_ = true;
   };
@@ -979,12 +1008,47 @@ TEST_F(GcpBlobStorageClientProviderTest, PutBlobPropagatesFailure) {
 
   EXPECT_CALL(*mock_gcs_client_,
               InsertObjectMedia(InsertObjectRequestEquals(expected_request)))
-      .WillOnce(Return(Status(CloudStatusCode::kInvalidArgument, "failure")));
+      .WillOnce(Return(Status(CloudStatusCode::kOutOfRange, "failure")));
 
   put_blob_context_.callback = [this](auto& context) {
     EXPECT_THAT(context.result,
                 ResultIs(FailureExecutionResult(
-                    SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR)));
+                    SC_BLOB_STORAGE_PROVIDER_ERROR_GETTING_BLOB)));
+
+    finish_called_ = true;
+  };
+
+  gcp_blob_storage_client_.PutBlob(put_blob_context_);
+
+  WaitUntil([this]() { return finish_called_.load(); });
+}
+
+TEST_F(GcpBlobStorageClientProviderTest,
+       PutBlobPropagatesFailureReturnsGcpErrorCode) {
+  options_->enable_new_gcp_error_code_converter = true;
+  put_blob_context_.request->mutable_blob()
+      ->mutable_metadata()
+      ->set_bucket_name(kBucketName1);
+  put_blob_context_.request->mutable_blob()->mutable_metadata()->set_blob_name(
+      kBlobName1);
+
+  string bytes_str = "put_string";
+  put_blob_context_.request->mutable_blob()->set_data(bytes_str);
+
+  // Use Google Cloud's MD5 method.
+  string expected_md5_hash = google::cloud::storage::ComputeMD5Hash(bytes_str);
+
+  InsertObjectMediaRequest expected_request(kBucketName1, kBlobName1,
+                                            bytes_str);
+  expected_request.set_option(MD5HashValue(expected_md5_hash));
+
+  EXPECT_CALL(*mock_gcs_client_,
+              InsertObjectMedia(InsertObjectRequestEquals(expected_request)))
+      .WillOnce(Return(Status(CloudStatusCode::kOutOfRange, "failure")));
+
+  put_blob_context_.callback = [this](auto& context) {
+    EXPECT_THAT(context.result,
+                ResultIs(FailureExecutionResult(SC_GCP_OUT_OF_RANGE)));
 
     finish_called_ = true;
   };

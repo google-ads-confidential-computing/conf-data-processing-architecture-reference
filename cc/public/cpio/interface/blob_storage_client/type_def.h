@@ -35,7 +35,9 @@ struct BlobStorageClientOptions {
 
   BlobStorageClientOptions(const BlobStorageClientOptions& options)
       : transfer_stall_timeout(options.transfer_stall_timeout),
-        retry_limit(options.retry_limit) {}
+        retry_limit(options.retry_limit),
+        enable_new_gcp_error_code_converter(
+            options.enable_new_gcp_error_code_converter) {}
 
   // GCP - How long a blob storage transfer (download or upload) should stay
   // alive for after some duration of inaction.
@@ -45,6 +47,9 @@ struct BlobStorageClientOptions {
   std::chrono::seconds cached_client_lifetime = std::chrono::seconds(60 * 10);
   // GCP - How many retries should be used for blob storage operations.
   size_t retry_limit = 3;
+
+  // Temporary flag to use the new GCP Error Code Converter.
+  bool enable_new_gcp_error_code_converter = false;
 };
 }  // namespace google::scp::cpio
 

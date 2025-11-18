@@ -27,6 +27,7 @@
 #include "core/interface/async_executor_interface.h"
 #include "cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cpio/client_providers/interface/queue_client_provider_interface.h"
+#include <grpcpp/support/status.h>
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/queue_service/v1/queue_service.pb.h"
 
@@ -139,6 +140,8 @@ class GcpQueueClientProvider : public QueueClientProviderInterface {
   core::ExecutionResultOr<cmrt::sdk::queue_service::v1::DeleteMessageResponse>
   AcknowledgeMessage(const cmrt::sdk::queue_service::v1::DeleteMessageRequest&
                          delete_message_request) noexcept;
+
+  bool IsStatusCodeRetriable(grpc::StatusCode status_code) noexcept;
 
   /// The configuration for queue client.
   std::shared_ptr<QueueClientOptions> queue_client_options_;

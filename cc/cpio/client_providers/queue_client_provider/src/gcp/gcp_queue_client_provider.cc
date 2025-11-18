@@ -16,10 +16,11 @@
 
 #include "gcp_queue_client_provider.h"
 
+#include <set>
 #include <string>
-
 #include <grpcpp/grpcpp.h>
 
+#include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/interface/async_context.h"
@@ -57,8 +58,10 @@ using google::scp::core::AsyncPriority;
 using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;
 using google::scp::core::FailureExecutionResult;
+using google::scp::core::RetryExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
+using google::scp::core::errors::SC_GCP_QUEUE_CLIENT_PROVIDER_CLOUD_UNAVAILABLE;
 using google::scp::core::errors::
     SC_GCP_QUEUE_CLIENT_PROVIDER_INVALID_CONFIG_VISIBILITY_TIMEOUT;
 using google::scp::core::errors::SC_GCP_QUEUE_CLIENT_PROVIDER_INVALID_MESSAGE;
@@ -92,6 +95,7 @@ using grpc::StatusCode;
 using grpc::StubOptions;
 using std::bind;
 using std::make_shared;
+using std::set;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
@@ -103,6 +107,11 @@ static constexpr char kGcpSubscriptionFormatString[] =
     "projects/%s/subscriptions/%s";
 static constexpr uint8_t kMaxNumberOfMessagesReceived = 1;
 static constexpr uint16_t kMaxAckDeadlineSeconds = 600;
+
+const set<StatusCode> kRetryStatusCodes = {
+    StatusCode::DEADLINE_EXCEEDED,
+    StatusCode::UNAVAILABLE,
+};
 
 namespace google::scp::cpio::client_providers {
 
@@ -221,6 +230,17 @@ GcpQueueClientProvider::PublishMessage(
   auto status = publisher_stub_->Publish(&client_context, publish_request,
                                          &publish_response);
   if (!status.ok()) {
+    if (IsStatusCodeRetriable(status.error_code())) {
+      auto execution_result =
+          RetryExecutionResult(SC_GCP_QUEUE_CLIENT_PROVIDER_CLOUD_UNAVAILABLE);
+      SCP_INFO(
+          kGcpQueueClientProvider, kZeroUuid,
+          "Enqueue message failed with RETRYABLE code %s and error message %s.",
+          absl::StatusCodeToString(absl::StatusCode(status.error_code()))
+              .c_str(),
+          status.error_message().c_str());
+      return execution_result;
+    }
     auto execution_result = GcpUtils::GcpErrorConverter(status);
     SCP_ERROR(
         kGcpQueueClientProvider, kZeroUuid, execution_result,
@@ -284,6 +304,17 @@ GcpQueueClientProvider::PullMessage() noexcept {
       subscriber_stub_->Pull(&client_context, pull_request, &pull_response);
 
   if (!status.ok()) {
+    if (IsStatusCodeRetriable(status.error_code())) {
+      auto execution_result =
+          RetryExecutionResult(SC_GCP_QUEUE_CLIENT_PROVIDER_CLOUD_UNAVAILABLE);
+      SCP_INFO(
+          kGcpQueueClientProvider, kZeroUuid,
+          "Get Top message failed with RETRYABLE code %s and error message %s.",
+          absl::StatusCodeToString(absl::StatusCode(status.error_code()))
+              .c_str(),
+          status.error_message().c_str());
+      return execution_result;
+    }
     auto execution_result = GcpUtils::GcpErrorConverter(status);
     SCP_ERROR(kGcpQueueClientProvider, kZeroUuid, execution_result,
               "Failed to get top message due to GCP Pub/Sub service error. "
@@ -418,6 +449,18 @@ GcpQueueClientProvider::ModifyMessageAckDeadline(
       &client_context, modify_ack_deadline_request,
       &modify_ack_deadline_response);
   if (!status.ok()) {
+    if (IsStatusCodeRetriable(status.error_code())) {
+      auto execution_result =
+          RetryExecutionResult(SC_GCP_QUEUE_CLIENT_PROVIDER_CLOUD_UNAVAILABLE);
+      SCP_INFO(kGcpQueueClientProvider, kZeroUuid,
+               "Modify message ack deadline failed with RETRYABLE code %s and "
+               "error message %s.",
+               absl::StatusCodeToString(absl::StatusCode(status.error_code()))
+                   .c_str(),
+               status.error_message().c_str());
+
+      return execution_result;
+    }
     auto execution_result = GcpUtils::GcpErrorConverter(status);
     SCP_ERROR(kGcpQueueClientProvider, kZeroUuid, execution_result,
               "Failed to modify message ack deadline due to GCP Pub/Sub "
@@ -483,6 +526,17 @@ GcpQueueClientProvider::AcknowledgeMessage(
   auto status = subscriber_stub_->Acknowledge(
       &client_context, acknowledge_request, &acknowledge_response);
   if (!status.ok()) {
+    if (IsStatusCodeRetriable(status.error_code())) {
+      auto execution_result =
+          RetryExecutionResult(SC_GCP_QUEUE_CLIENT_PROVIDER_CLOUD_UNAVAILABLE);
+      SCP_INFO(kGcpQueueClientProvider, kZeroUuid,
+               "Acknowledge message ack failed with RETRYABLE code %s and "
+               "error message %s.",
+               absl::StatusCodeToString(absl::StatusCode(status.error_code()))
+                   .c_str(),
+               status.error_message().c_str());
+      return execution_result;
+    }
     auto execution_result = GcpUtils::GcpErrorConverter(status);
     SCP_ERROR(kGcpQueueClientProvider, kZeroUuid, execution_result,
               "Failed to acknowledge message due to GCP Pub/Sub "
@@ -493,6 +547,11 @@ GcpQueueClientProvider::AcknowledgeMessage(
 
   DeleteMessageResponse response;
   return response;
+}
+
+bool GcpQueueClientProvider::IsStatusCodeRetriable(
+    StatusCode status_code) noexcept {
+  return kRetryStatusCodes.find(status_code) != kRetryStatusCodes.end();
 }
 
 shared_ptr<Channel> GcpPubSubStubFactory::GetPubSubChannel(

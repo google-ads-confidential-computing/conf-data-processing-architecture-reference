@@ -310,6 +310,9 @@ class GcpBlobStorageClientProvider : public BlobStorageClientProviderInterface {
       std::shared_ptr<google::cloud::storage::Client>& client,
       std::function<void(bool)> should_delete_entry) noexcept;
 
+  core::ExecutionResult GetConvertedFailureExecutionResult(
+      const google::cloud::Status& status) noexcept;
+
   // The project id of the current instance.
   std::string current_project_id_;
 

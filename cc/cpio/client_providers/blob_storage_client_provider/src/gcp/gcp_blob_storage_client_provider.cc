@@ -51,6 +51,7 @@
 
 using google::cloud::MakeExternalAccountCredentials;
 using google::cloud::Options;
+using google::cloud::Status;
 using google::cloud::StatusCode;
 using google::cloud::StatusOr;
 using google::cloud::UnifiedCredentialsOption;
@@ -119,7 +120,6 @@ using google::scp::core::errors::
     SC_BLOB_STORAGE_PROVIDER_STREAM_SESSION_CANCELLED;
 using google::scp::core::errors::
     SC_BLOB_STORAGE_PROVIDER_STREAM_SESSION_EXPIRED;
-
 using google::scp::cpio::client_providers::GcpInstanceClientUtils;
 using google::scp::cpio::common::GcpUtils;
 
@@ -652,8 +652,7 @@ void GcpBlobStorageClientProvider::ListBlobsMetadataInternal(
   for (auto&& object_metadata : objects_reader) {
     if (!object_metadata) {
       auto execution_result =
-          GcpBlobStorageClientUtils::ConvertCloudStorageErrorToExecutionResult(
-              object_metadata.status().code());
+          GetConvertedFailureExecutionResult(object_metadata.status());
       SCP_ERROR_CONTEXT(
           kGcpBlobStorageClientProvider, list_blobs_context, execution_result,
           "List blobs request failed. Error code: %d, message: %s",
@@ -744,8 +743,7 @@ void GcpBlobStorageClientProvider::PutBlobInternal(
                       object_metadata.status().code(),
                       object_metadata.status().message().c_str());
     auto execution_result =
-        GcpBlobStorageClientUtils::ConvertCloudStorageErrorToExecutionResult(
-            object_metadata.status().code());
+        GetConvertedFailureExecutionResult(object_metadata.status());
     FinishContext(execution_result, put_blob_context, cpu_async_executor_);
     return;
   }
@@ -874,7 +872,7 @@ void GcpBlobStorageClientProvider::PutBlobStreamInternal(
     auto session_id = tracker->stream.resumable_session_id();
     // Cancel any outstanding uploads.
     move(tracker->stream).Suspend();
-    cloud_storage_client.DeleteResumableUpload(session_id);
+    auto status = cloud_storage_client.DeleteResumableUpload(session_id);
     auto result = FailureExecutionResult(
         SC_BLOB_STORAGE_PROVIDER_STREAM_SESSION_CANCELLED);
     SCP_ERROR_CONTEXT(kGcpBlobStorageClientProvider, put_blob_stream_context,
@@ -894,9 +892,7 @@ void GcpBlobStorageClientProvider::PutBlobStreamInternal(
       auto object_metadata = tracker->stream.metadata();
       auto result = SuccessExecutionResult();
       if (!object_metadata) {
-        result = GcpBlobStorageClientUtils::
-            ConvertCloudStorageErrorToExecutionResult(
-                object_metadata.status().code());
+        result = GetConvertedFailureExecutionResult(object_metadata.status());
         SCP_ERROR_CONTEXT(
             kGcpBlobStorageClientProvider, put_blob_stream_context, result,
             "Put blob stream request failed. Error code: %d, message: %s",
@@ -1054,9 +1050,7 @@ void GcpBlobStorageClientProvider::DeleteBlobInternal(
     SCP_DEBUG_CONTEXT(kGcpBlobStorageClientProvider, delete_blob_context,
                       "Delete blob request failed. Error code: %d, message: %s",
                       status.code(), status.message().c_str());
-    auto execution_result =
-        GcpBlobStorageClientUtils::ConvertCloudStorageErrorToExecutionResult(
-            status.code());
+    auto execution_result = GetConvertedFailureExecutionResult(status);
     FinishContext(execution_result, delete_blob_context, cpu_async_executor_);
     return;
   }
@@ -1102,6 +1096,17 @@ void GcpBlobStorageClientProvider::OnBeforeGarbageCollection(
     string& client_identity, shared_ptr<Client>& client,
     function<void(bool)> should_delete_entry) noexcept {
   should_delete_entry(true);
+}
+
+ExecutionResult
+GcpBlobStorageClientProvider::GetConvertedFailureExecutionResult(
+    const Status& status) noexcept {
+  if (options_->enable_new_gcp_error_code_converter) {
+    return GcpUtils::GcpErrorConverter(status);
+  } else {
+    return GcpBlobStorageClientUtils::ConvertCloudStorageErrorToExecutionResult(
+        status.code());
+  }
 }
 
 Options GcpCloudStorageFactory::CreateClientOptions(

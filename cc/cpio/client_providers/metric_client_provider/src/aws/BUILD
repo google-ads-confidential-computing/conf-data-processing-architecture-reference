@@ -49,6 +49,16 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "aws_metric_client_provider_no_factory",
+    srcs = [
+        "//cc/cpio/client_providers/metric_client_provider/src/aws:aws_metric_client_provider_srcs",
+    ],
+    deps = [
+        ":aws_metric_client_provider_deps",
+    ],
+)
+
 exports_files([
     "aws_metric_client_provider.h",
     "aws_metric_client_provider.cc",

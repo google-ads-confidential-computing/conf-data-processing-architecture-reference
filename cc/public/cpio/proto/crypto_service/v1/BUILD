@@ -12,14 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load(
-    "@com_google_googleapis_imports//:imports.bzl",
-    "cc_grpc_library",
-    "java_grpc_library",
-)
+load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@com_google_protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
+load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -31,8 +28,6 @@ proto_library(
     ],
     deps = [
         "//cc/public/core/interface:execution_result_proto",
-        "//cc/public/cpio/proto/private_key_service/v1:private_key_service_proto",
-        "//cc/public/cpio/proto/public_key_service/v1:public_key_service_proto",
         "@tink_cc//proto:aes_ctr_hmac_streaming_proto",
         "@tink_cc//proto:aes_gcm_hkdf_streaming_proto",
     ],

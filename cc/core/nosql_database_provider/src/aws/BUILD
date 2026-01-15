@@ -33,6 +33,6 @@ cc_library(
         "//cc/core/interface:interface_lib",
         "//cc/core/nosql_database_provider/src/common:core_nosql_database_provider_common_lib",
         "@aws_sdk_cpp//:dynamodb",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )

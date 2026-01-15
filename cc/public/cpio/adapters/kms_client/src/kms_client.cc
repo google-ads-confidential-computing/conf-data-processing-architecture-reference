@@ -38,6 +38,7 @@ using google::scp::core::ExecutionResult;
 using google::scp::core::ExecutionResultOr;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
+using google::scp::core::utils::ConvertToPublicExecutionResult;
 using google::scp::cpio::client_providers::GlobalCpio;
 using google::scp::cpio::client_providers::KmsClientProviderFactory;
 using google::scp::cpio::client_providers::RoleCredentialsProviderInterface;
@@ -62,7 +63,7 @@ ExecutionResult KmsClient::Init() noexcept {
   if (!execution_result.Successful()) {
     SCP_ERROR(kKmsClient, kZeroUuid, execution_result,
               "Failed to get RoleCredentialsProvider.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
   shared_ptr<AsyncExecutorInterface> io_async_executor;
   execution_result =
@@ -70,7 +71,7 @@ ExecutionResult KmsClient::Init() noexcept {
   if (!execution_result.Successful()) {
     SCP_ERROR(kKmsClient, kZeroUuid, execution_result,
               "Failed to get IOAsyncExecutor.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
   shared_ptr<AsyncExecutorInterface> cpu_async_executor;
   execution_result =
@@ -78,16 +79,26 @@ ExecutionResult KmsClient::Init() noexcept {
   if (!execution_result.Successful()) {
     SCP_ERROR(kKmsClient, kZeroUuid, execution_result,
               "Failed to get CpuAsyncExecutor.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
-  kms_client_provider_ =
-      KmsClientProviderFactory::Create(options_, role_credentials_provider,
-                                       io_async_executor, cpu_async_executor);
+
+  shared_ptr<MetricClientInterface> metric_client;
+  execution_result =
+      GlobalCpio::GetGlobalCpio()->GetMetricClient(metric_client);
+  if (!execution_result.Successful()) {
+    SCP_ERROR(kKmsClient, kZeroUuid, execution_result,
+              "Failed to get MetricClient.");
+    return ConvertToPublicExecutionResult(execution_result);
+  }
+
+  kms_client_provider_ = KmsClientProviderFactory::Create(
+      options_, role_credentials_provider, metric_client, io_async_executor,
+      cpu_async_executor);
   execution_result = kms_client_provider_->Init();
   if (!execution_result.Successful()) {
     SCP_ERROR(kKmsClient, kZeroUuid, execution_result,
               "Failed to initialize KmsClientProvider.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
   return SuccessExecutionResult();
 }
@@ -97,7 +108,7 @@ ExecutionResult KmsClient::Run() noexcept {
   if (!execution_result.Successful()) {
     SCP_ERROR(kKmsClient, kZeroUuid, execution_result,
               "Failed to run KmsClientProvider.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
   return SuccessExecutionResult();
 }
@@ -107,13 +118,14 @@ ExecutionResult KmsClient::Stop() noexcept {
   if (!execution_result.Successful()) {
     SCP_ERROR(kKmsClient, kZeroUuid, execution_result,
               "Failed to stop KmsClientProvider.");
-    return execution_result;
+    return ConvertToPublicExecutionResult(execution_result);
   }
   return SuccessExecutionResult();
 }
 
 void KmsClient::Decrypt(
     AsyncContext<DecryptRequest, DecryptResponse>& decrypt_context) noexcept {
+  decrypt_context.setConvertToPublicError(true);
   kms_client_provider_->Decrypt(decrypt_context);
 }
 
@@ -123,8 +135,8 @@ ExecutionResultOr<DecryptResponse> KmsClient::DecryptSync(
   auto execution_result =
       SyncUtils::AsyncToSync2<DecryptRequest, DecryptResponse>(
           bind(&KmsClient::Decrypt, this, _1), move(request), response);
-  RETURN_AND_LOG_IF_FAILURE(execution_result, kKmsClient, kZeroUuid,
-                            "Failed to decrypt.");
+  RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
+                            kKmsClient, kZeroUuid, "Failed to decrypt.");
   return response;
 }
 

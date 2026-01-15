@@ -18,6 +18,7 @@ package(default_visibility = ["//visibility:public"])
 
 java_test(
     name = "AwsKmsHybridEncryptionKeyServiceTest",
+    size = "large",
     srcs = ["AwsKmsHybridEncryptionKeyServiceTest.java"],
     runtime_deps = [
         # LocalStackContainers uses v1 API in the background.

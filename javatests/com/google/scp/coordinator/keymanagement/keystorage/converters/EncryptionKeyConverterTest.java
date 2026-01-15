@@ -45,6 +45,8 @@ public class EncryptionKeyConverterTest {
             .setCreationTime(0L)
             .setActivationTime(1L)
             .setExpirationTime(2L)
+            .setKeyMetadata(
+                EncryptionKey.KeyMetadata.newBuilder().setBackfillExpirationTime(3L).build())
             .addAllKeyData(ImmutableList.of())
             .build();
 
@@ -56,6 +58,8 @@ public class EncryptionKeyConverterTest {
     assertThat(result.getPublicKey()).isEqualTo(keyStorageKey.getPublicKeysetHandle());
     assertThat(result.getActivationTime()).isEqualTo(keyStorageKey.getActivationTime());
     assertThat(result.getExpirationTime()).isEqualTo(keyStorageKey.getExpirationTime());
+    assertThat(result.getKeyMetadata().getBackfillExpirationTime())
+        .isEqualTo(keyStorageKey.getKeyMetadata().getBackfillExpirationTime());
   }
 
   @Test

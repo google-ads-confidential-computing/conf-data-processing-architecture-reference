@@ -24,8 +24,8 @@
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/interface/cpio.h"
-#include "public/cpio/interface/metric_client/metric_client_interface.h"
-#include "public/cpio/interface/metric_client/type_def.h"
+#include "public/cpio/interface/kms_client/kms_client_interface.h"
+#include "public/cpio/interface/kms_client/type_def.h"
 #include "public/cpio/test/global_cpio/test_cpio_options.h"
 #include "public/cpio/test/global_cpio/test_lib_cpio.h"
 
@@ -37,9 +37,9 @@ using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::GlobalLogger;
 using google::scp::core::errors::SC_ASYNC_EXECUTOR_NOT_RUNNING;
 using google::scp::core::test::ResultIs;
-using google::scp::cpio::MetricClientFactory;
-using google::scp::cpio::MetricClientInterface;
-using google::scp::cpio::MetricClientOptions;
+using google::scp::cpio::KmsClientFactory;
+using google::scp::cpio::KmsClientInterface;
+using google::scp::cpio::KmsClientOptions;
 using google::scp::cpio::client_providers::GlobalCpio;
 using std::make_shared;
 using std::shared_ptr;
@@ -152,13 +152,14 @@ TEST(LibCpioTest, InitializedCpioSucceedsTest) {
   options.log_option = LogOption::kConsoleLog;
   options.enabled_log_levels.emplace(LogLevel::kDebug);
   options.region = kRegion;
+  options.metric_client_options.enable_remote_metric_aggregation = true;
 
-  MetricClientOptions metric_client_options;
-  std::unique_ptr<MetricClientInterface> metric_client =
-      MetricClientFactory::Create(std::move(metric_client_options));
+  KmsClientOptions kms_client_options;
+  std::unique_ptr<KmsClientInterface> kms_client =
+      KmsClientFactory::Create(std::move(kms_client_options));
 
   EXPECT_SUCCESS(TestLibCpio::InitCpio(options));
-  EXPECT_SUCCESS(metric_client->Init());
+  EXPECT_SUCCESS(kms_client->Init());
   EXPECT_SUCCESS(TestLibCpio::ShutdownCpio(options));
 }
 
@@ -169,13 +170,13 @@ TEST(LibCpioDeathTest, UninitializedCpioFailsTest) {
   options.region = kRegion;
   // Named "*DeathTest" to be run first for GlobalCpio static state.
   // https://github.com/google/googletest/blob/main/docs/advanced.md#death-tests-and-threads
-  MetricClientOptions metric_client_options;
-  std::unique_ptr<MetricClientInterface> metric_client =
-      MetricClientFactory::Create(std::move(metric_client_options));
+  KmsClientOptions kms_client_options;
+  std::unique_ptr<KmsClientInterface> kms_client =
+      KmsClientFactory::Create(std::move(kms_client_options));
 
   constexpr char expected_uninit_cpio_error_message[] =
       "Cpio must be initialized with Cpio::InitCpio before client use";
-  ASSERT_DEATH(metric_client->Init(), expected_uninit_cpio_error_message);
+  ASSERT_DEATH(kms_client->Init(), expected_uninit_cpio_error_message);
 }
 
 TEST(LibCpioDeathTest, InitAndShutdownThenInitCpioSucceedsTest) {
@@ -183,18 +184,18 @@ TEST(LibCpioDeathTest, InitAndShutdownThenInitCpioSucceedsTest) {
   options.log_option = LogOption::kSysLog;
   options.region = kRegion;
 
-  MetricClientOptions metric_client_options;
-  std::unique_ptr<MetricClientInterface> metric_client =
-      MetricClientFactory::Create(std::move(metric_client_options));
+  KmsClientOptions kms_client_options;
+  std::unique_ptr<KmsClientInterface> kms_client =
+      KmsClientFactory::Create(std::move(kms_client_options));
 
   constexpr char expected_uninit_cpio_error_message[] =
       "Cpio must be initialized with Cpio::InitCpio before client use";
-  ASSERT_DEATH(metric_client->Init(), expected_uninit_cpio_error_message);
+  ASSERT_DEATH(kms_client->Init(), expected_uninit_cpio_error_message);
 
   EXPECT_SUCCESS(TestLibCpio::InitCpio(options));
-  EXPECT_SUCCESS(metric_client->Init());
+  EXPECT_SUCCESS(kms_client->Init());
   EXPECT_SUCCESS(TestLibCpio::ShutdownCpio(options));
 
-  ASSERT_DEATH(metric_client->Init(), expected_uninit_cpio_error_message);
+  ASSERT_DEATH(kms_client->Init(), expected_uninit_cpio_error_message);
 }
 }  // namespace google::scp::cpio::test

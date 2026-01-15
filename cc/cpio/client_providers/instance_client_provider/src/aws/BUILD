@@ -36,7 +36,7 @@ cc_library(
         "@aws_sdk_cpp//:core",
         "@aws_sdk_cpp//:ec2",
         "@com_google_absl//absl/strings:str_format",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )
 
@@ -61,7 +61,7 @@ cc_library(
         "@aws_sdk_cpp//:core",
         "@aws_sdk_cpp//:ec2",
         "@com_google_absl//absl/strings:str_format",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )
 

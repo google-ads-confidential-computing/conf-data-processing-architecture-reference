@@ -10,8 +10,14 @@ bazel-*
 *~
 tf_dev_test_env/
 .terraform
-# NOTE: .terraform.lock.hcl should be checked into git
+
+# NOTE: .terraform.lock.hcl for environments should be checked into git
 # https://www.terraform.io/docs/language/dependency-lock.html#lock-file-location
+# First, ignore all coordinator .terraform.lock.hcl files by default
+/coordinator/terraform/**/.terraform.lock.hcl
+# Then Un-ignore .terraform.lock.hcl for mp_primary and mp_secondary environments
+!/coordinator/terraform/*/environments_mp_primary/**/*.terraform.lock.hcl
+!/coordinator/terraform/*/environments_mp_secondary/**/*.terraform.lock.hcl
 
 # Ignore generated files for eclipse lsp
 /pom.xml
@@ -34,3 +40,5 @@ typescript/node_modules
 
 #Ignore release notes file
 release_diff_*.txt
+
+MODULE.bazel.lock

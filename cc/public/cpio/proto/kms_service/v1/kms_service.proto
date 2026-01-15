@@ -21,7 +21,6 @@ option java_outer_classname = "KmsServiceProto";
 option java_package = "com.google.cmrt.sdk.kms_service.v1";
 
 import "cc/public/core/interface/execution_result.proto";
-import "google/protobuf/duration.proto";
 
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;

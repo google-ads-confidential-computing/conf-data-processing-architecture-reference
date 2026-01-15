@@ -20,7 +20,7 @@ test {
 
 // google-beta provider is renamed to google
 mock_provider "google" {
-  source          = "../../../../../tfmocks/google-beta/"
+  source          = "../../../../../tools/tftesting/tfmocks/google-beta/"
   override_during = plan
 }
 
@@ -32,11 +32,11 @@ variables {
   load_balancing_scheme                     = ""
   source_container_image_url                = ""
   key_storage_memory                        = 0
-  key_storage_service_min_instances         = 0
-  key_storage_service_max_instances         = 0
+  min_instances                             = 0
+  max_instances                             = 0
+  execution_environment                     = ""
   spanner_instance_name                     = ""
   spanner_database_name                     = ""
-  key_encryption_key_id                     = ""
   alarms_enabled                            = false
   alarm_eval_period_sec                     = ""
   alarm_duration_sec                        = ""
@@ -48,37 +48,19 @@ variables {
   lb_5xx_ratio_threshold                    = 0
   key_storage_severity_map                  = {}
   populate_migration_key_data               = ""
-  disable_key_set_acl                       = ""
   kms_key_base_uri                          = ""
   migration_kms_key_base_uri                = ""
-  key_sets                                  = ["set1", "set2"]
-  key_encryption_key_ring_id                = ""
+
+  external_managed_migration_state              = "PREPARE"
+  external_managed_migration_testing_percentage = 0
+  
+  forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
+  external_managed_backend_bucket_migration_state              = null
+  external_managed_backend_bucket_migration_testing_percentage = null
 }
 
 # All run blocks should have "command = plan".
 # Take great care when writing tests with "command = apply".
-
-run "creates_crypto_key_iam_member_for_each_keyset" {
-  command = plan
-
-  assert {
-    condition = [for _, member in google_kms_crypto_key_iam_member.kms_key_set_level_iam_policy : {
-      key_id = member.crypto_key_id
-      member = member.member
-      }] == [
-      {
-        key_id = "/cryptoKeys/environment_set1_key_encryption_key"
-        member = "serviceAccount:mock_google_service_account_email"
-        }, {
-
-        key_id = "/cryptoKeys/environment_set2_key_encryption_key"
-        member = "serviceAccount:mock_google_service_account_email"
-      }
-
-    ]
-    error_message = "Wrong members"
-  }
-}
 
 run "generates_outputs_with_plan" {
   command = plan

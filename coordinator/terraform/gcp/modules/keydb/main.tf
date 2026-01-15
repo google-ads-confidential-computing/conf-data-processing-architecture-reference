@@ -64,6 +64,8 @@ resource "google_spanner_database" "keydb" {
     , "ALTER TABLE KeySets ADD COLUMN MigrationPrivateKey STRING(1000)"
     , "ALTER TABLE KeySets ADD COLUMN MigrationKeySplitData JSON"
     , "ALTER TABLE KeySets ADD COLUMN MigrationKeyEncryptionKeyUri STRING(1000)"
+    , "ALTER TABLE KeySets ADD COLUMN BackfillExpiryTime TIMESTAMP"
+    , "CREATE VIEW KeyAgeView SQL SECURITY INVOKER AS SELECT ks.KeyId, ks.SetName, ks.ActivationTime, ks.ExpiryTime FROM KeySets ks"
   ]
 
   deletion_protection = true

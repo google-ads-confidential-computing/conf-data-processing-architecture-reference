@@ -175,6 +175,31 @@ variable "private_key_service_load_balancing_scheme" {
   type        = string
 }
 
+variable "private_key_service_external_managed_migration_state" {
+  description = "Defines what stage of the Private KS LB migration in."
+  type        = string
+}
+
+variable "private_key_service_external_managed_migration_testing_percentage" {
+  description = "Defines what percentage of traffic should be routed to upgraded Private KS LB."
+  type        = number
+}
+
+variable "private_key_service_forwarding_rule_load_balancing_scheme" {
+  description = "Specifies the load balancing scheme used for the forwarding rule."
+  type        = string
+}
+
+variable "private_key_service_external_managed_backend_bucket_migration_state" {
+  description = "Specifies the canary migration state for the backend buckets attached to this forwarding rule."
+  type        = string
+}
+
+variable "private_key_service_external_managed_backend_bucket_migration_testing_percentage" {
+  description = "Determines the fraction of requests to backend buckets that should be processed by the Global external Application Load Balancer."
+  type        = number
+}
+
 variable "private_key_service_cloud_run_memory_mb" {
   description = "Memory size in MB for private key service cloud run."
   type        = number
@@ -188,6 +213,12 @@ variable "private_key_service_cloud_run_min_instances" {
 variable "private_key_service_cloud_run_max_instances" {
   description = "The maximum number of cloud run instances that may coexist at a given time."
   type        = number
+}
+
+variable "private_key_service_execution_environment" {
+  description = "The sandbox environment to host Private KS."
+  type        = string
+  nullable    = false
 }
 
 variable "enable_private_key_service_cache" {
@@ -216,6 +247,12 @@ variable "key_storage_service_max_instances" {
   type        = number
 }
 
+variable "key_storage_service_execution_environment" {
+  description = "The sandbox environment to host Key SS."
+  type        = string
+  nullable    = false
+}
+
 variable "location_new_key_ring" {
   description = "Location for the global key ring."
   type        = string
@@ -230,6 +267,31 @@ variable "key_storage_service_container_image_url" {
 variable "key_storage_service_load_balancing_scheme" {
   description = "Whether the Key Storage Service will be used with internal or external load balancing."
   type        = string
+}
+
+variable "key_storage_service_external_managed_migration_state" {
+  description = "Defines what stage of the KSS LB migration in."
+  type        = string
+}
+
+variable "key_storage_service_external_managed_migration_testing_percentage" {
+  description = "Defines what percentage of traffic should be routed to upgraded KSS LB."
+  type        = number
+}
+
+variable "key_storage_service_forwarding_rule_load_balancing_scheme" {
+  description = "Specifies the load balancing scheme used for the forwarding rule."
+  type        = string
+}
+
+variable "key_storage_service_external_managed_backend_bucket_migration_state" {
+  description = "Specifies the canary migration state for the backend buckets attached to this forwarding rule."
+  type        = string
+}
+
+variable "key_storage_service_external_managed_backend_bucket_migration_testing_percentage" {
+  description = "Determines the fraction of requests to backend buckets that should be processed by the Global external Application Load Balancer."
+  type        = number
 }
 
 ################################################################################
@@ -423,8 +485,9 @@ variable "key_sets_config" {
     key_sets[].count                 (optional(number)) - The number of keys to be generated.
     key_sets[].validity_in_days      (optional(number)) - Number of days the generated keys will be valid. If set to 0, the keys will never expire.
     key_sets[].ttl_in_days           (optional(number)) - Number of days the generated keys will be kept in the database. If set to 0, the keys will never be deleted.
-    key_sets[].create_max_days_ahead (optional(number)) - Number of days ahead that a key can be created
-    key_sets[].overlap_period_days   (optional(number)) - Number of days each consecutive active set should overlap
+    key_sets[].create_max_days_ahead (optional(number)) - Number of days ahead that a key can be created.
+    key_sets[].overlap_period_days   (optional(number)) - Number of days each consecutive active set should overlap.
+    key_sets[].backfill_days         (optional(number)) - Number of days allowed for a key to be used past its expiration date for a backfill job.
   EOT
   type = object({
     key_sets = list(object({
@@ -435,13 +498,9 @@ variable "key_sets_config" {
       ttl_in_days           = number
       create_max_days_ahead = optional(number)
       overlap_period_days   = optional(number)
+      backfill_days         = optional(number)
     }))
   })
-}
-
-variable "disable_key_set_acl" {
-  description = "Controls whether to generate keys enforcing key set level acl."
-  type        = string
 }
 
 ################################################################################

@@ -46,6 +46,7 @@ public final class GcpPrivateKeyServiceModule extends AbstractModule {
 
   private static final Logger logger = LoggerFactory.getLogger(GcpPrivateKeyServiceModule.class);
   private static final int DEFAULT_OVERLAP_PERIOD_DAYS = 0;
+  private static final int DEFAULT_BACKFILL_DAYS = 0;
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -99,14 +100,15 @@ public final class GcpPrivateKeyServiceModule extends AbstractModule {
       ImmutableMap.Builder<String, KeySetConfig> configBuilder = ImmutableMap.builder();
       for (var keySet : keySetsConfig.keySets()) {
         try {
-          // Only care about name, count, validityInDays, overlapPeriodDays
+          // Only care about name, count, validityInDays, overlapPeriodDays, backfillDays
           configBuilder.put(
               keySet.name(),
               KeySetConfig.create(
                   keySet.name(),
                   keySet.count().orElseThrow(),
                   keySet.validityInDays().orElseThrow(),
-                  keySet.overlapPeriodDays().orElse(DEFAULT_OVERLAP_PERIOD_DAYS)));
+                  keySet.overlapPeriodDays().orElse(DEFAULT_OVERLAP_PERIOD_DAYS),
+                  keySet.backfillDays().orElse(DEFAULT_BACKFILL_DAYS)));
         } catch (NoSuchElementException e) {
           logger.error(
               logHelper.format(

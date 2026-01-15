@@ -26,6 +26,7 @@
 #include "cpio/client_providers/kms_client_provider/interface/gcp/gcp_key_management_service_client_interface.h"
 #include "google/cloud/kms/key_management_client.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 #include "error_codes.h"
 
@@ -41,11 +42,13 @@ class GcpKmsClientProvider : public KmsClientProviderInterface {
   explicit GcpKmsClientProvider(
       const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
       const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
+      const std::shared_ptr<MetricClientInterface>& metric_client,
       const std::shared_ptr<KmsClientOptions>& kms_client_options,
       const std::shared_ptr<GcpKmsFactory>& gcp_kms_factory =
           std::make_shared<GcpKmsFactory>())
       : io_async_executor_(io_async_executor),
         cpu_async_executor_(cpu_async_executor),
+        metric_client_(metric_client),
         kms_client_options_(kms_client_options),
         gcp_kms_factory_(gcp_kms_factory),
         gcp_kms_service_client_cache_(
@@ -99,6 +102,7 @@ class GcpKmsClientProvider : public KmsClientProviderInterface {
 
   const std::shared_ptr<core::AsyncExecutorInterface> io_async_executor_,
       cpu_async_executor_;
+  const std::shared_ptr<MetricClientInterface> metric_client_;
   std::shared_ptr<KmsClientOptions> kms_client_options_;
   std::shared_ptr<GcpKmsFactory> gcp_kms_factory_;
 

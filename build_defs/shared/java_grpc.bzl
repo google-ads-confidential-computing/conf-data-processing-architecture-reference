@@ -15,20 +15,11 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-GAPIC_GENERATOR_JAVA_VERSION = "2.44.0"
-
 def java_grpc():
     maybe(
         http_archive,
-        name = "gapic_generator_java",
-        strip_prefix = "sdk-platform-java-%s" % GAPIC_GENERATOR_JAVA_VERSION,
-        urls = ["https://github.com/googleapis/sdk-platform-java/archive/v%s.zip" % GAPIC_GENERATOR_JAVA_VERSION],
-    )
-
-    # gax-java is part of sdk-platform-java repository
-    maybe(
-        http_archive,
-        name = "com_google_api_gax_java",
-        strip_prefix = "sdk-platform-java-%s/gax-java" % GAPIC_GENERATOR_JAVA_VERSION,
-        urls = ["https://github.com/googleapis/sdk-platform-java/archive/v%s.zip" % GAPIC_GENERATOR_JAVA_VERSION],
+        name = "io_grpc_grpc_java",
+        sha256 = "970ac87fccbaa6c978dc56b0ba72db53b6401821c01197e1942aecb347e5f218",
+        strip_prefix = "grpc-java-1.69.1",
+        urls = ["https://github.com/grpc/grpc-java/archive/v1.69.1.tar.gz"],
     )

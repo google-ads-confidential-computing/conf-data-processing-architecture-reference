@@ -29,6 +29,6 @@ cc_test(
         "//cc/process_launcher/daemonizer/src:daemonizer_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_google_googletest//:gtest_main",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )

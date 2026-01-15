@@ -143,7 +143,8 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int validityInDays,
       int ttlInDays,
       int createMaxDaysAhead,
-      int overlapPeriodDays)
+      int overlapPeriodDays,
+      int backfillDays)
       throws ServiceException {
     LOGGER.info(logMetricHelper.format("create", ImmutableMap.of("setName", setName)));
     create(
@@ -154,6 +155,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         ttlInDays,
         createMaxDaysAhead,
         overlapPeriodDays,
+        backfillDays,
         Instant.now());
   }
 
@@ -166,11 +168,16 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int ttlInDays,
       int createMaxDaysAhead,
       int overlapPeriodDays,
+      int backfillDays,
       Instant now)
       throws ServiceException {
     if (overlapPeriodDays < 0) {
       throw new ServiceException(
           INVALID_ARGUMENT, INVALID_ARGUMENT.name(), "overlap must be greater than or equal to 0");
+    }
+    if (backfillDays < 0) {
+      throw new ServiceException(
+          INVALID_ARGUMENT, INVALID_ARGUMENT.name(), "backfill must be greater than or equal to 0");
     }
     if (validityInDays > 0 && validityInDays <= overlapPeriodDays) {
       throw new ServiceException(
@@ -200,6 +207,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
           numDesiredKeys - activeKeys.size(),
           validityInDays,
           ttlInDays,
+          backfillDays,
           now);
     }
     activeKeys = keyDb.getActiveKeys(setName, numDesiredKeys, now);
@@ -248,6 +256,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
             numDesiredKeys - actual,
             validityInDays,
             ttlInDays,
+            backfillDays,
             expiration.minus(overlapPeriodDays, DAYS));
       }
       actual = keyDb.getActiveKeys(setName, numDesiredKeys, expiration).size();
@@ -277,17 +286,19 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int count,
       int validityInDays,
       int ttlInDays,
+      int backfillDays,
       Instant activation,
       Optional<DataKey> dataKey,
       Boolean populateMigrationData)
       throws ServiceException {
     LOGGER.info("[{}] Trying to generate {} keys.", setName, count);
     for (int i = 0; i < count; i++) {
-      createSplitKeyBase(
+      createSingleSplitKey(
           setName,
           tinkTemplate,
           validityInDays,
           ttlInDays,
+          backfillDays,
           activation,
           dataKey,
           populateMigrationData,
@@ -297,11 +308,12 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         "[{}] Successfully generated {} keys to be active on {}.", setName, count, activation);
   }
 
-  private void createSplitKeyBase(
+  private void createSingleSplitKey(
       String setName,
       String tinkTemplate,
       int validityInDays,
       int ttlInDays,
+      int backfillDays,
       Instant activation,
       Optional<DataKey> dataKey,
       Boolean populateMigrationData,
@@ -331,6 +343,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
               activation,
               validityInDays,
               ttlInDays,
+              backfillDays,
               publicKeysetHandle,
               keyEncryptionKeyUri,
               migrationKeyEncryptionKeyUri,
@@ -370,12 +383,18 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     try {
       // Reserve the key ID with a placeholder key that's not valid yet. Will be made valid at a
       // later step once key-split is successfully delivered to coordinator B.
-      keyDb.createKey(
+      // Sets activation_time and backfill_expiration_time to expiration_time such that the
+      // key is invalid for now.
+      EncryptionKey.Builder placeholderKeyBuilder =
           unsignedCoordinatorAKey.toBuilder()
-              // Setting activation_time to expiration_time such that the key is invalid for now.
-              .setActivationTime(unsignedCoordinatorAKey.getExpirationTime())
-              .build(),
-          false);
+              .setActivationTime(unsignedCoordinatorAKey.getExpirationTime());
+      if (placeholderKeyBuilder.hasKeyMetadata()
+          && unsignedCoordinatorAKey.getKeyMetadata().hasBackfillExpirationTime()) {
+        placeholderKeyBuilder.setKeyMetadata(
+            placeholderKeyBuilder.getKeyMetadata().toBuilder()
+                .setBackfillExpirationTime(unsignedCoordinatorAKey.getExpirationTime()));
+      }
+      keyDb.createKey(placeholderKeyBuilder.build(), false);
     } catch (ServiceException e) {
       if (e.getErrorCode().equals(Code.ALREADY_EXISTS)
           && keyIdConflictRetryCount < KEY_ID_CONFLICT_MAX_RETRY) {
@@ -384,11 +403,12 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
                 "Failed to insert placeholder key split with keyId %s, retry count: %d, error "
                     + "message: %s",
                 unsignedCoordinatorAKey.getKeyId(), keyIdConflictRetryCount, e.getErrorReason()));
-        createSplitKeyBase(
+        createSingleSplitKey(
             setName,
             tinkTemplate,
             validityInDays,
             ttlInDays,
+            backfillDays,
             activation,
             dataKey,
             populateMigrationData,
@@ -513,6 +533,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       Instant activation,
       int validityInDays,
       int ttlInDays,
+      int backfillDays,
       Optional<KeysetHandle> publicKeysetHandle,
       String keyEncryptionKeyUri,
       Optional<String> migrationkeyEncryptionKeyUri,
@@ -539,6 +560,12 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     }
     if (ttlInDays > 0) {
       unsignedEncryptionKey.setTtlTime(activation.plus(ttlInDays, DAYS).getEpochSecond());
+    }
+    if (backfillDays > 0 && validityInDays > 0) {
+      unsignedEncryptionKey.setKeyMetadata(
+          EncryptionKey.KeyMetadata.newBuilder()
+              .setBackfillExpirationTime(
+                  activation.plus(validityInDays + backfillDays, DAYS).toEpochMilli()));
     }
 
     try {

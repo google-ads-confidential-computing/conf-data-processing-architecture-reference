@@ -83,6 +83,7 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       int count,
       int validityInDays,
       int ttlInDays,
+      int backfillDays,
       Instant activation)
       throws ServiceException {
     // Reuse same data key for key batch.
@@ -95,6 +96,7 @@ public final class AwsCreateSplitKeyTask extends CreateSplitKeyTaskBase {
         count,
         validityInDays,
         ttlInDays,
+        backfillDays,
         activation,
         Optional.of(dataKey),
         populateMigrationData);

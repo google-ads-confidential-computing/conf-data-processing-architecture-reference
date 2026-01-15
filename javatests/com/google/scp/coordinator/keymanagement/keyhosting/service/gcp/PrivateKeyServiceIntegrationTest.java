@@ -19,7 +19,6 @@ package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.withActivationAndExpirationTimes;
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.SPANNER_KEY_TABLE_NAME;
-import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import static com.google.scp.shared.api.model.Code.OK;
 import static com.google.scp.shared.testutils.common.HttpRequestUtil.executeRequestWithRetry;
@@ -38,7 +37,6 @@ import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyServiceCloudFunctionContainer;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActiveEncryptionKeysResponseProto.GetActiveEncryptionKeysResponse;
-import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.testutils.gcp.GcpMultiCoordinatorTestEnvModule;
 import com.google.scp.protos.shared.api.v1.ErrorResponseProto.ErrorResponse;
@@ -71,13 +69,6 @@ public final class PrivateKeyServiceIntegrationTest {
   // GetEncryptionKeys v1beta
   private static final String correctPathBeta = "/v1beta/encryptionKeys/";
   private static final String incorrectPathBeta = "/v1beta/wrongPath/";
-
-  // ListRecentEncryptionKeys v1alpha
-  private static final String correctListRecentKeysPath =
-      "/v1alpha/encryptionKeys:recent?maxAgeSeconds=999";
-  private static final String uncompletedListRecentKeysPath = "/v1alpha/encryptionKeys:recent";
-  private static final String incorrectListRecentKeysPath =
-      "/v1alpha/encryptionKeys:wrong?maxAgeSeconds=999";
 
   // GetActiveKeys v1beta
   private static final String CORRECT_ACTIVE_KEYS =
@@ -180,65 +171,6 @@ public final class PrivateKeyServiceIntegrationTest {
   public void getEncryptionKeysWrongMethod(String path) {
     HttpRequest getRequest =
         HttpRequest.newBuilder().uri(getFunctionUri(path)).POST(BodyPublishers.noBody()).build();
-
-    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-    verifyNotFoundResponse(httpResponse);
-  }
-
-  // ListRecentEncryptionKeys v1alpha
-  @Test(timeout = 25_000)
-  public void listRecentKeys_returnsDbKeysTest() throws IOException, ServiceException {
-    keyDb.createKey(FakeEncryptionKey.create());
-    keyDb.createKey(FakeEncryptionKey.create());
-    assertThat(listRecentKeys().getKeysList()).hasSize(2);
-  }
-
-  @Test(timeout = 25_000)
-  public void listRecentKeys_emptyListTest() throws IOException {
-    assertThat(listRecentKeys().getKeysList()).hasSize(0);
-  }
-
-  private ListRecentEncryptionKeysResponse listRecentKeys() throws IOException {
-    HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(correctListRecentKeysPath)).GET().build();
-    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-
-    assertThat(httpResponse.statusCode()).isEqualTo(OK.getHttpStatusCode());
-
-    var builder = ListRecentEncryptionKeysResponse.newBuilder();
-    JsonFormat.parser().merge(httpResponse.body(), builder);
-    return builder.build();
-  }
-
-  @Test(timeout = 25_000)
-  public void listRecentKeys_missingMaxAgeSeconds() {
-    HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(uncompletedListRecentKeysPath)).GET().build();
-
-    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-    assertThat(httpResponse.statusCode()).isEqualTo(INVALID_ARGUMENT.getHttpStatusCode());
-
-    ErrorResponse response = ErrorUtil.parseErrorResponse(httpResponse.body());
-    assertThat(response.getCode()).isEqualTo(INVALID_ARGUMENT.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("maxAgeSeconds query parameter is required.");
-  }
-
-  @Test(timeout = 25_000)
-  public void listRecentKeys_wrongPath() {
-    HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(incorrectListRecentKeysPath)).GET().build();
-
-    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-    verifyNotFoundResponse(httpResponse);
-  }
-
-  @Test(timeout = 25_000)
-  public void listRecentKeys_wrongMethod() {
-    HttpRequest getRequest =
-        HttpRequest.newBuilder()
-            .uri(getFunctionUri(correctListRecentKeysPath))
-            .POST(BodyPublishers.noBody())
-            .build();
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
     verifyNotFoundResponse(httpResponse);

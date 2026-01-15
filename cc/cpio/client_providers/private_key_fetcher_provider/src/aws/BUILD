@@ -30,7 +30,7 @@ cc_library(
         "@aws_sdk_cpp//:core",
         "@boost//:system",
         "@com_github_nghttp2_nghttp2//:nghttp2",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )
 

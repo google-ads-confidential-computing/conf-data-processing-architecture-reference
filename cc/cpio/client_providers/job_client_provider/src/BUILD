@@ -53,6 +53,6 @@ cc_library(
         "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/proto/job_service/v1:job_service_cc_proto",
         "@com_google_protobuf//:protobuf",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )

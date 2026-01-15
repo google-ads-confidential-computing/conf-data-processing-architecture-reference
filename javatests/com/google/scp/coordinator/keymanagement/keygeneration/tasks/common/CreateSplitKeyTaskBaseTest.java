@@ -44,6 +44,7 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.Encryption
 import com.google.scp.shared.api.exception.ServiceException;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Map.Entry;
 import org.junit.Test;
@@ -68,7 +69,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     // When
     for (Entry<String, Class<?>> primitive : expectedPrimitives) {
       String template = primitive.getKey();
-      task.createSplitKey("test-set", template, 1, 1, 1, now());
+      task.createSplitKey("test-set", template, 1, 1, 1, 0, now());
     }
 
     // Then
@@ -98,7 +99,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
 
     // When
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365, 14, 0, 0);
 
     // Then
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(5);
@@ -113,7 +114,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var ttl = 365;
 
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 14, 0, 0);
 
     validateEncryptionKeyTimes(validity, ttl);
     var keys = task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE);
@@ -143,12 +144,12 @@ public abstract class CreateSplitKeyTaskBaseTest {
   @Test
   public void create_onlyOneButNotEnough_createsOnlyMissingKey() throws Exception {
     // Given
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 7, 365, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, 7, 365, 14, 0, 0);
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(1);
     assertThat(task.keyDb.getAllKeys()).hasSize(2);
 
     // When
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 5, 7, 365, 14, 0, 0);
 
     // Then
     assertThat(task.keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(5);
@@ -166,8 +167,8 @@ public abstract class CreateSplitKeyTaskBaseTest {
     assertThat(task.keyDb.getActiveKeys(setName2, MAX_VALUE)).isEmpty();
 
     // When
-    task.create(setName1, template, 5, 7, 365, 14, 0);
-    task.create(setName2, template, 5, 7, 365, 14, 0);
+    task.create(setName1, template, 5, 7, 365, 14, 0, 0);
+    task.create(setName2, template, 5, 7, 365, 14, 0, 0);
 
     // Then
     assertThat(
@@ -197,7 +198,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
             ServiceException.class,
             () ->
                 task.createSplitKey(
-                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, now()));
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, 0, now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(KeyStorageServiceException.class);
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
@@ -211,7 +212,21 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var ex =
         assertThrows(
             ServiceException.class,
-            () -> task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap));
+            () -> task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0));
+    assertThat(ex.getMessage()).contains("must be greater than or equal to 0");
+  }
+
+  @Test
+  public void backfillLessThanZero_throwsExceptionTest() {
+    int validity = 30;
+    int overlap = 0;
+    int backfill = -1;
+    var ex =
+        assertThrows(
+            ServiceException.class,
+            () ->
+                task.create(
+                    "setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, backfill));
     assertThat(ex.getMessage()).contains("must be greater than or equal to 0");
   }
 
@@ -222,7 +237,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var ex =
         assertThrows(
             ServiceException.class,
-            () -> task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap));
+            () -> task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0));
     assertThat(ex.getMessage()).contains("must be greater than overlap");
   }
 
@@ -233,7 +248,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var ex =
         assertThrows(
             ServiceException.class,
-            () -> task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap));
+            () -> task.create("setName", DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0));
     assertThat(ex.getMessage()).contains("multiple of the difference");
   }
 
@@ -245,12 +260,12 @@ public abstract class CreateSplitKeyTaskBaseTest {
 
     assertThat(keyDb.getActiveKeys(setName, MAX_VALUE)).isEmpty();
 
-    task.create(setName, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0);
     assertThat(keyDb.getActiveKeys(setName, MAX_VALUE)).hasSize(1);
     assertThat(keyDb.getAllKeys()).hasSize(2);
 
     // Assert another run does not create additional keys
-    task.create(setName, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0);
     assertThat(keyDb.getActiveKeys(setName, MAX_VALUE)).hasSize(1);
     assertThat(keyDb.getAllKeys()).hasSize(2);
   }
@@ -264,7 +279,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     String setName = "setName";
     var differenceMillis = Duration.ofDays(validity - overlap).toMillis();
 
-    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0);
 
     validateEncryptionKeyTimes(validity, ttl);
     var keys = task.keyDb.getActiveKeys(setName, MAX_VALUE);
@@ -287,9 +302,9 @@ public abstract class CreateSplitKeyTaskBaseTest {
     int ttl = 365;
     String setName = "setName";
 
-    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap);
-    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap);
-    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0);
+    task.create(setName, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0);
 
     assertThat(task.keyDb.getActiveKeys(setName, MAX_VALUE)).hasSize(count);
     assertThat(task.keyDb.getAllKeys()).hasSize(count * 2);
@@ -306,13 +321,13 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var differenceMillis = Duration.ofDays(validity - overlap).toMillis();
     var now = now();
 
-    task.create(setName, template, count, validity, ttl, 365, overlap);
+    task.create(setName, template, count, validity, ttl, 365, overlap, 0);
     assertThat(task.keyDb.getAllKeys()).hasSize(count * 2);
 
-    task.create(setName, template, count, validity, ttl, 365, overlap, now.plus(11, DAYS));
+    task.create(setName, template, count, validity, ttl, 365, overlap, 0, now.plus(11, DAYS));
     assertThat(task.keyDb.getAllKeys()).hasSize(count * 3);
 
-    task.create(setName, template, count, validity, ttl, 365, overlap, now.plus(21, DAYS));
+    task.create(setName, template, count, validity, ttl, 365, overlap, 0, now.plus(21, DAYS));
     var allKeys = task.keyDb.getAllKeys();
     assertThat(allKeys).hasSize(count * 4);
 
@@ -326,6 +341,43 @@ public abstract class CreateSplitKeyTaskBaseTest {
   }
 
   @Test
+  public void create_withBackfill_setsBackfillExpirationTime() throws Exception {
+    int count = 1;
+    int validity = 10;
+    int ttl = 20;
+    int backfill = 5;
+    Instant now = now();
+
+    task.create(
+        DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 14, 0, backfill, now);
+
+    ImmutableList<EncryptionKey> keys = task.keyDb.getAllKeys();
+    // 1 active key + 1 pending key = 2 keys.
+    assertThat(keys).hasSize(2);
+
+    EncryptionKey activeKey =
+        keys.stream()
+            .filter(k -> k.getActivationTime() == now.toEpochMilli())
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(activeKey.hasKeyMetadata()).isTrue();
+    assertThat(activeKey.getKeyMetadata().getBackfillExpirationTime())
+        .isEqualTo(now.plus(validity + backfill, DAYS).toEpochMilli());
+
+    EncryptionKey pendingKey =
+        keys.stream()
+            .filter(k -> k.getActivationTime() > now.toEpochMilli())
+            .findFirst()
+            .orElseThrow();
+
+    Instant pendingActivation = Instant.ofEpochMilli(pendingKey.getActivationTime());
+    assertThat(pendingKey.hasKeyMetadata()).isTrue();
+    assertThat(pendingKey.getKeyMetadata().getBackfillExpirationTime())
+        .isEqualTo(pendingActivation.plus(validity + backfill, DAYS).toEpochMilli());
+  }
+
+  @Test
   public void noKeys_createsActiveKeys_noNextActiveSet_test() throws Exception {
     validateMaxDaysAheadBlocksNextActiveSetCreation(5, 14, 365);
   }
@@ -333,7 +385,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
   public void validateMaxDaysAheadBlocksNextActiveSetCreation(
       int keysToCreate, int validity, int ttl) throws Exception {
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, validity, ttl, 14, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, validity, ttl, 14, 0, 0);
 
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(keysToCreate);
     // No next set
@@ -349,13 +401,13 @@ public abstract class CreateSplitKeyTaskBaseTest {
 
     // Create partial set
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, ttl, maxDaysAhead, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, ttl, maxDaysAhead, 0, 0);
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(1);
     // No next set
     assertThat(keyDb.getAllKeys()).hasSize(1);
 
     // Finish complete set
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0, 0);
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(count);
     // No next set
     assertThat(keyDb.getAllKeys()).hasSize(count);
@@ -369,7 +421,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     int maxDaysAhead = validity + 5;
 
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0, 0);
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).hasSize(count);
     assertThat(keyDb.getAllKeys()).hasSize(count * 2);
   }
@@ -398,7 +450,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
     int maxDaysAhead = 365;
 
     assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE)).isEmpty();
-    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0);
+    task.create(DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, maxDaysAhead, 0, 0);
     var keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, MAX_VALUE);
     assertThat(keys).hasSize(count);
     // Must have null expiration time which is represented as 0

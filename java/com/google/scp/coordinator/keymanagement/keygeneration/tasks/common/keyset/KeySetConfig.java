@@ -39,7 +39,8 @@ public abstract class KeySetConfig {
       int validityInDays,
       int ttlInDays,
       int createMaxDaysAhead,
-      int overlapPeriodDays) {
+      int overlapPeriodDays,
+      int backfillDays) {
     return new AutoValue_KeySetConfig(
         name,
         tinkTemplate,
@@ -47,7 +48,8 @@ public abstract class KeySetConfig {
         validityInDays,
         ttlInDays,
         createMaxDaysAhead,
-        overlapPeriodDays);
+        overlapPeriodDays,
+        backfillDays);
   }
 
   /* Returns the name of the key set. */
@@ -70,4 +72,7 @@ public abstract class KeySetConfig {
 
   /* Returns number of days active keys can overlap. */
   public abstract int getOverlapPeriodDays();
+
+  /* Returns number of days allowed for a key to be used past its expiration date for a backfill job. */
+  public abstract int getBackfillDays();
 }

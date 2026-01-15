@@ -112,9 +112,18 @@ ExecutionResult PrivateKeyClient::CreatePrivateKeyClientProvider() noexcept {
               "Failed to get CpuAsyncExecutor.");
     return ConvertToPublicExecutionResult(execution_result);
   }
+  shared_ptr<MetricClientInterface> metric_client;
+  execution_result = GlobalCpio::GetGlobalCpio()->GetMetricClient(
+      metric_client);
+  if (!execution_result.Successful()) {
+    SCP_ERROR(kPrivateKeyClient, kZeroUuid, execution_result,
+              "Failed to get MetricClient.");
+    return ConvertToPublicExecutionResult(execution_result);
+  }
+
   private_key_client_provider_ = PrivateKeyClientProviderFactory::Create(
       options_, http_client, role_credentials_provider, auth_token_provider,
-      io_async_executor, cpu_async_executor);
+      metric_client, io_async_executor, cpu_async_executor);
   return SuccessExecutionResult();
 }
 

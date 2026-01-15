@@ -29,6 +29,7 @@
 #include <google/protobuf/util/time_util.h>
 
 #include "core/interface/async_executor_interface.h"
+#include "google/cloud/status.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 #include "public/cpio/utils/metric_instance/interface/aggregate_metric_interface.h"
@@ -82,6 +83,26 @@ class MetricUtils {
       cmrt::sdk::metric_service::v1::MetricType metric_type,
       const std::vector<std::string> event_code_labels_list,
       const std::string& event_code_name = kEventCodeLabelKey);
+
+  /**
+   * @brief Push the GCP KMS Decryption Error Rate Metric.
+   *
+   * @param metric_client The metric client.
+   * @param status The GCP status returned from KMS decryption operation.
+   */
+  static void PushGcpKmsDecryptionErrorRateMetric(
+      const std::shared_ptr<MetricClientInterface> metric_client,
+      const google::cloud::Status status) noexcept;
+
+  /**
+   * @brief Push the given metric using the given metric client.
+   *
+   * @param metric_client The metric client.
+   * @param metric The metric to push.
+   */
+  static core::ExecutionResult PutMetric(
+      const std::shared_ptr<MetricClientInterface> metric_client,
+      const google::cmrt::sdk::metric_service::v1::Metric& metric) noexcept;
 };
 
 }  // namespace google::scp::cpio

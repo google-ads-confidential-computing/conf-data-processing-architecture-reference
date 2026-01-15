@@ -15,11 +15,11 @@
  */
 
 mock_provider "google" {
-  source          = "../../../../../../tfmocks/google/"
+  source          = "../../../../../../tools/tftesting/tfmocks/google/"
   override_during = plan
 }
 mock_provider "null" {
-  source          = "../../../../../../tfmocks/null/"
+  source          = "../../../../../../tools/tftesting/tfmocks/null/"
   override_during = plan
 }
 

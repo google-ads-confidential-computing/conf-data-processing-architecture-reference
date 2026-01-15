@@ -6,7 +6,7 @@ CMRT (Common Multi-cloud RunTime) provides facilities to deploy and operate appl
 
 # Building
 
-This repo depends on Bazel version 6.4.0 with JDK 21 and a C++17 compiler (we use GCC9 and Clang13 to build and verify this project).  The following environment variables should be set in your local environment (the exact location will depend on your environment):
+This repo depends on Bazel version 7.7.1 with JDK 21 and a C++17 compiler (we use GCC9 and Clang13 to build and verify this project).  The following environment variables should be set in your local environment (the exact location will depend on your environment):
 
 ```
 JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64

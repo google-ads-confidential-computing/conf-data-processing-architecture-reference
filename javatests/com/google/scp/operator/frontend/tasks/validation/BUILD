@@ -38,8 +38,6 @@ java_test(
         "//java/com/google/scp/operator/shared/model",
         "//java/external:google_truth",
         "//java/external:guava",
-        # Needs snakeyaml dependency here to choose the right snakeyaml version.
-        "//java/external:snakeyaml",
         "//java/external:test_parameter_injector",
         "//operator/protos/shared/backend:java_proto",
     ],

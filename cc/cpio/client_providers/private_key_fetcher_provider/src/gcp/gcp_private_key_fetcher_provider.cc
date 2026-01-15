@@ -61,6 +61,14 @@ constexpr char kListKeysByTimeUri[] = ":recent";
 constexpr char kMaxAgeSecondsQueryParameter[] = "maxAgeSeconds=";
 constexpr char kActiveKeyQueryTimeRangePattern[] =
     "startEpochMillis=%d&endEpochMillis=%d";
+
+string TryRemoveVersionSuffix(const string& endpoint) {
+  size_t version_position = endpoint.find(kVersionNumberSuffix);
+  if (version_position != string::npos) {
+    return endpoint.substr(0, version_position);
+  }
+  return endpoint;
+}
 }  // namespace
 
 namespace google::scp::cpio::client_providers {
@@ -83,8 +91,11 @@ void GcpPrivateKeyFetcherProvider::SignHttpRequest(
     core::AsyncContext<KeysetMetadataFetchingRequest, core::HttpRequest>&
         sign_request_context) noexcept {
   auto request = make_shared<GetSessionTokenForTargetAudienceRequest>();
+  // For KeysetMetadata API audience, only the base endpoint URI needs to be
+  // used.
   request->token_target_audience_uri =
-      sign_request_context.request->private_key_endpoint;
+      make_shared<string>(TryRemoveVersionSuffix(
+          *sign_request_context.request->private_key_endpoint));
   AsyncContext<GetSessionTokenForTargetAudienceRequest, GetSessionTokenResponse>
       get_token_context(
           move(request),
@@ -100,9 +111,12 @@ shared_ptr<core::HttpRequest> GcpPrivateKeyFetcherProvider::CreateHttpRequest(
     const KeysetMetadataFetchingRequest& request) noexcept {
   auto http_request = make_shared<HttpRequest>();
   http_request->method = HttpMethod::GET;
-  string full_uri = absl::StrCat(
-      *request.private_key_endpoint, kVersionNumberBetaSuffix, kKeySetPrefix,
-      "/", *request.keyset_name, kKeysetMetadataUrlSuffix);
+  // Recommend not to pass in version number, and this removal is just for
+  // backwards compatiblity.
+  string endpoint = TryRemoveVersionSuffix(*request.private_key_endpoint);
+  string full_uri =
+      absl::StrCat(endpoint, kVersionNumberBetaSuffix, kKeySetPrefix, "/",
+                   *request.keyset_name, kKeysetMetadataUrlSuffix);
   http_request->path = make_shared<Uri>(full_uri);
   return http_request;
 }
@@ -129,13 +143,9 @@ shared_ptr<HttpRequest> GcpPrivateKeyFetcherProvider::CreateHttpRequest(
     const PrivateKeyFetchingRequest& request) noexcept {
   auto http_request = make_shared<HttpRequest>();
   http_request->method = HttpMethod::GET;
-
-  auto endpoint = request.key_endpoint->endpoint();
-  size_t version_position = endpoint.find(kVersionNumberSuffix);
-  if (version_position != string::npos) {
-    endpoint = endpoint.substr(0, version_position);
-  }
-
+  // Recommend not to pass in version number, and this removal is just for
+  // backwards compatiblity.
+  auto endpoint = TryRemoveVersionSuffix(request.key_endpoint->endpoint());
   string base_uri;
   if (request.key_id && !request.key_id->empty()) {
     base_uri = absl::StrCat(endpoint, kVersionNumberBetaSuffix,

@@ -54,6 +54,13 @@ class TestLibCpioProvider : public LibCpioProvider {
       const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
       const std::shared_ptr<AuthTokenProviderInterface>&
           auth_token_provider) noexcept override;
+  std::shared_ptr<MetricClientInterface> CreateMetricClient(
+      const std::shared_ptr<MetricClientOptions>& metric_options,
+      const std::shared_ptr<InstanceClientProviderInterface>&
+          instance_client_provider,
+      const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
+      const std::shared_ptr<core::AsyncExecutorInterface>&
+          io_async_executor) noexcept override;
 
   std::shared_ptr<TestCpioOptions> test_options_;
 };

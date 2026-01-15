@@ -25,9 +25,17 @@ import com.google.scp.operator.cpio.configclient.gcp.Annotations.AttestedCredent
 import com.google.scp.operator.cpio.cryptoclient.HttpPrivateKeyFetchingService;
 import com.google.scp.operator.cpio.cryptoclient.HttpPrivateKeyFetchingService.PrivateKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyService;
+import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyService.KeyFetchException;
 import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyServiceImpl;
 import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyServiceModule;
 import com.google.scp.operator.cpio.cryptoclient.PrivateKeyFetchingService;
+import com.google.scp.operator.cpio.cryptoclient.model.KeyFetchExceptionUtils;
+import com.google.scp.operator.cpio.cryptoclient.model.MetricUtils;
+import com.google.scp.operator.cpio.metricclient.MetricClient;
+import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
+import com.google.scp.operator.cpio.metricclient.model.Annotations.EnableRemoteMetricAggregation;
+import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
+import com.google.scp.operator.cpio.metricclient.model.MetricType;
 import com.google.scp.shared.api.util.HttpClientWrapper;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
@@ -75,8 +83,10 @@ public final class GcpKmsHybridEncryptionKeyServiceModule extends HybridEncrypti
   Aead provideAead(
       GcpKmsHybridEncryptionKeyServiceConfig config,
       @AttestedCredentials GoogleCredentials credentials,
-      ParameterClient parameterClient)
-      throws ParameterClientException {
+      ParameterClient parameterClient,
+      MetricClient metricClient,
+      @EnableRemoteMetricAggregation Boolean enableRemoteAggregationMetrics)
+      throws ParameterClientException, KeyFetchException, MetricClientException {
     String kmsKeyUri =
         parameterClient
             .getParameter(WorkerParameter.COORDINATOR_KMS_ARN.name())
@@ -86,9 +96,20 @@ public final class GcpKmsHybridEncryptionKeyServiceModule extends HybridEncrypti
       client.withCredentials(credentials);
       return client.getAead(kmsKeyUri);
     } catch (GeneralSecurityException e) {
-      throw new RuntimeException(
-          String.format("Error getting gcloud Aead with uri %s.", config.coordinatorAKmsKeyUri()),
-          e);
+      KeyFetchException exception = KeyFetchExceptionUtils.parseGrpcException(e);
+      if (enableRemoteAggregationMetrics) {
+        CustomMetric errorMetric =
+            CustomMetric.builder()
+                .setNameSpace(MetricUtils.METRIC_NAMESPACE)
+                .setName("GcpKmsDecryptionErrorRate")
+                .setValue(1.0)
+                .setUnit("Count")
+                .setMetricType(MetricType.DOUBLE_COUNTER)
+                .addLabel("ErrorReason", exception.getReason().toString())
+                .build();
+        metricClient.recordMetric(errorMetric);
+      }
+      throw exception;
     }
   }
 }

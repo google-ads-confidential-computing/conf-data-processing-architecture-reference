@@ -113,6 +113,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       int count,
       int validityInDays,
       int ttlInDays,
+      int backfillDays,
       Instant activation)
       throws ServiceException {
     createSplitKeyBase(
@@ -121,6 +122,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
         count,
         validityInDays,
         ttlInDays,
+        backfillDays,
         activation,
         Optional.empty(),
         populateMigrationDataProvider.get());

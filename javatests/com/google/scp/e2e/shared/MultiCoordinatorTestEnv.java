@@ -39,6 +39,8 @@ import com.google.scp.operator.cpio.configclient.aws.Annotations.CoordinatorACre
 import com.google.scp.operator.cpio.configclient.aws.Annotations.CoordinatorBCredentialsProvider;
 import com.google.scp.operator.cpio.cryptoclient.aws.Annotations.KmsEndpointOverride;
 import com.google.scp.operator.cpio.cryptoclient.aws.AwsKmsMultiPartyHybridEncryptionKeyServiceModule;
+import com.google.scp.operator.cpio.metricclient.MetricClient;
+import com.google.scp.operator.cpio.metricclient.model.Annotations.EnableRemoteMetricAggregation;
 import com.google.scp.shared.api.util.HttpClientWrapper;
 import com.google.scp.shared.aws.credsprovider.AwsSessionCredentialsProvider;
 import com.google.scp.shared.clients.configclient.aws.AwsClientConfigModule.AwsCredentialAccessKey;
@@ -172,6 +174,8 @@ public final class MultiCoordinatorTestEnv extends AbstractModule {
         .annotatedWith(CoordinatorAEncryptionKeySignatureAlgorithm.class)
         .toInstance(AwsIntegrationTestUtil.SIGNATURE_KEY_ALGORITHM);
     bind(new Key<Optional<String>>(KeyIdTypeName.class) {}).toInstance(Optional.empty());
+    bind(MetricClient.class).toInstance(mock(MetricClient.class));
+    bind(Boolean.class).annotatedWith(EnableRemoteMetricAggregation.class).toInstance(false);
 
     install(new LocalKeyStorageServiceModule());
     install(new MultiKeyDbIntegrationTestModule());

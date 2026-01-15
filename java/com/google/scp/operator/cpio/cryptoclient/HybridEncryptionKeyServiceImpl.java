@@ -26,6 +26,7 @@ import com.google.crypto.tink.HybridEncrypt;
 import com.google.crypto.tink.JsonKeysetReader;
 import com.google.crypto.tink.KeysetHandle;
 import com.google.inject.Inject;
+import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyService.KeyFetchException;
 import com.google.scp.operator.cpio.cryptoclient.PrivateKeyFetchingService.PrivateKeyFetchingServiceException;
 import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import com.google.scp.shared.api.exception.ServiceException;

@@ -34,10 +34,8 @@ public class PrivateKeyServiceModule extends AbstractModule {
   @StringMapKey("/v1alpha")
   List<ApiTask> provideV1AlphaTasks(
       com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetEncryptedPrivateKeyTask
-          getEncryptedPrivateKeyTask,
-      com.google.scp.coordinator.keymanagement.keyhosting.tasks.ListRecentEncryptionKeysTask
-          listRecentEncryptionKeysTask) {
-    return ImmutableList.of(getEncryptedPrivateKeyTask, listRecentEncryptionKeysTask);
+          getEncryptedPrivateKeyTask) {
+    return ImmutableList.of(getEncryptedPrivateKeyTask);
   }
 
   @ProvidesIntoMap

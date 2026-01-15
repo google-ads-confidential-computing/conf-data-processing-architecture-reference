@@ -52,8 +52,6 @@ public final class LocalSimpleWorkerRunner {
   public static LocalSimpleWorkerRunner create(Path rootDir) {
     String[] args =
         new String[] {
-          "--pbs_client",
-          "LOCAL",
           "--job_client",
           "LOCAL_FILE",
           "--lifecycle_client",

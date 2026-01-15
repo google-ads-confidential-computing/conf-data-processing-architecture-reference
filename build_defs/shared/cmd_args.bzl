@@ -12,22 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
-
-package(
-    default_visibility = ["//visibility:public"],
-)
-
-cc_library(
-    name = "lib",
-    srcs = glob(
-        [
-            "single_include/nlohmann/json.hpp",
-            "include/nlohmann/*.h",
-        ],
-    ),
-    copts = [
-        "-std=c++17",
-    ],
-    includes = ["single_include"],
-)
+def to_cmd_args(args_dict):
+    """Converts a dictionary of arguments to a list of strings."""
+    result = []
+    for key, value in args_dict.items():
+        result.append(key)
+        if value != None:
+            result.append(value)
+    print(result)
+    return result

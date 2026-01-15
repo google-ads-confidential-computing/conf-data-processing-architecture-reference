@@ -34,6 +34,6 @@ cc_library(
         "//cc/core/nosql_database_provider/src/common:core_nosql_database_provider_common_lib",
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_google_absl//absl/strings",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )

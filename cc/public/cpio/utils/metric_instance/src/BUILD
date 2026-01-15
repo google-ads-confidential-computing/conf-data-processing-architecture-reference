@@ -34,6 +34,7 @@ cc_library(
         "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
         "//cc/public/cpio/utils/metric_instance/interface:metric_instance_interface",
         "//cc/public/cpio/utils/metric_instance/interface:type_def",
+        "@com_github_googleapis_google_cloud_cpp//:common",
         "@com_google_absl//absl/strings",
         "@com_google_protobuf//:protobuf",
     ],

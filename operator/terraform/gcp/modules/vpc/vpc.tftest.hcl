@@ -18,11 +18,11 @@ test {
   parallel = true
 }
 mock_provider "google" {
-  source          = "../../../../../tfmocks/google/"
+  source          = "../../../../../tools/tftesting/tfmocks/google/"
   override_during = plan
 }
 mock_provider "google-beta" {
-  source          = "../../../../../tfmocks/google-beta/"
+  source          = "../../../../../tools/tftesting/tfmocks/google-beta/"
   override_during = plan
 }
 

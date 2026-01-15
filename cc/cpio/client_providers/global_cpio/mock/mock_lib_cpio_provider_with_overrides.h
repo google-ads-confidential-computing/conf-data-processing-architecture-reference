@@ -22,12 +22,16 @@
 #include "cpio/client_providers/global_cpio/src/cpio_provider/lib_cpio_provider.h"
 #include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 namespace google::scp::cpio::client_providers::mock {
 class MockLibCpioProviderWithOverrides : public LibCpioProvider {
  public:
-  MockLibCpioProviderWithOverrides()
-      : LibCpioProvider(std::make_shared<CpioOptions>()) {}
+  MockLibCpioProviderWithOverrides(
+      const std::shared_ptr<CpioOptions> cpio_options =
+          std::make_shared<CpioOptions>())
+      : LibCpioProvider(cpio_options) {}
 
   core::ExecutionResult GetInstanceClientProvider(
       std::shared_ptr<InstanceClientProviderInterface>&
@@ -35,6 +39,17 @@ class MockLibCpioProviderWithOverrides : public LibCpioProvider {
     instance_client_provider_ = std::make_shared<MockInstanceClientProvider>();
     instance_client_provider = instance_client_provider_;
     return core::SuccessExecutionResult();
+  }
+
+  std::shared_ptr<MetricClientInterface> CreateMetricClient(
+      const std::shared_ptr<MetricClientOptions>& metric_options,
+      const std::shared_ptr<InstanceClientProviderInterface>&
+          instance_client_provider,
+      const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
+      const std::shared_ptr<core::AsyncExecutorInterface>&
+          io_async_executor) noexcept override {
+    metric_client_ = std::make_shared<MockMetricClient>();
+    return metric_client_;
   }
 
   std::shared_ptr<core::AsyncExecutorInterface> GetCpuAsyncExecutorMember() {
@@ -65,6 +80,10 @@ class MockLibCpioProviderWithOverrides : public LibCpioProvider {
 
   std::shared_ptr<AuthTokenProviderInterface> GetAuthTokenProviderMember() {
     return auth_token_provider_;
+  }
+
+  std::shared_ptr<MetricClientInterface> GetMetricClientMember() {
+    return metric_client_;
   }
 };
 }  // namespace google::scp::cpio::client_providers::mock

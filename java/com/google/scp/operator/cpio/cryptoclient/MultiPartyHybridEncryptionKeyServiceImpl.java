@@ -24,8 +24,6 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.gax.rpc.ApiException;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -44,8 +42,14 @@ import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.KeyDataProt
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAAead;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBAead;
 import com.google.scp.operator.cpio.cryptoclient.EncryptionKeyFetchingService.EncryptionKeyFetchingServiceException;
+import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyService.KeyFetchException;
 import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
-import com.google.scp.shared.api.exception.ServiceException;
+import com.google.scp.operator.cpio.cryptoclient.model.KeyFetchExceptionUtils;
+import com.google.scp.operator.cpio.cryptoclient.model.MetricUtils;
+import com.google.scp.operator.cpio.metricclient.MetricClient;
+import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
+import com.google.scp.operator.cpio.metricclient.model.Annotations.EnableRemoteMetricAggregation;
+import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.shared.crypto.tink.CloudAeadSelector;
 import com.google.scp.shared.util.KeySplitUtil;
 import io.github.resilience4j.core.IntervalFunction;
@@ -54,7 +58,6 @@ import io.github.resilience4j.retry.RetryConfig;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-import java.net.ConnectException;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.util.Base64;
@@ -91,6 +94,8 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
   private final CloudAeadSelector coordinatorBAeadService;
   private final EncryptionKeyFetchingService coordinatorAEncryptionKeyFetchingService;
   private final EncryptionKeyFetchingService coordinatorBEncryptionKeyFetchingService;
+  private final MetricClient metricClient;
+  private final Boolean enableRemoteMetricAggregation;
   private final LoadingCache<String, KeysetHandle> keysetHandleCache =
       CacheBuilder.newBuilder()
           .maximumSize(MAX_CACHE_SIZE)
@@ -99,7 +104,8 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
           .build(
               new CacheLoader<String, KeysetHandle>() {
                 @Override
-                public KeysetHandle load(final String keyId) throws KeyFetchException {
+                public KeysetHandle load(final String keyId)
+                    throws KeyFetchException, MetricClientException {
                   return createDecrypter(keyId);
                 }
               });
@@ -118,7 +124,7 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
           .retryOnException(
               t -> {
                 if (t instanceof GeneralSecurityException) {
-                  var parsedException = generateKeyFetchExceptionFromGrpcException(t);
+                  var parsedException = KeyFetchExceptionUtils.parseGrpcException(t);
                   return !KEY_DECRYPTION_NON_RETRYABLE_FAILURE_REASONS.contains(
                       parsedException.getReason());
                 }
@@ -138,11 +144,15 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
       @CoordinatorBEncryptionKeyFetchingService
           EncryptionKeyFetchingService coordinatorBEncryptionKeyFetchingService,
       @CoordinatorAAead CloudAeadSelector coordinatorAAeadService,
-      @CoordinatorBAead CloudAeadSelector coordinatorBAeadService) {
+      @CoordinatorBAead CloudAeadSelector coordinatorBAeadService,
+      MetricClient metricClient,
+      @EnableRemoteMetricAggregation Boolean enableRemoteMetricAggregation) {
     this.coordinatorAEncryptionKeyFetchingService = coordinatorAEncryptionKeyFetchingService;
     this.coordinatorBEncryptionKeyFetchingService = coordinatorBEncryptionKeyFetchingService;
     this.coordinatorAAeadService = coordinatorAAeadService;
     this.coordinatorBAeadService = coordinatorBAeadService;
+    this.metricClient = metricClient;
+    this.enableRemoteMetricAggregation = enableRemoteMetricAggregation;
   }
 
   private MultiPartyHybridEncryptionKeyServiceImpl(
@@ -150,14 +160,18 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
       EncryptionKeyFetchingService coordinatorBEncryptionKeyFetchingService,
       CloudAeadSelector coordinatorAAeadService,
       CloudAeadSelector coordinatorBAeadService,
-      boolean enablePrivateKeyDecryptionRetries,
+      MetricClient metricClient,
+      Boolean enableRemoteMetricAggregation,
+      Boolean enablePrivateKeyDecryptionRetries,
       Optional<RetryConfig> privateKeyDecryptionRetryConfig) {
 
     this(
         coordinatorAEncryptionKeyFetchingService,
         coordinatorBEncryptionKeyFetchingService,
         coordinatorAAeadService,
-        coordinatorBAeadService);
+        coordinatorBAeadService,
+        metricClient,
+        enableRemoteMetricAggregation);
 
     if (enablePrivateKeyDecryptionRetries) {
       if (privateKeyDecryptionRetryConfig.isPresent()) {
@@ -204,8 +218,9 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
         params.coordBKeyFetchingService(),
         params.coordAAeadService(),
         params.coordBAeadService(),
-        (params.enablePrivateKeyDecryptionRetries().isPresent()
-            && params.enablePrivateKeyDecryptionRetries().get()),
+        params.metricClient(),
+        params.enableRemoteMetricAggregation().orElse(false),
+        params.enablePrivateKeyDecryptionRetries().orElse(false),
         params.privateKeyDecryptionRetryConfig());
   }
 
@@ -249,7 +264,8 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
   @Retention(RUNTIME)
   public @interface CoordinatorBEncryptionKeyFetchingService {}
 
-  private KeysetHandle createDecrypter(String keyId) throws KeyFetchException {
+  private KeysetHandle createDecrypter(String keyId)
+      throws KeyFetchException, MetricClientException {
     try {
       var primaryEncryptionKey = coordinatorAEncryptionKeyFetchingService.fetchEncryptionKey(keyId);
 
@@ -270,11 +286,31 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
       }
 
     } catch (EncryptionKeyFetchingServiceException e) {
-      throw generateKeyFetchExceptionFromServiceException(e);
+      KeyFetchException exception = KeyFetchExceptionUtils.parseServiceException(e);
+      if (enableRemoteMetricAggregation) {
+        CustomMetric errorMetric =
+            MetricUtils.ConstructEncryptionKeyFetchingErrorRateMetric(exception);
+        metricClient.recordMetric(errorMetric);
+      }
+      throw exception;
     } catch (GeneralSecurityException e) {
-      throw generateKeyFetchExceptionFromGrpcException(e);
+      KeyFetchException exception = KeyFetchExceptionUtils.parseGrpcException(e);
+      if (enableRemoteMetricAggregation) {
+        CustomMetric errorMetric =
+            MetricUtils.ConstructEncryptionKeyFetchingErrorRateMetric(exception);
+        metricClient.recordMetric(errorMetric);
+      }
+      throw exception;
     } catch (IOException e) {
-      throw new KeyFetchException("Failed to fetch key ID: " + keyId, ErrorReason.UNKNOWN_ERROR, e);
+      KeyFetchException exception =
+          new KeyFetchException(
+              "Failed to fetch key ID: " + keyId + ".", ErrorReason.UNKNOWN_ERROR, e);
+      if (enableRemoteMetricAggregation) {
+        CustomMetric errorMetric =
+            MetricUtils.ConstructEncryptionKeyFetchingErrorRateMetric(exception);
+        metricClient.recordMetric(errorMetric);
+      }
+      throw exception;
     }
   }
 
@@ -338,70 +374,5 @@ public final class MultiPartyHybridEncryptionKeyServiceImpl implements HybridEnc
         .filter(keyData -> !keyData.getKeyMaterial().isEmpty())
         .findFirst()
         .get();
-  }
-
-  private static KeyFetchException generateKeyFetchExceptionFromServiceException(
-      EncryptionKeyFetchingServiceException e) {
-    logger.error("Exception for key fetching: ", e);
-    if (e.getCause() instanceof ServiceException) {
-      switch (((ServiceException) e.getCause()).getErrorCode()) {
-        case NOT_FOUND:
-          return new KeyFetchException(e, ErrorReason.KEY_NOT_FOUND);
-        case PERMISSION_DENIED:
-        case UNAUTHENTICATED:
-          return new KeyFetchException(e, ErrorReason.PERMISSION_DENIED);
-        case INTERNAL:
-          return new KeyFetchException(e, ErrorReason.INTERNAL);
-        case UNAVAILABLE:
-        case DEADLINE_EXCEEDED:
-          return new KeyFetchException(e, ErrorReason.KEY_SERVICE_UNAVAILABLE);
-        default:
-          return new KeyFetchException(e, ErrorReason.UNKNOWN_ERROR);
-      }
-    }
-    return new KeyFetchException(e, ErrorReason.UNKNOWN_ERROR);
-  }
-
-  private static KeyFetchException generateKeyFetchExceptionFromGrpcException(Throwable e) {
-    if (e == null) {
-      return new KeyFetchException(e, ErrorReason.KEY_DECRYPTION_ERROR);
-    }
-    logger.error("Exception for key decryption: ", e);
-    logger.info("End of exception log.");
-    if (e instanceof GoogleJsonResponseException) {
-      var jsonException = (GoogleJsonResponseException) e;
-      if (RETRYABLE_HTTP_STATUS_CODES.contains(jsonException.getStatusCode())) {
-        return new KeyFetchException(e, ErrorReason.KEY_SERVICE_UNAVAILABLE);
-      }
-    }
-    if (e instanceof ConnectException) {
-      return new KeyFetchException(e, ErrorReason.KEY_SERVICE_UNAVAILABLE);
-    }
-    if (e instanceof ApiException) {
-      switch (((ApiException) e).getStatusCode().getCode()) {
-        case NOT_FOUND:
-          return new KeyFetchException(e, ErrorReason.KEY_NOT_FOUND);
-        case PERMISSION_DENIED:
-          return new KeyFetchException(e, ErrorReason.PERMISSION_DENIED);
-        case UNAUTHENTICATED:
-          return new KeyFetchException(e, ErrorReason.UNAUTHENTICATED);
-        case INTERNAL:
-          return new KeyFetchException(e, ErrorReason.INTERNAL);
-        case UNAVAILABLE:
-          return new KeyFetchException(e, ErrorReason.KEY_SERVICE_UNAVAILABLE);
-        case DEADLINE_EXCEEDED:
-          return new KeyFetchException(e, ErrorReason.DEADLINE_EXCEEDED);
-        case RESOURCE_EXHAUSTED:
-          return new KeyFetchException(e, ErrorReason.RESOURCE_EXHAUSTED);
-        case INVALID_ARGUMENT:
-          return new KeyFetchException(e, ErrorReason.INVALID_ARGUMENT);
-        default:
-          return new KeyFetchException(e, ErrorReason.KEY_DECRYPTION_ERROR);
-      }
-    }
-    if (e.getCause() == null) {
-      return new KeyFetchException(e, ErrorReason.KEY_DECRYPTION_ERROR);
-    }
-    return generateKeyFetchExceptionFromGrpcException(e.getCause());
   }
 }

@@ -35,6 +35,7 @@ public final class SqsKeyGenerationService extends AbstractExecutionThreadServic
 
   private static final int DEFAULT_OVERLAP_DAYS = 0;
   private static final int DEFAULT_CREATE_MAX_DAYS_AHEAD = 365;
+  private static final int DEFAULT_BACKFILL_DAYS = 0;
   private static final Long THREAD_SLEEP_TIME_MILLIS = 5000L;
   private static final Logger logger = LoggerFactory.getLogger(SqsKeyGenerationService.class);
 
@@ -82,7 +83,8 @@ public final class SqsKeyGenerationService extends AbstractExecutionThreadServic
               validityInDays,
               ttlInDays,
               DEFAULT_CREATE_MAX_DAYS_AHEAD,
-              DEFAULT_OVERLAP_DAYS);
+              DEFAULT_OVERLAP_DAYS,
+              DEFAULT_BACKFILL_DAYS);
           sqsKeyGenerationQueue.acknowledgeKeyGenerationCompletion(item.get());
         }
 

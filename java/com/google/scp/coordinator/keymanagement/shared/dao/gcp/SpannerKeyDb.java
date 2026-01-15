@@ -40,6 +40,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
+import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitDataList;
@@ -64,6 +65,7 @@ public final class SpannerKeyDb implements KeyDb {
   private static final String KEY_TYPE = "KeyType";
   private static final String KEY_ENCRYPTION_KEY_URI = "KeyEncryptionKeyUri";
   private static final String EXPIRY_TIME_COLUMN = "ExpiryTime";
+  private static final String BACKFILL_EXPIRY_TIME_COLUMN = "BackfillExpiryTime";
   private static final String TTL_TIME_COLUMN = "TtlTime";
   private static final String ACTIVATION_TIME_COLUMN = "ActivationTime";
   private static final String CREATED_AT_COLUMN = "CreatedAt";
@@ -373,6 +375,12 @@ public final class SpannerKeyDb implements KeyDb {
             ? Timestamp.ofTimeMicroseconds(
                 TimeUnit.MICROSECONDS.convert(key.getExpirationTime(), TimeUnit.MILLISECONDS))
             : null;
+    Timestamp backfillExpireTime =
+        key.hasKeyMetadata() && key.getKeyMetadata().hasBackfillExpirationTime()
+            ? Timestamp.ofTimeMicroseconds(
+                TimeUnit.MICROSECONDS.convert(
+                    key.getKeyMetadata().getBackfillExpirationTime(), TimeUnit.MILLISECONDS))
+            : null;
     // TTL is saved in seconds, however Spanner requires a timestamp
     Timestamp ttlTime =
         key.hasTtlTime()
@@ -416,6 +424,8 @@ public final class SpannerKeyDb implements KeyDb {
         .to(key.getMigrationKeyEncryptionKeyUri())
         .set(EXPIRY_TIME_COLUMN)
         .to(expireTime)
+        .set(BACKFILL_EXPIRY_TIME_COLUMN)
+        .to(backfillExpireTime)
         .set(TTL_TIME_COLUMN)
         .to(ttlTime)
         .set(ACTIVATION_TIME_COLUMN)
@@ -506,6 +516,12 @@ public final class SpannerKeyDb implements KeyDb {
     }
     if (!resultSet.isNull(EXPIRY_TIME_COLUMN)) {
       keyBuilder.setExpirationTime(toEpochMilliSeconds(resultSet.getTimestamp(EXPIRY_TIME_COLUMN)));
+    }
+    if (!resultSet.isNull(BACKFILL_EXPIRY_TIME_COLUMN)) {
+      keyBuilder.setKeyMetadata(
+          EncryptionKeyProto.EncryptionKey.KeyMetadata.newBuilder()
+              .setBackfillExpirationTime(
+                  toEpochMilliSeconds(resultSet.getTimestamp(BACKFILL_EXPIRY_TIME_COLUMN))));
     }
     if (!resultSet.isNull(MIGRATION_PRIVATE_KEY_COLUMN)) {
       keyBuilder.setMigrationJsonEncodedKeyset(resultSet.getString(MIGRATION_PRIVATE_KEY_COLUMN));

@@ -24,6 +24,8 @@
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/kms_client/type_def.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "public/cpio/interface/metric_client/type_def.h"
 #include "public/cpio/interface/type_def.h"
 #include "public/cpio/proto/kms_service/v1/kms_service.pb.h"
 
@@ -58,6 +60,7 @@ class KmsClientProviderFactory {
       const std::shared_ptr<KmsClientOptions>& options,
       const std::shared_ptr<RoleCredentialsProviderInterface>&
           role_credentials_provider,
+      const std::shared_ptr<MetricClientInterface>& metric_client,
       const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
       const std::shared_ptr<core::AsyncExecutorInterface>&
           cpu_async_executor) noexcept;

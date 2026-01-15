@@ -35,6 +35,7 @@
 #include "cpio/common/src/gcp/error_codes.h"
 #include "google/cloud/status.h"
 #include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 using google::cloud::Status;
 using google::cloud::StatusCode;
@@ -50,6 +51,7 @@ using google::cmrt::sdk::kms_service::v1::DecryptResponse;
 using google::scp::core::AsyncContext;
 using google::scp::core::ExecutionResultOr;
 using google::scp::core::FailureExecutionResult;
+using google::scp::core::SuccessExecutionResult;
 using google::scp::core::errors::SC_DISPATCHER_EXHAUSTED_RETRIES;
 using google::scp::core::errors::
     SC_GCP_KMS_CLIENT_PROVIDER_BASE64_DECODING_FAILED;
@@ -63,18 +65,21 @@ using google::scp::core::test::ResultIs;
 using google::scp::core::test::TestLoggingUtils;
 using google::scp::core::test::WaitUntil;
 using google::scp::core::utils::Base64Encode;
+using google::scp::cpio::MockMetricClient;
 using google::scp::cpio::client_providers::mock::
     MockGcpKeyManagementServiceClient;
 using std::atomic;
 using std::dynamic_pointer_cast;
 using std::make_shared;
 using std::make_unique;
+using std::map;
 using std::move;
 using std::shared_ptr;
 using std::string;
 using std::thread;
 using std::unique_ptr;
 using std::vector;
+using testing::_;
 using testing::Eq;
 using testing::Exactly;
 using testing::ExplainMatchResult;
@@ -107,7 +112,7 @@ class GcpKmsClientProviderTest
       const shared_ptr<KmsClientOptions>& options =
           make_shared<KmsClientOptions>()) {
     auto client = make_unique<GcpKmsClientProvider>(
-        io_async_executor_, cpu_async_executor_, options,
+        io_async_executor_, cpu_async_executor_, mock_metric_client_, options,
         mock_gcp_kms_factory_);
 
     EXPECT_SUCCESS(client->Init());
@@ -129,6 +134,7 @@ class GcpKmsClientProviderTest
     EXPECT_SUCCESS(io_async_executor_->Run());
     EXPECT_SUCCESS(cpu_async_executor_->Init());
     EXPECT_SUCCESS(cpu_async_executor_->Run());
+    mock_metric_client_ = make_shared<MockMetricClient>();
 
     client_ = InitGcpKmsClientProvider(options);
 
@@ -151,6 +157,7 @@ class GcpKmsClientProviderTest
       make_shared<AsyncExecutor>(2, 100);
   shared_ptr<AsyncExecutor> cpu_async_executor_ =
       make_shared<AsyncExecutor>(2, 100);
+  shared_ptr<MockMetricClient> mock_metric_client_;
 };
 
 TEST_F(GcpKmsClientProviderTest, NullKeyArn) {
@@ -323,7 +330,8 @@ TEST_F(GcpKmsClientProviderTest, MultiThreadSuccessToDecryptWithCache) {
   auto options = make_shared<KmsClientOptions>();
   options->enable_gcp_kms_client_cache = true;
   auto client = make_unique<GcpKmsClientProvider>(
-      io_async_executor_, cpu_async_executor_, options, mock_gcp_kms_factory_);
+      io_async_executor_, cpu_async_executor_, mock_metric_client_, options,
+      mock_gcp_kms_factory_);
   EXPECT_SUCCESS(client->Init());
   EXPECT_SUCCESS(client->Run());
 
@@ -351,7 +359,8 @@ TEST_F(GcpKmsClientProviderTest, MultiThreadDifferentWipWithCache) {
   auto options = make_shared<KmsClientOptions>();
   options->enable_gcp_kms_client_cache = true;
   auto client = make_unique<GcpKmsClientProvider>(
-      io_async_executor_, cpu_async_executor_, options, mock_gcp_kms_factory_);
+      io_async_executor_, cpu_async_executor_, mock_metric_client_, options,
+      mock_gcp_kms_factory_);
   EXPECT_SUCCESS(client->Init());
   EXPECT_SUCCESS(client->Run());
 
@@ -453,6 +462,8 @@ TEST_P(GcpKmsClientProviderTest, ShouldRetryKmsDecryptForRetriableStatusCode) {
   ExpectCallDecryptWithFailuresAndEventualSuccess(
       mock_gcp_key_management_service_client_, failure_times, GetParam());
 
+  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_)).Times(0);
+
   DecryptSuccessfully(client_.get(), kWipProvider);
 }
 
@@ -490,6 +501,8 @@ TEST_F(GcpKmsClientProviderTest,
   ExpectCallDecryptWithFailures(mock_gcp_key_management_service_client_,
                                 failure_times, StatusCode::kUnavailable);
 
+  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_)).Times(0);
+
   DecryptFailure(client_.get(), kWipProvider, SC_DISPATCHER_EXHAUSTED_RETRIES);
 }
 
@@ -503,6 +516,9 @@ TEST_F(GcpKmsClientProviderTest, ShouldNotRetryKmsDecryptUponFailure) {
       /* failure_return_times */ 1,
       StatusCode::kPermissionDenied);  // Non-retryable code
 
+  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_))
+      .WillOnce(Return(SuccessExecutionResult()));
+
   DecryptFailure(client_.get(), kWipProvider,
                  SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);
 }
@@ -513,7 +529,8 @@ TEST_F(GcpKmsClientProviderTest,
   options->enable_gcp_kms_client_retries = true;
   options->enable_new_gcp_error_code_converter = true;
   auto client = make_unique<GcpKmsClientProvider>(
-      io_async_executor_, cpu_async_executor_, options, mock_gcp_kms_factory_);
+      io_async_executor_, cpu_async_executor_, mock_metric_client_, options,
+      mock_gcp_kms_factory_);
   EXPECT_SUCCESS(client->Init());
   EXPECT_SUCCESS(client->Run());
   EXPECT_CALL(*mock_gcp_kms_factory_, CreateGcpKeyManagementServiceClient(
@@ -524,6 +541,9 @@ TEST_F(GcpKmsClientProviderTest,
       mock_gcp_key_management_service_client_,
       /* failure_return_times */ 1,
       StatusCode::kPermissionDenied);  // Non-retryable code
+
+  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_))
+      .WillOnce(Return(SuccessExecutionResult()));
 
   DecryptFailure(client.get(), kWipProvider, SC_GCP_PERMISSION_DENIED);
 
@@ -543,6 +563,9 @@ TEST_F(GcpKmsClientProviderTest, ShouldNotRetryKmsDecryptIfRetriesDisabled) {
       mock_gcp_key_management_service_client_, /* failure_return_times */ 1,
       StatusCode::kUnavailable);  // Generally retryable code, but will fail
                                   // right away since retries are disabled
+
+  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_))
+      .WillOnce(Return(SuccessExecutionResult()));
 
   DecryptFailure(client.get(), kWipProvider,
                  SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);

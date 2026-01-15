@@ -29,6 +29,8 @@ java_library(
         "//java/com/google/scp/operator/cpio/configclient",
         "//java/com/google/scp/operator/cpio/configclient:aws",
         "//java/com/google/scp/operator/cpio/cryptoclient:aws",
+        "//java/com/google/scp/operator/cpio/metricclient",
+        "//java/com/google/scp/operator/cpio/metricclient:model",
         "//java/com/google/scp/shared/api/util",
         "//java/com/google/scp/shared/aws/credsprovider",
         "//java/com/google/scp/shared/clients/configclient:aws",
@@ -55,23 +57,5 @@ java_library(
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/aws",
         "//javatests/com/google/scp/shared/testutils/aws",
         "//javatests/com/google/scp/shared/testutils/common",
-    ],
-)
-
-java_library(
-    name = "testutils_with_pbs",
-    srcs =
-        ["MultiCoordinatorWithPbsTestEnv.java"],
-    tags = ["manual"],
-    deps = [
-        ":testutils",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:javax_inject",
-        "//java/external:localstack_containers",
-        "//java/external:mockito",
-        "//java/external:testcontainers",
-        "//javatests/com/google/scp/coordinator/privacy/budgeting/utils/aws:pbs_e2e_test_utils",
-        "//javatests/com/google/scp/shared/testutils/aws",
     ],
 )

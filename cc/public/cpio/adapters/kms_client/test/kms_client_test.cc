@@ -20,16 +20,21 @@
 #include "core/test/utils/conditional_wait.h"
 #include "core/test/utils/proto_test_utils.h"
 #include "core/test/utils/scp_test_base.h"
+#include "cpio/common/src/gcp/error_codes.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/adapters/kms_client/mock/mock_kms_client_with_overrides.h"
+#include "public/cpio/interface/error_codes.h"
 #include "public/cpio/interface/kms_client/kms_client_interface.h"
 #include "public/cpio/proto/kms_service/v1/kms_service.pb.h"
 
 using google::cmrt::sdk::kms_service::v1::DecryptRequest;
 using google::cmrt::sdk::kms_service::v1::DecryptResponse;
 using google::scp::core::AsyncContext;
+using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::errors::SC_CPIO_INVALID_CREDENTIALS;
+using google::scp::core::errors::SC_GCP_PERMISSION_DENIED;
 using google::scp::core::test::EqualsProto;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ScpTestBase;
@@ -77,4 +82,25 @@ TEST_F(KmsClientTest, DecryptSyncSuccess) {
       });
   EXPECT_SUCCESS(client_.DecryptSync(DecryptRequest()).result());
 }
+
+TEST_F(KmsClientTest, DecryptSyncFailedWithPublicError) {
+  EXPECT_CALL(client_.GetKmsClientProvider(), Decrypt)
+      .WillOnce([=](AsyncContext<DecryptRequest, DecryptResponse>& context) {
+        context.response = make_shared<DecryptResponse>();
+        context.result = FailureExecutionResult(SC_GCP_PERMISSION_DENIED);
+        context.Finish();
+        return SuccessExecutionResult();
+      });
+
+  std::atomic<bool> finished = false;
+  auto context = AsyncContext<DecryptRequest, DecryptResponse>(
+      make_shared<DecryptRequest>(), [&finished](auto& context) {
+        EXPECT_THAT(context.result,
+                    FailureExecutionResult(SC_CPIO_INVALID_CREDENTIALS));
+        finished = true;
+      });
+  client_.Decrypt(context);
+  WaitUntil([&]() { return finished.load(); });
+}
+
 }  // namespace google::scp::cpio::test

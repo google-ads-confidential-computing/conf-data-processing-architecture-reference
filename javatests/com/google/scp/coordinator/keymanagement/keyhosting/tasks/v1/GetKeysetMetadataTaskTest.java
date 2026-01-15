@@ -77,8 +77,12 @@ public class GetKeysetMetadataTaskTest extends ApiTaskTestBase {
     doReturn("noOverlap").when(matcher).group("name");
     task.execute(matcher, request, response);
 
-    var count = verifyResponse(response).getActiveKeyCount();
-    assertThat(count).isEqualTo(keyConfigMap.get("noOverlap").getCount());
+    var metadata = verifyResponse(response);
+    assertThat(metadata.getActiveKeyCount()).isEqualTo(keyConfigMap.get("noOverlap").getCount());
+    assertThat(metadata.getActiveKeyCadenceDays())
+        .isEqualTo(keyConfigMap.get("noOverlap").getValidityInDays());
+    assertThat(metadata.getBackfillDays())
+        .isEqualTo(keyConfigMap.get("noOverlap").getBackfillDays());
   }
 
   @Test
@@ -86,8 +90,22 @@ public class GetKeysetMetadataTaskTest extends ApiTaskTestBase {
     doReturn("overlap").when(matcher).group("name");
     task.execute(matcher, request, response);
 
-    var count = verifyResponse(response).getActiveKeyCount();
-    assertThat(count).isEqualTo(keyConfigMap.get("overlap").getCount() * 4);
+    var metadata = verifyResponse(response);
+    assertThat(metadata.getActiveKeyCount()).isEqualTo(keyConfigMap.get("overlap").getCount() * 4);
+    assertThat(metadata.getActiveKeyCadenceDays()).isEqualTo(2);
+    assertThat(metadata.getBackfillDays())
+        .isEqualTo(keyConfigMap.get("overlap").getBackfillDays());
+  }
+
+  @Test
+  public void backfillConfigTest() throws Exception {
+    doReturn("backfill").when(matcher).group("name");
+    task.execute(matcher, request, response);
+
+    var metadata = verifyResponse(response);
+    assertThat(metadata.getActiveKeyCount()).isEqualTo(keyConfigMap.get("backfill").getCount());
+    assertThat(metadata.getBackfillDays())
+        .isEqualTo(keyConfigMap.get("backfill").getBackfillDays());
   }
 
   private static GetKeysetMetadataResponse verifyResponse(ResponseContext response)

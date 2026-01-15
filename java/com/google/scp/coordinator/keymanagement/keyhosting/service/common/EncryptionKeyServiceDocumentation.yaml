@@ -76,25 +76,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EncryptionKey'
-  /v1alpha/encryptionKeys:recent:
-    get:
-      description: Get most recent encryption keys.
-      parameters:
-      - name: maxAgeSeconds
-        in: query
-        required: true
-        schema:
-          type: integer
-        description: Maximum age of keys to return in seconds.
-      responses:
-        '200':
-          description: Encryption keys.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/EncryptionKeyList'
 components:
   schemas:
     EncryptionKeyList:

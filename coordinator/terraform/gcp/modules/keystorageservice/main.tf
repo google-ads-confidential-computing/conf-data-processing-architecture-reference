@@ -53,19 +53,18 @@ module "cloud_run" {
   source_container_image_url = var.source_container_image_url
   concurrency                = 2
   cpu_count                  = 2
-  min_instance_count         = var.key_storage_service_min_instances
-  max_instance_count         = var.key_storage_service_max_instances
+  min_instance_count         = var.min_instances
+  max_instance_count         = var.max_instances
+  execution_environment      = var.execution_environment
   memory_mb                  = var.key_storage_memory
 
   environment_variables = {
     PROJECT_ID                  = var.project_id
-    GCP_KMS_URI                 = "gcp-kms://${var.key_encryption_key_id}"
     SPANNER_INSTANCE            = var.spanner_instance_name
     SPANNER_DATABASE            = var.spanner_database_name
     GCP_KMS_BASE_URI            = var.kms_key_base_uri
     MIGRATION_GCP_KMS_BASE_URI  = var.migration_kms_key_base_uri
     POPULATE_MIGRATION_KEY_DATA = var.populate_migration_key_data
-    DISABLE_KEY_SET_ACL         = var.disable_key_set_acl
   }
 
   # Alert settings
@@ -99,7 +98,12 @@ module "load_balancer" {
   monitoring_name = "Key Storage Service"
 
   # Migration to external managed LB
-  load_balancing_scheme = var.load_balancing_scheme
+  load_balancing_scheme                                        = var.load_balancing_scheme
+  external_managed_migration_state                             = var.external_managed_migration_state
+  external_managed_migration_testing_percentage                = var.external_managed_migration_testing_percentage
+  forwarding_rule_load_balancing_scheme                        = var.forwarding_rule_load_balancing_scheme
+  external_managed_backend_bucket_migration_state              = var.external_managed_backend_bucket_migration_state
+  external_managed_backend_bucket_migration_testing_percentage = var.external_managed_backend_bucket_migration_testing_percentage
 
   enable_cdn                    = false
   cdn_default_ttl_seconds       = 30
@@ -127,20 +131,6 @@ resource "google_spanner_database_iam_member" "keydb_iam_policy" {
   database = var.spanner_database_name
   role     = "roles/spanner.databaseUser"
   member   = "serviceAccount:${google_service_account.key_storage_service_account.email}"
-}
-
-# IAM entry to allow function to encrypt and decrypt using KMS
-resource "google_kms_crypto_key_iam_member" "kms_key_set_level_iam_policy" {
-  for_each      = toset(var.key_sets)
-  crypto_key_id = "${var.key_encryption_key_ring_id}/cryptoKeys/${var.environment}_${each.value}_key_encryption_key"
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:${google_service_account.key_storage_service_account.email}"
-}
-
-resource "google_kms_crypto_key_iam_member" "kms_iam_policy" {
-  crypto_key_id = var.key_encryption_key_id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:${google_service_account.key_storage_service_account.email}"
 }
 
 module "service_monitoring_dashboard" {

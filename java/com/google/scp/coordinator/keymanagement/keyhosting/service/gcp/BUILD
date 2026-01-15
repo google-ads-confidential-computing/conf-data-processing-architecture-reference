@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -99,11 +99,12 @@ alias(
 pkg_tar(
     name = "public_key_service_cloud_run_tar",
     srcs = [":PublicKeyServiceHttpCloudRunDeploy"],
+    tags = ["manual"],
 )
 
-container_image(
-    name = "PublicKeyServiceRuntimeContainer",
-    base = "@java_base_21//image",
+oci_image(
+    name = "PublicKeyServiceRuntimeImage",
+    base = "@java_base_21_oci",
     cmd = [
         "./processed_java-function-invoker-1.3.1.jar",
         "--classpath",
@@ -111,12 +112,20 @@ container_image(
         "--target",
         "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PublicKeyService",
     ],
-    files = [],
     tags = ["manual"],
     tars = [
         ":function_invoker_tar",
         ":public_key_service_cloud_run_tar",
     ],
+)
+
+oci_load(
+    name = "PublicKeyServiceRuntimeContainer",
+    image = ":PublicKeyServiceRuntimeImage",
+    repo_tags = [
+        "bazel/java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PublicKeyServiceRuntimeContainer",
+    ],
+    tags = ["manual"],
 )
 
 # Private Key Service
@@ -165,9 +174,9 @@ pkg_tar(
     srcs = [":PrivateKeyServiceHttpCloudRunDeploy"],
 )
 
-container_image(
-    name = "PrivateKeyServiceRuntimeContainer",
-    base = "@java_base_21//image",
+oci_image(
+    name = "PrivateKeyServiceRuntimeImage",
+    base = "@java_base_21_oci",
     cmd = [
         "./processed_java-function-invoker-1.3.1.jar",
         "--classpath",
@@ -175,10 +184,18 @@ container_image(
         "--target",
         "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PrivateKeyService",
     ],
-    files = [],
     tags = ["manual"],
     tars = [
         ":function_invoker_tar",
         ":private_key_service_cloud_run_tar",
     ],
+)
+
+oci_load(
+    name = "PrivateKeyServiceRuntimeContainer",
+    image = ":PrivateKeyServiceRuntimeImage",
+    repo_tags = [
+        "bazel/java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp:PrivateKeyServiceRuntimeContainer",
+    ],
+    tags = ["manual"],
 )

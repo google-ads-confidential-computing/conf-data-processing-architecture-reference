@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_zip")
 
 package(default_visibility = ["//visibility:public"])
@@ -86,9 +86,9 @@ pkg_tar(
     srcs = [":FrontendServiceHttpCloudFunctionDeploy"],
 )
 
-container_image(
-    name = "FrontendCloudFunctionRuntimeContainer",
-    base = "@java_base_21//image",
+oci_image(
+    name = "FrontendCloudFunctionRuntimeImage",
+    base = "@java_base_21_oci",
     cmd = [
         "./processed_java-function-invoker-1.3.1.jar",
         "--classpath",
@@ -96,8 +96,29 @@ container_image(
         "--target",
         "com.google.scp.operator.frontend.service.gcp.FrontendServiceHttpFunction",
     ],
+    tags = ["manual"],
     tars = [
         ":function_invoker_tar",
         ":frontend_cloud_function_tar",
     ],
+)
+
+oci_load(
+    name = "FrontendCloudFunctionRuntimeContainer",
+    image = ":FrontendCloudFunctionRuntimeImage",
+    repo_tags = [
+        "bazel/java/com/google/scp/operator/frontend/service/gcp:FrontendCloudFunctionRuntimeContainer",
+    ],
+    tags = ["manual"],
+)
+
+# To build and push this image to a repository in one command:
+#   bazel run //java/com/google/scp/operator/frontend/service/gcp:FrontendCloudFunctionRuntimeContainer_push -- \
+#     --repository "us-docker.pkg.dev/<project>/<repo>/operator-fe-service" \
+#     --tag "some-tag"
+oci_push(
+    name = "FrontendCloudFunctionRuntimeContainer_push",
+    image = ":FrontendCloudFunctionRuntimeImage",
+    repository = "replace-me-with-a-real-repo",
+    tags = ["manual"],
 )

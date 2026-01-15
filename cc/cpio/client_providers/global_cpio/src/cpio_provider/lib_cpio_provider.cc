@@ -30,9 +30,12 @@
 #include "cpio/client_providers/interface/auth_token_provider_interface.h"
 #include "cpio/client_providers/interface/cloud_initializer_interface.h"
 #include "cpio/client_providers/interface/cpio_provider_interface.h"
+#include "cpio/client_providers/interface/metric_client_provider_interface.h"
+#include "cpio/client_providers/interface/otel_metric_client_provider_interface.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 #include "error_codes.h"
 
@@ -49,6 +52,10 @@ using google::scp::core::errors::
     SC_LIB_CPIO_ROVIDER_CPU_ASYNC_EXECUTOR_ALREADY_EXISTS;
 using google::scp::core::errors::
     SC_LIB_CPIO_ROVIDER_IO_ASYNC_EXECUTOR_ALREADY_EXISTS;
+using google::scp::cpio::MetricClientInterface;
+using google::scp::cpio::client_providers::InstanceClientProviderInterface;
+using google::scp::cpio::client_providers::MetricClientProviderFactory;
+using google::scp::cpio::client_providers::OtelMetricClientProviderFactory;
 using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
@@ -76,6 +83,15 @@ core::ExecutionResult LibCpioProvider::Run() noexcept {
 }
 
 core::ExecutionResult LibCpioProvider::Stop() noexcept {
+  if (metric_client_) {
+    auto execution_result = metric_client_->Stop();
+    if (!execution_result.Successful()) {
+      SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
+                "Failed to stop metric client.");
+      return execution_result;
+    }
+  }
+
   if (instance_client_provider_) {
     auto execution_result = instance_client_provider_->Stop();
     if (!execution_result.Successful()) {
@@ -145,8 +161,7 @@ ExecutionResult LibCpioProvider::GetHttpClient(
   }
 
   shared_ptr<AsyncExecutorInterface> cpu_async_executor;
-  auto execution_result =
-      LibCpioProvider::GetCpuAsyncExecutor(cpu_async_executor);
+  auto execution_result = GetCpuAsyncExecutor(cpu_async_executor);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get asynce executor.");
@@ -179,8 +194,7 @@ ExecutionResult LibCpioProvider::GetHttp1Client(
   }
 
   shared_ptr<AsyncExecutorInterface> cpu_async_executor;
-  auto execution_result =
-      LibCpioProvider::GetCpuAsyncExecutor(cpu_async_executor);
+  auto execution_result = GetCpuAsyncExecutor(cpu_async_executor);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get CPU async executor.");
@@ -188,7 +202,7 @@ ExecutionResult LibCpioProvider::GetHttp1Client(
   }
 
   shared_ptr<AsyncExecutorInterface> io_async_executor;
-  execution_result = LibCpioProvider::GetIoAsyncExecutor(io_async_executor);
+  execution_result = GetIoAsyncExecutor(io_async_executor);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get IO async executor.");
@@ -300,8 +314,7 @@ ExecutionResult LibCpioProvider::GetInstanceClientProvider(
   }
 
   shared_ptr<AuthTokenProviderInterface> auth_token_provider;
-  auto execution_result =
-      LibCpioProvider::GetAuthTokenProvider(auth_token_provider);
+  auto execution_result = GetAuthTokenProvider(auth_token_provider);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get auth token provider.");
@@ -309,7 +322,7 @@ ExecutionResult LibCpioProvider::GetInstanceClientProvider(
   }
 
   shared_ptr<HttpClientInterface> http1_client;
-  execution_result = LibCpioProvider::GetHttp1Client(http1_client);
+  execution_result = GetHttp1Client(http1_client);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get Http1 client.");
@@ -317,7 +330,7 @@ ExecutionResult LibCpioProvider::GetInstanceClientProvider(
   }
 
   shared_ptr<HttpClientInterface> http2_client;
-  execution_result = LibCpioProvider::GetHttpClient(http2_client);
+  execution_result = GetHttpClient(http2_client);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get Http2 client.");
@@ -325,7 +338,7 @@ ExecutionResult LibCpioProvider::GetInstanceClientProvider(
   }
 
   shared_ptr<AsyncExecutorInterface> cpu_async_executor;
-  execution_result = LibCpioProvider::GetCpuAsyncExecutor(cpu_async_executor);
+  execution_result = GetCpuAsyncExecutor(cpu_async_executor);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get cpu async executor.");
@@ -333,7 +346,7 @@ ExecutionResult LibCpioProvider::GetInstanceClientProvider(
   }
 
   shared_ptr<AsyncExecutorInterface> io_async_executor;
-  execution_result = LibCpioProvider::GetIoAsyncExecutor(io_async_executor);
+  execution_result = GetIoAsyncExecutor(io_async_executor);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get io async executor.");
@@ -381,8 +394,7 @@ ExecutionResult LibCpioProvider::GetRoleCredentialsProvider(
   }
 
   shared_ptr<AsyncExecutorInterface> cpu_async_executor;
-  auto execution_result =
-      LibCpioProvider::GetCpuAsyncExecutor(cpu_async_executor);
+  auto execution_result = GetCpuAsyncExecutor(cpu_async_executor);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get cpu async executor.");
@@ -390,7 +402,7 @@ ExecutionResult LibCpioProvider::GetRoleCredentialsProvider(
   }
 
   shared_ptr<AsyncExecutorInterface> io_async_executor;
-  execution_result = LibCpioProvider::GetIoAsyncExecutor(io_async_executor);
+  execution_result = GetIoAsyncExecutor(io_async_executor);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get io async executor.");
@@ -406,7 +418,7 @@ ExecutionResult LibCpioProvider::GetRoleCredentialsProvider(
   }
 
   shared_ptr<AuthTokenProviderInterface> auth_token_provider;
-  execution_result = LibCpioProvider::GetAuthTokenProvider(auth_token_provider);
+  execution_result = GetAuthTokenProvider(auth_token_provider);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get auth token provider.");
@@ -441,7 +453,7 @@ ExecutionResult LibCpioProvider::GetAuthTokenProvider(
   }
 
   shared_ptr<HttpClientInterface> http1_client;
-  auto execution_result = LibCpioProvider::GetHttp1Client(http1_client);
+  auto execution_result = GetHttp1Client(http1_client);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get Http1 client.");
@@ -449,7 +461,7 @@ ExecutionResult LibCpioProvider::GetAuthTokenProvider(
   }
 
   shared_ptr<AsyncExecutorInterface> io_async_executor;
-  execution_result = LibCpioProvider::GetIoAsyncExecutor(io_async_executor);
+  execution_result = GetIoAsyncExecutor(io_async_executor);
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
               "Failed to get IO Async Executor.");
@@ -473,6 +485,74 @@ ExecutionResult LibCpioProvider::GetAuthTokenProvider(
   }
   auth_token_provider = auth_token_provider_;
   return SuccessExecutionResult();
+}
+
+ExecutionResult LibCpioProvider::GetMetricClient(
+    std::shared_ptr<MetricClientInterface>& metric_client) noexcept {
+  if (metric_client_) {
+    metric_client = metric_client_;
+    return SuccessExecutionResult();
+  }
+
+  shared_ptr<InstanceClientProviderInterface> instance_client_provider;
+  auto execution_result = GetInstanceClientProvider(instance_client_provider);
+  if (!execution_result.Successful()) {
+    SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
+              "Failed to get instance client provider.");
+    return execution_result;
+  }
+
+  shared_ptr<AsyncExecutorInterface> cpu_async_executor;
+  execution_result = GetCpuAsyncExecutor(cpu_async_executor);
+  if (!execution_result.Successful()) {
+    SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
+              "Failed to get CPU Async Executor.");
+    return execution_result;
+  }
+
+  shared_ptr<AsyncExecutorInterface> io_async_executor;
+  execution_result = GetIoAsyncExecutor(io_async_executor);
+  if (!execution_result.Successful()) {
+    SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
+              "Failed to get IO Async Executor.");
+    return execution_result;
+  }
+
+  auto metric_options =
+      make_shared<MetricClientOptions>(cpio_options_->metric_client_options);
+  metric_client_ = CreateMetricClient(metric_options, instance_client_provider,
+                                      cpu_async_executor, io_async_executor);
+  execution_result = metric_client_->Init();
+  if (!execution_result.Successful()) {
+    SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
+              "Failed to initialize metric client.");
+    return execution_result;
+  }
+  execution_result = metric_client_->Run();
+  if (!execution_result.Successful()) {
+    SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
+              "Failed to run metric client.");
+    return execution_result;
+  }
+  metric_client = metric_client_;
+  return SuccessExecutionResult();
+}
+
+shared_ptr<MetricClientInterface> LibCpioProvider::CreateMetricClient(
+    const shared_ptr<MetricClientOptions>& metric_options,
+    const shared_ptr<InstanceClientProviderInterface>&
+        instance_client_provider,
+    const shared_ptr<AsyncExecutorInterface>& cpu_async_executor,
+    const shared_ptr<AsyncExecutorInterface>&
+        io_async_executor) noexcept {
+  if (metric_options->enable_remote_metric_aggregation) {
+    return OtelMetricClientProviderFactory::Create(metric_options,
+                                                   instance_client_provider);
+  } else {
+    return MetricClientProviderFactory::Create(
+        metric_options, instance_client_provider, cpu_async_executor,
+        io_async_executor);
+  }
 }
 
 #ifndef TEST_CPIO

@@ -139,12 +139,6 @@ alias(
 )
 
 alias(
-    name = "snakeyaml",
-    actual = "@maven_yaml//:org_yaml_snakeyaml",
-)
-
-# Make sure use snakeyaml deps together to pick the right snakeyaml version.
-alias(
     name = "test_parameter_injector",
     actual = "@maven//:com_google_testparameterinjector_test_parameter_injector",
 )
@@ -371,21 +365,6 @@ alias(
     actual = "@maven//:org_apache_logging_log4j_log4j_core",
     # log4j is only used in tests.
     visibility = ["//javatests:__subpackages__"],
-)
-
-alias(
-    name = "differential_privacy",
-    actual = "@com_google_differential_privacy//java/main/com/google/privacy/differentialprivacy",
-)
-
-alias(
-    name = "differential_privacy_reference_noise",
-    actual = "@com_google_differential_privacy//java/main/com/google/privacy/differentialprivacy/testing:reference_noise",
-)
-
-alias(
-    name = "differential_privacy_statistical_utils",
-    actual = "@com_google_differential_privacy//java/main/com/google/privacy/differentialprivacy/testing:statistical_utils",
 )
 
 alias(
@@ -760,4 +739,9 @@ alias(
 alias(
     name = "org_threeten_bp",
     actual = "@maven//:org_threeten_threetenbp",
+)
+
+alias(
+    name = "apache_commons_lang",
+    actual = "@maven//:org_apache_commons_commons_lang3",
 )

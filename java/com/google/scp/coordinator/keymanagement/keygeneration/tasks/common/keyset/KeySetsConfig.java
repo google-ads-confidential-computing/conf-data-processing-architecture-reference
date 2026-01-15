@@ -67,6 +67,8 @@ public abstract class KeySetsConfig {
 
     public abstract Optional<Integer> overlapPeriodDays();
 
+    public abstract Optional<Integer> backfillDays();
+
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     @AutoValue.Builder
@@ -109,6 +111,13 @@ public abstract class KeySetsConfig {
       }
 
       abstract Builder overlapPeriodDays(Optional<Integer> overlapPeriodDays);
+
+      @JsonProperty("backfill_days")
+      Builder backfillDays(Integer backfillDays) {
+        return backfillDays(Optional.ofNullable(backfillDays));
+      }
+
+      abstract Builder backfillDays(Optional<Integer> backfillDays);
 
       @JsonProperty("tink_template")
       Builder tinkTemplate(String tinkTemplate) {

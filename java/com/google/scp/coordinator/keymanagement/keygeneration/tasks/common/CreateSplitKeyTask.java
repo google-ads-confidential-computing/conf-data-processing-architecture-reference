@@ -46,6 +46,7 @@ public interface CreateSplitKeyTask {
       int count,
       int validityInDays,
       int ttlInDays,
+      int backfillDays,
       Instant activation)
       throws ServiceException;
 
@@ -65,6 +66,7 @@ public interface CreateSplitKeyTask {
    * @param ttlInDays the number of days each key should be stored in the database.
    * @param createMaxDaysAhead the number of days ahead that a key can be created
    * @param overlapPeriodDays the number of days each consecutive active set should overlap
+   * @param backfillDays the number of days a key can be used beyond expiration.
    */
   void create(
       String setName,
@@ -73,6 +75,7 @@ public interface CreateSplitKeyTask {
       int validityInDays,
       int ttlInDays,
       int createMaxDaysAhead,
-      int overlapPeriodDays)
+      int overlapPeriodDays,
+      int backfillDays)
       throws ServiceException;
 }

@@ -27,7 +27,7 @@ cc_test(
         "//cc:cc_base_include_dir",
         "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
-        "//cc/public/cpio/interface/metric_client",
+        "//cc/public/cpio/interface/kms_client",
         "//cc/public/cpio/test/global_cpio:test_lib_cpio",
         "@com_google_googletest//:gtest_main",
     ],

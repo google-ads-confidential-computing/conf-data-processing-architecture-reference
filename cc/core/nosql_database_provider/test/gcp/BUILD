@@ -44,7 +44,7 @@ cc_test(
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_github_googleapis_google_cloud_cpp//:spanner_mocks",
         "@com_google_googletest//:gtest_main",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )
 
@@ -73,7 +73,7 @@ cc_library(
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_github_googleapis_google_cloud_cpp//:spanner_mocks",
         "@com_google_googletest//:gtest_main",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )
 

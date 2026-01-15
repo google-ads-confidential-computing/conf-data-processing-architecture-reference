@@ -52,12 +52,6 @@ variable "secondary_region_zone" {
   type        = string
 }
 
-variable "key_generation_allow_stopping_for_update" {
-  description = "If true, allows Terraform to stop the key generation instances to update their properties. If you try to update a property that requires stopping the instances without setting this field, the update will fail."
-  type        = bool
-  default     = false
-}
-
 ################################################################################
 # Global Alarm Variables.
 ################################################################################
@@ -98,7 +92,7 @@ variable "spanner_custom_configuration_display_name" {
 }
 
 variable "spanner_custom_configuration_base_config" {
-  description = "Base spanner configuration used as starting basis for custom configuraiton."
+  description = "Base spanner configuration used as starting basis for custom configuration."
   type        = string
 }
 
@@ -110,6 +104,18 @@ variable "spanner_custom_configuration_read_replica_location" {
 ################################################################################
 # Key Generation Variables.
 ################################################################################
+
+variable "key_generation_region" {
+  description = "Region to use for the key generation MIG."
+  type        = string
+  nullable    = false
+}
+
+variable "key_generation_allow_stopping_for_update" {
+  description = "If true, allows Terraform to stop the key generation instances to update their properties. If you try to update a property that requires stopping the instances without setting this field, the update will fail."
+  type        = bool
+  default     = false
+}
 
 variable "key_generation_service_container_image_url" {
   description = "The Key Generation Application docker image."
@@ -227,11 +233,6 @@ variable "key_generation_create_alert_alignment_periods" {
   type        = number
 }
 
-variable "peer_coordinator_kms_key_uri" {
-  description = "KMS key URI for peer coordinator."
-  type        = string
-}
-
 variable "key_storage_service_base_url" {
   description = "Base url for key storage service for peer coordinator."
   type        = string
@@ -323,6 +324,31 @@ variable "public_key_service_load_balancing_scheme" {
   type        = string
 }
 
+variable "public_key_service_external_managed_migration_state" {
+  description = "Defines what stage of the Public KS LB migration in."
+  type        = string
+}
+
+variable "public_key_service_external_managed_migration_testing_percentage" {
+  description = "Defines what percentage of traffic should be routed to upgraded Public KS LB."
+  type        = number
+}
+
+variable "public_key_service_forwarding_rule_load_balancing_scheme" {
+  description = "Specifies the load balancing scheme used for the forwarding rule."
+  type        = string
+}
+
+variable "public_key_service_external_managed_backend_bucket_migration_state" {
+  description = "Specifies the canary migration state for the backend buckets attached to this forwarding rule."
+  type        = string
+}
+
+variable "public_key_service_external_managed_backend_bucket_migration_testing_percentage" {
+  description = "Determines the fraction of requests to backend buckets that should be processed by the Global external Application Load Balancer."
+  type        = number
+}
+
 variable "public_key_service_cr_regions" {
   description = "Additional regions beyond primary and secondary that Public KS will run in."
   type        = list(string)
@@ -352,6 +378,12 @@ variable "public_key_service_min_instances" {
 variable "public_key_service_max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
+}
+
+variable "public_key_service_execution_environment" {
+  description = "The sandbox environment to host Public KS."
+  type        = string
+  nullable    = false
 }
 
 ### Private Key Service
@@ -410,6 +442,37 @@ variable "private_key_service_load_balancing_scheme" {
   type        = string
 }
 
+variable "private_key_service_external_managed_migration_state" {
+  description = "Defines what stage of the Private KS LB migration in."
+  type        = string
+}
+
+variable "private_key_service_external_managed_migration_testing_percentage" {
+  description = "Defines what percentage of traffic should be routed to upgraded Private KS LB."
+  type        = number
+}
+
+variable "private_key_service_forwarding_rule_load_balancing_scheme" {
+  description = "Specifies the load balancing scheme used for the forwarding rule."
+  type        = string
+}
+
+variable "private_key_service_external_managed_backend_bucket_migration_state" {
+  description = "Specifies the canary migration state for the backend buckets attached to this forwarding rule."
+  type        = string
+}
+
+variable "private_key_service_external_managed_backend_bucket_migration_testing_percentage" {
+  description = "Determines the fraction of requests to backend buckets that should be processed by the Global external Application Load Balancer."
+  type        = number
+}
+
+variable "private_key_service_cloud_run_ingress" {
+  description = "Ingress setting used to restrict access to Private KS."
+  type        = string
+  nullable    = false
+}
+
 variable "private_key_service_cloud_run_memory_mb" {
   description = "Memory size in MB for private key service cloud run."
   type        = number
@@ -423,6 +486,12 @@ variable "private_key_service_cloud_run_min_instances" {
 variable "private_key_service_cloud_run_max_instances" {
   description = "The maximum number of cloud run instances that may coexist at a given time."
   type        = number
+}
+
+variable "private_key_service_execution_environment" {
+  description = "The sandbox environment to host Private KS."
+  type        = string
+  nullable    = false
 }
 
 ################################################################################
@@ -560,8 +629,9 @@ variable "key_sets_config" {
     key_sets[].count                 (optional(number)) - The number of keys to be generated.
     key_sets[].validity_in_days      (optional(number)) - Number of days the generated keys will be valid. If set to 0, the keys will never expire.
     key_sets[].ttl_in_days           (optional(number)) - Number of days the generated keys will be kept in the database. If set to 0, the keys will never be deleted.
-    key_sets[].create_max_days_ahead (optional(number)) - Number of days ahead that a key can be created
-    key_sets[].overlap_period_days   (optional(number)) - Number of days each consecutive active set should overlap
+    key_sets[].create_max_days_ahead (optional(number)) - Number of days ahead that a key can be created.
+    key_sets[].overlap_period_days   (optional(number)) - Number of days each consecutive active set should overlap.
+    key_sets[].backfill_days         (optional(number)) - Number of days allowed for a key to be used past its expiration date for a backfill job.
   EOT
   type = object({
     key_sets = list(object({
@@ -572,6 +642,7 @@ variable "key_sets_config" {
       ttl_in_days           = number
       create_max_days_ahead = optional(number)
       overlap_period_days   = optional(number)
+      backfill_days         = optional(number)
     }))
   })
 }
@@ -594,11 +665,6 @@ variable "private_key_service_config_read_alert_threshold" {
 variable "alert_severity_overrides" {
   description = "Alerts severity overrides."
   type        = map(string)
-}
-
-variable "disable_key_set_acl" {
-  description = "Controls whether to generate keys enforcing key set level acl."
-  type        = string
 }
 
 variable "peer_coordinator_kms_key_base_uri" {

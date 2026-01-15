@@ -110,6 +110,7 @@ java_test(
 
 java_test(
     name = "SqsKeyGenerationQueueTest",
+    size = "large",
     srcs = [
         "SqsKeyGenerationQueueTest.java",
         "SqsKeyGenerationQueueTestEnv.java",

@@ -49,6 +49,7 @@ shared_ptr<KmsClientProviderInterface> KmsClientProviderFactory::Create(
     const shared_ptr<KmsClientOptions>& options,
     const shared_ptr<RoleCredentialsProviderInterface>&
         role_credentials_provider,
+    const shared_ptr<MetricClientInterface>& metric_client,
     const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
     const std::shared_ptr<core::AsyncExecutorInterface>&
         cpu_async_executor) noexcept {

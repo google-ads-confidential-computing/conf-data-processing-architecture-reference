@@ -34,6 +34,6 @@ cc_library(
         "@com_github_googleapis_google_cloud_cpp//:common",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/strings",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )

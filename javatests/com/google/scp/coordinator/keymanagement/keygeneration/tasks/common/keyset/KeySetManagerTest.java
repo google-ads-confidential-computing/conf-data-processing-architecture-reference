@@ -165,7 +165,8 @@ public final class KeySetManagerTest {
               "validity_in_days": null,
               "ttl_in_days": null,
               "create_max_days_ahead": null,
-              "overlap_period_days": null
+              "overlap_period_days": null,
+              "backfill_days": null
             }
           ]
         }
@@ -193,7 +194,8 @@ public final class KeySetManagerTest {
               "validity_in_days": 0,
               "ttl_in_days": 0,
               "create_max_days_ahead": 13,
-              "overlap_period_days": 24
+              "overlap_period_days": 24,
+              "backfill_days": 12
             }
           ]
         }
@@ -205,7 +207,7 @@ public final class KeySetManagerTest {
 
     // Then
     assertThat(configs)
-        .containsExactly(KeySetConfig.create("set1", "test_template", 5, 0, 0, 13, 24));
+        .containsExactly(KeySetConfig.create("set1", "test_template", 5, 0, 0, 13, 24, 12));
   }
 
   private static KeySetManager createKeySetManager(String config) {
@@ -237,6 +239,7 @@ public final class KeySetManagerTest {
         TEST_VALIDITY_IN_DAYS,
         TEST_TTL_IN_DAYS,
         TEST_CREATE_MAX_DAYS_AHEAD,
+        0,
         0);
   }
 }

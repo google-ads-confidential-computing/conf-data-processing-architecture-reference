@@ -20,7 +20,7 @@ test {
 
 // The google-beta provider is renamed to google
 mock_provider "google" {
-  source          = "../../../../../tfmocks/google-beta/"
+  source          = "../../../../../tools/tftesting/tfmocks/google-beta/"
   override_during = plan
 }
 

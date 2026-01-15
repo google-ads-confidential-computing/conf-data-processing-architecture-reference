@@ -35,5 +35,6 @@ cc_library(
         "//cc/cpio/client_providers/global_cpio/src/cpio_provider:cpio_provider_lib",
         "//cc/cpio/client_providers/instance_client_provider/mock:instance_client_provider_mock",
         "//cc/cpio/client_providers/role_credentials_provider/mock:role_credentials_provider_mock",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
     ],
 )

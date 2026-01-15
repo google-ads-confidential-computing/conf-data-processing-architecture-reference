@@ -69,6 +69,13 @@ public final class EncryptionKeyConverter {
             .addAllKeyData(keyData)
             .addAllMigrationKeyData(migrationKeyData);
 
+    if (encryptionKey.hasKeyMetadata()) {
+      encryptionKeyBuilder.setKeyMetadata(
+          EncryptionKey.KeyMetadata.newBuilder()
+              .setBackfillExpirationTime(
+                  encryptionKey.getKeyMetadata().getBackfillExpirationTime()));
+    }
+
     Set<String> keyTypeValues = ProtoUtil.getValidEnumValues(EncryptionKeyType.class);
     if (keyTypeValues.contains(encryptionKey.getKeyType())) {
       encryptionKeyBuilder.setEncryptionKeyType(

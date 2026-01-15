@@ -48,7 +48,7 @@ cc_library(
         "//cc/cpio/common/src:cpio_utils_lib",
         "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/interface/private_key_client:type_def",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
         "@tink_cc//tink:binary_keyset_writer",
         "@tink_cc//tink:cleartext_keyset_handle",
         "@tink_cc//tink:json_keyset_reader",

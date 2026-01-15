@@ -58,11 +58,12 @@ shared_ptr<KmsClientProviderInterface> KmsClientProviderFactory::Create(
     const shared_ptr<KmsClientOptions>& options,
     const shared_ptr<RoleCredentialsProviderInterface>&
         role_credentials_provider,
+    const shared_ptr<MetricClientInterface>& metric_client,
     const shared_ptr<AsyncExecutorInterface>& io_async_executor,
     const std::shared_ptr<core::AsyncExecutorInterface>&
         cpu_async_executor) noexcept {
-  return make_shared<GcpKmsClientProvider>(io_async_executor,
-                                           cpu_async_executor, options,
-                                           make_shared<FakeGcpKmsFactory>());
+  return make_shared<GcpKmsClientProvider>(
+      io_async_executor, cpu_async_executor, metric_client, options,
+      make_shared<FakeGcpKmsFactory>());
 }
 }  // namespace google::scp::cpio::client_providers

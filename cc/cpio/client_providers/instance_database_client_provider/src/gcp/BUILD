@@ -35,7 +35,7 @@ cc_library(
         "//operator/protos/shared/backend/asginstance:cc_proto",
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_google_absl//absl/strings",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )
 

@@ -31,11 +31,14 @@ cc_library(
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
         "//cc/cpio/client_providers/kms_client_provider/interface/gcp:gcp_kms_client_provider_interface",
         "//cc/cpio/common/src/gcp:gcp_utils_lib",
+        "//cc/public/core/interface:execution_result",
         "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/interface/kms_client:type_def",
+        "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
+        "//cc/public/cpio/utils/metric_instance/src:metric_instance",
         "@com_github_googleapis_google_cloud_cpp//:kms",
         "@com_google_absl//absl/strings",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )
 
@@ -65,11 +68,14 @@ cc_library(
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
         "//cc/cpio/client_providers/kms_client_provider/interface/gcp:gcp_kms_client_provider_interface",
         "//cc/cpio/common/src/gcp:gcp_utils_lib",
+        "//cc/public/core/interface:execution_result",
         "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/interface/kms_client:type_def",
+        "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
+        "//cc/public/cpio/utils/metric_instance/src:metric_instance",
         "@com_github_googleapis_google_cloud_cpp//:kms",
         "@com_google_absl//absl/strings",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )
 

@@ -18,6 +18,9 @@ package com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener;
 
 import static com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubKeyGenerationTestModule.PROJECT_ID;
 import static com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubKeyGenerationTestModule.SUBSCRIPTION_ID;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 
 import com.google.acai.Acai;
@@ -29,13 +32,20 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Actua
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.testutils.gcp.PubSubEmulatorContainer;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
+import org.mockito.stubbing.Answer;
 
 @RunWith(JUnit4.class)
 public final class CreateSplitKeysPubSubListenerTest {
@@ -43,28 +53,68 @@ public final class CreateSplitKeysPubSubListenerTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
   @Inject PubSubEmulatorContainer pubSubEmulatorContainer;
-
   @Inject Publisher publisher;
 
   @Mock private ActuateKeySetTask mockSplitKeysTask;
+  private CreateSplitKeysPubSubListener listener;
 
-  @Test
-  public void start_success() throws ServiceException {
-    PubsubMessage message =
-        PubsubMessage.newBuilder().setData(ByteString.copyFromUtf8("generateSplitKeys")).build();
-
-    publisher.publish(message);
-
+  @Before
+  public void setUp() {
     PubSubListenerConfig config =
         PubSubListenerConfig.newBuilder()
             .setTimeoutInSeconds(Optional.of(5))
             .setEndpointUrl(Optional.of(pubSubEmulatorContainer.getEmulatorEndpoint()))
             .build();
-
-    CreateSplitKeysPubSubListener listener =
+    listener =
         new CreateSplitKeysPubSubListener(config, mockSplitKeysTask, PROJECT_ID, SUBSCRIPTION_ID);
+  }
+
+  @After
+  public void tearDown() {
+    listener.stop();
+  }
+
+  @Test
+  public void start_success() throws ServiceException {
+    PubsubMessage message =
+        PubsubMessage.newBuilder().setData(ByteString.copyFromUtf8("generateSplitKeys")).build();
+    publisher.publish(message);
     listener.start();
 
     verify(mockSplitKeysTask).execute();
+  }
+
+  @Test
+  public void start_concurrentCalls_areSerialized() throws Exception {
+    final AtomicInteger concurrentThreads = new AtomicInteger(0);
+    final AtomicInteger maxConcurrentThreads = new AtomicInteger(0);
+    final CountDownLatch twoCallsMade = new CountDownLatch(2);
+
+    doAnswer(
+            (Answer<Void>)
+                invocation -> {
+                  int current = concurrentThreads.incrementAndGet();
+                  maxConcurrentThreads.getAndAccumulate(current, Math::max);
+
+                  // Simulate work
+                  Thread.sleep(1000);
+
+                  concurrentThreads.decrementAndGet();
+                  twoCallsMade.countDown();
+                  return null;
+                })
+        .when(mockSplitKeysTask)
+        .execute();
+
+    // Publish two messages to trigger two calls
+    PubsubMessage message =
+        PubsubMessage.newBuilder().setData(ByteString.copyFromUtf8("message")).build();
+    publisher.publish(message);
+    publisher.publish(message);
+    listener.start();
+
+    assertTrue("Two calls were not made in time", twoCallsMade.await(5, TimeUnit.SECONDS));
+    assertEquals(1, maxConcurrentThreads.get());
+    verify(mockSplitKeysTask, Mockito.times(2)).execute();
   }
 }

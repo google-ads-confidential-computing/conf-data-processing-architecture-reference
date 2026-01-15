@@ -88,7 +88,7 @@ public final class Annotations {
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface KmsKeyUri {}
+  public @interface KmsKeyBaseUri {}
 
   /** Uri of KMS key for peer coordinator */
   @BindingAnnotation
@@ -112,11 +112,6 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface KeyIdTypeName {}
-
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface DisableKeySetAcl {}
 
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})

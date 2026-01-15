@@ -53,6 +53,31 @@ variable "load_balancing_scheme" {
   type        = string
 }
 
+variable "external_managed_migration_state" {
+  description = "Defines what stage of the LB migration in."
+  type        = string
+}
+
+variable "external_managed_migration_testing_percentage" {
+  description = "Defines what percentage of traffic should be routed to upgraded LB."
+  type        = number
+}
+
+variable "forwarding_rule_load_balancing_scheme" {
+  description = "Specifies the load balancing scheme used for the forwarding rule."
+  type        = string
+}
+
+variable "external_managed_backend_bucket_migration_state" {
+  description = "Specifies the canary migration state for the backend buckets attached to this forwarding rule."
+  type        = string
+}
+
+variable "external_managed_backend_bucket_migration_testing_percentage" {
+  description = "Determines the fraction of requests to backend buckets that should be processed by the Global external Application Load Balancer."
+  type        = number
+}
+
 ################################################################################
 # Function Variables
 ################################################################################
@@ -67,14 +92,20 @@ variable "key_storage_memory" {
   description = "Memory size in MB for cloud function."
 }
 
-variable "key_storage_service_min_instances" {
+variable "min_instances" {
   description = "The minimum number of function instances that may coexist at a given time."
   type        = number
 }
 
-variable "key_storage_service_max_instances" {
+variable "max_instances" {
   description = "The maximum number of function instances that may coexist at a given time."
   type        = number
+}
+
+variable "execution_environment" {
+  description = "The sandbox environment to host the cloud run service."
+  type        = string
+  nullable    = false
 }
 
 variable "spanner_instance_name" {
@@ -85,11 +116,6 @@ variable "spanner_instance_name" {
 variable "spanner_database_name" {
   type        = string
   description = "Name of the KeyDb Spanner database."
-}
-
-variable "key_encryption_key_id" {
-  description = "KMS key used to decrypt private keys."
-  type        = string
 }
 
 ################################################################################
@@ -155,11 +181,6 @@ variable "populate_migration_key_data" {
   type        = string
 }
 
-variable "disable_key_set_acl" {
-  description = "Controls whether to generate keys enforcing key set level acl."
-  type        = string
-}
-
 variable "kms_key_base_uri" {
   description = "Kms encryption key base uri for composing kms encryption keys."
   type        = string
@@ -167,15 +188,5 @@ variable "kms_key_base_uri" {
 
 variable "migration_kms_key_base_uri" {
   description = "Migration kms encryption key base uri for composing kms encryption keys."
-  type        = string
-}
-
-variable "key_sets" {
-  description = "All key sets that are supported by key service."
-  type        = list(string)
-}
-
-variable "key_encryption_key_ring_id" {
-  description = "Key ring id that holds all the keys"
   type        = string
 }

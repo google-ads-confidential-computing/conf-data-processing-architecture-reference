@@ -24,9 +24,9 @@ import java.util.Optional;
 public final class KeyGenerationArgs {
 
   @Parameter(
-      names = "--kms-key-uri",
-      description = "GCP KMS key Uri used to encrypt the private key split.")
-  private String kmsKeyUri = "";
+      names = "--kms-key-base-uri",
+      description = "GCP KMS key base Uri used to encrypt the private key split.")
+  private String kmsKeyBaseUri = "";
 
   @Parameter(names = "--spanner-instance-id", description = "Spanner instance id.")
   private String spannerInstanceId = "";
@@ -78,11 +78,11 @@ public final class KeyGenerationArgs {
   private boolean multiparty = false;
 
   @Parameter(
-      names = "--peer-coordinator-kms-key-uri",
+      names = "--peer-coordinator-kms-key-base-uri",
       description =
-          "GCP KMS key Uri used to encrypt the private key split for Coordinator B. Key is provided"
-              + " by Coordinator B.")
-  private String peerCoordinatorKmsKeyUri = "";
+          "GCP KMS key Base Uri used to encrypt the private key split for Coordinator B. Key is"
+              + " provided by Coordinator B.")
+  private String peerCoordinatorKmsKeyBaseUri = "";
 
   @Parameter(
       names = "--peer-coordinator-wip-provider",
@@ -136,8 +136,8 @@ public final class KeyGenerationArgs {
       description = "Whether or not the default parameters should be used on GCP.")
   private boolean testUseDefaultParametersOnGcp = false;
 
-  public String getKmsKeyUri() {
-    return kmsKeyUri;
+  public String getKmsKeyBaseUri() {
+    return kmsKeyBaseUri;
   }
 
   public String getSpannerInstanceId() {
@@ -168,8 +168,8 @@ public final class KeyGenerationArgs {
     return ttlInDays;
   }
 
-  public String getPeerCoordinatorKmsKeyUri() {
-    return peerCoordinatorKmsKeyUri;
+  public String getPeerCoordinatorKmsKeyBaseUri() {
+    return peerCoordinatorKmsKeyBaseUri;
   }
 
   public String getKeyStorageServiceBaseUrl() {

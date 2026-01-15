@@ -20,7 +20,7 @@ output "private_key_service_loadbalancer_ip_additional" {
   value = (
     var.private_key_service_addon_container_image_url == ""
     ? module.private_key_service.loadbalancer_ip
-    : module.private_key_service_addon.loadbalancer_ip
+    : module.private_key_service_addon[0].loadbalancer_ip
   )
 }
 
@@ -62,10 +62,6 @@ output "allowed_operators_wipp_names" {
     for provider in module.key_set_acl_kek_pool :
     provider.workload_identity_pool_provider_name
   ]
-}
-
-output "key_encryption_key_id" {
-  value = google_kms_crypto_key.key_encryption_key.id
 }
 
 output "kms_key_base_uri" {

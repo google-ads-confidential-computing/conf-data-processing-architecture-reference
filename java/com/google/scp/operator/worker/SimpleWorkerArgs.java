@@ -428,10 +428,6 @@ public final class SimpleWorkerArgs {
     return resultLoggerModuleSelector;
   }
 
-  PrivacyBudgetClientSelector getPbsclient() {
-    return pbsclient;
-  }
-
   String getLocalFileSinglePullerPath() {
     return localFileSinglePullerPath;
   }

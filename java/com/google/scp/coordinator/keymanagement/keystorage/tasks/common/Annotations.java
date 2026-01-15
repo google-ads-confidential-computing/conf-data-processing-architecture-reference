@@ -36,12 +36,6 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface KmsKeyAead {}
 
-  /** Binds instance of Kms Key Encryption Key used to validate encrypted private keys/splits. */
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface KmsKeyEncryptionKeyUri {}
-
   /** Binds instance of Coordinator Key Aead. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
@@ -135,12 +129,6 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface EncryptionKeySignatureKey {}
-
-  /** Binds the disable key set acl environment variable. */
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface DisableKeySetAcl {}
 
   /** Binds the populate migration key data environment variable. */
   @BindingAnnotation

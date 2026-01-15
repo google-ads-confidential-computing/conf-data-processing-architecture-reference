@@ -34,6 +34,12 @@ service PrivateKeyService {
       returns (ListPrivateKeysResponse) {}
 }
 
+message PrivateKeyMetadata {
+  // The backfill cutoff time of the private key. this is optional field for
+  // keyset enabled with backfill.
+  optional google.protobuf.Timestamp backfill_cutoff_time = 1;
+}
+
 // Wrap of private key.
 message PrivateKey {
   // The id of the public and private key pair.
@@ -50,6 +56,10 @@ message PrivateKey {
   google.protobuf.Timestamp creation_time = 5;
   // The activation time of the private key.
   google.protobuf.Timestamp activation_time = 7;
+
+  // Optional metadata of the private key.
+  optional PrivateKeyMetadata private_key_metadata = 8;
+
   // Optional key set name for the private key, as this is a newly added field,
   // old keys don't have this field.
   string key_set_name = 6;
@@ -159,4 +169,10 @@ message GetKeysetMetadataResponse {
   scp.core.proto.ExecutionResult result = 1;
   // The active key count at one time.
   int32 active_key_count = 2;
+
+  // Cadence in days for when a new key(s) will be activated.
+  int32 key_active_cadence_days = 3;
+
+  // Number of days after expiry that keyset can be used to perform backfill.
+  int32 backfill_days = 4;
 }

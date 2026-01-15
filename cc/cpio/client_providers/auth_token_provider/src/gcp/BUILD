@@ -32,7 +32,7 @@ cc_library(
         "//cc/public/cpio/interface:type_def",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/strings:str_format",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )
 

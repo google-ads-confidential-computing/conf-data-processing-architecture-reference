@@ -39,10 +39,6 @@ import com.google.scp.operator.cpio.cryptoclient.HttpPrivateKeyFetchingService.P
 import com.google.scp.operator.cpio.cryptoclient.aws.Annotations.KmsEndpointOverride;
 import com.google.scp.operator.cpio.cryptoclient.gcp.GcpKmsHybridEncryptionKeyServiceConfig;
 import com.google.scp.operator.cpio.cryptoclient.local.LocalFileHybridEncryptionKeyServiceModule.DecryptionKeyFilePath;
-import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorAPrivacyBudgetServiceAuthEndpoint;
-import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorAPrivacyBudgetServiceBaseUrl;
-import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorBPrivacyBudgetServiceAuthEndpoint;
-import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorBPrivacyBudgetServiceBaseUrl;
 import com.google.scp.operator.cpio.jobclient.aws.AwsJobHandlerModule.DdbEndpointOverrideBinding;
 import com.google.scp.operator.cpio.jobclient.aws.AwsJobHandlerModule.SqsEndpointOverrideBinding;
 import com.google.scp.operator.cpio.jobclient.gcp.GcpJobHandlerConfig;
@@ -63,6 +59,7 @@ import com.google.scp.operator.worker.perf.exporter.CloudStopwatchExporter.Stopw
 import com.google.scp.operator.worker.perf.exporter.CloudStopwatchExporter.StopwatchKeyName;
 import com.google.scp.operator.worker.reader.RecordReaderFactory;
 import com.google.scp.operator.worker.reader.avro.LocalNioPathAvroReaderFactory;
+import com.google.scp.operator.worker.selector.PrivacyBudgetClientSelector;
 import com.google.scp.operator.worker.selector.ResultLoggerModuleSelector;
 import com.google.scp.shared.clients.configclient.Annotations.ApplicationRegionBindingOverride;
 import com.google.scp.shared.clients.configclient.aws.AwsClientConfigModule.AwsCredentialAccessKey;
@@ -335,28 +332,9 @@ public final class SimpleWorkerModule extends AbstractModule {
         break;
     }
 
-    // installs the appropriate pbs client module
-    install(args.getPbsclient().getDistributedPrivacyBudgetClientModule());
-    switch (args.getPbsclient()) {
-      case AWS:
-      case GCP:
-        bind(String.class)
-            .annotatedWith(CoordinatorAPrivacyBudgetServiceBaseUrl.class)
-            .toInstance(args.getCoordinatorAPrivacyBudgetingServiceUrl());
-        bind(String.class)
-            .annotatedWith(CoordinatorBPrivacyBudgetServiceBaseUrl.class)
-            .toInstance(args.getCoordinatorBPrivacyBudgetingServiceUrl());
-        bind(String.class)
-            .annotatedWith(CoordinatorAPrivacyBudgetServiceAuthEndpoint.class)
-            .toInstance(args.getCoordinatorAPrivacyBudgetingServiceAuthEndpoint());
-        bind(String.class)
-            .annotatedWith(CoordinatorBPrivacyBudgetServiceAuthEndpoint.class)
-            .toInstance(args.getCoordinatorBPrivacyBudgetingServiceAuthEndpoint());
-        break;
-      case LOCAL:
-      default:
-        // No bindings necessary.
-    }
+    // installs the LOCAL pbs client module
+    install(PrivacyBudgetClientSelector.LOCAL.getDistributedPrivacyBudgetClientModule());
+
     // decryption key service.
     install(args.getHybridEncryptionKeyServiceSelector().getHybridEncryptionKeyServiceModule());
 

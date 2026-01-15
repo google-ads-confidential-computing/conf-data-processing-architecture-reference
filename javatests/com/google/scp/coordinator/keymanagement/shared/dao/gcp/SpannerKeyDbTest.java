@@ -43,6 +43,7 @@ import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDbBaseTest;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
+import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyStatusProto.EncryptionKeyStatus;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
@@ -76,6 +77,9 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
   @Test
   public void createKey_successAdd() throws ServiceException {
     String keyId = "test-key-id";
+    Instant now = Instant.now();
+    long expirationTime = now.plus(3, DAYS).toEpochMilli();
+    long backfillExpirationTime = now.plus(5, DAYS).toEpochMilli();
     EncryptionKey expectedKey =
         EncryptionKey.newBuilder()
             .setKeyId(keyId)
@@ -83,8 +87,11 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
             .setPublicKeyMaterial("12345")
             .setJsonEncodedKeyset("67890")
             .setKeyEncryptionKeyUri("URI")
-            .setCreationTime(0L)
-            .setExpirationTime(0L)
+            .setCreationTime(0L) // This is populated by the DB upon insertion
+            .setExpirationTime(expirationTime)
+            .setKeyMetadata(
+                EncryptionKeyProto.EncryptionKey.KeyMetadata.newBuilder()
+                    .setBackfillExpirationTime(backfillExpirationTime))
             .build();
 
     keyDb.createKey(expectedKey);
@@ -96,6 +103,32 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
     assertThat(receivedKey.getMigrationKeyEncryptionKeyUri()).isEqualTo("");
     assertThat(receivedKey.getMigrationJsonEncodedKeyset()).isEqualTo("");
     assertThat(receivedKey.getMigrationKeySplitDataList()).hasSize(0);
+    assertThat(receivedKey.getExpirationTime()).isEqualTo(expirationTime);
+    assertThat(receivedKey.getKeyMetadata().getBackfillExpirationTime())
+        .isEqualTo(backfillExpirationTime);
+  }
+
+  @Test
+  public void createKey_successWithoutBackfillExpirationTime() throws ServiceException {
+    String keyId = "test-key-id-zero-backfill";
+    Instant now = Instant.now();
+    long expirationTime = now.plus(3, DAYS).toEpochMilli();
+    EncryptionKey expectedKey =
+        EncryptionKey.newBuilder()
+            .setKeyId(keyId)
+            .setPublicKey("12345")
+            .setPublicKeyMaterial("12345")
+            .setJsonEncodedKeyset("67890")
+            .setKeyEncryptionKeyUri("URI")
+            .setCreationTime(0L)
+            .setExpirationTime(expirationTime)
+            .build();
+
+    keyDb.createKey(expectedKey);
+    EncryptionKey receivedKey = keyDb.getKey(keyId);
+
+    assertThat(receivedKey.getKeyId()).isEqualTo(keyId);
+    assertThat(receivedKey.hasKeyMetadata()).isFalse();
   }
 
   @Test

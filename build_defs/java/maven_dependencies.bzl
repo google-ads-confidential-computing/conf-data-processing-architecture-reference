@@ -14,7 +14,6 @@
 
 load("@rules_jvm_external//:defs.bzl", "maven_install")
 load("@rules_jvm_external//:specs.bzl", "maven")
-load("//build_defs/shared:java_grpc.bzl", "GAPIC_GENERATOR_JAVA_VERSION")
 load("//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS")
 
 JACKSON_VERSION = "2.15.2"
@@ -91,7 +90,7 @@ def maven_dependencies():
             "com.google.inject.extensions:guice-assistedinject:5.1.0",
             "com.google.inject.extensions:guice-testlib:5.1.0",
             "com.google.jimfs:jimfs:1.2",
-            "com.google.testparameterinjector:test-parameter-injector:1.1",
+            "com.google.testparameterinjector:test-parameter-injector:1.19",
             "com.google.truth.extensions:truth-java8-extension:1.3.0",
             "com.google.truth.extensions:truth-proto-extension:1.3.0",
             "com.google.truth:truth:1.3.0",
@@ -103,6 +102,7 @@ def maven_dependencies():
             "javax.inject:javax.inject:1",
             "junit:junit:4.12",
             "org.apache.avro:avro:1.10.2",
+            "org.apache.commons:commons-lang3:3.14.0",
             "org.apache.commons:commons-math3:3.6.1",
             "org.apache.httpcomponents:httpcore:4.4.14",
             "org.apache.httpcomponents:httpclient:4.5.13",
@@ -138,7 +138,7 @@ def maven_dependencies():
             "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
             "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
             "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
-            "com.google.api:gapic-generator-java:" + GAPIC_GENERATOR_JAVA_VERSION,  # To use generated gRpc Java interface
+            "com.google.api:gapic-generator-java:2.44.0",  # To use generated gRpc Java interface
             "io.grpc:grpc-netty:1.65.1",
             "io.opentelemetry:opentelemetry-api:1.31.0",
             "io.opentelemetry:opentelemetry-exporter-otlp:1.31.0",
@@ -159,16 +159,4 @@ def maven_dependencies():
         repositories = [
             "https://repo1.maven.org/maven2",
         ],
-    )
-
-    maven_install(
-        name = "maven_yaml",
-        artifacts = [
-            "org.yaml:snakeyaml:1.27",
-        ],
-        repositories = [
-            "https://repo1.maven.org/maven2",
-        ],
-        # Pin the working version for snakeyaml.
-        version_conflict_policy = "pinned",
     )

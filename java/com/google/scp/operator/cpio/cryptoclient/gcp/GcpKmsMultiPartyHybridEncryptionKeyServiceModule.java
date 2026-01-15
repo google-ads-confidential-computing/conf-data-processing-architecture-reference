@@ -35,6 +35,7 @@ import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyServiceModul
 import com.google.scp.operator.cpio.cryptoclient.MultiPartyHybridEncryptionKeyServiceImpl;
 import com.google.scp.operator.cpio.cryptoclient.MultiPartyHybridEncryptionKeyServiceImpl.CoordinatorAEncryptionKeyFetchingService;
 import com.google.scp.operator.cpio.cryptoclient.MultiPartyHybridEncryptionKeyServiceImpl.CoordinatorBEncryptionKeyFetchingService;
+import com.google.scp.operator.cpio.cryptoclient.model.KeyFetchExceptionUtils;
 import com.google.scp.shared.api.util.HttpClientWrapper;
 import com.google.scp.shared.crypto.tink.CloudAeadSelector;
 import java.security.GeneralSecurityException;
@@ -90,8 +91,7 @@ public final class GcpKmsMultiPartyHybridEncryptionKeyServiceModule
         client.withCredentials(credentials);
         return client.getAead(kmsKeyArn);
       } catch (GeneralSecurityException e) {
-        throw new RuntimeException(
-            String.format("Error getting gcloud Aead with uri %s.", kmsKeyArn), e);
+        throw new RuntimeException(KeyFetchExceptionUtils.parseGrpcException(e));
       }
     };
   }
@@ -112,8 +112,7 @@ public final class GcpKmsMultiPartyHybridEncryptionKeyServiceModule
         client.withCredentials(credentials);
         return client.getAead(kmsKeyArn);
       } catch (GeneralSecurityException e) {
-        throw new RuntimeException(
-            String.format("Error getting gcloud Aead with uri %s.", kmsKeyArn), e);
+        throw new RuntimeException(KeyFetchExceptionUtils.parseGrpcException(e));
       }
     };
   }

@@ -35,7 +35,7 @@ provider "google" {
 }
 
 locals {
-  private_key_service_addtional_environment = "${var.environment}-pre${var.environment}"
+  private_key_service_addtional_environment = "pre-${var.environment}"
 
   service_subdomain_suffix      = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
   key_storage_domain            = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.key_storage_service_subdomain}.${var.parent_domain_name}"
@@ -54,16 +54,18 @@ locals {
     : {
       (local.key_storage_domain) : module.keystorageservice.load_balancer_ip,
       (local.private_key_domain) : module.private_key_service.loadbalancer_ip
-      (local.private_key_domain_additional) : module.private_key_service_addon.loadbalancer_ip
+      (local.private_key_domain_additional) : module.private_key_service_addon[0].loadbalancer_ip
     }
   )
 
-  # TODO: b/428770204 - Update kms base uri to the migration uri post 'generate' phase
+  all_service_accounts = flatten([
+    for _, operator in var.allowed_operators : operator.service_accounts
+  ])
+
   kms_key_base_uri           = "gcp-kms://${module.key_management_service.kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
   migration_kms_key_base_uri = "gcp-kms://${module.key_management_service.kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
 
   # Key Migration Tool Safety Preconditions
-  # TODO: b/428770204 - remove disable_key_set_acl check once its dependency has been removed
   base_uris_are_different = (local.kms_key_base_uri != local.migration_kms_key_base_uri)
   key_migration_tool_safe_to_generate = (var.populate_migration_key_data
     && var.key_migration_tool_container_image_url != null
@@ -71,14 +73,12 @@ locals {
     && length(var.key_sets_vending_config.allowed_migrators) == 0
     && local.base_uris_are_different
     && var.migration_peer_coordinator_kms_key_base_uri != null
-    && var.disable_key_set_acl
   )
   key_migration_tool_safe_to_migrate = (var.populate_migration_key_data
     && var.key_migration_tool_container_image_url != null
     && var.key_migration_tool_migrator_mode == "migrate"
     && length(var.key_sets_vending_config.allowed_migrators) > 0
     && !local.base_uris_are_different
-    && !var.disable_key_set_acl
   )
   key_migration_tool_safe_to_cleanup = (!var.populate_migration_key_data
     && var.key_migration_tool_container_image_url != null
@@ -153,24 +153,26 @@ module "keystorageservice" {
   region                       = var.primary_region
   allowed_wip_user_group       = var.allowed_wip_user_group
   allowed_wip_service_accounts = var.allowed_wip_service_accounts
-  key_sets                     = local.key_sets
-  key_encryption_key_ring_id   = google_kms_key_ring.key_encryption_ring.id
 
   # Migration to external managed LB
-  load_balancing_scheme = var.key_storage_service_load_balancing_scheme
+  load_balancing_scheme                                        = var.key_storage_service_load_balancing_scheme
+  external_managed_migration_state                             = var.key_storage_service_external_managed_migration_state
+  external_managed_migration_testing_percentage                = var.key_storage_service_external_managed_migration_testing_percentage
+  forwarding_rule_load_balancing_scheme                        = var.key_storage_service_forwarding_rule_load_balancing_scheme
+  external_managed_backend_bucket_migration_state              = var.key_storage_service_external_managed_backend_bucket_migration_state
+  external_managed_backend_bucket_migration_testing_percentage = var.key_storage_service_external_managed_backend_bucket_migration_testing_percentage
 
   # Function vars
-  key_encryption_key_id             = google_kms_crypto_key.key_encryption_key.id
-  disable_key_set_acl               = var.disable_key_set_acl
-  populate_migration_key_data       = var.populate_migration_key_data
-  kms_key_base_uri                  = local.kms_key_base_uri
-  migration_kms_key_base_uri        = local.migration_kms_key_base_uri
-  spanner_database_name             = module.keydb.keydb_name
-  spanner_instance_name             = module.keydb.keydb_instance_name
-  key_storage_memory                = var.key_storage_service_memory_mb
-  key_storage_service_min_instances = var.key_storage_service_min_instances
-  key_storage_service_max_instances = var.key_storage_service_max_instances
-  source_container_image_url        = var.key_storage_service_container_image_url
+  populate_migration_key_data = var.populate_migration_key_data
+  kms_key_base_uri            = local.kms_key_base_uri
+  migration_kms_key_base_uri  = local.migration_kms_key_base_uri
+  spanner_database_name       = module.keydb.keydb_name
+  spanner_instance_name       = module.keydb.keydb_instance_name
+  key_storage_memory          = var.key_storage_service_memory_mb
+  min_instances               = var.key_storage_service_min_instances
+  max_instances               = var.key_storage_service_max_instances
+  execution_environment       = var.key_storage_service_execution_environment
+  source_container_image_url  = var.key_storage_service_container_image_url
 
   # Domain Management
   key_storage_domain = local.key_storage_domain
@@ -188,11 +190,6 @@ module "keystorageservice" {
   lb_max_latency_ms      = var.key_storage_service_lb_max_latency_ms
 
   key_storage_severity_map = var.alert_severity_overrides
-  depends_on = [
-    google_kms_crypto_key.key_set_key_encryption_key,
-    google_kms_crypto_key.key_encryption_key,
-    google_kms_key_ring.key_encryption_ring
-  ]
 }
 
 module "private_key_service" {
@@ -207,18 +204,24 @@ module "private_key_service" {
   service_domain = local.private_key_domain
 
   # Migration to external managed LB
-  load_balancing_scheme = var.private_key_service_load_balancing_scheme
+  load_balancing_scheme                                        = var.private_key_service_load_balancing_scheme
+  external_managed_migration_state                             = var.private_key_service_external_managed_migration_state
+  external_managed_migration_testing_percentage                = var.private_key_service_external_managed_migration_testing_percentage
+  forwarding_rule_load_balancing_scheme                        = var.private_key_service_forwarding_rule_load_balancing_scheme
+  external_managed_backend_bucket_migration_state              = var.private_key_service_external_managed_backend_bucket_migration_state
+  external_managed_backend_bucket_migration_testing_percentage = var.private_key_service_external_managed_backend_bucket_migration_testing_percentage
 
-  allowed_invoker_service_account_emails = module.allowed_operators.all_service_accounts
+  allowed_invoker_service_account_emails = local.all_service_accounts
   allowed_operator_user_group            = var.allowed_operator_user_group
   source_container_image_url             = var.private_key_service_container_image_url
 
   # Cloud Run settings
-  cpu_count          = var.private_key_service_cloud_run_cpu_count
-  memory_mb          = var.private_key_service_cloud_run_memory_mb
-  concurrency        = var.private_key_service_cloud_run_concurrency
-  max_instance_count = var.private_key_service_cloud_run_max_instances
-  min_instance_count = var.private_key_service_cloud_run_min_instances
+  cpu_count             = var.private_key_service_cloud_run_cpu_count
+  memory_mb             = var.private_key_service_cloud_run_memory_mb
+  concurrency           = var.private_key_service_cloud_run_concurrency
+  min_instance_count    = var.private_key_service_cloud_run_min_instances
+  max_instance_count    = var.private_key_service_cloud_run_max_instances
+  execution_environment = var.private_key_service_execution_environment
 
   # Spanner configs
   spanner_database_name      = module.keydb.keydb_name
@@ -261,20 +264,26 @@ module "private_key_service_addon" {
     var.private_key_service_additional_regions
   )
 
-  service_domain        = local.private_key_domain_additional
-  display_identifier    = "Pre${var.environment}"
-  load_balancing_scheme = "EXTERNAL_MANAGED"
+  service_domain                                               = local.private_key_domain_additional
+  display_identifier                                           = "Pre${var.environment}"
+  load_balancing_scheme                                        = "EXTERNAL_MANAGED"
+  external_managed_migration_state                             = null
+  external_managed_migration_testing_percentage                = null
+  forwarding_rule_load_balancing_scheme                        = var.private_key_service_forwarding_rule_load_balancing_scheme
+  external_managed_backend_bucket_migration_state              = var.private_key_service_external_managed_backend_bucket_migration_state
+  external_managed_backend_bucket_migration_testing_percentage = var.private_key_service_external_managed_backend_bucket_migration_testing_percentage
 
-  allowed_invoker_service_account_emails = module.allowed_operators.all_service_accounts
+  allowed_invoker_service_account_emails = local.all_service_accounts
   allowed_operator_user_group            = var.allowed_operator_user_group
   source_container_image_url             = var.private_key_service_addon_container_image_url
 
   # Cloud Run settings
-  cpu_count          = var.private_key_service_cloud_run_cpu_count
-  memory_mb          = var.private_key_service_cloud_run_memory_mb
-  concurrency        = var.private_key_service_cloud_run_concurrency
-  max_instance_count = var.private_key_service_cloud_run_max_instances
-  min_instance_count = var.private_key_service_cloud_run_min_instances
+  cpu_count             = var.private_key_service_cloud_run_cpu_count
+  memory_mb             = var.private_key_service_cloud_run_memory_mb
+  concurrency           = var.private_key_service_cloud_run_concurrency
+  min_instance_count    = var.private_key_service_cloud_run_min_instances
+  max_instance_count    = var.private_key_service_cloud_run_max_instances
+  execution_environment = var.private_key_service_execution_environment
 
   # Spanner configs
   spanner_database_name      = module.keydb.keydb_name
@@ -327,7 +336,7 @@ module "key_migration_tool" {
   spanner_instance_name = module.keydb.keydb_instance_name
 
   # Key Rings
-  legacy_migration_key_ring_id = google_kms_key_ring.key_encryption_ring.id
+  legacy_migration_key_ring_id = module.key_management_service.kms_key_ring_id
   migration_key_ring_id        = module.key_management_service.kms_key_ring_id
 
   # Environment variables
@@ -373,7 +382,6 @@ module "workload_identity_pool" {
   wip_allowed_service_account_id           = "${var.environment}-coallowedusr"
   wip_allowed_service_account_display_name = "${var.environment} Allowed Coordinator User"
 
-  key_encryption_key_id                        = google_kms_crypto_key.key_encryption_key.id
   allowed_wip_user_group                       = var.allowed_wip_user_group
   allowed_wip_service_accounts                 = var.allowed_wip_service_accounts
   enable_attestation                           = var.enable_attestation
@@ -384,72 +392,14 @@ module "workload_identity_pool" {
 }
 
 ### KMS
-## Current Key Ring
-# Cloud KMS encryption ring and key encryption key (KEK)
-resource "google_kms_key_ring" "key_encryption_ring" {
-  name     = "${var.environment}_key_encryption_ring"
-  location = "us"
-}
-
-resource "google_kms_crypto_key" "key_encryption_key" {
-  name     = "${var.environment}_key_encryption_key"
-  key_ring = google_kms_key_ring.key_encryption_ring.id
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-resource "google_kms_crypto_key" "key_set_key_encryption_key" {
-  for_each = toset(local.key_sets)
-  name     = "${var.environment}_${each.value}_key_encryption_key"
-  key_ring = google_kms_key_ring.key_encryption_ring.id
-
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-# Allow Verified Service Account to encrypt with given KEK
-resource "google_kms_crypto_key_iam_member" "workload_identity_member" {
-  crypto_key_id = google_kms_crypto_key.key_encryption_key.id
-  role          = "roles/cloudkms.cryptoKeyEncrypter"
-  member        = "serviceAccount:${module.workload_identity_pool.wip_verified_service_account}"
-  depends_on    = [module.workload_identity_pool]
-}
-
-resource "google_kms_crypto_key_iam_member" "key_set_level_workload_identity_member" {
-  for_each      = google_kms_crypto_key.key_set_key_encryption_key
-  crypto_key_id = each.value.id
-  member        = "serviceAccount:${module.workload_identity_pool.wip_verified_service_account}"
-  role          = "roles/cloudkms.cryptoKeyEncrypter"
-  depends_on = [
-    module.workload_identity_pool,
-    google_kms_crypto_key.key_set_key_encryption_key
-  ]
-}
-
-module "allowed_operators" {
-  source = "../../modules/allowed_operators"
-
-  environment           = var.environment
-  key_encryption_key_id = google_kms_crypto_key.key_encryption_key.id
-  allowed_operators     = var.allowed_operators
-  key_ring_id           = google_kms_key_ring.key_encryption_ring.id
-}
-
 # Key set acl kek pool
 module "key_set_acl_kek_pool" {
   for_each = var.allowed_operators
   source   = "../../modules/allowed_operator_pool"
 
-  environment                = var.environment
-  key_encryption_key_ring_id = google_kms_key_ring.key_encryption_ring.id
-  key_encryption_key_id      = google_kms_crypto_key.key_encryption_key.id
-
-  key_sets           = toset(each.value.key_sets)
-  global_key_ring_id = module.key_management_service.kms_key_ring_id
-
+  environment      = var.environment
+  key_sets         = toset(each.value.key_sets)
+  key_ring_id      = module.key_management_service.kms_key_ring_id
   allowed_operator = each.value
   pool_name        = each.key
 }

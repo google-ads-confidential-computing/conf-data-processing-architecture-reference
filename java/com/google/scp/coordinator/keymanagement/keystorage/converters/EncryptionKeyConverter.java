@@ -70,6 +70,12 @@ public final class EncryptionKeyConverter {
     if (encryptionKey.hasExpirationTime()) {
       keyBuilder.setExpirationTime(encryptionKey.getExpirationTime());
     }
+    if (encryptionKey.hasKeyMetadata()) {
+      keyBuilder.setKeyMetadata(
+          EncryptionKeyProto.EncryptionKey.KeyMetadata.newBuilder()
+              .setBackfillExpirationTime(
+                  encryptionKey.getKeyMetadata().getBackfillExpirationTime()));
+    }
     return keyBuilder.build();
   }
 
@@ -105,6 +111,12 @@ public final class EncryptionKeyConverter {
             .addAllMigrationKeyData(migrationKeyData);
     if (encryptionKey.hasExpirationTime()) {
       encryptionKeyBuilder.setExpirationTime(encryptionKey.getExpirationTime());
+    }
+    if (encryptionKey.hasKeyMetadata()) {
+      encryptionKeyBuilder.setKeyMetadata(
+          EncryptionKey.KeyMetadata.newBuilder()
+              .setBackfillExpirationTime(
+                  encryptionKey.getKeyMetadata().getBackfillExpirationTime()));
     }
     if (encryptionKey.hasTtlTime()) {
       encryptionKeyBuilder.setTtlTime(Long.valueOf(encryptionKey.getTtlTime()).intValue());

@@ -32,6 +32,6 @@ cc_library(
         "//cc/core/common/concurrent_map/src:concurrent_map_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/interface:type_def_lib",
-        "@oneTBB//:tbb",
+        "@onetbb//:tbb",
     ],
 )

@@ -619,11 +619,12 @@ PrivateKeyClientProviderFactory::Create(
     const shared_ptr<RoleCredentialsProviderInterface>&
         role_credentials_provider,
     const shared_ptr<AuthTokenProviderInterface>& auth_token_provider,
+    const shared_ptr<MetricClientInterface>& metric_client,
     const shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
     const shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor) {
   auto kms_client_options = CreateKmsClientOptions(options);
   auto kms_client_provider = KmsClientProviderFactory::Create(
-      std::move(kms_client_options), role_credentials_provider,
+      std::move(kms_client_options), role_credentials_provider, metric_client,
       io_async_executor, cpu_async_executor);
   auto private_key_fetcher = PrivateKeyFetcherProviderFactory::Create(
       http_client, role_credentials_provider, auth_token_provider);

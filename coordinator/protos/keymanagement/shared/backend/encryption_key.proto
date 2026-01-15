@@ -24,6 +24,24 @@ option java_outer_classname = "EncryptionKeyProto";
 
 // Represents single key record.
 message EncryptionKey {
+  /** Metadata for an encryption key. */
+  message KeyMetadata {
+    /**
+     * Timestamp, represented in Unix epoch milliseconds, when clients are
+     * expected to no longer use this key for for encrypting new payloads for
+     * backfill jobs.
+     *
+     * Depending on use case, clients may still continue to encrypt payloads with
+     * an "expired" key if the client does not yet have new keys available yet.
+     *
+     * Payload processing servers should continue to have access to and cache keys
+     * until ttl_time. The "expiration" time should only be used by a payload
+     * processing server to determine when clients are expected to stop encrypting
+     * new payloads with this key.
+     */
+    optional int64 backfill_expiration_time = 1;
+  }
+
   // Unique identifier of public key record (eg: UUID).
   string key_id = 1;
 
@@ -114,4 +132,9 @@ message EncryptionKey {
   // be a legacy type single party key (and the key data is in
   // jsonEncodedKeyset).
   string key_type = 11;
+
+  // Metadata for the key.
+  KeyMetadata key_metadata = 18;
+
+  reserved 17;
 }

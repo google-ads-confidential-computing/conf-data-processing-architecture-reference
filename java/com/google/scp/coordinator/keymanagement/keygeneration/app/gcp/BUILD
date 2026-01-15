@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+# TODO(b/386426300): the load statement below is needed due to a cherry-pick that
+# happens during the ks release process. Once that cherry-pick is removed, the pkg_files load can be removed.
+
 load("@rules_pkg//:mappings.bzl", "pkg_files")
 
 package(default_visibility = ["//visibility:public"])
@@ -50,20 +55,6 @@ java_library(
     ],
 )
 
-container_image(
-    name = "KeyGenerationServiceRuntimeContainer",
-    base = "@java_base_21//image",
-    cmd = [
-        "./KeyGenerationApp_deploy.jar",
-        "--multiparty",
-    ],
-    files = ["//java/com/google/scp/coordinator/keymanagement/keygeneration/app/gcp:KeyGenerationApp_deploy.jar"],
-    labels = {
-        "tee.launch_policy.allow_cmd_override": "false",
-        "tee.launch_policy.log_redirect": "always",
-    },
-)
-
 java_binary(
     name = "KeyGenerationApp",
     classpath_resources = ["//java/com/google/scp:slf4jconfig_prod"],
@@ -80,11 +71,35 @@ alias(
     actual = ":KeyGenerationApp_deploy.jar",
 )
 
-pkg_files(
-    name = "KeyGenerationAppDeployPackage",
-    srcs = [
-        ":KeyGenerationAppDeploy",
+pkg_tar(
+    name = "key_generation_app_tar",
+    srcs = [":KeyGenerationAppDeploy"],
+    include_runfiles = True,
+    tags = ["manual"],
+)
+
+oci_image(
+    name = "KeyGenerationServiceRuntimeImage",
+    base = "@java_base_21_oci",
+    cmd = [
+        "KeyGenerationApp_deploy.jar",
+        "--multiparty",
     ],
-    prefix = "jars",
-    strip_prefix = ".",
+    labels = {
+        "tee.launch_policy.allow_cmd_override": "false",
+        "tee.launch_policy.log_redirect": "always",
+    },
+    tags = ["manual"],
+    tars = [
+        ":key_generation_app_tar",
+    ],
+)
+
+oci_load(
+    name = "KeyGenerationServiceRuntimeContainer",
+    image = ":KeyGenerationServiceRuntimeImage",
+    repo_tags = [
+        "bazel/java/com/google/scp/coordinator/keymanagement/keygeneration/app/gcp:KeyGenerationServiceRuntimeContainer",
+    ],
+    tags = ["manual"],
 )

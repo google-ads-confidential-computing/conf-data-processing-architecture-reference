@@ -98,7 +98,7 @@ public final class HttpEncryptionKeyFetchingServiceTest {
     HttpClientResponse response =
         HttpClientResponse.create(200, getSingleKeyResponse(), ImmutableMap.of());
     when(httpClient.execute(any(HttpRequestBase.class))).thenReturn(response);
-    var expectedUri = URI.create("https://example.com/v1alpha/encryptionKeys/12345");
+    var expectedUri = URI.create("https://example.com/v1beta/encryptionKeys/12345");
     var argument = ArgumentCaptor.forClass(HttpRequestBase.class);
 
     var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com");
@@ -115,10 +115,10 @@ public final class HttpEncryptionKeyFetchingServiceTest {
     HttpClientResponse response =
         HttpClientResponse.create(200, getSingleKeyResponse(), ImmutableMap.of());
     when(httpClient.execute(any(HttpRequestBase.class))).thenReturn(response);
-    var expectedUri = URI.create("https://example.com/v1alpha/encryptionKeys/12345");
+    var expectedUri = URI.create("https://example.com/v1beta/encryptionKeys/12345");
     var argument = ArgumentCaptor.forClass(HttpRequestBase.class);
 
-    var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com/v1alpha");
+    var service = new HttpEncryptionKeyFetchingService(httpClient, "https://example.com/v1beta");
     // Assume response is valid if deserialization was successful.
     service.fetchEncryptionKey("12345");
 

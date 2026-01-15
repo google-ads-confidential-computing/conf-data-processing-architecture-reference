@@ -26,7 +26,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient.KeyStorageServiceException;
@@ -35,7 +34,6 @@ import com.google.scp.coordinator.keymanagement.testutils.FakeDataKeyUtil;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
-import com.google.scp.shared.mapper.TimeObjectMapper;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
@@ -71,8 +69,6 @@ public final class HttpKeyStorageClientTest {
 
   // Under test.
   private HttpKeyStorageClient keyStorageClient;
-
-  private final ObjectMapper mapper = new TimeObjectMapper();
 
   @Before
   public void setup() {

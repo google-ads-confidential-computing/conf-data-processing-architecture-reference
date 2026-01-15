@@ -27,7 +27,10 @@
 #include "cpio/common/src/gcp/gcp_utils.h"
 #include "google/cloud/kms/key_management_client.h"
 #include "google/cloud/status.h"
+#include "public/core/interface/execution_result_macros.h"
 #include "public/cpio/interface/kms_client/type_def.h"
+#include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "public/cpio/utils/metric_instance/src/metric_utils.h"
 
 #include "error_codes.h"
 #include "gcp_key_management_service_client.h"
@@ -57,6 +60,7 @@ using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_CLOUD_UNAVAILABLE;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED;
 using google::scp::core::errors::SC_GCP_KMS_CLIENT_PROVIDER_KEY_ARN_NOT_FOUND;
 using google::scp::core::utils::Base64Decode;
+using google::scp::cpio::MetricUtils;
 using google::scp::cpio::common::GcpUtils;
 using std::bind;
 using std::make_shared;
@@ -239,6 +243,12 @@ void GcpKmsClientProvider::AeadDecrypt(
                       "Decryption failed with code %s and error message %s.",
                       StatusCodeToString(status.code()).c_str(),
                       status.message().c_str());
+
+    // Record metric for decryption error.
+    if (metric_client_) {
+      MetricUtils::PushGcpKmsDecryptionErrorRateMetric(metric_client_, status);
+    }
+
     FinishContext(execution_result, decrypt_context, cpu_async_executor_);
     return;
   }
@@ -303,10 +313,11 @@ shared_ptr<KmsClientProviderInterface> KmsClientProviderFactory::Create(
     const shared_ptr<KmsClientOptions>& options,
     const shared_ptr<RoleCredentialsProviderInterface>&
         role_credentials_provider,
+    const shared_ptr<MetricClientInterface>& metric_client,
     const shared_ptr<AsyncExecutorInterface>& io_async_executor,
     const shared_ptr<AsyncExecutorInterface>& cpu_async_executor) noexcept {
-  return make_shared<GcpKmsClientProvider>(io_async_executor,
-                                           cpu_async_executor, options);
+  return make_shared<GcpKmsClientProvider>(
+      io_async_executor, cpu_async_executor, metric_client, options);
 }
 #endif
 }  // namespace google::scp::cpio::client_providers

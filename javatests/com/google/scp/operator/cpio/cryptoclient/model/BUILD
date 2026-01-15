@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,21 +17,19 @@ load("@rules_java//java:defs.bzl", "java_test")
 package(default_visibility = ["//visibility:public"])
 
 java_test(
-    name = "HttpPrivacyBudgetClientTest",
-    srcs = ["HttpPrivacyBudgetClientTest.java"],
+    name = "KeyFetchExceptionUtilsTest",
+    srcs = ["KeyFetchExceptionUtilsTest.java"],
     deps = [
-        "//java/com/google/scp/coordinator/privacy/budgeting/model",
-        "//java/com/google/scp/operator/cpio/privacybudgetclient",
+        "//java/com/google/scp/operator/cpio/cryptoclient",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/mapper",
-        "//java/external:acai",
-        "//java/external:apache_httpclient",
-        "//java/external:apache_httpcore",
+        "//java/external:google_api_client",
+        "//java/external:google_http_client",
         "//java/external:google_truth",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:jackson_databind",
-        "//java/external:mockito",
+        "//java/external:google_truth8",
+        "//javatests/com/google/scp/shared/testutils/gcp",
+        "@maven//:com_google_api_gax",
+        "@maven//:com_google_api_gax_grpc",
+        "@maven//:io_grpc_grpc_api",
     ],
 )

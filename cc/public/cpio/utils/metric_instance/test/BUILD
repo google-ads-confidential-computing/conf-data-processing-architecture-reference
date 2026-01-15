@@ -102,6 +102,7 @@ cc_test(
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
         "//cc/public/cpio/utils/metric_instance/mock:metric_instance_mock",
         "//cc/public/cpio/utils/metric_instance/src:metric_instance",

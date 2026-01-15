@@ -20,10 +20,12 @@
 #include "cpio/client_providers/global_cpio/mock/mock_lib_cpio_provider_with_overrides.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 using google::scp::core::AsyncExecutor;
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::HttpClientInterface;
+using google::scp::cpio::MetricClientInterface;
 using google::scp::cpio::client_providers::AuthTokenProviderInterface;
 using google::scp::cpio::client_providers::InstanceClientProviderInterface;
 using google::scp::cpio::client_providers::RoleCredentialsProviderInterface;
@@ -133,6 +135,40 @@ TEST(LibCpioProviderTest, AuthTokenProviderNotCreatedInInit) {
   EXPECT_THAT(auth_token_provider, NotNull());
   EXPECT_THAT(lib_cpio_provider->GetHttp1ClientMember(), NotNull());
   EXPECT_THAT(lib_cpio_provider->GetIoAsyncExecutorMember(), NotNull());
+
+  EXPECT_SUCCESS(lib_cpio_provider->Stop());
+}
+
+TEST(LibCpioProviderTest, MetricClientNotCreatedInInit) {
+  auto lib_cpio_provider = make_unique<MockLibCpioProviderWithOverrides>();
+  EXPECT_SUCCESS(lib_cpio_provider->Init());
+  EXPECT_SUCCESS(lib_cpio_provider->Run());
+  EXPECT_THAT(lib_cpio_provider->GetMetricClientMember(), IsNull());
+
+  shared_ptr<MetricClientInterface> metric_client;
+  EXPECT_SUCCESS(lib_cpio_provider->GetMetricClient(metric_client));
+  EXPECT_THAT(metric_client, NotNull());
+  EXPECT_THAT(lib_cpio_provider->GetCpuAsyncExecutorMember(), NotNull());
+
+  EXPECT_SUCCESS(lib_cpio_provider->Stop());
+}
+
+TEST(LibCpioProviderTest,
+     MetricClientNotCreatedInInitWithEnableMetricAggregation) {
+  MetricClientOptions metric_options;
+  metric_options.enable_remote_metric_aggregation = true;
+  auto cpio_options = make_shared<CpioOptions>();
+  cpio_options->metric_client_options = metric_options;
+  auto lib_cpio_provider =
+      make_unique<MockLibCpioProviderWithOverrides>(cpio_options);
+  EXPECT_SUCCESS(lib_cpio_provider->Init());
+  EXPECT_SUCCESS(lib_cpio_provider->Run());
+  EXPECT_THAT(lib_cpio_provider->GetMetricClientMember(), IsNull());
+
+  shared_ptr<MetricClientInterface> metric_client;
+  EXPECT_SUCCESS(lib_cpio_provider->GetMetricClient(metric_client));
+  EXPECT_THAT(metric_client, NotNull());
+  EXPECT_THAT(lib_cpio_provider->GetCpuAsyncExecutorMember(), NotNull());
 
   EXPECT_SUCCESS(lib_cpio_provider->Stop());
 }

@@ -31,11 +31,9 @@ import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.Ca
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKekUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKeyAead;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DisableKeySetAcl;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyAead;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyBaseUri;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.MigrationKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.MigrationKmsKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.PopulateMigrationKeyData;
@@ -75,12 +73,7 @@ public class KeyStorageHttpFunctionModule extends AbstractModule {
     bind(SpannerKeyDbConfig.class).toInstance(SpannerKeyDbTestUtil.getSpannerKeyDbConfig());
     bind(CreateKeyTask.class).to(GcpCreateKeyTask.class);
     bind(SignDataKeyTask.class).to(GcpSignDataKeyTask.class);
-    // Note: This is currently unused.
-    bind(String.class)
-        .annotatedWith(KmsKeyEncryptionKeyUri.class)
-        .toInstance("inline-kms://unused_so_far");
     bind(String.class).annotatedWith(CoordinatorKekUri.class).toInstance("");
-    bind(String.class).annotatedWith(DisableKeySetAcl.class).toInstance("false");
     bind(String.class).annotatedWith(PopulateMigrationKeyData.class).toInstance("false");
     bind(String.class)
         .annotatedWith(KmsKeyEncryptionKeyBaseUri.class)

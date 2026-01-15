@@ -32,6 +32,14 @@ module "vpc_network" {
   version = ">= 4.0"
 
   project_id = var.project_id
+
+  # A change in google provider v7.13 defaults bgp_always_compare_med to `false`
+  # which then enforces STANDARD mode. To maintain LEGACY mode which is
+  # recommended for critical workloads, this must be set to null so the value is
+  # not present.
+  # See https://github.com/hashicorp/terraform-provider-google/issues/25526
+  bgp_always_compare_med = null
+
   # If auto_create_subnetworks set to false, the network name has to be renamed
   # so terraform can destroy existing one and recreate a new one with customized
   # subnets.

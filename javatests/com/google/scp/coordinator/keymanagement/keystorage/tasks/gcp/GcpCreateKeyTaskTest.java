@@ -52,8 +52,7 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public class GcpCreateKeyTaskTest {
-  private static final String KEK_URI = "gcp-kms://kek-uri";
-  private static final String MIGRATION_KEK_URI = "gcp-kms://migration-kek-uri";
+  private static final String MIGRATION_KEK_BASE_URI = "gcp-kms://$setName$-migration-kek-uri";
   private static final String KEK_BASE_URI = "gcp-kms://$setName$-kek-uri";
   private static final String TEST_PUBLIC_KEY = "test private key split";
   private static final String TEST_PRIVATE_KEY = "test public key";
@@ -69,8 +68,8 @@ public class GcpCreateKeyTaskTest {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    keyEncryptionKeyUri = KEK_URI.replace("$setName$", "");
-    migrationKeyEncryptionKeyUri = MIGRATION_KEK_URI.replace("$setName$", "");
+    keyEncryptionKeyUri = KEK_BASE_URI.replace("$setName$", "");
+    migrationKeyEncryptionKeyUri = MIGRATION_KEK_BASE_URI.replace("$setName$", "");
     kmsClient = new FakeKmsClient();
     migrationKmsClient = new FakeKmsClient();
     AeadConfig.register();
@@ -79,15 +78,7 @@ public class GcpCreateKeyTaskTest {
 
   @Test
   public void createKey_success() throws Exception {
-    createKey_success_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
-  }
-
-  @Test
-  public void createKey_disableKeySetAcl_success() throws Exception {
-    createKey_success_base(KEK_URI, KEK_URI);
-  }
-
-  public void createKey_success_base(String keyEncryptionKeyUri, String baseUrl) throws Exception {
+    String keyEncryptionKeyUri = KEK_BASE_URI.replace("$setName$", "");
     String publicKey = "123456";
     String privateKeySplit = "privateKeySplit";
     var encryptedPrivateKeySplit =
@@ -95,7 +86,12 @@ public class GcpCreateKeyTaskTest {
             privateKeySplit, kmsClient.getAead(keyEncryptionKeyUri), publicKey);
     CreateKeyTask taskWithMock =
         new GcpCreateKeyTask(
-            keyDb, kmsClient, baseUrl, migrationKmsClient, migrationKeyEncryptionKeyUri, false);
+            keyDb,
+            kmsClient,
+            KEK_BASE_URI,
+            migrationKmsClient,
+            migrationKeyEncryptionKeyUri,
+            false);
     String keyId = "asdf";
     var creationTime = Instant.now().toEpochMilli();
     var expirationTime = Instant.now().plus(1, ChronoUnit.DAYS).toEpochMilli();
@@ -133,20 +129,16 @@ public class GcpCreateKeyTaskTest {
 
   @Test
   public void createKey_successOverwrite() throws ServiceException, GeneralSecurityException {
-    this.createKey_successOverwrite_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
-  }
+    String keyEncryptionKeyUri = KEK_BASE_URI.replace("$setName$", "");
 
-  @Test
-  public void createKey_successOverwrite_disableKeySetAcl()
-      throws ServiceException, GeneralSecurityException {
-    this.createKey_successOverwrite_base(KEK_URI, KEK_URI);
-  }
-
-  public void createKey_successOverwrite_base(String keyEncryptionKeyUri, String baseUrl)
-      throws ServiceException, GeneralSecurityException {
     CreateKeyTask taskWithMock =
         new GcpCreateKeyTask(
-            keyDb, kmsClient, baseUrl, migrationKmsClient, migrationKeyEncryptionKeyUri, false);
+            keyDb,
+            kmsClient,
+            KEK_BASE_URI,
+            migrationKmsClient,
+            migrationKeyEncryptionKeyUri,
+            false);
     String keyId = "asdf";
     var creationTime = 500L;
     var split1 = toBase64AndEncodeWithAead("12345", kmsClient.getAead(keyEncryptionKeyUri), "123");
@@ -351,7 +343,12 @@ public class GcpCreateKeyTaskTest {
   public void createKey_databaseException() {
     CreateKeyTask taskWithMock =
         new GcpCreateKeyTask(
-            keyDb, kmsClient, KEK_URI, migrationKmsClient, migrationKeyEncryptionKeyUri, false);
+            keyDb,
+            kmsClient,
+            KEK_BASE_URI,
+            migrationKmsClient,
+            migrationKeyEncryptionKeyUri,
+            false);
     EncryptionKey key =
         EncryptionKey.newBuilder()
             .setKeyId("asdf")
@@ -375,7 +372,12 @@ public class GcpCreateKeyTaskTest {
   public void createKey_validationException() throws ServiceException {
     com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask taskWithMock =
         new GcpCreateKeyTask(
-            keyDb, kmsClient, KEK_URI, migrationKmsClient, migrationKeyEncryptionKeyUri, false);
+            keyDb,
+            kmsClient,
+            KEK_BASE_URI,
+            migrationKmsClient,
+            migrationKeyEncryptionKeyUri,
+            false);
     EncryptionKey key =
         EncryptionKey.newBuilder()
             .setKeyId("myName")
@@ -396,7 +398,12 @@ public class GcpCreateKeyTaskTest {
   public void createKey_missingPrivateKeyException() throws ServiceException {
     CreateKeyTask taskWithMock =
         new GcpCreateKeyTask(
-            keyDb, kmsClient, KEK_URI, migrationKmsClient, migrationKeyEncryptionKeyUri, false);
+            keyDb,
+            kmsClient,
+            KEK_BASE_URI,
+            migrationKmsClient,
+            migrationKeyEncryptionKeyUri,
+            false);
     EncryptionKey key =
         EncryptionKey.newBuilder()
             .setKeyId("myName")
@@ -413,16 +420,7 @@ public class GcpCreateKeyTaskTest {
 
   @Test
   public void createKey_happyInput_createsExpected() throws Exception {
-    createKey_happyInput_createsExpected_base(KEK_BASE_URI.replace("$setName$", ""), KEK_BASE_URI);
-  }
-
-  @Test
-  public void createKey_happyInput_createsExpected_disableKeySetAcl() throws Exception {
-    createKey_happyInput_createsExpected_base(KEK_URI, KEK_URI);
-  }
-
-  public void createKey_happyInput_createsExpected_base(String keyEncryptionKeyUri, String baseUrl)
-      throws Exception {
+    String keyEncryptionKeyUri = KEK_BASE_URI.replace("$setName$", "");
     // Given
     var encryptedPrivateKeyWithAssociatedPublicKey =
         toBase64AndEncodeWithAead(
@@ -435,7 +433,12 @@ public class GcpCreateKeyTaskTest {
     // When
     var task =
         new GcpCreateKeyTask(
-            keyDb, kmsClient, baseUrl, migrationKmsClient, migrationKeyEncryptionKeyUri, false);
+            keyDb,
+            kmsClient,
+            KEK_BASE_URI,
+            migrationKmsClient,
+            migrationKeyEncryptionKeyUri,
+            false);
     task.createKey(key, encryptedPrivateKeyWithAssociatedPublicKey, "");
 
     // Then
@@ -459,7 +462,12 @@ public class GcpCreateKeyTaskTest {
     // When
     var task =
         new GcpCreateKeyTask(
-            keyDb, kmsClient, KEK_URI, migrationKmsClient, migrationKeyEncryptionKeyUri, false);
+            keyDb,
+            kmsClient,
+            KEK_BASE_URI,
+            migrationKmsClient,
+            migrationKeyEncryptionKeyUri,
+            false);
     ThrowingRunnable when =
         () -> task.createKey(key, encryptedPrivateKeyWithAssociatedPublicKey, "");
 

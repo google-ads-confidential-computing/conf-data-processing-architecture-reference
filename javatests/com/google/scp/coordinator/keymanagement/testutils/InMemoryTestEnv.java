@@ -52,9 +52,10 @@ public final class InMemoryTestEnv extends AbstractModule {
   }
 
   private static ImmutableMap<String, KeySetConfig> createConfigMap() {
-    var config1 = KeySetConfig.create("noOverlap", 5, 10, 0);
-    var config2 = KeySetConfig.create("overlap", 1, 8, 6);
-    return ImmutableMap.of("noOverlap", config1, "overlap", config2);
+    var config1 = KeySetConfig.create("noOverlap", 5, 10, 0, 0);
+    var config2 = KeySetConfig.create("overlap", 1, 8, 6, 0);
+    var config3 = KeySetConfig.create("backfill", 1, 8, 0, 3);
+    return ImmutableMap.of("noOverlap", config1, "overlap", config2, "backfill", config3);
   }
 
   @Override

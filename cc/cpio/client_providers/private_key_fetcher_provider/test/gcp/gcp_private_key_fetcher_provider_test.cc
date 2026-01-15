@@ -210,6 +210,50 @@ TEST_F(GcpPrivateKeyFetcherProviderTest, SignHttpRequestForKeysetMetadata) {
   WaitUntil([&]() { return condition.load(); });
 }
 
+TEST_F(GcpPrivateKeyFetcherProviderTest,
+       SignHttpRequestForKeysetMetadataWithVersion) {
+  atomic<bool> condition = false;
+
+  EXPECT_CALL(*credentials_provider_,
+              GetSessionTokenForTargetAudience(
+                  TargetAudienceUriEquals(kPrivateKeyBaseUri)))
+      .WillOnce([=](AsyncContext<GetSessionTokenForTargetAudienceRequest,
+                                 GetSessionTokenResponse>& context) {
+        context.response = make_shared<GetSessionTokenResponse>();
+        context.response->session_token =
+            make_shared<string>(kSessionTokenMock);
+        context.result = SuccessExecutionResult();
+        context.Finish();
+      });
+
+  shared_ptr<KeysetMetadataFetchingRequest> keyset_metadata_request =
+      make_shared<KeysetMetadataFetchingRequest>();
+  keyset_metadata_request->private_key_endpoint =
+      make_shared<string>(kPrivateKeyBaseUriWithVersionSuffix);
+  keyset_metadata_request->keyset_name = make_shared<string>(kKeysetTestName);
+
+  AsyncContext<KeysetMetadataFetchingRequest, HttpRequest> context(
+      keyset_metadata_request,
+      [&](AsyncContext<KeysetMetadataFetchingRequest, HttpRequest>& context) {
+        EXPECT_SUCCESS(context.result);
+        const auto& signed_request = *context.response;
+        EXPECT_EQ(signed_request.method, HttpMethod::GET);
+        EXPECT_THAT(signed_request.headers,
+                    Pointee(UnorderedElementsAre(Pair(
+                        kAuthorizationHeaderKey,
+                        absl::StrCat(kBearerTokenPrefix, kSessionTokenMock)))));
+        string uri = absl::StrCat(kPrivateKeyBaseUri, kVersionNumberBetaSuffix,
+                                  kKeySetNameSuffix, "/", kKeysetTestName,
+                                  kKeysetMetadataUrlSuffix);
+        EXPECT_EQ(*signed_request.path, uri);
+        condition = true;
+        return SuccessExecutionResult();
+      });
+
+  gcp_private_key_fetcher_provider_->SignHttpRequest(context);
+  WaitUntil([&]() { return condition.load(); });
+}
+
 TEST_F(GcpPrivateKeyFetcherProviderTest, SignHttpRequestForKeyId) {
   atomic<bool> condition = false;
 

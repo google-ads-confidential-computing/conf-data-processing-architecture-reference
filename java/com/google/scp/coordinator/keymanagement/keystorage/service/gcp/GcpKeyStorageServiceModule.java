@@ -25,7 +25,6 @@ import com.google.crypto.tink.integration.gcpkms.GcpKmsClient;
 import com.google.inject.AbstractModule;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKekUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKeyAead;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.DisableKeySetAcl;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.MigrationKmsAeadClient;
@@ -50,20 +49,13 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
   private static final String SPANNER_INSTANCE_ENV_VAR = "SPANNER_INSTANCE";
   private static final String SPANNER_DATABASE_ENV_VAR = "SPANNER_DATABASE";
   private static final String SPANNER_ENDPOINT = "SPANNER_ENDPOINT";
-  private static final String GCP_KMS_URI_ENV_VAR = "GCP_KMS_URI";
   private static final String GCP_KMS_BASE_URI_ENV_VAR = "GCP_KMS_BASE_URI";
   private static final String MIGRATION_GCP_KMS_BASE_URI_ENV_VAR = "MIGRATION_GCP_KMS_BASE_URI";
   private static final String POPULATE_MIGRATION_KEY_DATA_ENV_VAR = "POPULATE_MIGRATION_KEY_DATA";
-  private static final String DISABLE_KEY_SET_ACL_ENV_VAR = "DISABLE_KEY_SET_ACL";
 
   private String getGcpKmsBaseUri() {
     Map<String, String> env = System.getenv();
-    // TODO: b/428770204 - Remove disableKeySetAcl check and GCP_KMS_URI_ENV_VAR after migration.
-    boolean disableKeySetAcl =
-        Boolean.parseBoolean(env.getOrDefault(DISABLE_KEY_SET_ACL_ENV_VAR, "true"));
-    return disableKeySetAcl
-        ? env.getOrDefault(GCP_KMS_URI_ENV_VAR, "unknown_gcp_uri")
-        : env.getOrDefault(GCP_KMS_BASE_URI_ENV_VAR, "unknown_gcp_uri");
+    return env.getOrDefault(GCP_KMS_BASE_URI_ENV_VAR, "unknown_gcp_uri");
   }
 
   private String getMigrationGcpKmsBaseUri() {
@@ -102,9 +94,6 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
     bind(String.class)
         .annotatedWith(MigrationKmsKeyEncryptionKeyBaseUri.class)
         .toInstance(getMigrationGcpKmsBaseUri());
-    bind(Boolean.class)
-        .annotatedWith(DisableKeySetAcl.class)
-        .toInstance(Boolean.valueOf(env.getOrDefault(DISABLE_KEY_SET_ACL_ENV_VAR, "true")));
     bind(Boolean.class)
         .annotatedWith(PopulateMigrationKeyData.class)
         .toInstance(getPopulateMigrationKeyData());

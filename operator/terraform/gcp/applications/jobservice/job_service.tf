@@ -673,8 +673,8 @@ module "workgroups" {
   autoscaling_cloudfunction_5xx_threshold         = each.value.autoscaling_cloudfunction_5xx_threshold
   autoscaling_cloudfunction_error_threshold       = each.value.autoscaling_cloudfunction_error_threshold
   autoscaling_cloudfunction_max_execution_time_ms = each.value.autoscaling_cloudfunction_max_execution_time_ms
-  autoscaling_cloudfunction_alarm_eval_period_sec = each.value.autoscaling_alarm_eval_period_sec
-  autoscaling_cloudfunction_alarm_duration_sec    = each.value.autoscaling_alarm_duration_sec
+  autoscaling_cloudfunction_alarm_eval_period_sec = each.value.autoscaling_cloudfunction_alarm_eval_period_sec
+  autoscaling_cloudfunction_alarm_duration_sec    = each.value.autoscaling_cloudfunction_alarm_duration_sec
 
   # Make sure the otel collector is running before creating the server instances.
   depends_on = [module.opentelemetry_collector]

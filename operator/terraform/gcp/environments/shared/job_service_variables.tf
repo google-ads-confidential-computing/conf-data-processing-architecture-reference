@@ -1228,6 +1228,9 @@ autoscaling_cloudfunction_error_threshold: Error counts greater than this value 
 autoscaling_cloudfunction_max_execution_time_ms: Max execution time (in ms) allowed before sending an alarm.
 autoscaling_alarm_eval_period_sec: Time period (in seconds) for alarm evaluation.
 autoscaling_alarm_duration_sec: Amount of time (in seconds) to wait before sending an alarm. Must be in minute intervals. Example: '60','120'.
+autoscaling_cloudfunction_alarm_eval_period_sec: Time period (in seconds) for cloudfunction alarm evaluation.
+autoscaling_cloudfunction_alarm_duration_sec: Amount of time (in seconds) to wait before sending a cloudfunction alarm. Must be in minute intervals. Example: '60','120'.
+
   EOF
   type = object({
     # Job Queue
@@ -1274,6 +1277,8 @@ autoscaling_alarm_duration_sec: Amount of time (in seconds) to wait before sendi
     autoscaling_cloudfunction_max_execution_time_ms = optional(number, 1000 * 60)
     autoscaling_alarm_eval_period_sec               = optional(string, "60")
     autoscaling_alarm_duration_sec                  = optional(string, "60")
+    autoscaling_cloudfunction_alarm_eval_period_sec = optional(string, "60")
+    autoscaling_cloudfunction_alarm_duration_sec    = optional(string, "60")
   })
   default = {}
 }
@@ -1322,6 +1327,9 @@ autoscaling_cloudfunction_error_threshold: Error counts greater than this value 
 autoscaling_cloudfunction_max_execution_time_ms: Max execution time (in ms) allowed before sending an alarm.
 autoscaling_alarm_eval_period_sec: Time period (in seconds) for alarm evaluation.
 autoscaling_alarm_duration_sec: Amount of time (in seconds) to wait before sending an alarm. Must be in minute intervals. Example: '60','120'.
+autoscaling_cloudfunction_alarm_eval_period_sec: Time period (in seconds) for cloudfunction alarm evaluation.
+autoscaling_cloudfunction_alarm_duration_sec: Amount of time (in seconds) to wait before sending a cloudfunction alarm. Must be in minute intervals. Example: '60','120'.
+
   EOF
   type = map(object({
     # Job Queue
@@ -1365,6 +1373,8 @@ autoscaling_alarm_duration_sec: Amount of time (in seconds) to wait before sendi
     autoscaling_cloudfunction_max_execution_time_ms = optional(number)
     autoscaling_alarm_eval_period_sec               = optional(string)
     autoscaling_alarm_duration_sec                  = optional(string)
+    autoscaling_cloudfunction_alarm_eval_period_sec = optional(string)
+    autoscaling_cloudfunction_alarm_duration_sec    = optional(string)
   }))
   default = {}
 }

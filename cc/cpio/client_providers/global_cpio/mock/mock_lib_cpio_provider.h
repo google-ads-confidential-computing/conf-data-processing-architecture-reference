@@ -25,6 +25,7 @@
 #include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "cpio/client_providers/role_credentials_provider/mock/mock_role_credentials_provider.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 
 namespace google::scp::cpio::client_providers::mock {
 class MockLibCpioProvider : public LibCpioProvider {
@@ -37,6 +38,7 @@ class MockLibCpioProvider : public LibCpioProvider {
         std::make_shared<core::http2_client::mock::MockHttpClient>();
     role_credentials_provider_ =
         std::make_shared<mock::MockRoleCredentialsProvider>();
+    metric_client_ = std::make_shared<MockMetricClient>();
   }
 };
 }  // namespace google::scp::cpio::client_providers::mock

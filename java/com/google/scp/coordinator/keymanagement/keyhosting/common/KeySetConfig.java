@@ -31,8 +31,8 @@ public abstract class KeySetConfig {
    * @param overlapPeriodDays used to create overlapping keys
    */
   public static KeySetConfig create(
-      String name, int count, int validityInDays, int overlapPeriodDays) {
-    return new AutoValue_KeySetConfig(name, count, validityInDays, overlapPeriodDays);
+      String name, int count, int validityInDays, int overlapPeriodDays, int backfillDays) {
+    return new AutoValue_KeySetConfig(name, count, validityInDays, overlapPeriodDays, backfillDays);
   }
 
   /* Returns the name of the key set. */
@@ -46,4 +46,8 @@ public abstract class KeySetConfig {
 
   /* Returns number of days active keys can overlap. */
   public abstract int getOverlapPeriodDays();
+
+  /* Returns number of days keys can remain usable beyond expiration. Individual keys must be
+  checked for their expiry time. */
+  public abstract int getBackfillDays();
 }

@@ -15,10 +15,10 @@
  */
 
 mock_provider "google" {
-  source = "../../../../../../tfmocks/google/"
+  source = "../../../../../../tools/tftesting/tfmocks/google/"
 }
 mock_provider "null" {
-  source = "../../../../../../tfmocks/null/"
+  source = "../../../../../../tools/tftesting/tfmocks/null/"
 }
 
 # All run blocks should have "command = plan".

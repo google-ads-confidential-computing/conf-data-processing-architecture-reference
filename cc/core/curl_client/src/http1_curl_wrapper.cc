@@ -32,6 +32,7 @@
 #include "public/core/interface/execution_result_or_macros.h"
 
 #include "error_codes.h"
+#include "http1_curl_handlers.h"
 
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::utils::GetEscapedUriWithQuery;
@@ -117,117 +118,6 @@ ExecutionResult GetExecutionResultFromCurlError(const string& err_buffer) {
       return RetryExecutionResult(
           errors::SC_CURL_CLIENT_REQUEST_OTHER_HTTP_ERROR);
   }
-}
-
-/**
- * @brief Interprets contents as a char* of length byte_size * num_bytes and
- * writes them into output which should be a BytesBuffer*
- *
- * https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
- *
- * @param contents The contents to write to the output
- * @param byte_size The size of each member (char in this case; always 1)
- * @param num_bytes How many members (chars) are in contents
- * @param output A BytesBuffer* to write contents into
- * @return size_t The amount of data written
- */
-size_t ResponsePayloadHandler(char* contents, size_t byte_size,
-                              size_t num_bytes, void* output) {
-  BytesBuffer* output_buffer = static_cast<BytesBuffer*>(output);
-  size_t contents_length = byte_size * num_bytes;
-  output_buffer->bytes = make_shared<vector<Byte>>(contents_length);
-  for (size_t i = 0; i < contents_length; i++) {
-    output_buffer->bytes->at(i) = contents[i];
-  }
-  output_buffer->length = contents_length;
-  output_buffer->capacity = contents_length;
-  return contents_length;
-}
-
-/**
- * @brief Interprets output as a HttpHeaders*. Parses contents into a
- * colon-separated header string and stores the key-value pair in output.
- * This is called for each header individually - including the blank line
- * header.
- *
- * https://curl.se/libcurl/c/CURLOPT_HEADERFUNCTION.html
- *
- * @param contents A header acquired from the response - not null terminated
- * @param byte_size The size of each member (char in this case; always 1)
- * @param num_bytes How many members (chars) are in contents
- * @param output The header map to place this header into.
- * @return size_t The amount of characters processed.
- */
-size_t ResponseHeaderHandler(char* contents, size_t byte_size, size_t num_bytes,
-                             void* output) {
-  HttpHeaders* header_map = static_cast<HttpHeaders*>(output);
-  size_t contents_size = byte_size * num_bytes;
-  if (contents_size <= 2) {
-    // Empty field line (i.e. "\r\n") - skip.
-    return contents_size;
-  }
-  string contents_str(contents, contents_size);
-  if (regex r("HTTP.*[0-9]{3}"); regex_search(contents_str, r)) {
-    // The header is just the HTTP response code.
-    return contents_size;
-  }
-
-  // The index of the carriage return character '\r'.
-  size_t contents_end = contents_str.find('\r');
-  // The index of the colon character ':'.
-  size_t colon_index = contents_str.find(':');
-
-  if (colon_index > contents_end) {
-    SCP_ERROR(
-        kHttp1CurlWrapper, kZeroUuid,
-        FailureExecutionResult(errors::SC_CURL_CLIENT_BAD_HEADER_RECEIVED),
-        "The ':' was found after the '\r' in the header: \"%s\"",
-        contents_str.c_str());
-    return contents_size;
-  }
-  if (colon_index == string::npos) {
-    SCP_ERROR(
-        kHttp1CurlWrapper, kZeroUuid,
-        FailureExecutionResult(errors::SC_CURL_CLIENT_BAD_HEADER_RECEIVED),
-        "No ':' was found in the header: \"%s\"", contents_str.c_str());
-    return contents_size;
-  }
-  bool has_space_after_colon = contents_str[colon_index + 1] == ' ';
-
-  // Copy the position after the colon until the end.
-  size_t value_index = colon_index + 1;
-  if (has_space_after_colon) value_index++;
-
-  header_map->insert(
-      {contents_str.substr(0, colon_index),
-       contents_str.substr(value_index, contents_end - value_index)});
-  return contents_size;
-}
-
-/**
- * @brief Read the request userdata to contents.
- *
- * https://curl.se/libcurl/c/CURLOPT_READFUNCTION.html
- *
- * @param contents The output array to copy userdata into.
- * @param byte_size The size of each member (char in this case; always 1)
- * @param num_bytes How many members (chars) are in contents
- * @param userdata BytesBuffer* of the data to copy into contents
- * @return size_t The amount of characters processed.
- */
-size_t RequestReadHandler(char* contents, size_t byte_size, size_t num_bytes,
-                          void* userdata) {
-  BytesBuffer* input_buffer = static_cast<BytesBuffer*>(userdata);
-
-  int64_t bytes_to_read = byte_size * num_bytes;
-  if (bytes_to_read > input_buffer->length) {
-    bytes_to_read = input_buffer->length;
-  }
-
-  if (bytes_to_read) {
-    memcpy(contents, input_buffer->bytes->data(), bytes_to_read);
-  }
-  return bytes_to_read;
 }
 
 }  // namespace

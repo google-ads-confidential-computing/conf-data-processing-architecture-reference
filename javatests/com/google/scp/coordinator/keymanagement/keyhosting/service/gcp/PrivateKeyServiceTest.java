@@ -125,25 +125,6 @@ public final class PrivateKeyServiceTest {
   }
 
   @Test
-  public void v1alphaListRecentEncryptionKeys_happyPath_returnsExpected() throws Exception {
-    // Given
-    var daysInSecs = ofDays(8).toSeconds();
-    String endpoint = "/v1alpha/encryptionKeys:recent?maxAgeSeconds=" + daysInSecs;
-
-    // When
-    ListRecentEncryptionKeysResponse keys = listRecentEncryptionKeys(endpoint);
-
-    // Then
-    assertThat(keys.getKeysList()).hasSize(1);
-  }
-
-  @Test
-  public void v1alphaListRecentEncryptionKeys_missingMaxAgeSeconds_returnsExpectedError()
-      throws Exception {
-    invalidArgumentTest("/v1alpha/encryptionKeys:recent");
-  }
-
-  @Test
   public void v1betaListRecentEncryptionKeys_emptySetName_returnsExpected() throws Exception {
     listRecentEncryptionKeysTest("", ofDays(7), 0);
     listRecentEncryptionKeysTest("", ofDays(8), 1);
@@ -260,17 +241,26 @@ public final class PrivateKeyServiceTest {
 
   @Test
   public void v1betaGetKeysetMetadata_noOverlap_returnsExpected() throws Exception {
-    getActiveKeysetMetadataValidation("noOverlap", 5);
+    getActiveKeysetMetadataOverlapValidation("noOverlap", 5, 10);
   }
 
   @Test
   public void v1betaGetKeysetMetadata_overlap_returnsExpected() throws Exception {
-    getActiveKeysetMetadataValidation("overlap", 4);
+    getActiveKeysetMetadataOverlapValidation("overlap", 4, 2);
   }
 
-  private void getActiveKeysetMetadataValidation(String setName, int expected) throws Exception {
+  @Test
+  public void v1betaGetKeysetMetadata_backfill_returnsExpected() throws Exception {
+    String endpoint = String.format("/v1beta/sets/%s/keysetMetadata", "backfill");
+    assertThat(getMetadata(endpoint).getBackfillDays()).isEqualTo(3);
+  }
+
+  private void getActiveKeysetMetadataOverlapValidation(String setName, int keyCount, int cadence)
+      throws Exception {
     String endpoint = String.format("/v1beta/sets/%s/keysetMetadata", setName);
-    assertThat(getMetadata(endpoint).getActiveKeyCount()).isEqualTo(expected);
+    var metadata = getMetadata(endpoint);
+    assertThat(metadata.getActiveKeyCount()).isEqualTo(keyCount);
+    assertThat(metadata.getActiveKeyCadenceDays()).isEqualTo(cadence);
   }
 
   private void invalidArgumentTest(String endpoint) throws Exception {
@@ -307,9 +297,9 @@ public final class PrivateKeyServiceTest {
 
   private GetKeysetMetadataResponse getMetadata(String endpoint) throws IOException {
     String body = getHttpBody(endpoint);
-    var countBuilder = GetKeysetMetadataResponse.newBuilder();
-    JsonFormat.parser().merge(body, countBuilder);
-    return countBuilder.build();
+    var metadataBuilder = GetKeysetMetadataResponse.newBuilder();
+    JsonFormat.parser().merge(body, metadataBuilder);
+    return metadataBuilder.build();
   }
 
   private String getHttpBody(String endpoint) throws IOException {
@@ -371,6 +361,12 @@ public final class PrivateKeyServiceTest {
             "count": 1,
             "validity_in_days": 8,
             "overlap_period_days": 6
+          },
+          {
+            "name": "backfill",
+            "count": 5,
+            "validity_in_days": 10,
+            "backfill_days": 3
           }
         ]
       }

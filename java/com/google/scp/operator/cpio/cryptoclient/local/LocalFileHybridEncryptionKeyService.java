@@ -23,6 +23,7 @@ import com.google.crypto.tink.HybridEncrypt;
 import com.google.crypto.tink.KeysetHandle;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyService;
+import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyService.KeyFetchException;
 import com.google.scp.operator.cpio.cryptoclient.local.LocalFileHybridEncryptionKeyServiceModule.DecryptionKeyFilePath;
 import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import java.io.IOException;

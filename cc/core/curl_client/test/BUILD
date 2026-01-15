@@ -60,3 +60,24 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "curl_handlers_test",
+    srcs =
+        [
+            "http1_curl_handlers_test.cc",
+        ],
+    copts = [
+        "-std=c++17",
+    ],
+    deps = [
+        "//cc:cc_base_include_dir",
+        "//cc/core/curl_client/src:http1_curl_client_lib",
+        "//cc/core/interface:interface_lib",
+        "//cc/core/test/utils:utils_lib",
+        "//cc/core/utils/src:core_utils",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

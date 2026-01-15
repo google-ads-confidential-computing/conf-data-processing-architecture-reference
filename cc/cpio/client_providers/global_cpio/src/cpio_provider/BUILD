@@ -46,6 +46,8 @@ cc_library(
         "//cc/cpio/client_providers/cloud_initializer/src:cloud_initializer_select_lib",
         "//cc/cpio/client_providers/instance_client_provider/src:instance_client_provider_select_lib",
         "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
+        "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_select_lib",
+        "//cc/cpio/client_providers/otel_metric_client_provider/src:otel_metric_client_provider_select_lib",
         "//cc/cpio/client_providers/role_credentials_provider/src:role_credentials_provider_select_lib",
         "//cc/public/cpio/interface:type_def",
     ],

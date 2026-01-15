@@ -27,6 +27,7 @@
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/type_def.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 namespace google::scp::cpio::client_providers {
 /**
@@ -121,6 +122,9 @@ class CpioProviderInterface : public core::ServiceInterface {
   virtual core::ExecutionResult GetAuthTokenProvider(
       std::shared_ptr<AuthTokenProviderInterface>&
           auth_token_provider) noexcept = 0;
+
+  virtual core::ExecutionResult GetMetricClient(
+      std::shared_ptr<MetricClientInterface>& metric_client) noexcept = 0;
 };
 
 /// Factory to create CpioProvider.

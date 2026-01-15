@@ -23,7 +23,6 @@ import com.google.acai.TestScoped;
 import com.google.crypto.tink.KmsClient;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.DisableKeySetAcl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.MigrationKeyEncryptionKeyBaseUri;
@@ -88,7 +87,6 @@ public final class GcpCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskTestBa
       bind(String.class)
           .annotatedWith(MigrationPeerCoordinatorKeyEncryptionKeyBaseUri.class)
           .toInstance("");
-      bind(Boolean.class).annotatedWith(DisableKeySetAcl.class).toInstance(false);
       bind(String.class)
           .annotatedWith(KeyEncryptionKeyBaseUri.class)
           .toInstance("fake-kms://$setName$-fake-id-a");

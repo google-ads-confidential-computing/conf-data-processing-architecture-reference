@@ -26,6 +26,7 @@
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/logger_interface.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/type_def.h"
 
 namespace google::scp::cpio {
 using AccountIdentity = std::string;
@@ -78,6 +79,9 @@ struct CpioOptions {
 
   /// Optional IO thread pool. If not set, an internal thread pool will be used.
   std::shared_ptr<core::AsyncExecutorInterface> io_async_executor;
+
+  /// Options for Metric Client.
+  MetricClientOptions metric_client_options;
 };
 
 template <typename TResponse>

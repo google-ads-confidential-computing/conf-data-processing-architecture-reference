@@ -45,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 /** Provides key sets management functionalities. */
 public final class KeySetManager {
 
+  private static final int DEFAULT_BACKFILL_DAYS = 0;
   private static final int DEFAULT_OVERLAP_PERIOD_DAYS = 0;
   private static final Duration FETCHER_CACHE_DURATION = Duration.ofSeconds(20L);
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -82,7 +83,8 @@ public final class KeySetManager {
                 defaultValidityInDays,
                 defaultTtlInDays,
                 defaultCreateMaxDaysAhead,
-                DEFAULT_OVERLAP_PERIOD_DAYS));
+                DEFAULT_OVERLAP_PERIOD_DAYS,
+                DEFAULT_BACKFILL_DAYS));
   }
 
   /** Returns all key set configurations. */
@@ -101,7 +103,8 @@ public final class KeySetManager {
                     keySet.validityInDays().orElse(defaultValidityInDays),
                     keySet.ttlInDays().orElse(defaultTtlInDays),
                     keySet.createMaxDaysAhead().orElse(defaultCreateMaxDaysAhead),
-                    keySet.overlapPeriodDays().orElse(DEFAULT_OVERLAP_PERIOD_DAYS)))
+                    keySet.overlapPeriodDays().orElse(DEFAULT_OVERLAP_PERIOD_DAYS),
+                    keySet.backfillDays().orElse(DEFAULT_BACKFILL_DAYS)))
         .collect(toImmutableList());
   }
 

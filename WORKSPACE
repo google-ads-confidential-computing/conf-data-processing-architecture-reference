@@ -1,3 +1,4 @@
+# LINT.IfChange
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 ################################################################################
@@ -66,15 +67,6 @@ load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl",
 
 google_cloud_cpp_deps()
 
-load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
-
-switched_rules_by_language(
-    name = "com_google_googleapis_imports",
-    cc = True,
-    grpc = True,
-    java = True,
-)
-
 ##########
 # GRPC C Deps #
 ##########
@@ -134,18 +126,6 @@ load("//build_defs:scp_dependencies.bzl", "scp_dependencies")
 
 scp_dependencies(PROTOBUF_CORE_VERSION_FOR_CC, PROTOBUF_SHA_256_FOR_CC)
 
-######### To gegerate Java interface for SDK #########
-load("@com_google_api_gax_java//:repository_rules.bzl", "com_google_api_gax_java_properties")
-
-com_google_api_gax_java_properties(
-    name = "com_google_api_gax_java_properties",
-    file = "@com_google_api_gax_java//:dependencies.properties",
-)
-
-load("@com_google_api_gax_java//:repositories.bzl", "com_google_api_gax_java_repositories")
-
-com_google_api_gax_java_repositories()
-
 load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
 
 grpc_java_repositories()
@@ -175,11 +155,6 @@ load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_jav
 rules_java_dependencies()
 
 rules_java_toolchains()
-
-# Load dependencies for the base workspace.
-load("@com_google_differential_privacy//:differential_privacy_deps.bzl", "differential_privacy_deps")
-
-differential_privacy_deps()
 
 #############
 # PKG Rules #
@@ -218,11 +193,20 @@ load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
 
 container_deps()
 
+load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
+
+rules_oci_dependencies()
+
+load("@rules_oci//oci:repositories.bzl", "oci_register_toolchains")
+
+oci_register_toolchains(name = "oci")
+
 ###########################
 # Binary Dev Dependencies #
 ###########################
 load("@com_github_google_rpmpack//:deps.bzl", "rpmpack_dependencies")
 load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
+load("@rules_oci//oci:pull.bzl", "oci_pull")
 
 rpmpack_dependencies()
 
@@ -243,6 +227,14 @@ container_pull(
     name = "java_base_21",
     # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2025-01-12.
     digest = "sha256:d6ba76b612098d03aa8f0782295c859a7b24476528f96401ca4bdf5bfe38161f",
+    registry = "gcr.io",
+    repository = "distroless/java21-debian12",
+)
+
+oci_pull(
+    name = "java_base_21_oci",
+    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2025-11-17.
+    digest = "sha256:ed5be62a70c5b99708b4ad0fc53bda628d11e46e917f66720fd218cae8fe1568",
     registry = "gcr.io",
     repository = "distroless/java21-debian12",
 )
@@ -322,33 +314,6 @@ container_pull(
     repository = "admcloud-scp/cc-build-time-snapshot/linux_debian_11_build_time",
     tag = "v0.2",
 )
-
-########################################################################
-# Roma dependencies
-load("//build_defs/cc:roma.bzl", "roma_dependencies")
-
-roma_dependencies()
-
-load(
-    "@com_google_sandboxed_api//sandboxed_api/bazel:llvm_config.bzl",
-    "llvm_disable_optional_support_deps",
-)
-
-# Must call install_v8_python_deps to make sure the requirements are installed.
-load("@v8_python_deps//:requirements.bzl", install_v8_python_deps = "install_deps")
-
-install_v8_python_deps()
-
-# Must be right after roma_dependencies
-load(
-    "@com_google_sandboxed_api//sandboxed_api/bazel:sapi_deps.bzl",
-    "sapi_deps",
-)
-
-llvm_disable_optional_support_deps()
-
-sapi_deps()
-########################################################################
 
 # Needed for cc reproducible builds
 load("//cc/tools/build:build_container_params.bzl", "CC_BUILD_CONTAINER_REGISTRY", "CC_BUILD_CONTAINER_REPOSITORY", "CC_BUILD_CONTAINER_TAG")

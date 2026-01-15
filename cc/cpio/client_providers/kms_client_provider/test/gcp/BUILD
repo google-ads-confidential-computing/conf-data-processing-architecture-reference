@@ -28,6 +28,7 @@ cc_test(
         "//cc/cpio/client_providers/kms_client_provider/mock/gcp:gcp_kms_client_provider_mock",
         "//cc/cpio/client_providers/kms_client_provider/src/gcp:nontee_gcp_kms_client_provider_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
+        "//cc/public/cpio/mock/metric_client:metric_client_mock",
         "@com_github_googleapis_google_cloud_cpp//:kms",
         "@com_google_googletest//:gtest_main",
     ],

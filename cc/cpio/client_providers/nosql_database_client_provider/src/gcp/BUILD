@@ -31,7 +31,7 @@ cc_library(
         "//cc/public/cpio/interface/nosql_database_client:type_def",
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_google_absl//absl/strings",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )
 

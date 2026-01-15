@@ -23,6 +23,7 @@ import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.hybrid.EciesAeadHkdfPrivateKeyManager;
 import com.google.crypto.tink.hybrid.HybridConfig;
 import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyService;
+import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyService.KeyFetchException;
 import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import java.io.IOException;
 import java.security.GeneralSecurityException;

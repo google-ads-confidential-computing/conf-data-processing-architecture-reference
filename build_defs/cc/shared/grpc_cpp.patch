@@ -1,3 +1,23 @@
+From e40746b43cdf03397e5f43eca81b1e3eacb46c75 Mon Sep 17 00:00:00 2001
+From: George Chih <georgechih@google.com>
+Date: Fri, 17 Oct 2025 17:02:48 +0000
+Subject: [PATCH 1/2] Override grpc library source code to make it return
+ useful error message if the error is not due to network connection.
+
+By default, if the OAuth token is failed to parse within grpc server-client connections, grpc library always returns UNAVAILABLE with no additional error mesage. We make this patch file to align with https://github.com/grpc/grpc/pull/40907.
+
+This can help the developer easier to troubleshooting the error code from the KMS client, which the KMS server frequently returns error in our production traffic.
+---
+ src/core/BUILD                                |   2 +
+ ...cp_service_account_identity_credentials.cc | 160 +++++++-----------
+ ...gcp_service_account_identity_credentials.h |  12 +-
+ .../credentials/oauth2/oauth2_credentials.cc  |  77 +++------
+ .../credentials/oauth2/oauth2_credentials.h   |   8 +-
+ .../token_fetcher_credentials.cc              |  42 +++++
+ .../token_fetcher/token_fetcher_credentials.h |  29 ++++
+ test/core/security/credentials_test.cc        |  23 ++-
+ 8 files changed, 173 insertions(+), 180 deletions(-)
+
 diff --git a/src/core/BUILD b/src/core/BUILD
 index f65a41fbe3..268e5ed6f1 100644
 --- a/src/core/BUILD
@@ -410,3 +430,148 @@ index d70fd4cb96..91c2cadaf5 100644
 +      absl::UnauthenticatedError("HTTP token fetch failed with status 400"),
 +      "");
 --
+2.52.0.457.g6b5491de43-goog
+
+
+From a1bcaefd5a55c228f01224e330f9aade36a8d4f7 Mon Sep 17 00:00:00 2001
+From: George Chih <georgechih@google.com>
+Date: Tue, 13 Jan 2026 06:41:50 +0000
+Subject: [PATCH 2/2] Improve the error status returned from external account
+ credentials
+
+---
+ src/core/BUILD                                |  1 +
+ .../aws_external_account_credentials.cc       |  4 +-
+ .../external/external_account_credentials.cc  | 15 +++--
+ .../file_external_account_credentials.cc      |  4 +-
+ test/core/security/credentials_test.cc        | 64 +++++++++++++++++--
+ 5 files changed, 74 insertions(+), 14 deletions(-)
+
+diff --git a/src/core/BUILD b/src/core/BUILD
+index 268e5ed6f1..1b5081dfd3 100644
+--- a/src/core/BUILD
++++ b/src/core/BUILD
+@@ -4650,0 +4651 @@ grpc_cc_library(
++        "status_conversion",
+diff --git a/src/core/lib/security/credentials/external/aws_external_account_credentials.cc b/src/core/lib/security/credentials/external/aws_external_account_credentials.cc
+index 13a46dadda..b31813c8ce 100644
+--- a/src/core/lib/security/credentials/external/aws_external_account_credentials.cc
++++ b/src/core/lib/security/credentials/external/aws_external_account_credentials.cc
+@@ -296,2 +296,2 @@ void AwsExternalAccountCredentials::AwsFetchBody::RetrieveSigningKeys() {
+-    AsyncFinish(
+-        GRPC_ERROR_CREATE("Missing role name when retrieving signing keys."));
++    AsyncFinish(absl::UnauthenticatedError(
++        "Missing role name when retrieving signing keys."));
+diff --git a/src/core/lib/security/credentials/external/external_account_credentials.cc b/src/core/lib/security/credentials/external/external_account_credentials.cc
+index d8bacf7299..a1901e0a98 100644
+--- a/src/core/lib/security/credentials/external/external_account_credentials.cc
++++ b/src/core/lib/security/credentials/external/external_account_credentials.cc
+@@ -50,0 +51 @@
++#include "src/core/lib/transport/status_conversion.h"
+@@ -112 +113,7 @@ void ExternalAccountCredentials::HttpFetchBody::OnHttpResponse(
+-    self->Finish(absl::UnavailableError(
++    grpc_status_code status_code =
++        grpc_http2_status_to_grpc_status(self->response_.status);
++    if (status_code != GRPC_STATUS_UNAVAILABLE) {
++      status_code = GRPC_STATUS_UNAUTHENTICATED;
++    }
++    self->Finish(absl::Status(
++        static_cast<absl::StatusCode>(status_code),
+@@ -184 +191 @@ void ExternalAccountCredentials::ExternalFetchRequest::ExchangeToken(
+-    return FinishTokenFetch(GRPC_ERROR_CREATE(
++    return FinishTokenFetch(absl::UnauthenticatedError(
+@@ -288 +295 @@ void ExternalAccountCredentials::ExternalFetchRequest::
+-    FinishTokenFetch(GRPC_ERROR_CREATE(absl::StrFormat(
++    FinishTokenFetch(absl::UnauthenticatedError(absl::StrFormat(
+@@ -296 +303 @@ void ExternalAccountCredentials::ExternalFetchRequest::
+-    FinishTokenFetch(GRPC_ERROR_CREATE(absl::StrFormat(
++    FinishTokenFetch(absl::UnauthenticatedError(absl::StrFormat(
+diff --git a/src/core/lib/security/credentials/external/file_external_account_credentials.cc b/src/core/lib/security/credentials/external/file_external_account_credentials.cc
+index a02fb698c3..1ece4e0cd5 100644
+--- a/src/core/lib/security/credentials/external/file_external_account_credentials.cc
++++ b/src/core/lib/security/credentials/external/file_external_account_credentials.cc
+@@ -59 +59 @@ void FileExternalAccountCredentials::FileFetchBody::ReadFile() {
+-    Finish(content_slice.status());
++    Finish(absl::UnavailableError(content_slice.status().message()));
+@@ -66 +66 @@ void FileExternalAccountCredentials::FileFetchBody::ReadFile() {
+-      Finish(GRPC_ERROR_CREATE(
++      Finish(absl::UnauthenticatedError(
+diff --git a/test/core/security/credentials_test.cc b/test/core/security/credentials_test.cc
+index 91c2cadaf5..97e12c6a0c 100644
+--- a/test/core/security/credentials_test.cc
++++ b/test/core/security/credentials_test.cc
+@@ -2273,0 +2274,15 @@ int external_account_creds_httpcli_post_failure_token_exchange_response_missing_
++int external_account_creds_httpcli_post_failure_token_exchange_bad_request(
++    const grpc_http_request* /*request*/, const URI& uri,
++    absl::string_view /*body*/, Timestamp /*deadline*/, grpc_closure* on_done,
++    grpc_http_response* response) {
++  if (uri.path() == "/token") {
++    *response = http_response(400, "");
++  } else if (uri.path() == "/service_account_impersonation") {
++    *response = http_response(
++        200,
++        valid_external_account_creds_service_account_impersonation_response);
++  }
++  ExecCtx::Run(DEBUG_LOCATION, on_done, absl::OkStatus());
++  return 1;
++}
++
+@@ -3070 +3085 @@ TEST_F(ExternalAccountCredentialsTest, FailureInvalidTokenUrl) {
+-  grpc_error_handle expected_error = absl::UnknownError(
++  grpc_error_handle expected_error = absl::UnauthenticatedError(
+@@ -3109 +3124 @@ TEST_F(ExternalAccountCredentialsTest,
+-  grpc_error_handle expected_error = absl::UnknownError(
++  grpc_error_handle expected_error = absl::UnauthenticatedError(
+@@ -3150 +3165 @@ TEST_F(ExternalAccountCredentialsTest,
+-  grpc_error_handle expected_error = absl::UnknownError(
++  grpc_error_handle expected_error = absl::UnauthenticatedError(
+@@ -3161,0 +3177,37 @@ TEST_F(ExternalAccountCredentialsTest,
++TEST_F(ExternalAccountCredentialsTest, FailureTokenExchangeResponseNotOk) {
++  ExecCtx exec_ctx;
++  Json credential_source = Json::FromString("");
++  TestExternalAccountCredentials::ServiceAccountImpersonation
++      service_account_impersonation;
++  service_account_impersonation.token_lifetime_seconds = 3600;
++  TestExternalAccountCredentials::Options options = {
++      "external_account",    // type;
++      "audience",            // audience;
++      "subject_token_type",  // subject_token_type;
++      "https://foo.com:5555/service_account_impersonation",  // service_account_impersonation_url;
++      service_account_impersonation,      // service_account_impersonation;
++      "https://foo.com:5555/token",       // token_url;
++      "https://foo.com:5555/token_info",  // token_info_url;
++      credential_source,                  // credential_source
++      "quota_project_id",                 // quota_project_id;
++      "client_id",                        // client_id;
++      "client_secret",                    // client_secret;
++      "",                                 // workforce_pool_user_project;
++  };
++  auto creds = MakeRefCounted<TestExternalAccountCredentials>(
++      options, std::vector<std::string>(), event_engine_);
++  HttpRequest::SetOverride(
++      httpcli_get_should_not_be_called,
++      external_account_creds_httpcli_post_failure_token_exchange_bad_request,
++      httpcli_put_should_not_be_called);
++  grpc_error_handle expected_error = absl::UnauthenticatedError(
++      "error fetching oauth2 token: Call to HTTP server ended with status 400 "
++      "[]");
++  auto state = RequestMetadataState::NewInstance(expected_error, {});
++  state->RunRequestMetadataTest(creds.get(), kTestUrlScheme, kTestAuthority,
++                                kTestPath);
++  ExecCtx::Get()->Flush();
++  event_engine_->TickUntilIdle();
++  HttpRequest::SetOverride(nullptr, nullptr, nullptr);
++}
++
+@@ -3439 +3491 @@ TEST_F(ExternalAccountCredentialsTest,
+-  grpc_error_handle expected_error = absl::InternalError(
++  grpc_error_handle expected_error = absl::UnavailableError(
+@@ -3490 +3542 @@ TEST_F(ExternalAccountCredentialsTest,
+-  grpc_error_handle expected_error = absl::UnknownError(
++  grpc_error_handle expected_error = absl::UnauthenticatedError(
+@@ -4199 +4251 @@ TEST_F(ExternalAccountCredentialsTest,
+-  grpc_error_handle expected_error = absl::UnknownError(
++  grpc_error_handle expected_error = absl::UnauthenticatedError(
+--
+2.52.0.457.g6b5491de43-goog
+

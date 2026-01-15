@@ -36,6 +36,6 @@ cc_library(
         "//cc/cpio/common/src/aws:aws_utils_lib",
         "@aws_sdk_cpp//:dynamodb",
         "@com_google_absl//absl/strings",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )

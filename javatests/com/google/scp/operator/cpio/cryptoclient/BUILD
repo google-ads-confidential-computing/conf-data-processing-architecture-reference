@@ -76,6 +76,7 @@ java_test(
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
         "//java/com/google/scp/operator/cpio/cryptoclient",
+        "//java/com/google/scp/operator/cpio/metricclient",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
         "//java/com/google/scp/shared/crypto/tink",

@@ -26,16 +26,20 @@
 
 #include "core/interface/async_context.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/mock/metric_client/mock_metric_client.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 
+using google::cloud::Status;
+using google::cloud::StatusCode;
 using google::cmrt::sdk::metric_service::v1::Metric;
 using google::cmrt::sdk::metric_service::v1::MetricUnit;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
+using google::scp::cpio::MockMetricClient;
 using std::make_shared;
 using std::map;
 using std::string;
-
+using testing::_;
 namespace {
 constexpr char kMetricName[] = "FrontEndRequestCount";
 constexpr char kMetricValue[] = "1234";
@@ -91,6 +95,28 @@ TEST(MetricUtilsTest, CreateMetricLabelsWithComponentSignature) {
       MetricUtils::CreateMetricLabelsWithComponentSignature(kComponentValue);
   EXPECT_EQ(metric_labels2.size(), 1);
   EXPECT_EQ(metric_labels2.find("ComponentName")->second, kComponentValue);
+}
+
+TEST(MetricUtilsTest, PushGcpKmsDecryptionErrorRateMetric) {
+  auto metric_client = make_shared<MockMetricClient>();
+  auto status = Status(StatusCode::kUnavailable, "Test error message");
+  EXPECT_CALL(*metric_client, PutMetricsSync(_)).Times(1);
+
+  MetricUtils::PushGcpKmsDecryptionErrorRateMetric(metric_client, status);
+}
+
+TEST(MetricUtilsTest, PutMetric) {
+  auto metric_client = make_shared<MockMetricClient>();
+  auto metric_label = MetricUtils::CreateMetricLabelsWithComponentSignature(
+      kComponentValue, kMethodValue);
+  Metric metric;
+  metric.set_name(kMetricName);
+  metric.set_unit(MetricUnit::METRIC_UNIT_COUNT);
+  metric.set_value(kMetricValue);
+  *metric.mutable_labels() = {metric_label.begin(), metric_label.end()};
+  EXPECT_CALL(*metric_client, PutMetricsSync(_)).Times(1);
+
+  MetricUtils::PutMetric(metric_client, metric);
 }
 
 }  // namespace google::scp::cpio

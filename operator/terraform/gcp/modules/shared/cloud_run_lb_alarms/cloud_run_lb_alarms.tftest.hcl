@@ -18,7 +18,7 @@ test {
   parallel = true
 }
 mock_provider "google" {
-  source          = "../../../../../../tfmocks/google/"
+  source          = "../../../../../../tools/tftesting/tfmocks/google/"
   override_during = plan
 }
 

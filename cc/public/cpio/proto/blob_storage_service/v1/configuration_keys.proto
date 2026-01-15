@@ -20,8 +20,6 @@ option java_multiple_files = true;
 option java_outer_classname = "BlobStorageServiceConfigurationKeysProto";
 option java_package = "com.google.cmrt.sdk.blob_storage_service.v1";
 
-import "cc/public/core/interface/execution_result.proto";
-
 // For faster allocations of sub-messages.
 option cc_enable_arenas = true;
 

@@ -18,6 +18,7 @@ package(default_visibility = ["//visibility:public"])
 
 java_test(
     name = "PubSubJobQueueTest",
+    size = "large",
     srcs = ["PubSubJobQueueTest.java"],
     runtime_deps = [
         "//java/external:slf4j_simple",

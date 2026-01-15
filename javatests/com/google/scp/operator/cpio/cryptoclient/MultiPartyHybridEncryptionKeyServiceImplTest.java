@@ -16,7 +16,6 @@
 
 package com.google.scp.operator.cpio.cryptoclient;
 
-import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_BAD_GATEWAY;
 import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_SERVER_ERROR;
 import static com.google.api.client.http.HttpStatusCodes.STATUS_CODE_SERVICE_UNAVAILABLE;
 import static com.google.common.truth.Truth.assertThat;
@@ -49,6 +48,7 @@ import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.KeyDataProt
 import com.google.scp.operator.cpio.cryptoclient.EncryptionKeyFetchingService.EncryptionKeyFetchingServiceException;
 import com.google.scp.operator.cpio.cryptoclient.HybridEncryptionKeyService.KeyFetchException;
 import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
+import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 import com.google.scp.shared.crypto.tink.CloudAeadSelector;
@@ -79,6 +79,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
   @Mock private Aead aeadSecondary;
   @Mock private CloudAeadSelector aeadServicePrimary;
   @Mock private CloudAeadSelector aeadServiceSecondary;
+  @Mock private MetricClient metricClient;
   private MockTinkUtils mockTinkUtils;
   private MultiPartyHybridEncryptionKeyServiceImpl multiPartyHybridEncryptionKeyServiceImpl;
   private KeyData keyData;
@@ -94,6 +95,8 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             .setCoordBKeyFetchingService(coordinatorBKeyFetchingService)
             .setCoordAAeadService(aeadServicePrimary)
             .setCoordBAeadService(aeadServiceSecondary)
+            .setMetricClient(metricClient)
+            .setEnableRemoteMetricAggregation(true)
             .setEnablePrivateKeyDecryptionRetries(true)
             .build();
 
@@ -117,65 +120,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
   }
 
   @Test
-  public void getDecrypter_errorWithCode_NOT_FOUND() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(anyString()))
-        .thenThrow(
-            new EncryptionKeyFetchingServiceException(
-                new ServiceException(Code.NOT_FOUND, "test", "test")));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(exception.getReason(), ErrorReason.KEY_NOT_FOUND);
-  }
-
-  @Test
-  public void getDecrypter_errorWithCode_PERMISSION_DENIED() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(anyString()))
-        .thenThrow(
-            new EncryptionKeyFetchingServiceException(
-                new ServiceException(Code.PERMISSION_DENIED, "test", "test")));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(exception.getReason(), ErrorReason.PERMISSION_DENIED);
-  }
-
-  @Test
-  public void getDecrypter_errorWithCode_INTERNAL() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(anyString()))
-        .thenThrow(
-            new EncryptionKeyFetchingServiceException(
-                new ServiceException(Code.INTERNAL, "test", "test")));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(exception.getReason(), ErrorReason.INTERNAL);
-  }
-
-  @Test
-  public void getDecrypter_errorWithCode_default() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(anyString()))
-        .thenThrow(new EncryptionKeyFetchingServiceException(new Exception()));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(exception.getReason(), ErrorReason.UNKNOWN_ERROR);
-  }
-
-  @Test
-  public void getDecrypter_serviceNotAvailable_throwsServiceUnavailable() throws Exception {
+  public void getDecrypter_errorWithCode() throws Exception {
     when(coordinatorAKeyFetchingService.fetchEncryptionKey(anyString()))
         .thenThrow(
             new EncryptionKeyFetchingServiceException(
@@ -187,36 +132,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
 
     assertEquals(exception.getReason(), ErrorReason.KEY_SERVICE_UNAVAILABLE);
-  }
-
-  @Test
-  public void getDecrypter_deadlineExceeded_throwsServiceUnavailable() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(anyString()))
-        .thenThrow(
-            new EncryptionKeyFetchingServiceException(
-                new ServiceException(Code.DEADLINE_EXCEEDED, "test", "test")));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(exception.getReason(), ErrorReason.KEY_SERVICE_UNAVAILABLE);
-  }
-
-  @Test
-  public void getDecrypter_errorWithCode_UNKNOWN() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(anyString()))
-        .thenThrow(
-            new EncryptionKeyFetchingServiceException(
-                new ServiceException(Code.UNKNOWN, "test", "test")));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(exception.getReason(), ErrorReason.UNKNOWN_ERROR);
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -231,6 +147,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
 
     assertEquals(ErrorReason.KEY_DECRYPTION_ERROR, exception.getReason());
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -251,6 +168,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
 
     assertEquals(ErrorReason.KEY_SERVICE_UNAVAILABLE, exception.getReason());
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -271,26 +189,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
 
     assertEquals(ErrorReason.KEY_SERVICE_UNAVAILABLE, exception.getReason());
-  }
-
-  @Test
-  public void getDecrypter_getAead_JsonException_badGateway() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
-    GoogleJsonError jsonError = new GoogleJsonError();
-    var jsonException =
-        new GoogleJsonResponseException(
-            new HttpResponseException.Builder(
-                STATUS_CODE_BAD_GATEWAY, "Bad gateway", new HttpHeaders()),
-            jsonError);
-    when(aeadServicePrimary.getAead(anyString()))
-        .thenThrow(new GeneralSecurityException(jsonException));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(ErrorReason.KEY_SERVICE_UNAVAILABLE, exception.getReason());
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -306,29 +205,11 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
 
     assertEquals(ErrorReason.KEY_SERVICE_UNAVAILABLE, exception.getReason());
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_NOT_FOUND() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
-    when(aeadServicePrimary.getAead(anyString()))
-        .thenThrow(
-            new GeneralSecurityException(
-                new ApiException(
-                    new RuntimeException("Key not found exception triggered."),
-                    GrpcStatusCode.of(io.grpc.Status.Code.NOT_FOUND),
-                    false)));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(ErrorReason.KEY_NOT_FOUND, exception.getReason());
-  }
-
-  @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_PERMISSION_DENIED() throws Exception {
+  public void getDecrypter_getAead_errorWithGrpcCode() throws Exception {
     when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
     when(aeadServicePrimary.getAead(anyString()))
         .thenThrow(
@@ -344,152 +225,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
 
     assertEquals(ErrorReason.PERMISSION_DENIED, exception.getReason());
-  }
-
-  @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_UNAUTHENTICATED() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
-    when(aeadServicePrimary.getAead(anyString()))
-        .thenThrow(
-            new GeneralSecurityException(
-                new ApiException(
-                    new RuntimeException("Unauthenticated exception triggered."),
-                    GrpcStatusCode.of(io.grpc.Status.Code.UNAUTHENTICATED),
-                    false)));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(ErrorReason.UNAUTHENTICATED, exception.getReason());
-  }
-
-  @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_INTERNAL() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
-    when(aeadServicePrimary.getAead(anyString()))
-        .thenThrow(
-            new GeneralSecurityException(
-                new ApiException(
-                    new RuntimeException("Internal exception triggered."),
-                    GrpcStatusCode.of(io.grpc.Status.Code.INTERNAL),
-                    false)));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(ErrorReason.INTERNAL, exception.getReason());
-  }
-
-  @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_UNAVAILABLE() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
-    when(aeadServicePrimary.getAead(anyString()))
-        .thenThrow(
-            new GeneralSecurityException(
-                new ApiException(
-                    new RuntimeException("Unavailable exception triggered."),
-                    GrpcStatusCode.of(io.grpc.Status.Code.UNAVAILABLE),
-                    false)));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(ErrorReason.KEY_SERVICE_UNAVAILABLE, exception.getReason());
-  }
-
-  @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_DEADLINE_EXCEEDED() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
-    when(aeadServicePrimary.getAead(anyString()))
-        .thenThrow(
-            new GeneralSecurityException(
-                new ApiException(
-                    new RuntimeException("Deadline exceeded exception triggered."),
-                    GrpcStatusCode.of(io.grpc.Status.Code.DEADLINE_EXCEEDED),
-                    false)));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(ErrorReason.DEADLINE_EXCEEDED, exception.getReason());
-  }
-
-  @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_RESOURCE_EXHAUSTED() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
-    when(aeadServicePrimary.getAead(anyString()))
-        .thenThrow(
-            new GeneralSecurityException(
-                new ApiException(
-                    new RuntimeException("Resource exhausted exception triggered."),
-                    GrpcStatusCode.of(io.grpc.Status.Code.RESOURCE_EXHAUSTED),
-                    false)));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(ErrorReason.RESOURCE_EXHAUSTED, exception.getReason());
-  }
-
-  @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_INVALID_ARGUMENT() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
-    when(aeadServicePrimary.getAead(anyString()))
-        .thenThrow(
-            new GeneralSecurityException(
-                new ApiException(
-                    new RuntimeException("Invalid argument exception triggered."),
-                    GrpcStatusCode.of(io.grpc.Status.Code.INVALID_ARGUMENT),
-                    false)));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(ErrorReason.INVALID_ARGUMENT, exception.getReason());
-  }
-
-  @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_NullException() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
-    when(aeadServicePrimary.getAead(anyString())).thenThrow(new GeneralSecurityException("", null));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(ErrorReason.KEY_DECRYPTION_ERROR, exception.getReason());
-  }
-
-  @Test
-  public void getDecrypter_getAead_errorWithGrpcCode_OtherApiException() throws Exception {
-    when(coordinatorAKeyFetchingService.fetchEncryptionKey(eq("123"))).thenReturn(encryptionKey);
-    when(aeadServicePrimary.getAead(anyString()))
-        .thenThrow(
-            new GeneralSecurityException(
-                new ApiException(
-                    new RuntimeException("Other exception triggered."),
-                    GrpcStatusCode.of(io.grpc.Status.Code.CANCELLED),
-                    false)));
-
-    KeyFetchException exception =
-        assertThrows(
-            KeyFetchException.class,
-            () -> multiPartyHybridEncryptionKeyServiceImpl.getDecrypter("123"));
-
-    assertEquals(ErrorReason.KEY_DECRYPTION_ERROR, exception.getReason());
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -505,6 +241,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
 
     assertEquals(ErrorReason.KEY_DECRYPTION_ERROR, exception.getReason());
     assertEquals(innerEx, exception.getCause().getCause().getCause()); // three levels deep
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -564,6 +301,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
     assertEquals(ErrorReason.UNAUTHENTICATED, exception.getReason());
     // We should have called it once and failed, since this is a non-retryable error
     verify(aeadPrimary, times(1)).decrypt(any(), any());
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -586,6 +324,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
     assertEquals(ErrorReason.PERMISSION_DENIED, exception.getReason());
     // We should have called it once and failed, since this is a non-retryable error
     verify(aeadPrimary, times(1)).decrypt(any(), any());
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -608,6 +347,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
     assertEquals(ErrorReason.KEY_NOT_FOUND, exception.getReason());
     // We should have called it once and failed, since this is a non-retryable error
     verify(aeadPrimary, times(1)).decrypt(any(), any());
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -630,6 +370,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
     assertEquals(ErrorReason.INVALID_ARGUMENT, exception.getReason());
     // We should have called it once and failed, since this is a non-retryable error
     verify(aeadPrimary, times(1)).decrypt(any(), any());
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -652,6 +393,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
     assertEquals(ErrorReason.KEY_SERVICE_UNAVAILABLE, exception.getReason());
     // We should have exhausted retries
     verify(aeadPrimary, times(4)).decrypt(any(), any());
+    verify(metricClient, times(1)).recordMetric(any());
   }
 
   @Test
@@ -783,6 +525,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
             .setCoordBKeyFetchingService(coordinatorBKeyFetchingService)
             .setCoordAAeadService(aeadServicePrimary)
             .setCoordBAeadService(aeadServiceSecondary)
+            .setMetricClient(metricClient)
             .build();
     multiPartyHybridEncryptionKeyServiceImpl =
         MultiPartyHybridEncryptionKeyServiceImpl.newInstance(params);
@@ -861,6 +604,7 @@ public class MultiPartyHybridEncryptionKeyServiceImplTest {
         .setCoordBKeyFetchingService(coordinatorBKeyFetchingService)
         .setCoordAAeadService(aeadServicePrimary)
         .setCoordBAeadService(aeadServiceSecondary)
+        .setMetricClient(metricClient)
         .build();
   }
 }

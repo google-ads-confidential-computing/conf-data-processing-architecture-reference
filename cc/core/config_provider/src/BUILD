@@ -30,6 +30,6 @@ cc_library(
     deps = [
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )

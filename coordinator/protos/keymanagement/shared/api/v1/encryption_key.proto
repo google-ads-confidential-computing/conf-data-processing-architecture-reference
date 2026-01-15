@@ -24,6 +24,24 @@ option java_outer_classname = "EncryptionKeyProto";
 
 /** Represents a singular or distributed encryption key. */
 message EncryptionKey {
+  /** Metadata for an encryption key. */
+  message KeyMetadata {
+    /**
+     * Timestamp, represented in Unix epoch milliseconds, when clients are
+     * expected to no longer use this key for for encrypting new payloads for
+     * backfill jobs.
+     *
+     * Depending on use case, clients may still continue to encrypt payloads with
+     * an "expired" key if the client does not yet have new keys available yet.
+     *
+     * Payload processing servers should continue to have access to and cache keys
+     * until ttl_time. The "expiration" time should only be used by a payload
+     * processing server to determine when clients are expected to stop encrypting
+     * new payloads with this key.
+     */
+    optional int64 backfill_expiration_time = 1;
+  }
+
   /**
    * Unique resource identifier.
    *
@@ -70,4 +88,8 @@ message EncryptionKey {
   repeated KeyData key_data = 8;
   /** List of migration KeyData. */
   repeated KeyData migration_key_data = 11;
+  /** Metadata for the key. */
+  KeyMetadata key_metadata = 13;
+
+  reserved 12;
 }

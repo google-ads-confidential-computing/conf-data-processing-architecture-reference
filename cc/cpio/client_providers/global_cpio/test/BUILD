@@ -53,6 +53,8 @@ cc_library(
         ) + [
             "//cc:cc_base_include_dir",
             "//cc/cpio/client_providers/global_cpio/src/cpio_provider:cpio_provider_deps",
+            "//cc/cpio/client_providers/metric_client_provider/src:metric_client_provider_select_lib",
+            "//cc/cpio/client_providers/otel_metric_client_provider/src:otel_metric_client_provider_select_lib",
             "//cc/public/cpio/test/global_cpio:test_cpio_options",
         ],
 )
@@ -63,6 +65,7 @@ cc_test(
     srcs = ["lib_cpio_provider_test.cc"],
     deps = [
         "//cc:cc_base_include_dir",
+        "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/global_cpio/mock:global_cpio_mock",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/interface:cpio",

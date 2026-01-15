@@ -54,6 +54,7 @@ import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Optional;
 import org.junit.Before;
@@ -97,16 +98,21 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
   private void createSplitKey(String setName) throws Exception {
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
-    var key = validateCreateSplitKey(setName, 3, 10, 20);
+    int backfillDays = 5;
     var now = now();
+    var key = validateCreateSplitKey(setName, 3, 10, 20, backfillDays, now);
 
     // Must have expected expiration time
     var dayInMilli = now.plus(expectedExpiryInDays, DAYS).toEpochMilli();
-    assertThat(key.getExpirationTime()).isIn(Range.closed(dayInMilli - 5000, dayInMilli));
+    assertThat(key.getExpirationTime()).isEqualTo(dayInMilli);
 
     // Must match expected ttl
     var ttlInSec = now.plus(expectedTtlInDays, DAYS).getEpochSecond();
-    assertThat(key.getTtlTime()).isIn(Range.closed(ttlInSec - 5, ttlInSec));
+    assertThat(key.getTtlTime()).isEqualTo(ttlInSec);
+
+    // Must match expected backfill expiration time
+    var backfillInMilli = now.plus(expectedExpiryInDays + backfillDays, DAYS).toEpochMilli();
+    assertThat(key.getKeyMetadata().getBackfillExpirationTime()).isEqualTo(backfillInMilli);
   }
 
   @Test
@@ -120,7 +126,8 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
   }
 
   private void createKeysWithoutExpirationAndTtl(String setName) throws Exception {
-    var key = validateCreateSplitKey(setName, 1, 0, 0);
+    Instant now = Instant.now();
+    var key = validateCreateSplitKey(setName, 1, 0, 0, 0, now);
 
     // Must have null expiration time which is represented as 0
     assertThat(key.getExpirationTime()).isEqualTo(0);
@@ -139,8 +146,56 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
         .isEqualTo(1);
   }
 
+  @Test
+  public void createSplitKey_zeroBackfill_success() throws Exception {
+    int expectedExpiryInDays = 10;
+    int expectedTtlInDays = 20;
+    int backfillDays = 0;
+    String setName = "test-set";
+    var now = now();
+    var key = validateCreateSplitKey(setName, 3, 10, 20, backfillDays, now);
+
+    // Must have expected expiration time
+    var dayInMilli = now.plus(expectedExpiryInDays, DAYS).toEpochMilli();
+    assertThat(key.getExpirationTime()).isEqualTo(dayInMilli);
+
+    // Must match expected ttl
+    var ttlInSec = now.plus(expectedTtlInDays, DAYS).getEpochSecond();
+    assertThat(key.getTtlTime()).isEqualTo(ttlInSec);
+
+    // Must match expected backfill expiration time (same as expiration time)
+    assertThat(key.hasKeyMetadata()).isFalse();
+  }
+
+  @Test
+  public void createSplitKey_threeDayBackfill_success() throws Exception {
+    int expectedExpiryInDays = 10;
+    int expectedTtlInDays = 20;
+    int backfillDays = 3;
+    String setName = "test-set";
+    var now = now();
+    var key = validateCreateSplitKey(setName, 3, 10, 20, backfillDays, now);
+
+    // Must have expected expiration time
+    var dayInMilli = now.plus(expectedExpiryInDays, DAYS).toEpochMilli();
+    assertThat(key.getExpirationTime()).isEqualTo(dayInMilli);
+
+    // Must match expected ttl
+    var ttlInSec = now.plus(expectedTtlInDays, DAYS).getEpochSecond();
+    assertThat(key.getTtlTime()).isEqualTo(ttlInSec);
+
+    // Must match expected backfill expiration time
+    var backfillInMilli = now.plus(expectedExpiryInDays + backfillDays, DAYS).toEpochMilli();
+    assertThat(key.getKeyMetadata().getBackfillExpirationTime()).isEqualTo(backfillInMilli);
+  }
+
   private EncryptionKey validateCreateSplitKey(
-      String setName, int keysToCreate, int expectedExpiryInDays, int expectedTtlInDays)
+      String setName,
+      int keysToCreate,
+      int expectedExpiryInDays,
+      int expectedTtlInDays,
+      int backfillDays,
+      Instant activation)
       throws Exception {
     task.createSplitKey(
         setName,
@@ -148,7 +203,10 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
-        now());
+        backfillDays,
+        activation);
+
+    var justAfterCreateTime = now().toEpochMilli();
 
     ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
     assertThat(keys).hasSize(keysToCreate);
@@ -188,9 +246,9 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
       assertThat(keySplitDataB.getKeySplitKeyEncryptionKeyUri()).isEqualTo(KEK_URI);
       // TODO: Verify signature
 
-      // Must have a creationTime of now
-      var now = now().toEpochMilli();
-      assertThat(key.getCreationTime()).isIn(Range.closed(now - 2000, now));
+      // CreationTime is very recent
+      assertThat(key.getCreationTime())
+          .isIn(Range.closed(justAfterCreateTime - 5000, justAfterCreateTime));
     }
 
     verify(keyStorageClient, times(keysToCreate))
@@ -225,7 +283,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
             ServiceException.class,
             () ->
                 task.createSplitKey(
-                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, now()));
+                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, 0, now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
     assertThat(ex.getErrorCode()).isEqualTo(Code.INTERNAL);

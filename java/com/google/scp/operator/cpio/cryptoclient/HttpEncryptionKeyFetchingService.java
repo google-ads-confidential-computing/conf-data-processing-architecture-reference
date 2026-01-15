@@ -37,7 +37,7 @@ public final class HttpEncryptionKeyFetchingService implements EncryptionKeyFetc
 
   private static final int REQUEST_TIMEOUT_DURATION =
       Ints.checkedCast(Duration.ofMinutes(1).toMillis());
-  private static final String ENCRYPTION_KEY_VERSION_NUMBER = "v1alpha";
+  private static final String ENCRYPTION_KEY_VERSION_NUMBER = "v1beta";
   private static final String VERSION_NUMBER_SUFFIX = "/v1";
   private final HttpClientWrapper httpClient;
   private final String encryptionKeyServiceBaseUrl;

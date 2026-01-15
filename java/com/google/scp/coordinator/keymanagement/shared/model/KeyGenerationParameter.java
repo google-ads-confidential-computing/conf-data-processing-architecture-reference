@@ -19,14 +19,13 @@ package com.google.scp.coordinator.keymanagement.shared.model;
 /** Parameters needed for the key generation configuration */
 public final class KeyGenerationParameter {
   // COMMON
-  public static final String DISABLE_KEY_SET_ACL = "DISABLE_KEY_SET_ACL";
   public static final String POPULATE_MIGRATION_KEY_DATA = "POPULATE_MIGRATION_KEY_DATA";
   public static final String KEY_DB_NAME = "KEY_DB_NAME";
-  public static final String KMS_KEY_URI = "KMS_KEY_URI";
   public static final String KMS_KEY_BASE_URI = "KMS_KEY_BASE_URI";
   public static final String MIGRATION_KMS_KEY_BASE_URI = "MIGRATION_KMS_KEY_BASE_URI";
 
   // AWS
+  public static final String KMS_KEY_URI = "KMS_KEY_URI";
   public static final String KEY_GENERATION_QUEUE_URL = "KEY_GENERATION_QUEUE_URL";
   public static final String KEY_STORAGE_SERVICE_BASE_URL = "KEY_STORAGE_SERVICE_BASE_URL";
   public static final String KEY_DB_REGION = "KEY_DB_REGION";
@@ -43,7 +42,6 @@ public final class KeyGenerationParameter {
   public static final String KEY_TTL_IN_DAYS = "KEY_TTL_IN_DAYS";
   public static final String CREATE_MAX_DAYS_AHEAD = "CREATE_MAX_DAYS_AHEAD";
 
-  public static final String PEER_COORDINATOR_KMS_KEY_URI = "PEER_COORDINATOR_KMS_KEY_URI";
   public static final String PEER_COORDINATOR_KMS_KEY_BASE_URI =
       "PEER_COORDINATOR_KMS_KEY_BASE_URI";
   public static final String MIGRATION_PEER_COORDINATOR_KMS_KEY_BASE_URI =

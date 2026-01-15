@@ -29,6 +29,7 @@
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
 
 #include "error_codes.h"
 
@@ -86,6 +87,9 @@ class LibCpioProvider : public CpioProviderInterface {
       std::shared_ptr<AuthTokenProviderInterface>& auth_token_provider) noexcept
       override;
 
+  core::ExecutionResult GetMetricClient(
+      std::shared_ptr<MetricClientInterface>& metric_client) noexcept override;
+
  protected:
   /// Global CPIO options.
   std::shared_ptr<CpioOptions> cpio_options_;
@@ -102,6 +106,8 @@ class LibCpioProvider : public CpioProviderInterface {
   std::shared_ptr<RoleCredentialsProviderInterface> role_credentials_provider_;
   /// Global auth token provider.
   std::shared_ptr<AuthTokenProviderInterface> auth_token_provider_;
+  /// Global metric clinet.
+  std::shared_ptr<MetricClientInterface> metric_client_;
 
  private:
   virtual std::shared_ptr<RoleCredentialsProviderInterface>
@@ -112,6 +118,13 @@ class LibCpioProvider : public CpioProviderInterface {
       const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
       const std::shared_ptr<AuthTokenProviderInterface>&
           auth_token_provider) noexcept;
+  virtual std::shared_ptr<MetricClientInterface> CreateMetricClient(
+      const std::shared_ptr<MetricClientOptions>& metric_options,
+      const std::shared_ptr<InstanceClientProviderInterface>&
+          instance_client_provider,
+      const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
+      const std::shared_ptr<core::AsyncExecutorInterface>&
+          io_async_executor) noexcept;
 
   bool external_cpu_async_executor_is_set_;
   bool external_io_asycn_executor_is_set_;

@@ -16,6 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener;
 
+import com.google.api.core.ApiService;
 import com.google.api.gax.core.CredentialsProvider;
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
@@ -24,6 +25,7 @@ import com.google.api.gax.rpc.TransportChannelProvider;
 import com.google.cloud.pubsub.v1.AckReplyConsumer;
 import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Subscriber;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.pubsub.v1.ProjectSubscriptionName;
 import com.google.pubsub.v1.PubsubMessage;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -31,6 +33,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,10 +44,12 @@ public abstract class PubSubListener {
 
   private final String projectId;
   private final String subscriptionId;
+  private final ReentrantLock lock = new ReentrantLock();
 
   private TransportChannelProvider channelProvider = null; // Only used for testing
   private CredentialsProvider credentialsProvider = null; // Only used for testing
   private int timeoutInSeconds = -1; // Only used for testing
+  private Subscriber subscriber;
 
   protected PubSubListener(PubSubListenerConfig config, String projectId, String subscriptionId) {
     this.projectId = projectId;
@@ -62,7 +67,7 @@ public abstract class PubSubListener {
         ProjectSubscriptionName.of(projectId, subscriptionId);
 
     MessageReceiver receiver = getMessageReceiver();
-    Subscriber subscriber = getSubscriber(subscriptionName, receiver);
+    subscriber = getSubscriber(subscriptionName, receiver);
 
     // Start the subscriber.
     subscriber.startAsync().awaitRunning();
@@ -72,10 +77,18 @@ public abstract class PubSubListener {
       try {
         subscriber.awaitTerminated(timeoutInSeconds, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
-        logger.info("TimeoutException occured.", e);
+        logger.info("TimeoutException occurred.", e);
       }
     } else {
       subscriber.awaitTerminated();
+    }
+  }
+
+  /** Only used for testing */
+  @VisibleForTesting
+  void stop() {
+    if (subscriber != null && subscriber.state() != ApiService.State.TERMINATED) {
+      subscriber.stopAsync().awaitTerminated();
     }
   }
 
@@ -99,6 +112,7 @@ public abstract class PubSubListener {
               + message.getMessageId()
               + "Data: "
               + message.getData().toStringUtf8());
+      lock.lock();
       try {
         createKeys();
         logger.info(
@@ -106,6 +120,8 @@ public abstract class PubSubListener {
         consumer.ack();
       } catch (ServiceException e) {
         logger.error("Error creating keys.", e);
+      } finally {
+        lock.unlock();
       }
     };
   }

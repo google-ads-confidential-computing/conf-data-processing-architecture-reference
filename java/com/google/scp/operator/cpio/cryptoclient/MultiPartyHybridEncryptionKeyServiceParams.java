@@ -17,6 +17,7 @@
 package com.google.scp.operator.cpio.cryptoclient;
 
 import com.google.auto.value.AutoValue;
+import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.shared.crypto.tink.CloudAeadSelector;
 import io.github.resilience4j.retry.RetryConfig;
 import java.util.Optional;
@@ -41,6 +42,12 @@ public abstract class MultiPartyHybridEncryptionKeyServiceParams {
 
   /** Returns the {@link CloudAeadSelector} for coordinator B. */
   public abstract CloudAeadSelector coordBAeadService();
+
+  /** Returns the {@link MetricClient}. */
+  public abstract MetricClient metricClient();
+
+  /** Whether to enable remote metric aggregation. */
+  public abstract Optional<Boolean> enableRemoteMetricAggregation();
 
   /** Whether to enable retries for the decryption of the coordinator private keys. */
   public abstract Optional<Boolean> enablePrivateKeyDecryptionRetries();
@@ -69,8 +76,12 @@ public abstract class MultiPartyHybridEncryptionKeyServiceParams {
     /** Sets coordinator B {@link CloudAeadSelector} object. */
     public abstract Builder setCoordBAeadService(CloudAeadSelector coordBAeadService);
 
+    public abstract Builder setMetricClient(MetricClient metricClient);
+
+    public abstract Builder setEnableRemoteMetricAggregation(Boolean enableRemoteMetricAggregation);
+
     public abstract Builder setEnablePrivateKeyDecryptionRetries(
-        boolean enablePrivateKeyDecryptionRetries);
+        Boolean enablePrivateKeyDecryptionRetries);
 
     public abstract Builder setPrivateKeyDecryptionRetryConfig(
         RetryConfig privateKeyDecryptionRetryConfig);

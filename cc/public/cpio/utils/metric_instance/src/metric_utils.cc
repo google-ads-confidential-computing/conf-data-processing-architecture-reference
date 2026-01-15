@@ -22,8 +22,14 @@
 
 #include "absl/container/flat_hash_map.h"
 
+using google::cloud::Status;
 using google::cmrt::sdk::metric_service::v1::Metric;
 using google::cmrt::sdk::metric_service::v1::MetricType;
+using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
+using google::scp::core::ExecutionResult;
+using google::scp::core::FailureExecutionResult;
+using google::scp::core::SuccessExecutionResult;
+using google::scp::core::common::kZeroUuid;
 using std::make_shared;
 using std::map;
 using std::move;
@@ -35,7 +41,11 @@ using std::vector;
 namespace {
 constexpr char kMethodName[] = "MethodName";
 constexpr char kComponentName[] = "ComponentName";
-
+constexpr char kMetricUtils[] = "MetricUtils";
+constexpr char kGcpKmsDecryptionErrorRateMetricName[] =
+    "GcpKmsDecryptionErrorRate";
+constexpr char kGrpcErrorCodeLabel[] = "error_code";
+constexpr char kMetricValueOne[] = "1";
 }  // namespace
 
 namespace google::scp::cpio {
@@ -101,6 +111,36 @@ absl::flat_hash_map<string, Metric> MetricUtils::MakeMetricsForEventCodes(
         ConvertMetricDefinitionToMetric(labeled_definition, metric_type);
   }
   return metrics;
+}
+
+void MetricUtils::PushGcpKmsDecryptionErrorRateMetric(
+    const shared_ptr<MetricClientInterface> metric_client,
+    const Status status) noexcept {
+  auto labels = map<string, string>{
+      {kGrpcErrorCodeLabel, StatusCodeToString(status.code()).c_str()}};
+
+  Metric error_metric;
+  error_metric.set_name(kGcpKmsDecryptionErrorRateMetricName);
+  error_metric.set_value(kMetricValueOne);
+  error_metric.set_type(MetricType::METRIC_TYPE_COUNTER);
+  *error_metric.mutable_labels() = {labels.begin(), labels.end()};
+
+  PutMetric(metric_client, error_metric);
+}
+
+ExecutionResult MetricUtils::PutMetric(
+    const shared_ptr<MetricClientInterface> metric_client,
+    const Metric& metric) noexcept {
+  PutMetricsRequest put_metrics_request;
+  *put_metrics_request.add_metrics() = metric;
+
+  auto result_or = metric_client->PutMetricsSync(put_metrics_request);
+  if (!result_or.Successful()) {
+    SCP_ERROR(kMetricUtils, kZeroUuid, result_or.result(),
+              "Failed to push Metric.");
+    return result_or.result();
+  }
+  return SuccessExecutionResult();
 }
 
 }  // namespace google::scp::cpio

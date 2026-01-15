@@ -26,6 +26,8 @@
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/private_key_client/type_def.h"
 #include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
+#include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "public/cpio/interface/metric_client/type_def.h"
 
 namespace google::scp::cpio::client_providers {
 /**
@@ -81,6 +83,7 @@ class PrivateKeyClientProviderFactory {
       const std::shared_ptr<RoleCredentialsProviderInterface>&
           role_credentials_provider,
       const std::shared_ptr<AuthTokenProviderInterface>& auth_token_provider,
+      const std::shared_ptr<MetricClientInterface>& metric_client,
       const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
       const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor);
 };

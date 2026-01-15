@@ -33,6 +33,6 @@ cc_library(
         "//cc/public/cpio/proto/public_key_service/v1:public_key_service_cc_proto",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_protobuf//:protobuf",
-        "@nlohmann_json//:lib",
+        "@nlohmann_json//:json",
     ],
 )

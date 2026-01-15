@@ -29,7 +29,6 @@ import com.google.crypto.tink.KmsClient;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.DisableKeySetAcl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient.KeyStorageServiceException;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyBaseUri;
@@ -69,6 +68,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     int keysToCreate = 100;
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
+    int expectedBackfillDays = 5;
 
     task.createSplitKey(
         DEFAULT_SET_NAME,
@@ -76,6 +76,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
+        expectedBackfillDays,
         Instant.now());
 
     task.createSplitKey(
@@ -84,6 +85,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
+        expectedBackfillDays,
         Instant.now());
 
     List<String> keys = sortKeysById();
@@ -109,6 +111,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     }
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
+    int expectedBackfillDays = 5;
 
     task.createSplitKey(
         DEFAULT_SET_NAME,
@@ -116,6 +119,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
+        expectedBackfillDays,
         Instant.now());
 
     keys = sortKeysById();
@@ -142,6 +146,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     assertThat(keys.getFirst()).isEqualTo(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
+    int expectedBackfillDays = 5;
 
     task.createSplitKey(
         DEFAULT_SET_NAME,
@@ -149,6 +154,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
+        expectedBackfillDays,
         Instant.now());
 
     keys = sortKeysById();
@@ -170,6 +176,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     assertThat(keys.get(1)).isEqualTo(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE));
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
+    int expectedBackfillDays = 5;
 
     task.createSplitKey(
         DEFAULT_SET_NAME,
@@ -177,6 +184,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         keysToCreate,
         expectedExpiryInDays,
         expectedTtlInDays,
+        expectedBackfillDays,
         Instant.now());
 
     keys = sortKeysById();
@@ -191,6 +199,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     int keysToCreate = 3;
     int expectedExpiryInDays = 10;
     int expectedTtlInDays = 20;
+    int expectedBackfillDays = 5;
     when(keyStorageClient.createKey(any(), any(), any()))
         .thenCallRealMethod()
         .thenThrow(new KeyStorageServiceException("Failure", new GeneralSecurityException()))
@@ -202,6 +211,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
           keysToCreate,
           expectedExpiryInDays,
           expectedTtlInDays,
+          expectedBackfillDays,
           Instant.now());
     } catch (ServiceException e) {
       List<String> keys = sortKeysById();
@@ -268,7 +278,6 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
       bind(String.class)
           .annotatedWith(MigrationPeerCoordinatorKeyEncryptionKeyBaseUri.class)
           .toInstance("");
-      bind(Boolean.class).annotatedWith(DisableKeySetAcl.class).toInstance(false);
       bind(Boolean.class).annotatedWith(PopulateMigrationKeyData.class).toInstance(false);
       bind(String.class)
           .annotatedWith(KeyEncryptionKeyBaseUri.class)

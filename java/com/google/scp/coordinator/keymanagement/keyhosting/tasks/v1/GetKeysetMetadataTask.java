@@ -57,11 +57,19 @@ public class GetKeysetMetadataTask extends ApiTask {
       response.setBody(
           GetKeysetMetadataResponse.newBuilder()
               .setActiveKeyCount(computeExpectedActiveKeyCount(keySetConfigMap.get(setName)))
+              .setActiveKeyCadenceDays(computeActiveKeyCadence(keySetConfigMap.get(setName)))
+              .setBackfillDays(keySetConfigMap.get(setName).getBackfillDays())
               .build());
     } else {
       throw new ServiceException(
           NOT_FOUND, MISSING_SET_NAME.name(), "Do not have config for setName " + setName);
     }
+  }
+
+  private static int computeActiveKeyCadence(KeySetConfig config) {
+    return config.getOverlapPeriodDays() > 0
+        ? config.getValidityInDays() - config.getOverlapPeriodDays()
+        : config.getValidityInDays();
   }
 
   private static int computeExpectedActiveKeyCount(KeySetConfig config) {

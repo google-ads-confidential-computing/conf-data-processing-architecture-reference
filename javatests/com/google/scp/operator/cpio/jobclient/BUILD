@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -20,7 +20,7 @@ java_test(
     name = "JobClientImplTest",
     srcs = ["JobClientImplTest.java"],
     deps = [
-        "//java/com/google/scp/operator/cpio/jobclient:aws",
+        "//java/com/google/scp/operator/cpio/jobclient",
         "//java/com/google/scp/operator/cpio/jobclient:model",
         "//java/com/google/scp/operator/cpio/lifecycleclient:local",
         "//java/com/google/scp/operator/cpio/metricclient",
@@ -31,7 +31,8 @@ java_test(
         "//java/com/google/scp/operator/shared/dao/jobqueue/testing",
         "//java/com/google/scp/operator/shared/dao/metadatadb/common",
         "//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_metadata_db",
-        "//java/com/google/scp/shared/clients/configclient:aws",
+        "//java/com/google/scp/shared/clients/configclient",
+        "//java/com/google/scp/shared/clients/configclient:model",
         "//java/com/google/scp/shared/proto",
         "//java/external:acai",
         "//java/external:google_truth",
@@ -51,7 +52,7 @@ java_test(
     name = "JobValidatorCheckRetryLimitTest",
     srcs = ["JobValidatorCheckRetryLimitTest.java"],
     deps = [
-        "//java/com/google/scp/operator/cpio/jobclient:aws",
+        "//java/com/google/scp/operator/cpio/jobclient",
         "//java/com/google/scp/operator/cpio/jobclient:model",
         "//java/external:acai",
         "//java/external:google_truth",

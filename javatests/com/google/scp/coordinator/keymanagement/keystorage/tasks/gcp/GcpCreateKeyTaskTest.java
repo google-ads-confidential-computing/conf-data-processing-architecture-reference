@@ -19,7 +19,7 @@ package com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
-import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.KEY_LIMIT;
+import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.KEY_LIMIT;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
 import static org.junit.Assert.assertThrows;
 

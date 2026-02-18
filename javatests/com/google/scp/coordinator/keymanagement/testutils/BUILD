@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -28,8 +28,6 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/common/cache",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
-        "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/aws",
-        "//java/com/google/scp/coordinator/keymanagement/shared/dao/aws",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",
         "//java/com/google/scp/coordinator/keymanagement/shared/model",
@@ -39,20 +37,12 @@ java_library(
         "//java/com/google/scp/shared/proto",
         "//java/com/google/scp/shared/util",
         "//java/external:acai",
-        "//java/external:aws_dynamodb",
-        "//java/external:aws_dynamodb_enhanced",
-        "//java/external:aws_lambda_v2",
-        "//java/external:aws_regions",
-        "//java/external:aws_s3",
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:guice",
-        "//java/external:localstack_containers",
         "//java/external:protobuf_java",
         "//java/external:testcontainers",
         "//java/external:tink",
         "//java/external:tink-gcpkms",
-        "//javatests/com/google/scp/coordinator/keymanagement/keyhosting/service/aws/testing",
-        "//javatests/com/google/scp/shared/testutils/aws",
     ],
 )

@@ -16,21 +16,12 @@
 
 package com.google.scp.operator.cpio.configclient.local;
 
-import static com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorKmsArnParameter;
-import static com.google.scp.operator.cpio.configclient.local.Annotations.DdbJobMetadataTableNameParameter;
 import static com.google.scp.operator.cpio.configclient.local.Annotations.MaxJobNumAttemptsParameter;
 import static com.google.scp.operator.cpio.configclient.local.Annotations.MaxJobProcessingTimeSecondsParameter;
-import static com.google.scp.operator.cpio.configclient.local.Annotations.ScaleInHookParameter;
-import static com.google.scp.operator.cpio.configclient.local.Annotations.SqsJobQueueUrlParameter;
 import static com.google.scp.shared.clients.configclient.local.Annotations.ParameterValues;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Key;
 import com.google.inject.Provides;
-import com.google.inject.multibindings.OptionalBinder;
-import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorARoleArn;
-import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorBRoleArn;
-import com.google.scp.operator.cpio.configclient.local.Annotations.WorkerAutoscalingGroup;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterModule;
 import com.google.scp.shared.clients.configclient.local.LocalParameterClient;
@@ -47,32 +38,11 @@ public final class LocalOperatorParameterModule extends ParameterModule {
   @Provides
   @ParameterValues
   ImmutableMap<String, String> provideParameterValues(
-      @SqsJobQueueUrlParameter String sqsUrl,
-      @DdbJobMetadataTableNameParameter String ddbTableName,
       @MaxJobNumAttemptsParameter String maxJobNumAttempts,
-      @MaxJobProcessingTimeSecondsParameter String maxJobProcessingTimeSeconds,
-      @CoordinatorARoleArn String coordinatorARoleArn,
-      @CoordinatorBRoleArn String coordinatorBRoleArn,
-      @CoordinatorKmsArnParameter String coordinatorKmsArn,
-      @ScaleInHookParameter String scaleInHookParameter,
-      @WorkerAutoscalingGroup String workerAutoscalingGroup) {
+      @MaxJobProcessingTimeSecondsParameter String maxJobProcessingTimeSeconds) {
     return ImmutableMap.<String, String>builder()
-        .put(WorkerParameter.JOB_QUEUE.name(), sqsUrl)
-        .put(WorkerParameter.JOB_METADATA_DB.name(), ddbTableName)
         .put(WorkerParameter.MAX_JOB_NUM_ATTEMPTS.name(), maxJobNumAttempts)
         .put(WorkerParameter.MAX_JOB_PROCESSING_TIME_SECONDS.name(), maxJobProcessingTimeSeconds)
-        .put(WorkerParameter.COORDINATOR_A_ROLE.name(), coordinatorARoleArn)
-        .put(WorkerParameter.COORDINATOR_B_ROLE.name(), coordinatorBRoleArn)
-        .put(WorkerParameter.COORDINATOR_KMS_ARN.name(), coordinatorKmsArn)
-        .put(WorkerParameter.SCALE_IN_HOOK.name(), scaleInHookParameter)
-        .put(WorkerParameter.WORKER_AUTOSCALING_GROUP.name(), workerAutoscalingGroup)
         .build();
-  }
-
-  @Override
-  public void customConfigure() {
-    OptionalBinder.newOptionalBinder(binder(), Key.get(String.class, WorkerAutoscalingGroup.class))
-        .setDefault()
-        .toInstance("fakeGroup");
   }
 }

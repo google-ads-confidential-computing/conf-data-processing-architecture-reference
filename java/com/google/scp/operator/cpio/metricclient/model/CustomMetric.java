@@ -32,14 +32,7 @@ public abstract class CustomMetric {
     return new AutoValue_CustomMetric.Builder().setMetricType(MetricType.DOUBLE_GAUGE);
   }
 
-  /**
-   * Metric namespace.
-   *
-   * <p>Used for populating namespace in {@code PutMetricDataRequest}:
-   * https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/cloudwatch/model/PutMetricDataRequest.html
-   *
-   * <p>Ignored for gcp monitoring.
-   */
+  /** Metric namespace. */
   @JsonProperty("name_space")
   public abstract String nameSpace();
 
@@ -51,12 +44,7 @@ public abstract class CustomMetric {
   @JsonProperty("value")
   public abstract double value();
 
-  /**
-   * Metric value unit.
-   *
-   * <p>For available set of units in cloudwatch refer to:
-   * https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/cloudwatch/model/StandardUnit.html
-   */
+  /** Metric value unit. */
   @JsonProperty("unit")
   public abstract String unit();
 
@@ -70,9 +58,6 @@ public abstract class CustomMetric {
 
   /**
    * A set of key-value pairs. The key represents label name and the value represents label value.
-   *
-   * <p>In cloudwatch this is used for populating dimensions:
-   * https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/cloudwatch/model/MetricDatum.html
    */
   @JsonProperty("labels")
   public abstract ImmutableMap<String, String> labels();
@@ -81,14 +66,7 @@ public abstract class CustomMetric {
   @AutoValue.Builder
   public abstract static class Builder {
 
-    /**
-     * Set the metric namespace.
-     *
-     * <p>Used for populating namespace in {@code PutMetricDataRequest}:
-     * https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/cloudwatch/model/PutMetricDataRequest.html
-     *
-     * <p>Ignored for gcp monitoring.
-     */
+    /** Set the metric namespace. */
     @JsonProperty("name_space")
     public abstract Builder setNameSpace(String nameSpace);
 
@@ -100,12 +78,7 @@ public abstract class CustomMetric {
     @JsonProperty("value")
     public abstract Builder setValue(double value);
 
-    /**
-     * Set the metric value unit.
-     *
-     * <p>For available set of units in cloudwatch refer to:
-     * https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/cloudwatch/model/StandardUnit.html
-     */
+    /** Set the metric value unit. */
     @JsonProperty("unit")
     public abstract Builder setUnit(String unit);
 
@@ -116,9 +89,6 @@ public abstract class CustomMetric {
     /**
      * Set the key-value pairs representing labels. The key represents label name and the value
      * represents label value.
-     *
-     * <p>In cloudwatch this is used for populating dimensions:
-     * https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/cloudwatch/model/MetricDatum.html
      */
     @JsonProperty("labels")
     public abstract Builder setLabels(ImmutableMap<String, String> labels);
@@ -126,9 +96,6 @@ public abstract class CustomMetric {
     /**
      * A builder class for creating key-value pairs representing labels. The key represents label
      * name and the value represents label value.
-     *
-     * <p>In cloudwatch this is used for populating dimensions:
-     * https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/cloudwatch/model/MetricDatum.html
      */
     abstract ImmutableMap.Builder<String, String> labelsBuilder();
 

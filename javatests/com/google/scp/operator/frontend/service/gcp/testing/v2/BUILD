@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_java//java:java_binary.bzl", "java_binary")
+load("@rules_java//java:java_library.bzl", "java_library")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
 java_library(
     name = "FrontendServiceV2Module",
-    srcs = glob([
-        "FrontendServiceV2Module.java",
-    ]),
+    srcs = ["FrontendServiceV2Module.java"],
     deps = [
         "//java/com/google/scp/operator/frontend/service/gcp",
         "//java/external:guice",
@@ -73,9 +73,7 @@ java_library(
 
 java_library(
     name = "FrontendServiceV2IntegrationTestEnv",
-    srcs = glob([
-        "FrontendServiceV2IntegrationTestEnv.java",
-    ]),
+    srcs = ["FrontendServiceV2IntegrationTestEnv.java"],
     deps = [
         ":FrontendServiceV2CloudFunctionEmulatorContainer",
         "//java/com/google/scp/operator/shared/dao/metadatadb/common",
@@ -141,7 +139,6 @@ java_test(
         "//java/external:jackson_core",
         "//java/external:jackson_databind",
         "//java/external:javax_inject",
-        "//java/external:localstack_containers",
         "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
         "//java/external:slf4j",

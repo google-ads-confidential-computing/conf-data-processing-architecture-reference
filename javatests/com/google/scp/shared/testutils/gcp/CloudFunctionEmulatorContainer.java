@@ -29,8 +29,13 @@ public final class CloudFunctionEmulatorContainer
     extends GenericContainer<CloudFunctionEmulatorContainer> {
 
   private static final String invokerJarFilename = "processed_java-function-invoker-1.3.1.jar";
+  // Location of function jar file with bzlmod disabled.
   private static final String invokerJarPath =
       "external/maven/v1/https/repo1.maven.org/maven2/com/google/cloud/functions/invoker/java-function-invoker/1.3.1/"
+          + invokerJarFilename;
+  // With bzlmod enabled, runfiles from rules_jvm_external are put in this subdirectory.
+  private static final String invokerJarPathBzlmod =
+      "external/rules_jvm_external~~maven~maven/com/google/cloud/functions/invoker/java-function-invoker/1.3.1/"
           + invokerJarFilename;
   private static final int invokerPort = 8080; // default internal port for the invoker jar process
 
@@ -48,7 +53,11 @@ public final class CloudFunctionEmulatorContainer
     this.functionJarPath = functionJarPath;
     this.functionClassTarget = functionClassTarget;
     withExposedPorts(invokerPort);
+    // For the invokerJarPath, only 1 of the below files should exist on the host system,
+    // depending on if bazel is run with bzlmod on or off. In either case, the file is copied onto
+    // the Docker image.
     withCopyFileToContainer(MountableFile.forHostPath(invokerJarPath), "/");
+    withCopyFileToContainer(MountableFile.forHostPath(invokerJarPathBzlmod), "/");
     withCopyFileToContainer(MountableFile.forHostPath(getFunctionJarPath()), "/");
     withCommand("/bin/sh", "-c", getContainerStartupCommand());
   }

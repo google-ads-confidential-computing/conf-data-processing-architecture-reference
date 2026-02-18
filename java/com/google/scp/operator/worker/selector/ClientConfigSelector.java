@@ -17,12 +17,10 @@
 package com.google.scp.operator.worker.selector;
 
 import com.google.inject.Module;
-import com.google.scp.operator.cpio.configclient.aws.AwsOperatorClientConfigModule;
 import com.google.scp.operator.cpio.configclient.gcp.GcpOperatorClientConfigModule;
 
 /** CLI enum to select the client config module */
 public enum ClientConfigSelector {
-  AWS(new AwsOperatorClientConfigModule()),
   GCP(new GcpOperatorClientConfigModule());
 
   private final Module clientConfigGuiceModule;

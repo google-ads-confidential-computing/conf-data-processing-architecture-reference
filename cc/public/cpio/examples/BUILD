@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("//cc/public/cpio/build_deps/native_lib/gcp:gcp_sdk_lib_container.bzl", "gcp_sdk_lib_container")
 
 package(default_visibility = ["//cc:scp_cc_internal_pkg"])

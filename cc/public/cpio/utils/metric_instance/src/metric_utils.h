@@ -95,6 +95,17 @@ class MetricUtils {
       const google::cloud::Status status) noexcept;
 
   /**
+   * @brief Push the GCP KMS Decryption Latency Metric.
+   *
+   * @param metric_client The metric client.
+   * @param latency_in_millis The latency of the KMS decryption operation in
+   * milliseconds.
+   */
+  static void PushGcpKmsDecryptionLatencyMetric(
+      const std::shared_ptr<MetricClientInterface> metric_client,
+      const google::scp::core::Timestamp latency_in_millis) noexcept;
+
+  /**
    * @brief Push the given metric using the given metric client.
    *
    * @param metric_client The metric client.

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -72,7 +72,6 @@ java_library(
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:annotations",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp/cloudfunction",
-        "//javatests/com/google/scp/e2e/shared:testutils",
         "//javatests/com/google/scp/operator/frontend/service/gcp/testing/v1:FrontendServiceV1CloudFunctionEmulatorContainer",
         "//javatests/com/google/scp/operator/shared/dao/jobqueue/gcp",
         "//javatests/com/google/scp/operator/shared/dao/metadatadb/gcp",

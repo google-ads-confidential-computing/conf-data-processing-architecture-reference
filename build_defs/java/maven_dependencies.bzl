@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Defines Maven dependencies used by maven_install."""
+
 load("@rules_jvm_external//:defs.bzl", "maven_install")
 load("@rules_jvm_external//:specs.bzl", "maven")
 load("//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS")
 
+# LINT.IfChange
 JACKSON_VERSION = "2.15.2"
 
 AUTO_VALUE_VERSION = "1.7.4"
@@ -30,7 +33,6 @@ def maven_dependencies():
     maven_install(
         name = "maven",
         artifacts = [
-            "org.conscrypt:conscrypt-openjdk-uber:2.5.2",
             "org.slf4j:slf4j-api:2.0.16",
             "org.slf4j:slf4j-log4j12:2.0.16",
             "org.slf4j:slf4j-simple:2.0.16",
@@ -40,13 +42,6 @@ def maven_dependencies():
             "com.google.protobuf:protobuf-java:4.28.0",
             "com.google.protobuf:protobuf-java-util:4.28.0",
             "com.google.protobuf:protobuf-javalite:4.28.0",
-            "com.amazonaws:aws-lambda-java-core:1.2.1",
-            "com.amazonaws:aws-lambda-java-events:3.8.0",
-            "com.amazonaws:aws-lambda-java-events-sdk-transformer:3.1.0",
-            "com.amazonaws:aws-java-sdk-sqs:1.11.860",
-            "com.amazonaws:aws-java-sdk-s3:1.11.860",
-            "com.amazonaws:aws-java-sdk-kms:1.11.860",
-            "com.amazonaws:aws-java-sdk-core:1.11.860",
             "com.beust:jcommander:1.81",
             "com.fasterxml.jackson.core:jackson-annotations:" + JACKSON_VERSION,
             "com.fasterxml.jackson.core:jackson-core:" + JACKSON_VERSION,
@@ -94,7 +89,6 @@ def maven_dependencies():
             "com.google.truth.extensions:truth-java8-extension:1.3.0",
             "com.google.truth.extensions:truth-proto-extension:1.3.0",
             "com.google.truth:truth:1.3.0",
-            "com.jayway.jsonpath:json-path:2.5.0",
             "io.cloudevents:cloudevents-api:2.5.0",
             "io.github.resilience4j:resilience4j-core:1.7.1",
             "io.github.resilience4j:resilience4j-retry:1.7.1",
@@ -112,34 +106,17 @@ def maven_dependencies():
             "org.apache.logging.log4j:log4j-1.2-api:2.17.0",
             "org.apache.logging.log4j:log4j-core:2.17.0",
             "org.awaitility:awaitility:3.0.0",
-            "org.mock-server:mockserver-core:5.11.2",
-            "org.mock-server:mockserver-junit-rule:5.11.2",
-            "org.mock-server:mockserver-client-java:5.11.2",
             "org.hamcrest:hamcrest-library:1.3",
             "org.mockito:mockito-core:5.4.0",
-            "org.testcontainers:testcontainers:1.17.6",
-            "org.testcontainers:localstack:1.17.6",
-            "software.amazon.awssdk:apigateway:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:arns:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:autoscaling:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:aws-sdk-java:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:dynamodb-enhanced:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:dynamodb:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:cloudwatch:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:ec2:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:pricing:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:regions:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:s3:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:aws-core:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:ssm:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:sts:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:sqs:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:url-connection-client:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
+            "org.testcontainers:testcontainers:1.21.4",
+            "org.testcontainers:localstack:1.21.4",
             "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
-            "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
+            "software.amazon.awssdk:kms:" + AWS_SDK_VERSION,
+            "software.amazon.awssdk:regions:" + AWS_SDK_VERSION,
+            "software.amazon.awssdk:sdk-core:" + AWS_SDK_VERSION,
+            "software.amazon.awssdk:sts:" + AWS_SDK_VERSION,
+            "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
             "com.google.api:gapic-generator-java:2.44.0",  # To use generated gRpc Java interface
-            "io.grpc:grpc-netty:1.65.1",
             "io.opentelemetry:opentelemetry-api:1.31.0",
             "io.opentelemetry:opentelemetry-exporter-otlp:1.31.0",
             "io.opentelemetry:opentelemetry-sdk:1.31.0",
@@ -147,7 +124,6 @@ def maven_dependencies():
             "io.opentelemetry:opentelemetry-sdk-metrics:1.31.0",
             "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.31.0",
             "com.google.cloud.opentelemetry:detector-resources:0.26.0-alpha",
-            "org.threeten:threetenbp:1.7.0",
             # maven_install can't generate the right url to download this library
             # with com.google.apis:google-api-services-cloudkms:<version>
             maven.artifact(
@@ -160,3 +136,5 @@ def maven_dependencies():
             "https://repo1.maven.org/maven2",
         ],
     )
+
+# LINT.ThenChange(/MODULE.bazel:maven_deps)

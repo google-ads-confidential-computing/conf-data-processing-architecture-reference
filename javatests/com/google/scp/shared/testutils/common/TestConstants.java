@@ -18,5 +18,5 @@ package com.google.scp.shared.testutils.common;
 
 /** Contains the constants for unit tests. */
 public class TestConstants {
-  public static final String TEST_DOCKER_IMAGE_NAME = "openjdk:21-ea-21-jdk-slim";
+  public static final String TEST_DOCKER_IMAGE_NAME = "eclipse-temurin:21";
 }

@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
 java_library(
     name = "FrontendServiceHttpFunctionTestModule",
-    srcs = glob([
-        "FrontendServiceHttpFunctionTestModule.java",
-    ]),
+    srcs = ["FrontendServiceHttpFunctionTestModule.java"],
     deps = [
         "//java/com/google/scp/operator/frontend/service",
         "//java/com/google/scp/operator/frontend/service/converter",
@@ -51,7 +49,6 @@ java_library(
         "//java/external:jackson_core",
         "//java/external:jackson_databind",
         "//java/external:javax_inject",
-        "//java/external:localstack_containers",
         "//java/external:mockito",
         "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
@@ -71,9 +68,7 @@ java_library(
 
 java_library(
     name = "FrontendServiceIntegrationTestModule",
-    srcs = glob([
-        "FrontendServiceIntegrationTestModule.java",
-    ]),
+    srcs = ["FrontendServiceIntegrationTestModule.java"],
     deps = [
         "//java/com/google/scp/operator/frontend/service/gcp",
         "//java/com/google/scp/operator/shared/dao/jobqueue/common",

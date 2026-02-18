@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_test")
-
-# package(default_visibility = ["//cc:scp_cc_internal_pkg"])
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 cc_test(
     name = "concurrent_queue_test",

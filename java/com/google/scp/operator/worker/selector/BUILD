@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -20,25 +20,17 @@ java_library(
     name = "selector",
     srcs = glob(["*.java"]),
     deps = [
-        "//java/com/google/scp/operator/cpio/blobstorageclient:aws",
+        "//java/com/google/scp/operator/cpio/blobstorageclient",
         "//java/com/google/scp/operator/cpio/blobstorageclient:gcp",
-        "//java/com/google/scp/operator/cpio/configclient:aws",
         "//java/com/google/scp/operator/cpio/configclient:gcp",
-        "//java/com/google/scp/operator/cpio/cryptoclient:aws",
+        "//java/com/google/scp/operator/cpio/cryptoclient",
         "//java/com/google/scp/operator/cpio/cryptoclient:gcp",
-        "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
-        "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/aws:aws_pbs_client_module",
-        "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/gcp:gcp_pbs_client_module",
-        "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/local:local_distributed_privacy_budget_client",
-        "//java/com/google/scp/operator/cpio/jobclient:aws",
+        "//java/com/google/scp/operator/cpio/jobclient",
         "//java/com/google/scp/operator/cpio/jobclient:gcp",
-        "//java/com/google/scp/operator/cpio/lifecycleclient:aws",
         "//java/com/google/scp/operator/cpio/lifecycleclient:gcp",
         "//java/com/google/scp/operator/cpio/lifecycleclient:local",
         "//java/com/google/scp/operator/cpio/metricclient",
-        "//java/com/google/scp/operator/cpio/metricclient:aws",
         "//java/com/google/scp/operator/cpio/metricclient:gcp",
-        "//java/com/google/scp/operator/cpio/notificationclient:aws",
         "//java/com/google/scp/operator/cpio/notificationclient:gcp",
         "//java/com/google/scp/operator/cpio/notificationclient:local",
         "//java/com/google/scp/operator/worker/logger",
@@ -47,7 +39,7 @@ java_library(
         "//java/com/google/scp/operator/worker/perf",
         "//java/com/google/scp/operator/worker/perf/exporter:cloud_stopwatch_exporter",
         "//java/com/google/scp/operator/worker/perf/exporter:no_op_exporter",
-        "//java/com/google/scp/shared/clients/configclient:aws",
+        "//java/com/google/scp/shared/clients/configclient",
         "//java/com/google/scp/shared/clients/configclient:gcp",
         "//java/com/google/scp/shared/clients/configclient:model",
         "//java/external:apache_httpcore5",

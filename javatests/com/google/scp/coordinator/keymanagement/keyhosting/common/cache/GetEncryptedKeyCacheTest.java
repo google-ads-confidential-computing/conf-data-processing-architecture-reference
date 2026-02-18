@@ -52,7 +52,7 @@ public class GetEncryptedKeyCacheTest {
   @Test
   public void readDbThrows_dbCalledOnceTest() throws Exception {
     when(mockKeyDb.getKey(anyString())).thenThrow(SERVICE_EXCEPTION);
-    var cache = new GetEncryptedKeyCache(mockKeyDb, LOG_METRIC_HELPER);
+    var cache = new GetEncryptedKeyCache(mockKeyDb);
     assertThrows(ServiceException.class, () -> cache.get(KEY));
     assertThrows(ServiceException.class, () -> cache.get(KEY));
     assertThrows(ServiceException.class, () -> cache.get(KEY));
@@ -62,7 +62,7 @@ public class GetEncryptedKeyCacheTest {
   @Test
   public void readDbSucceeds_dbCalledOnceTest() throws Exception {
     when(mockKeyDb.getKey(anyString())).thenReturn(ENCRYPTION_KEY);
-    var cache = new GetEncryptedKeyCache(mockKeyDb, LOG_METRIC_HELPER);
+    var cache = new GetEncryptedKeyCache(mockKeyDb);
     assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEY);
     assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEY);
     assertThat(cache.get(KEY)).isEqualTo(ENCRYPTION_KEY);

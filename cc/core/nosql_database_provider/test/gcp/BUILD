@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 package(default_visibility = ["//cc:scp_cc_internal_pkg"])
 
@@ -39,7 +40,6 @@ cc_test(
         "//cc/core/nosql_database_provider/mock:nosql_database_provider_mock_lib",
         "//cc/core/nosql_database_provider/src/gcp:core_nosql_database_provider_gcp_lib",
         "//cc/core/test/utils:utils_lib",
-        "//cc/pbs/leasable_lock/src:pbs_leasable_lock_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_github_googleapis_google_cloud_cpp//:spanner_mocks",
@@ -68,7 +68,6 @@ cc_library(
         "//cc/core/nosql_database_provider/mock:nosql_database_provider_mock_lib",
         "//cc/core/nosql_database_provider/src/gcp:core_nosql_database_provider_gcp_lib",
         "//cc/core/test/utils:utils_lib",
-        "//cc/pbs/leasable_lock/src:pbs_leasable_lock_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_github_googleapis_google_cloud_cpp//:spanner_mocks",

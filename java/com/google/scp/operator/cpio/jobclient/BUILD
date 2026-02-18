@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
 java_library(
     name = "jobclient",
-    srcs = glob(["*.java"]),
+    srcs = glob([
+        "*.java",
+        "local/*.java",
+        "testing/*.java",
+    ]),
     deps = [
         ":model",
         "//java/com/google/scp/operator/cpio/lifecycleclient",
@@ -28,6 +32,7 @@ java_library(
         "//java/com/google/scp/operator/cpio/notificationclient:model",
         "//java/com/google/scp/operator/shared/dao/jobqueue/common",
         "//java/com/google/scp/operator/shared/dao/metadatadb/common",
+        "//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
         "//java/com/google/scp/operator/shared/model",
         "//java/com/google/scp/shared/clients/configclient",
         "//java/com/google/scp/shared/clients/configclient:model",
@@ -57,54 +62,6 @@ java_library(
         "//java/external:guava",
         "//java/external:jackson_annotations",
         "//operator/protos/shared/backend:java_proto",
-    ],
-)
-
-java_library(
-    name = "aws",
-    srcs = glob([
-        "*.java",
-        "local/*.java",
-        "aws/*.java",
-        "testing/*.java",
-    ]),
-    deps = [
-        ":model",
-        "//java/com/google/scp/operator/cpio/configclient",
-        "//java/com/google/scp/operator/cpio/lifecycleclient",
-        "//java/com/google/scp/operator/cpio/metricclient",
-        "//java/com/google/scp/operator/cpio/metricclient:aws",
-        "//java/com/google/scp/operator/cpio/metricclient:model",
-        "//java/com/google/scp/operator/cpio/notificationclient",
-        "//java/com/google/scp/operator/cpio/notificationclient:model",
-        "//java/com/google/scp/operator/shared/dao/jobqueue/aws",
-        "//java/com/google/scp/operator/shared/dao/jobqueue/common",
-        "//java/com/google/scp/operator/shared/dao/metadatadb/aws",
-        "//java/com/google/scp/operator/shared/dao/metadatadb/common",
-        "//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
-        "//java/com/google/scp/operator/shared/model",
-        "//java/com/google/scp/shared/clients/configclient:aws",
-        "//java/com/google/scp/shared/clients/configclient:model",
-        "//java/com/google/scp/shared/proto",
-        "//java/external:aws_apache_http",
-        "//java/external:aws_auth",
-        "//java/external:aws_core",
-        "//java/external:aws_dynamodb",
-        "//java/external:aws_dynamodb_enhanced",
-        "//java/external:aws_regions",
-        "//java/external:aws_sqs",
-        "//java/external:findbugs",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:jackson_core",
-        "//java/external:jackson_databind",
-        "//java/external:javax_inject",
-        "//java/external:protobuf_java",
-        "//java/external:protobuf_java_util",
-        "//operator/protos/shared/backend:java_proto",
-        "//operator/protos/shared/backend/jobnotification:job_notification_event_java_proto",
-        "//operator/protos/shared/backend/jobqueue:java_proto",
-        "//operator/protos/shared/backend/metadatadb:java_proto",
     ],
 )
 

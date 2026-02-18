@@ -13,9 +13,7 @@
 # limitations under the License.
 
 load("@com_github_grpc_grpc//bazel:grpc_build_system.bzl", "grpc_proto_library")
-load("@rules_cc//cc:defs.bzl", "cc_test")
-
-# package(default_visibility = ["//cc:scp_cc_internal_pkg"])
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 grpc_proto_library(
     name = "helloworld_grpc",

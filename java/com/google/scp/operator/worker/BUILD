@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_java//java:java_binary.bzl", "java_binary")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -47,10 +48,8 @@ java_library(
     ],
     deps = [
         ":worker_util",
-        "//java/com/google/scp/coordinator/privacy/budgeting/model",
         "//java/com/google/scp/operator/cpio/blobstorageclient",
         "//java/com/google/scp/operator/cpio/blobstorageclient:model",
-        "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
         "//java/com/google/scp/operator/cpio/jobclient",
         "//java/com/google/scp/operator/cpio/jobclient:model",
         "//java/com/google/scp/operator/cpio/metricclient",
@@ -86,20 +85,17 @@ java_library(
     deps = [
         ":worker",
         ":worker_util",
-        "//java/com/google/scp/operator/cpio/blobstorageclient:aws",
+        "//java/com/google/scp/operator/cpio/blobstorageclient",
         "//java/com/google/scp/operator/cpio/blobstorageclient:gcp",
-        "//java/com/google/scp/operator/cpio/configclient",
-        "//java/com/google/scp/operator/cpio/configclient:aws",
         "//java/com/google/scp/operator/cpio/configclient:gcp",
-        "//java/com/google/scp/operator/cpio/cryptoclient:aws",
+        "//java/com/google/scp/operator/cpio/configclient:local",
+        "//java/com/google/scp/operator/cpio/cryptoclient",
         "//java/com/google/scp/operator/cpio/cryptoclient:gcp",
-        "//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
-        "//java/com/google/scp/operator/cpio/jobclient:aws",
+        "//java/com/google/scp/operator/cpio/jobclient",
         "//java/com/google/scp/operator/cpio/jobclient:gcp",
-        "//java/com/google/scp/operator/cpio/lifecycleclient:aws",
-        "//java/com/google/scp/operator/cpio/metricclient:aws",
+        "//java/com/google/scp/operator/cpio/lifecycleclient:local",
+        "//java/com/google/scp/operator/cpio/metricclient",
         "//java/com/google/scp/operator/cpio/metricclient:gcp",
-        "//java/com/google/scp/operator/cpio/privacybudgetclient",
         "//java/com/google/scp/operator/worker/decryption",
         "//java/com/google/scp/operator/worker/decryption/hybrid",
         "//java/com/google/scp/operator/worker/logger/localtocloud",
@@ -111,13 +107,9 @@ java_library(
         "//java/com/google/scp/operator/worker/reader",
         "//java/com/google/scp/operator/worker/reader/avro",
         "//java/com/google/scp/operator/worker/selector",
-        "//java/com/google/scp/shared/clients/configclient:aws",
+        "//java/com/google/scp/shared/clients/configclient",
         "//java/com/google/scp/shared/clients/configclient:gcp",
         "//java/com/google/scp/shared/mapper",
-        "//java/external:aws_apache_http",
-        "//java/external:aws_http_client_spi",
-        "//java/external:aws_regions",
-        "//java/external:aws_s3",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_databind",

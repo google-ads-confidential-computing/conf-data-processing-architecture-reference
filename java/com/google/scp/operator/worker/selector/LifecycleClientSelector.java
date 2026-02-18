@@ -17,14 +17,12 @@
 package com.google.scp.operator.worker.selector;
 
 import com.google.inject.Module;
-import com.google.scp.operator.cpio.lifecycleclient.aws.AwsLifecycleModule;
 import com.google.scp.operator.cpio.lifecycleclient.gcp.GcpLifecycleModule;
 import com.google.scp.operator.cpio.lifecycleclient.local.LocalLifecycleModule;
 
 /** CLI enum to select the lifecycle implementation */
 public enum LifecycleClientSelector {
   LOCAL(new LocalLifecycleModule()),
-  AWS(new AwsLifecycleModule()),
   GCP(new GcpLifecycleModule());
 
   private final Module lifecycleClientGuiceModule;

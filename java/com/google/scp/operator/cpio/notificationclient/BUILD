@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -48,32 +48,6 @@ java_library(
         ":model",
         "//java/external:guice",
         "//java/external:slf4j",
-    ],
-)
-
-java_library(
-    name = "aws",
-    srcs = glob([
-        "*.java",
-        "aws/*.java",
-    ]),
-    deps = [
-        ":model",
-        "//java/com/google/scp/shared/clients/configclient",
-        "//java/external:autovalue",
-        "//java/external:autovalue_annotations",
-        "//java/external:aws_auth",
-        "//java/external:aws_core",
-        "//java/external:aws_http_client_spi",
-        "//java/external:aws_regions",
-        "//java/external:aws_sns",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:javax_inject",
-        "//java/external:protobuf_java",
-        "//java/external:protobuf_java_util",
-        "//java/external:slf4j",
-        "//java/external:slf4j_simple",
     ],
 )
 

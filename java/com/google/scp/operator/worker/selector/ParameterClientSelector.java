@@ -18,13 +18,11 @@ package com.google.scp.operator.worker.selector;
 
 import com.google.inject.Module;
 import com.google.scp.operator.cpio.configclient.local.LocalOperatorParameterModule;
-import com.google.scp.shared.clients.configclient.aws.AwsParameterModule;
 import com.google.scp.shared.clients.configclient.gcp.GcpParameterModule;
 
 /** CLI enum to select the job puller implementation */
 public enum ParameterClientSelector {
   ARGS(new LocalOperatorParameterModule()),
-  AWS(new AwsParameterModule()),
   GCP(new GcpParameterModule());
 
   private final Module parameterClientGuiceModule;

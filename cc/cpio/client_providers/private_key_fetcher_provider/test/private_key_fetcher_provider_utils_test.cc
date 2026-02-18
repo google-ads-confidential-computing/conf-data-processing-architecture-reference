@@ -91,7 +91,9 @@ class PrivateKeyFetchingClientUtilsTest : public ScpTestBase {};
 TEST_F(PrivateKeyFetchingClientUtilsTest,
        ParseFetchingResponseActiveKeyCountSuccess) {
   string bytes_str = R"({
-        "activeKeyCount": 5
+        "activeKeyCount": 5,
+        "activeKeyCadenceDays":0,
+        "backfillDays": 10
     })";
   KeysetMetadataFetchingResponse response;
   auto result = PrivateKeyFetchingClientUtils::ParseFetchingResponse(
@@ -99,6 +101,8 @@ TEST_F(PrivateKeyFetchingClientUtilsTest,
 
   EXPECT_SUCCESS(result);
   EXPECT_EQ(response.active_key_count, 5);
+  EXPECT_EQ(response.active_key_cadence_days, 0);
+  EXPECT_EQ(response.backfill_days, 10);
 }
 
 TEST_F(PrivateKeyFetchingClientUtilsTest,

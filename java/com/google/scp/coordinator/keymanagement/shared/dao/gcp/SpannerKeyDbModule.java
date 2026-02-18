@@ -30,7 +30,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
-import org.threeten.bp.Duration;
+import java.time.Duration;
 
 /** Module for spanner key db. */
 public final class SpannerKeyDbModule extends AbstractModule {
@@ -69,22 +69,22 @@ public final class SpannerKeyDbModule extends AbstractModule {
             RetrySettings.newBuilder()
                 // Configure retry delay settings.
                 // The initial amount of time to wait before retrying the request.
-                .setInitialRetryDelay(Duration.ofMillis(500))
+                .setInitialRetryDelayDuration(Duration.ofMillis(500))
                 // The maximum amount of time to wait before retrying. I.e. after this value is
                 // reached, the wait time will not increase further by the multiplier.
-                .setMaxRetryDelay(Duration.ofSeconds(10))
+                .setMaxRetryDelayDuration(Duration.ofSeconds(10))
                 // The previous wait time is multiplied by this multiplier to come up with the next
                 // wait time, until the max is reached.
                 .setRetryDelayMultiplier(1.5)
                 // Configure RPC and total timeout settings.
                 // Timeout for the first RPC call. Subsequent retries will be based off this value.
-                .setInitialRpcTimeout(Duration.ofSeconds(10))
+                .setInitialRpcTimeoutDuration(Duration.ofSeconds(10))
                 // The max for the per RPC timeout.
-                .setMaxRpcTimeout(Duration.ofSeconds(10))
+                .setMaxRpcTimeoutDuration(Duration.ofSeconds(10))
                 // Controls the change of timeout for each retry.
                 .setRpcTimeoutMultiplier(1.0)
                 // The timeout for all calls (first call + all retries).
-                .setTotalTimeout(Duration.ofSeconds(60))
+                .setTotalTimeoutDuration(Duration.ofSeconds(60))
                 .build());
     Spanner spanner = spannerOptions.build().getService();
     InstanceId instanceId = InstanceId.of(config.gcpProjectId(), config.spannerInstanceId());

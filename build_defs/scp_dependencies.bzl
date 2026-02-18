@@ -13,10 +13,8 @@
 # limitations under the License.
 
 load("//build_defs/cc:sdk.bzl", "sdk_dependencies")
-load("//build_defs/shared:google_java_format.bzl", "google_java_format")
 load("//build_defs/shared:rpm.bzl", "rpm")
 
 def scp_dependencies(protobuf_version, protobuf_repo_hash):
     sdk_dependencies(protobuf_version, protobuf_repo_hash)
-    google_java_format()
     rpm()

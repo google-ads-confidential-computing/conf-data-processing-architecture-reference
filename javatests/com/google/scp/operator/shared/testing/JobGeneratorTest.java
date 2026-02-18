@@ -20,14 +20,11 @@ import static com.google.cmrt.sdk.job_service.v1.JobStatus.JOB_STATUS_CREATED;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.amazonaws.services.lambda.runtime.events.DynamodbEvent.DynamodbStreamRecord;
-import com.amazonaws.services.lambda.runtime.events.transformers.v2.dynamodb.DynamodbRecordTransformer;
 import com.google.acai.Acai;
 import com.google.cmrt.sdk.job_service.v1.Job;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
-import com.google.inject.Inject;
 import com.google.scp.operator.frontend.service.ServiceJobGenerator;
 import com.google.scp.operator.frontend.service.model.Constants;
 import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
@@ -39,7 +36,6 @@ import com.google.scp.operator.protos.shared.backend.JobKeyProto.JobKey;
 import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
 import com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode;
 import com.google.scp.operator.protos.shared.backend.metadatadb.JobMetadataProto.JobMetadata;
-import com.google.scp.operator.shared.dao.metadatadb.aws.model.converter.AttributeValueMapToJobMetadataConverter;
 import com.google.scp.operator.shared.dao.metadatadb.testing.HelloWorld;
 import com.google.scp.operator.shared.dao.metadatadb.testing.JobGenerator;
 import com.google.scp.shared.proto.ProtoUtil;
@@ -49,7 +45,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import software.amazon.awssdk.services.dynamodb.model.Record;
 
 @RunWith(JUnit4.class)
 public class JobGeneratorTest {
@@ -58,8 +53,6 @@ public class JobGeneratorTest {
   private static final String JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT = "debug_privacy_budget_limit";
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
-
-  @Inject AttributeValueMapToJobMetadataConverter attributeValueMapConverter;
 
   @Test
   public void testCreateFakeJobMetadata() {
@@ -163,32 +156,6 @@ public class JobGeneratorTest {
     JobMetadata actualJobMetadata = JobGenerator.createFakeJobMetadata("foo-bar");
 
     assertThat(actualJobMetadata).isEqualTo(expectedJobMetadata);
-  }
-
-  @Test
-  public void testDynamoStreamRecordEqualsJobMetadata() {
-    String requestId = "123";
-    JobMetadata expectedNewImageJobMetadata = JobGenerator.createFakeJobMetadata(requestId);
-    JobMetadata expectedOldImageJobMetadata =
-        expectedNewImageJobMetadata.toBuilder()
-            .setJobStatus(
-                com.google.scp.operator.protos.shared.backend.JobStatusProto.JobStatus.RECEIVED)
-            .setRequestUpdatedAt(
-                ProtoUtil.toProtoTimestamp(Instant.parse("2019-10-01T08:25:24.00Z")))
-            .setRecordVersion(1)
-            .build();
-
-    // Get the stream record from the JobGenerator and convert its new and old images to JobMetadata
-    // objects to compare against.
-    DynamodbStreamRecord streamRecord = JobGenerator.createFakeDynamodbStreamRecord(requestId);
-    Record sdkV2Record = DynamodbRecordTransformer.toRecordV2(streamRecord);
-    JobMetadata actualOldImageJobMetadata =
-        attributeValueMapConverter.convert(sdkV2Record.dynamodb().oldImage());
-    JobMetadata actualNewImageJobMetadata =
-        attributeValueMapConverter.convert(sdkV2Record.dynamodb().newImage());
-
-    assertThat(actualOldImageJobMetadata).isEqualTo(expectedOldImageJobMetadata);
-    assertThat(actualNewImageJobMetadata).isEqualTo(expectedNewImageJobMetadata);
   }
 
   @Test

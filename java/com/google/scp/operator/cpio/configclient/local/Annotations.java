@@ -25,18 +25,6 @@ import java.lang.annotation.Target;
 /** Annotations used for local client configuration bindings specific to operators. */
 public final class Annotations {
 
-  /** Annotation to use for sqs url */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface SqsJobQueueUrlParameter {}
-
-  /** Annotation to use for ddb table name */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface DdbJobMetadataTableNameParameter {}
-
   /**
    * Annotation to use for setting the limit on number of times the job processing can be attempted.
    * Each time the job is picked up from the queue by a worker is considered one processing attempt.
@@ -51,33 +39,4 @@ public final class Annotations {
   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
   @Retention(RetentionPolicy.RUNTIME)
   public @interface MaxJobProcessingTimeSecondsParameter {}
-
-  /** ARN of the role assumed to access coordinator A. */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface CoordinatorARoleArn {}
-
-  /** ARN of the role assumed to access coordinator B. */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface CoordinatorBRoleArn {}
-
-  /** Annotation to use for coordinator kms arn */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface CoordinatorKmsArnParameter {}
-
-  /** Annotation to use for scale in lifecycle hook name */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface ScaleInHookParameter {}
-
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface WorkerAutoscalingGroup {}
 }

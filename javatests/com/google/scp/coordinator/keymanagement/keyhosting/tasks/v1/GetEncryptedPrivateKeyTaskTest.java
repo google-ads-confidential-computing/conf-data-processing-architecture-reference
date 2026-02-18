@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.scp.coordinator.keymanagement.keyhosting.tasks;
+package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
@@ -143,10 +143,9 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
     var taskWithMigrators =
         new GetEncryptedPrivateKeyTask(
             spyKeyDb,
-            new GetEncryptedKeyCache(spyKeyDb, new LogMetricHelper("test")),
+            new GetEncryptedKeyCache(spyKeyDb),
             enabled,
             new LogMetricHelper("test"),
-            "v1Alpha",
             ImmutableSet.of(),
             cacheUsers);
     for (int i = 0; i < numRequests; i++) {
@@ -216,10 +215,9 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
     var taskWithMigrators =
         new GetEncryptedPrivateKeyTask(
             keyDb,
-            new GetEncryptedKeyCache(keyDb, new LogMetricHelper("test")),
+            new GetEncryptedKeyCache(keyDb),
             true,
             new LogMetricHelper("test"),
-            "v1Alpha",
             allowedMigrators,
             ImmutableSet.of());
     taskWithMigrators.execute(matcher, request, response);

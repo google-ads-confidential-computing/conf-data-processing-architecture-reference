@@ -19,7 +19,7 @@ package com.google.scp.coordinator.keymanagement.shared.dao.testing;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
-import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.KEY_LIMIT;
+import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.KEY_LIMIT;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
@@ -44,6 +44,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
   @Rule public final Acai acai = new Acai(TestEnv.class);
 
   private static final class TestEnv extends AbstractModule {
+
     @Override
     protected void configure() {
       bind(KeyDb.class).to(InMemoryKeyDb.class);

@@ -136,7 +136,8 @@ TEST_F(PrivateKeyFetcherProviderTest, MissingHttpClient) {
 
 TEST_F(PrivateKeyFetcherProviderTest, FetchKeysetMetadata) {
   MockRequest(string(kPrivateKeyBaseUri) + kGetKeysetMetadata);
-  MockResponse(R"({"activeKeyCount": 5})");
+  MockResponse(
+      R"({"activeKeyCount": 5, "activeKeyCadenceDays": 0, "backfillDays": 10})");
 
   atomic<bool> condition = false;
 
@@ -146,6 +147,8 @@ TEST_F(PrivateKeyFetcherProviderTest, FetchKeysetMetadata) {
                                KeysetMetadataFetchingResponse>& context) {
                 EXPECT_SUCCESS(context.result);
                 EXPECT_EQ(context.response->active_key_count, 5);
+                EXPECT_EQ(context.response->active_key_cadence_days, 0);
+                EXPECT_EQ(context.response->backfill_days, 10);
                 condition = true;
                 return SuccessExecutionResult();
               });

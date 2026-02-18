@@ -34,7 +34,6 @@
 #include "core/nosql_database_provider/mock/aws/mock_aws_dynamo_db_client.h"
 #include "core/nosql_database_provider/src/common/error_codes.h"
 #include "core/test/utils/conditional_wait.h"
-#include "pbs/leasable_lock/src/leasable_lock_on_nosql_database.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 
 using Aws::InitAPI;
@@ -65,7 +64,6 @@ using google::scp::core::nosql_database_provider::aws::mock::MockAwsDynamoDB;
 using google::scp::core::nosql_database_provider::aws::mock::
     MockAwsDynamoDBClient;
 using google::scp::core::test::WaitUntil;
-using google::scp::pbs::LeasableLockOnNoSQLDatabase;
 using std::atomic;
 using std::get;
 using std::isxdigit;
@@ -705,54 +703,4 @@ TEST(AwsDynamoDBTests, UpsertDatabaseItemCallback) {
   ShutdownAPI(options);
 }
 
-TEST(AwsDynamoDBTests, DISABLED_LeaseManagerWithleasableLockOnDynamoDB) {
-  SDKOptions options;
-  InitAPI(options);
-
-  auto client_config = make_shared<Aws::Client::ClientConfiguration>();
-  String aws_region("us-west-1");
-  client_config->region = aws_region;
-  auto dynamo_db_client = make_shared<MockAwsDynamoDBClient>(*client_config);
-  auto mock_async_executor = make_shared<MockAsyncExecutor>();
-
-  auto dynamo_db =
-      std::make_shared<MockAwsDynamoDB>(dynamo_db_client, mock_async_executor);
-
-  static std::random_device random_device_local;
-  static mt19937 random_generator(random_device_local());
-  uniform_int_distribution<uint64_t> distribution;
-
-  LeaseInfo lease_info;
-  lease_info.lease_acquirer_id = std::to_string(distribution(random_generator));
-  lease_info.service_endpoint_address =
-      std::to_string(distribution(random_generator));
-
-  LeaseManager lease_manager;
-  auto leasable_lock = std::make_shared<LeasableLockOnNoSQLDatabase>(
-      dynamo_db, lease_info, "pbs_lock_table_test");
-
-  auto callback = [](LeaseTransitionType lease_transition,
-                     std::optional<LeaseInfo> lease_info) {
-    if (lease_transition == LeaseTransitionType::kAcquired) {
-      std::cout << "Lease acquired: " << lease_info->service_endpoint_address
-                << "\n";
-    } else if (lease_transition == LeaseTransitionType::kRenewed) {
-      std::cout << "Lease renewed: " << lease_info->service_endpoint_address
-                << "\n";
-    } else if (lease_transition == LeaseTransitionType::kLost) {
-      std::cout << "Lease lost \n";
-      std::abort();
-    } else if (lease_transition == LeaseTransitionType::kNotAcquired) {
-      std::cout << "Lease not acquired \n";
-    }
-  };
-
-  EXPECT_SUCCESS(lease_manager.Init());
-  EXPECT_SUCCESS(lease_manager.ManageLeaseOnLock(leasable_lock, callback));
-  EXPECT_SUCCESS(lease_manager.Run());
-
-  std::cout << "Lease manager is running...\n";
-
-  std::this_thread::sleep_for(std::chrono::seconds(10000));
-}
 }  // namespace google::scp::core::test

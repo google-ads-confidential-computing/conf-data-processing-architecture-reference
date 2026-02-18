@@ -16,8 +16,8 @@
 
 package com.google.scp.coordinator.keymanagement.testutils;
 
-import static com.google.scp.coordinator.keymanagement.testutils.DynamoKeyDbTestUtil.KEY_LIMIT;
 import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.CACHE_CONTROL_MAX;
+import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.KEY_LIMIT;
 
 import com.google.acai.TestScoped;
 import com.google.common.collect.ImmutableMap;

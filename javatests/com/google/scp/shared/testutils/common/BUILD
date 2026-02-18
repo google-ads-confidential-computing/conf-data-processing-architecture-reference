@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -21,7 +21,6 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//java/external:acai",
-        "//java/external:bazel_runfiles",
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:guice",

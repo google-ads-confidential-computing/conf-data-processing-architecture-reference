@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
 java_test(
     name = "GcpMetricClientTest",
-    srcs = glob(["GcpMetricClientTest.java"]),
+    srcs = ["GcpMetricClientTest.java"],
     deps = [
         "//java/com/google/scp/operator/cpio/configclient",
         "//java/com/google/scp/operator/cpio/metricclient:gcp",
@@ -48,7 +48,7 @@ java_test(
 
 java_test(
     name = "GcpMetricClientManualTest",
-    srcs = glob(["GcpMetricClientManualTest.java"]),
+    srcs = ["GcpMetricClientManualTest.java"],
     tags = ["manual"],
     deps = [
         "//java/com/google/scp/operator/cpio/configclient",

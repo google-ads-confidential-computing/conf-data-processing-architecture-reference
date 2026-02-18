@@ -388,6 +388,8 @@ TEST_F(PrivateKeyClientProviderTest, GetKeysetMetadataSuccess) {
         EXPECT_THAT(*context.request->private_key_endpoint, kTestEndpoint1);
         KeysetMetadataFetchingResponse response;
         response.active_key_count = 5;
+        response.backfill_days = 10;
+        response.active_key_cadence_days = 0;
         context.response =
             make_shared<KeysetMetadataFetchingResponse>(response);
         context.result = SuccessExecutionResult();
@@ -406,6 +408,8 @@ TEST_F(PrivateKeyClientProviderTest, GetKeysetMetadataSuccess) {
           [&](AsyncContext<GetKeysetMetadataRequest, GetKeysetMetadataResponse>&
                   context) {
             EXPECT_THAT(context.response->active_key_count(), 5);
+            EXPECT_THAT(context.response->backfill_days(), 10);
+            EXPECT_THAT(context.response->active_key_cadence_days(), 0);
             EXPECT_SUCCESS(context.result);
             response_count.fetch_add(1);
           });

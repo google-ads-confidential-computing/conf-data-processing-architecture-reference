@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -21,7 +21,6 @@ java_test(
     srcs = ["DefaultHttpClientRetryStrategyTest.java"],
     deps = [
         "//java/com/google/scp/shared/clients",
-        "//java/com/google/scp/shared/clients/configclient:aws",
         "//java/external:apache_httpclient",
         "//java/external:apache_httpcore",
         "//java/external:google_truth",

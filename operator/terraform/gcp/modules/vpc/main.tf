@@ -29,7 +29,7 @@ data "google_compute_subnetwork" "auto_created_subnets" {
 # Dedicated VPC network.
 module "vpc_network" {
   source  = "terraform-google-modules/network/google"
-  version = ">= 4.0"
+  version = "~> 15.2.0"
 
   project_id = var.project_id
 
@@ -73,7 +73,7 @@ module "vpc_network" {
 # Cloud NAT to provide internet to VMs without external IPs.
 module "vpc_nat" {
   source  = "terraform-google-modules/cloud-nat/google"
-  version = ">= 1.2"
+  version = "~> 6.0"
 
   for_each = var.regions
 

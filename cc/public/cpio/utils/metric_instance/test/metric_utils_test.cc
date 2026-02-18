@@ -32,12 +32,14 @@
 using google::cloud::Status;
 using google::cloud::StatusCode;
 using google::cmrt::sdk::metric_service::v1::Metric;
+using google::cmrt::sdk::metric_service::v1::MetricType;
 using google::cmrt::sdk::metric_service::v1::MetricUnit;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
 using google::scp::cpio::MockMetricClient;
 using std::make_shared;
 using std::map;
+using std::stoi;
 using std::string;
 using testing::_;
 namespace {
@@ -100,9 +102,38 @@ TEST(MetricUtilsTest, CreateMetricLabelsWithComponentSignature) {
 TEST(MetricUtilsTest, PushGcpKmsDecryptionErrorRateMetric) {
   auto metric_client = make_shared<MockMetricClient>();
   auto status = Status(StatusCode::kUnavailable, "Test error message");
-  EXPECT_CALL(*metric_client, PutMetricsSync(_)).Times(1);
+
+  EXPECT_CALL(*metric_client, PutMetricsSync)
+      .Times(1)
+      .WillOnce([](const PutMetricsRequest& request) {
+        EXPECT_EQ(request.metrics_size(), 1);
+        const auto& actual_metric = request.metrics(0);
+        EXPECT_EQ(actual_metric.name(), "GcpKmsDecryptionErrorRate");
+        EXPECT_EQ(actual_metric.type(), MetricType::METRIC_TYPE_COUNTER);
+        EXPECT_EQ(actual_metric.value(), "1");
+        EXPECT_EQ(actual_metric.labels().at("error_code"), "UNAVAILABLE");
+        return PutMetricsResponse();
+      });
 
   MetricUtils::PushGcpKmsDecryptionErrorRateMetric(metric_client, status);
+}
+
+TEST(MetricUtilsTest, PushGcpKmsDecryptionLatencyMetric) {
+  auto metric_client = make_shared<MockMetricClient>();
+  uint64_t latency_ms = 250;
+
+  EXPECT_CALL(*metric_client, PutMetricsSync)
+      .Times(1)
+      .WillOnce([](const PutMetricsRequest& request) {
+        EXPECT_EQ(request.metrics_size(), 1);
+        const auto& actual_metric = request.metrics(0);
+        EXPECT_EQ(actual_metric.name(), "GcpKmsDecryptionLatencyInMillis");
+        EXPECT_EQ(actual_metric.type(), MetricType::METRIC_TYPE_HISTOGRAM);
+        EXPECT_EQ(stoi(actual_metric.value()), 250);
+        return PutMetricsResponse();
+      });
+
+  MetricUtils::PushGcpKmsDecryptionLatencyMetric(metric_client, latency_ms);
 }
 
 TEST(MetricUtilsTest, PutMetric) {
@@ -114,7 +145,21 @@ TEST(MetricUtilsTest, PutMetric) {
   metric.set_unit(MetricUnit::METRIC_UNIT_COUNT);
   metric.set_value(kMetricValue);
   *metric.mutable_labels() = {metric_label.begin(), metric_label.end()};
-  EXPECT_CALL(*metric_client, PutMetricsSync(_)).Times(1);
+
+  EXPECT_CALL(*metric_client, PutMetricsSync)
+      .Times(1)
+      .WillOnce([&metric](const PutMetricsRequest& request) {
+        EXPECT_EQ(request.metrics_size(), 1);
+        const auto& actual_metric = request.metrics(0);
+        EXPECT_EQ(actual_metric.name(), metric.name());
+        EXPECT_EQ(actual_metric.unit(), metric.unit());
+        EXPECT_EQ(actual_metric.value(), metric.value());
+        EXPECT_EQ(actual_metric.labels_size(), metric.labels_size());
+        for (const auto& [key, value] : metric.labels()) {
+          EXPECT_EQ(actual_metric.labels().at(key), value);
+        }
+        return PutMetricsResponse();
+      });
 
   MetricUtils::PutMetric(metric_client, metric);
 }

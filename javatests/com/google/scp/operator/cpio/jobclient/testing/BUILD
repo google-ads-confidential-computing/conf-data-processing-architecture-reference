@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -20,7 +20,7 @@ java_test(
     name = "ConstantJobClientTest",
     srcs = ["ConstantJobClientTest.java"],
     deps = [
-        "//java/com/google/scp/operator/cpio/jobclient:aws",
+        "//java/com/google/scp/operator/cpio/jobclient",
         "//java/com/google/scp/operator/cpio/jobclient:model",
         "//java/external:google_truth",
         "//java/external:google_truth8",
@@ -31,7 +31,7 @@ java_test(
     name = "FakeJobGeneratorTest",
     srcs = ["FakeJobGeneratorTest.java"],
     deps = [
-        "//java/com/google/scp/operator/cpio/jobclient:aws",
+        "//java/com/google/scp/operator/cpio/jobclient",
         "//java/com/google/scp/operator/cpio/jobclient:model",
         "//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
         "//java/com/google/scp/operator/shared/model",

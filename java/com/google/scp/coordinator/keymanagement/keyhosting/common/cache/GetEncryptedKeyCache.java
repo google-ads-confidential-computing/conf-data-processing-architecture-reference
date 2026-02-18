@@ -25,7 +25,6 @@ import com.google.common.cache.LoadingCache;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
-import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import java.util.concurrent.TimeUnit;
@@ -37,8 +36,8 @@ public final class GetEncryptedKeyCache extends KeyDbCache<String, EncryptionKey
   private final LoadingCache<String, Boolean> missingKeyCache;
 
   @Inject
-  public GetEncryptedKeyCache(KeyDb keyDb, LogMetricHelper logMetricHelper) {
-    super(CacheBuilder.newBuilder().maximumSize(2000), "getEncryptedKeyCache", logMetricHelper);
+  public GetEncryptedKeyCache(KeyDb keyDb) {
+    super(CacheBuilder.newBuilder().maximumSize(2000));
     this.keyDb = keyDb;
     this.missingKeyCache =
         CacheBuilder.newBuilder()

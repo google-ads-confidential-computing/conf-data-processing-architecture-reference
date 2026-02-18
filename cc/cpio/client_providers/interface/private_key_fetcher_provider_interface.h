@@ -153,7 +153,15 @@ struct KeysetMetadataFetchingRequest {
 
 /// Response for fetching private keyset metadata.
 struct KeysetMetadataFetchingResponse {
-  int active_key_count;
+  // The active key count at one time. Default is 0.
+  int active_key_count{};
+
+  // Cadence in days for when a new key(s) will be activated. Default is 0.
+  int active_key_cadence_days{};
+
+  // Number of days after expiry that keyset can be used to perform backfill.
+  // Default by 0.
+  int backfill_days{};
 };
 
 /**

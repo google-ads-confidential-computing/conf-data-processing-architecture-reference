@@ -16,7 +16,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google-beta"
-      version = ">= 4.36"
+      version = "7.15"
     }
   }
 }
@@ -94,16 +94,27 @@ module "load_balancer" {
   environment     = var.environment
   project_id      = var.project_id
   service_id      = local.service_id
+  protocol        = "HTTP2"
   ssl_cert_id     = "key-ss"
   monitoring_name = "Key Storage Service"
 
   # Migration to external managed LB
-  load_balancing_scheme                                        = var.load_balancing_scheme
-  external_managed_migration_state                             = var.external_managed_migration_state
-  external_managed_migration_testing_percentage                = var.external_managed_migration_testing_percentage
-  forwarding_rule_load_balancing_scheme                        = var.forwarding_rule_load_balancing_scheme
-  external_managed_backend_bucket_migration_state              = var.external_managed_backend_bucket_migration_state
-  external_managed_backend_bucket_migration_testing_percentage = var.external_managed_backend_bucket_migration_testing_percentage
+  load_balancing_scheme                                        = "EXTERNAL_MANAGED"
+  external_managed_migration_state                             = null
+  external_managed_migration_testing_percentage                = 0
+  forwarding_rule_load_balancing_scheme                        = "EXTERNAL_MANAGED"
+  external_managed_backend_bucket_migration_state              = null
+  external_managed_backend_bucket_migration_testing_percentage = 0
+
+  # Outlier Detection
+  lb_outlier_detection_enabled                               = var.lb_outlier_detection_enabled
+  lb_outlier_detection_consecutive_errors                    = var.lb_outlier_detection_consecutive_errors
+  lb_outlier_detection_interval_seconds                      = var.lb_outlier_detection_interval_seconds
+  lb_outlier_detection_base_ejection_time_seconds            = var.lb_outlier_detection_base_ejection_time_seconds
+  lb_outlier_detection_max_ejection_percent                  = var.lb_outlier_detection_max_ejection_percent
+  lb_outlier_detection_enforcing_consecutive_errors          = var.lb_outlier_detection_enforcing_consecutive_errors
+  lb_outlier_detection_consecutive_gateway_failure           = var.lb_outlier_detection_consecutive_gateway_failure
+  lb_outlier_detection_enforcing_consecutive_gateway_failure = var.lb_outlier_detection_enforcing_consecutive_gateway_failure
 
   enable_cdn                    = false
   cdn_default_ttl_seconds       = 30
@@ -116,12 +127,10 @@ module "load_balancer" {
   managed_domain = var.key_storage_domain
 
   # Alert settings
-  alarms_enabled           = var.alarms_enabled
   alarm_eval_period_sec    = var.alarm_eval_period_sec
   alarm_duration_sec       = var.alarm_duration_sec
   alert_severity_overrides = var.key_storage_severity_map
   lb_5xx_threshold         = var.lb_5xx_threshold
-  lb_5xx_ratio_threshold   = var.lb_5xx_ratio_threshold
   lb_max_latency_ms        = var.lb_max_latency_ms
 }
 

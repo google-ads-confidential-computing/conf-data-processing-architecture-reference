@@ -22,6 +22,7 @@
 #include <utility>
 
 #include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
+#include "core/common/time_provider/src/time_provider.h"
 #include "core/utils/src/base64.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "cpio/common/src/gcp/gcp_utils.h"
@@ -52,6 +53,7 @@ using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::AutoExpiryConcurrentMap;
 using google::scp::core::common::kZeroUuid;
 using google::scp::core::common::OperationDispatcher;
+using google::scp::core::common::TimeProvider;
 using google::scp::core::errors::
     SC_GCP_KMS_CLIENT_PROVIDER_BASE64_DECODING_FAILED;
 using google::scp::core::errors::
@@ -69,6 +71,10 @@ using std::set;
 using std::shared_ptr;
 using std::string;
 using std::to_string;
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using std::chrono::nanoseconds;
+using std::chrono::system_clock;
 
 /// Filename for logging errors
 static constexpr char kGcpKmsClientProvider[] = "GcpKmsClientProvider";
@@ -197,6 +203,8 @@ bool GcpKmsClientProvider::IsStatusCodeRetriable(
 
 void GcpKmsClientProvider::AeadDecrypt(
     AsyncContext<DecryptRequest, DecryptResponse>& decrypt_context) noexcept {
+  const auto start_time_in_ns =
+      TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks();
   auto decoded_ciphertext_or =
       Base64Decode(decrypt_context.request->ciphertext());
   if (!decoded_ciphertext_or.Successful()) {
@@ -254,6 +262,18 @@ void GcpKmsClientProvider::AeadDecrypt(
   }
   decrypt_context.response = make_shared<DecryptResponse>();
   decrypt_context.response->set_plaintext(std::move(response_or->plaintext()));
+
+  const auto finish_time_in_ns =
+      TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks();
+  const auto waiting_time_in_ms =
+      duration_cast<milliseconds>(
+          nanoseconds(start_time_in_ns - finish_time_in_ns))
+          .count();
+
+  if (metric_client_) {
+    MetricUtils::PushGcpKmsDecryptionLatencyMetric(metric_client_,
+                                                   waiting_time_in_ms);
+  }
 
   FinishContext(SuccessExecutionResult(), decrypt_context, cpu_async_executor_);
 }

@@ -14,7 +14,7 @@
 
 load("@com_google_protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@com_google_protobuf//bazel:proto_library.bzl", "proto_library")
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -52,8 +52,6 @@ java_library(
         ":hello_world_java_proto",
         "//cc/public/cpio/proto/job_service/v1:job_service_java_proto",
         "//java/com/google/scp/shared/proto",
-        "//java/external:aws_lambda_java_core",
-        "//java/external:aws_lambda_java_events",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:protobuf_java",

@@ -16,15 +16,12 @@
 
 package com.google.scp.coordinator.keymanagement.testutils;
 
-import static com.google.scp.coordinator.keymanagement.keystorage.tasks.aws.DataKeyEncryptionUtil.decryptWithDataKey;
-import static com.google.scp.coordinator.keymanagement.keystorage.tasks.aws.DataKeyEncryptionUtil.encryptWithDataKey;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toBinaryCiphertext;
 
 import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KeyTemplates;
 import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.aead.AeadConfig;
-import com.google.protobuf.ByteString;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.shared.crypto.tink.CloudAeadSelector;
 import com.google.scp.shared.util.Base64Util;
@@ -90,26 +87,6 @@ public final class FakeDataKeyUtil {
    */
   public static void registerDataKey(Aead kekAead, String kekUri) {
     aeadByUri.put(kekUri, kekAead);
-  }
-
-  /**
-   * Helper method for encrypting an unencoded string using a DataKey and returning the
-   * base64-encoded result.
-   */
-  public static String encryptString(DataKey dataKey, String cleartextMessage, String publicKey)
-      throws Exception {
-    var cleartextBytes = ByteString.copyFrom(cleartextMessage.getBytes());
-    var encryptedBytes = encryptWithDataKey(getAeadSelector(), dataKey, cleartextBytes, publicKey);
-
-    return Base64Util.toBase64String(encryptedBytes);
-  }
-
-  public static byte[] decryptString(DataKey dataKey, String ciphertextMessage, String publicKey)
-      throws Exception {
-    var ciphertextBytes = Base64Util.fromBase64String(ciphertextMessage);
-    var decryptedBytes = decryptWithDataKey(getAeadSelector(), dataKey, ciphertextBytes, publicKey);
-
-    return decryptedBytes.toByteArray();
   }
 
   /** Returns an AEAD selector that can decrypt DataKeys created with {@link #createDataKey}. */

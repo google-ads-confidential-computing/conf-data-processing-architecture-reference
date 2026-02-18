@@ -16,10 +16,7 @@
 
 package com.google.scp.shared.testutils.aws;
 
-import com.google.scp.shared.crypto.tink.CloudAeadSelector;
-import com.google.scp.shared.crypto.tink.aws.AwsTinkUtil;
 import java.time.Duration;
-import java.util.Optional;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -27,18 +24,10 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.core.retry.backoff.EqualJitterBackoffStrategy;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.apigateway.ApiGatewayClient;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.streams.DynamoDbStreamsClient;
 import software.amazon.awssdk.services.kms.KmsClient;
-import software.amazon.awssdk.services.lambda.LambdaClient;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sts.StsClient;
 
 /**
  * Helper class for providing AWS clients configured to talk to LocalStack with test-friendly
@@ -68,15 +57,6 @@ public final class LocalStackAwsClientUtil {
           .tcpKeepAlive(true)
           .build();
 
-  // Invoking a Lambda can take more than 10 seconds, increase timeouts.
-  private static final SdkHttpClient lambdaHttpClient =
-      ApacheHttpClient.builder()
-          // Note: 30 seconds appeared to cause premature timeouts.
-          .connectionTimeout(Duration.ofSeconds(120))
-          .socketTimeout(Duration.ofSeconds(120))
-          .tcpKeepAlive(true)
-          .build();
-
   /**
    * AWS Client configuration which increases the number of retries and alters the backoff strategy
    * to accomodate some of the network issues encountered in e2e test.
@@ -94,12 +74,6 @@ public final class LocalStackAwsClientUtil {
                   .build())
           .build();
 
-  // Override configuration that disables retries (the client does 3 by default)
-  private static final ClientOverrideConfiguration NO_RETRIES_OVERRIDE =
-      ClientOverrideConfiguration.builder()
-          .retryPolicy(RetryPolicy.builder().numRetries(0).build())
-          .build();
-
   private static final AwsCredentialsProvider createCredentialsProvider(
       LocalStackContainer localStack) {
     return StaticCredentialsProvider.create(
@@ -112,109 +86,6 @@ public final class LocalStackAwsClientUtil {
   public static KmsClient createKmsClient(LocalStackContainer localStack) {
     return KmsClient.builder()
         .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.KMS))
-        .httpClient(defaultHttpClient)
-        .credentialsProvider(createCredentialsProvider(localStack))
-        .region(REGION)
-        .overrideConfiguration(defaultClientConfiguration)
-        .build();
-  }
-
-  /** Returns a CloudAeadSelector that is configured to use LocalStack to access cloud keys. */
-  public static CloudAeadSelector createCloudAeadSelector(LocalStackContainer localStack) {
-    return AwsTinkUtil.getKmsAeadSelector(
-        createCredentialsProvider(localStack),
-        defaultHttpClient,
-        Optional.of(localStack.getEndpointOverride(LocalStackContainer.Service.KMS)));
-  }
-
-  /** Returns an AWS DynamoDB client configured to use the specified localStack container. */
-  public static DynamoDbClient createDynamoDbClient(LocalStackContainer localStack) {
-    return DynamoDbClient.builder()
-        .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.DYNAMODB))
-        .httpClient(defaultHttpClient)
-        .credentialsProvider(createCredentialsProvider(localStack))
-        .region(REGION)
-        .overrideConfiguration(defaultClientConfiguration)
-        .build();
-  }
-
-  /** Returns an AWS DynamoDB client configured to use the specified localStack container. */
-  public static DynamoDbEnhancedClient createDynamoDbEnhancedClient(
-      LocalStackContainer localStack) {
-    return DynamoDbEnhancedClient.builder()
-        .dynamoDbClient(createDynamoDbClient(localStack))
-        .build();
-  }
-
-  /**
-   * Returns an AWS DynamoDB Streams client configured to use the specified localStack container.
-   */
-  public static DynamoDbStreamsClient createDynamoDbStreamsClient(LocalStackContainer localStack) {
-    return DynamoDbStreamsClient.builder()
-        .endpointOverride(
-            localStack.getEndpointOverride(LocalStackContainer.Service.DYNAMODB_STREAMS))
-        .httpClient(defaultHttpClient)
-        .credentialsProvider(createCredentialsProvider(localStack))
-        .region(REGION)
-        .overrideConfiguration(defaultClientConfiguration)
-        .build();
-  }
-
-  /** Returns an AWS S3 client configured to use the specified localStack container. */
-  public static S3Client createS3Client(LocalStackContainer localStack) {
-    S3Client s3Client =
-        S3Client.builder()
-            .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
-            .httpClient(defaultHttpClient)
-            .credentialsProvider(createCredentialsProvider(localStack))
-            .region(REGION)
-            .overrideConfiguration(defaultClientConfiguration)
-            .build();
-    return s3Client;
-  }
-
-  /** Create an AWS SQS client configured to use the specified localStack container. */
-  public static SqsClient createSqsClient(LocalStackContainer localStack) {
-    SqsClient sqsClient =
-        SqsClient.builder()
-            .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.SQS))
-            .httpClient(defaultHttpClient)
-            .credentialsProvider(createCredentialsProvider(localStack))
-            .region(REGION)
-            .overrideConfiguration(defaultClientConfiguration)
-            .build();
-    return sqsClient;
-  }
-
-  public static ApiGatewayClient createApiGatewayClient(LocalStackContainer localStack) {
-    return ApiGatewayClient.builder()
-        .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.API_GATEWAY))
-        .httpClient(defaultHttpClient)
-        .credentialsProvider(createCredentialsProvider(localStack))
-        .region(REGION)
-        .overrideConfiguration(defaultClientConfiguration)
-        .build();
-  }
-
-  /**
-   * Returns an AWS S3 client configured to use the specified localStack container. Does not retry
-   * failed requests.
-   */
-  public static LambdaClient createLambdaClient(LocalStackContainer localStack) {
-    return LambdaClient.builder()
-        .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.LAMBDA))
-        // longer HTTP client timeouts necessary to allow enough time for a lambda invocation to
-        // reliably complete.
-        .httpClient(lambdaHttpClient)
-        .credentialsProvider(createCredentialsProvider(localStack))
-        .region(REGION)
-        .overrideConfiguration(NO_RETRIES_OVERRIDE)
-        .build();
-  }
-
-  public static StsClient createStsClient(LocalStackContainer localStack) {
-    return StsClient.builder()
-        .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.STS))
         .httpClient(defaultHttpClient)
         .credentialsProvider(createCredentialsProvider(localStack))
         .region(REGION)

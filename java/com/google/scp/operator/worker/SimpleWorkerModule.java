@@ -21,32 +21,18 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
-import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3EndpointOverrideBinding;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.Annotations.GcsEndpointUrl;
-import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorARegionBindingOverride;
-import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorBRegionBindingOverride;
-import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorARoleArn;
-import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorBRoleArn;
-import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorKmsArnParameter;
-import com.google.scp.operator.cpio.configclient.local.Annotations.DdbJobMetadataTableNameParameter;
 import com.google.scp.operator.cpio.configclient.local.Annotations.MaxJobNumAttemptsParameter;
 import com.google.scp.operator.cpio.configclient.local.Annotations.MaxJobProcessingTimeSecondsParameter;
-import com.google.scp.operator.cpio.configclient.local.Annotations.ScaleInHookParameter;
-import com.google.scp.operator.cpio.configclient.local.Annotations.SqsJobQueueUrlParameter;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.HttpPrivateKeyFetchingService.PrivateKeyServiceBaseUrl;
-import com.google.scp.operator.cpio.cryptoclient.aws.Annotations.KmsEndpointOverride;
 import com.google.scp.operator.cpio.cryptoclient.gcp.GcpKmsHybridEncryptionKeyServiceConfig;
 import com.google.scp.operator.cpio.cryptoclient.local.LocalFileHybridEncryptionKeyServiceModule.DecryptionKeyFilePath;
-import com.google.scp.operator.cpio.jobclient.aws.AwsJobHandlerModule.DdbEndpointOverrideBinding;
-import com.google.scp.operator.cpio.jobclient.aws.AwsJobHandlerModule.SqsEndpointOverrideBinding;
 import com.google.scp.operator.cpio.jobclient.gcp.GcpJobHandlerConfig;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerPath;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerResultPath;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobParameters;
-import com.google.scp.operator.cpio.lifecycleclient.aws.AwsLifecycleModule.AutoScalingEndpointOverrideBinding;
-import com.google.scp.operator.cpio.metricclient.aws.AwsMetricModule.CloudwatchEndpointOverrideBinding;
 import com.google.scp.operator.worker.Annotations.BenchmarkMode;
 import com.google.scp.operator.worker.decryption.RecordDecrypter;
 import com.google.scp.operator.worker.decryption.hybrid.HybridDecryptionModule;
@@ -59,31 +45,19 @@ import com.google.scp.operator.worker.perf.exporter.CloudStopwatchExporter.Stopw
 import com.google.scp.operator.worker.perf.exporter.CloudStopwatchExporter.StopwatchKeyName;
 import com.google.scp.operator.worker.reader.RecordReaderFactory;
 import com.google.scp.operator.worker.reader.avro.LocalNioPathAvroReaderFactory;
-import com.google.scp.operator.worker.selector.PrivacyBudgetClientSelector;
 import com.google.scp.operator.worker.selector.ResultLoggerModuleSelector;
-import com.google.scp.shared.clients.configclient.Annotations.ApplicationRegionBindingOverride;
-import com.google.scp.shared.clients.configclient.aws.AwsClientConfigModule.AwsCredentialAccessKey;
-import com.google.scp.shared.clients.configclient.aws.AwsClientConfigModule.AwsCredentialSecretKey;
-import com.google.scp.shared.clients.configclient.aws.AwsClientConfigModule.AwsEc2MetadataEndpointOverride;
-import com.google.scp.shared.clients.configclient.aws.AwsParameterModule.Ec2EndpointOverrideBinding;
-import com.google.scp.shared.clients.configclient.aws.AwsParameterModule.SsmEndpointOverrideBinding;
-import com.google.scp.shared.clients.configclient.aws.StsClientModule;
-import com.google.scp.shared.clients.configclient.aws.StsClientModule.StsEndpointOverrideBinding;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpInstanceIdOverride;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpInstanceNameOverride;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectIdOverride;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpZoneOverride;
 import com.google.scp.shared.clients.configclient.gcp.GcpOperatorClientConfig;
 import com.google.scp.shared.mapper.TimeObjectMapper;
-import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.function.Supplier;
-import software.amazon.awssdk.http.SdkHttpClient;
-import software.amazon.awssdk.http.apache.ApacheHttpClient;
 
 /**
  * Defines dependencies needed to run Simple Worker. Most are populated from build arguments defined
@@ -100,14 +74,8 @@ public final class SimpleWorkerModule extends AbstractModule {
   @Override
   protected void configure() {
     install(new WorkerModule());
-    bind(SdkHttpClient.class).toInstance(ApacheHttpClient.builder().build());
 
     switch (args.getBlobStorageClientSelector()) {
-      case AWS_S3_CLIENT:
-        bind(URI.class)
-            .annotatedWith(S3EndpointOverrideBinding.class)
-            .toInstance(args.getS3EndpointOverride());
-        break;
       case GCP_CS_CLIENT:
         bind(new TypeLiteral<Optional<String>>() {})
             .annotatedWith(GcsEndpointUrl.class)
@@ -117,8 +85,10 @@ public final class SimpleWorkerModule extends AbstractModule {
         bind(FileSystem.class).toInstance(FileSystems.getDefault());
     }
     install(args.getBlobStorageClientSelector().getBlobStorageClientSelectorModule());
-    // Binding/installing puller-specific classes and objects, mainly based on the CLI arguments.
-    // Ideally this would happen in the relevant modules, but since they cannot have access to the
+    // Binding/installing puller-specific classes and objects, mainly based on the
+    // CLI arguments.
+    // Ideally this would happen in the relevant modules, but since they cannot have
+    // access to the
     // CLI args, it is done here.
     switch (args.getJobClient()) {
       case LOCAL_FILE:
@@ -160,88 +130,23 @@ public final class SimpleWorkerModule extends AbstractModule {
 
     install(args.getParamClient().getParameterClientModule());
     // Binding/installing parameter store values when providing them from cli args.
-    // Ideally this would happen in the relevant modules, but since they cannot have access to the
+    // Ideally this would happen in the relevant modules, but since they cannot have
+    // access to the
     // CLI args, it is done here.
     switch (args.getParamClient()) {
       case ARGS:
-        bind(String.class)
-            .annotatedWith(SqsJobQueueUrlParameter.class)
-            .toInstance(args.getAwsSqsQueueUrl());
-        bind(String.class)
-            .annotatedWith(DdbJobMetadataTableNameParameter.class)
-            .toInstance(args.getAwsMetadatadbTableName());
         bind(String.class)
             .annotatedWith(MaxJobNumAttemptsParameter.class)
             .toInstance(args.getMaxJobNumAttempts());
         bind(String.class)
             .annotatedWith(MaxJobProcessingTimeSecondsParameter.class)
             .toInstance(args.getMessageVisibilityTimeoutSeconds());
-        bind(String.class)
-            .annotatedWith(CoordinatorARoleArn.class)
-            .toInstance(args.getCoordinatorARoleArn());
-        bind(String.class)
-            .annotatedWith(CoordinatorBRoleArn.class)
-            .toInstance(args.getCoordinatorBRoleArn());
-        bind(String.class)
-            .annotatedWith(CoordinatorKmsArnParameter.class)
-            .toInstance(args.getKmsSymmetricKey());
-        bind(String.class)
-            .annotatedWith(ScaleInHookParameter.class)
-            .toInstance(args.getScaleInHook());
-        break;
-      case AWS:
         break;
       case GCP:
         break;
     }
 
     switch (args.getClientConfigSelector()) {
-      case AWS:
-        bind(String.class)
-            .annotatedWith(AwsCredentialAccessKey.class)
-            .toInstance(args.getAccessKey());
-        bind(String.class)
-            .annotatedWith(AwsCredentialSecretKey.class)
-            .toInstance(args.getSecretKey());
-        bind(String.class)
-            .annotatedWith(AwsEc2MetadataEndpointOverride.class)
-            .toInstance(args.getAwsMetadataEndpointOverride());
-        bind(URI.class)
-            .annotatedWith(CloudwatchEndpointOverrideBinding.class)
-            .toInstance(args.getCloudwatchEndpointOverride());
-        bind(URI.class)
-            .annotatedWith(Ec2EndpointOverrideBinding.class)
-            .toInstance(args.getEc2EndpointOverride());
-        bind(URI.class)
-            .annotatedWith(SqsEndpointOverrideBinding.class)
-            .toInstance(args.getSqsEndpointOverride());
-        bind(URI.class)
-            .annotatedWith(SsmEndpointOverrideBinding.class)
-            .toInstance(args.getSsmEndpointOverride());
-        bind(URI.class)
-            .annotatedWith(DdbEndpointOverrideBinding.class)
-            .toInstance(args.getDdbEndpointOverride());
-        bind(URI.class)
-            .annotatedWith(StsEndpointOverrideBinding.class)
-            .toInstance(args.getStsEndpointOverride());
-        bind(URI.class)
-            .annotatedWith(KmsEndpointOverride.class)
-            .toInstance(args.getKmsEndpointOverride());
-        bind(String.class)
-            .annotatedWith(ApplicationRegionBindingOverride.class)
-            .toInstance(args.getAdtechRegionOverride());
-        bind(String.class)
-            .annotatedWith(CoordinatorARegionBindingOverride.class)
-            .toInstance(args.getCoordinatorARegionOverride());
-        bind(String.class)
-            .annotatedWith(CoordinatorBRegionBindingOverride.class)
-            .toInstance(args.getCoordinatorBRegionOverride());
-
-        install(new StsClientModule());
-        bind(URI.class)
-            .annotatedWith(AutoScalingEndpointOverrideBinding.class)
-            .toInstance(args.getAutoScalingEndpointOverride());
-        break;
       case GCP:
         bind(String.class)
             .annotatedWith(GcpProjectIdOverride.class)
@@ -331,9 +236,6 @@ public final class SimpleWorkerModule extends AbstractModule {
         bind(GcpKmsHybridEncryptionKeyServiceConfig.class).toInstance(configBuilder.build());
         break;
     }
-
-    // installs the LOCAL pbs client module
-    install(PrivacyBudgetClientSelector.LOCAL.getDistributedPrivacyBudgetClientModule());
 
     // decryption key service.
     install(args.getHybridEncryptionKeyServiceSelector().getHybridEncryptionKeyServiceModule());

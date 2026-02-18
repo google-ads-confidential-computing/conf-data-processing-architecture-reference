@@ -171,7 +171,7 @@ message GetKeysetMetadataResponse {
   int32 active_key_count = 2;
 
   // Cadence in days for when a new key(s) will be activated.
-  int32 key_active_cadence_days = 3;
+  int32 active_key_cadence_days = 3;
 
   // Number of days after expiry that keyset can be used to perform backfill.
   int32 backfill_days = 4;

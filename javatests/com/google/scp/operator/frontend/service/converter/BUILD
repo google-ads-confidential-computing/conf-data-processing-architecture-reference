@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -21,13 +21,13 @@ java_test(
     srcs = [
         "GetJobResponseConverterTest.java",
     ],
+    runtime_deps = [
+        "//java/com/google/scp/operator/shared/injection/modules/testing:fake_data_module",
+    ],
     deps = [
         "//java/com/google/scp/operator/frontend/injection/modules/testing:fake_frontend_module",
         "//java/com/google/scp/operator/frontend/service/converter",
-        "//java/com/google/scp/operator/frontend/service/model",
         "//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
-        "//java/com/google/scp/operator/shared/model",
-        "//java/com/google/scp/shared/api/model",
         "//java/external:acai",
         "//java/external:google_truth",
         "//java/external:google_truth8",
@@ -65,6 +65,9 @@ java_test(
     srcs = [
         "ResultInfoConverterTest.java",
     ],
+    runtime_deps = [
+        "//java/com/google/scp/operator/shared/injection/modules/testing:fake_data_module",
+    ],
     deps = [
         "//java/com/google/scp/operator/frontend/injection/modules/testing:fake_frontend_module",
         "//java/com/google/scp/operator/frontend/service/converter",
@@ -87,6 +90,9 @@ java_test(
     name = "ErrorSummaryConverterTest",
     srcs = [
         "ErrorSummaryConverterTest.java",
+    ],
+    runtime_deps = [
+        "//java/com/google/scp/operator/shared/injection/modules/testing:fake_data_module",
     ],
     deps = [
         "//java/com/google/scp/operator/frontend/injection/modules/testing:fake_frontend_module",
@@ -129,6 +135,9 @@ java_test(
     name = "ErrorCountConverterTest",
     srcs = [
         "ErrorCountConverterTest.java",
+    ],
+    runtime_deps = [
+        "//java/com/google/scp/operator/shared/injection/modules/testing:fake_data_module",
     ],
     deps = [
         "//java/com/google/scp/operator/frontend/injection/modules/testing:fake_frontend_module",

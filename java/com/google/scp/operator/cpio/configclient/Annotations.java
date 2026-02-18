@@ -22,81 +22,11 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import com.google.inject.BindingAnnotation;
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /** Annotations used for client configuration bindings. */
 public final class Annotations {
-
-  /**
-   * Cloud Region where key management (including KMS keys) and privacy budget services are hosted.
-   * Provided as a {@link software.amazon.awssdk.regions.Region} for compatibility reasons.
-   *
-   * <p><b>Internally Bound<b> annotation, external consumers of the CPIO library should use {@link
-   * CoordinatorARegionBindingOverride} to set this value.
-   *
-   * <p>Used for signing requests to coordinator services and creating KMS clients configured for
-   * the correct region when within the Enclave.
-   *
-   * <p>In the future, coordinator services may be hosted in multiple regions at which point this
-   * configuration value may become obsolete.
-   *
-   * <p>TODO(b/221319893): The interface provided by this annotation should match that of {@link
-   * AdtechRegionBinding}
-   */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface CoordinatorARegionBinding {};
-
-  /**
-   * Cloud Region where key management (including KMS keys) and privacy budget services are hosted.
-   * Provided as a {@link software.amazon.awssdk.regions.Region} for compatibility reasons.
-   *
-   * <p><b>Internally Bound<b> annotation, external consumers of the CPIO library should use {@link
-   * CoordinatorBRegionBindingOverride} to set this value.
-   *
-   * <p>Used for signing requests to coordinator services and creating KMS clients configured for
-   * the correct region when within the Enclave.
-   *
-   * <p>In the future, coordinator services may be hosted in multiple regions at which point this
-   * configuration value may become obsolete.
-   *
-   * <p>TODO(b/221319893): The interface provided by this annotation should match that of {@link
-   * AdtechRegionBinding}
-   */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface CoordinatorBRegionBinding {};
-
-  /**
-   * Cloud Region where key management (including KMS keys) and privacy budget services are hosted
-   * by coordinator A. Must be provided as a string e.g. "us-west-2"
-   *
-   * <p>TODO(b/221319893): Provide standardized interface for providing these values.
-   *
-   * @see CoordinatorARegionBinding
-   */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface CoordinatorARegionBindingOverride {};
-
-  /**
-   * Cloud Region where key management (including KMS keys) and privacy budget services are hosted
-   * by coordinator B. Must be provided as a string e.g. "us-west-2"
-   *
-   * <p>TODO(b/221319893): Provide standardized interface for providing these values.
-   *
-   * @see CoordinatorARegionBinding
-   */
-  @BindingAnnotation
-  @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface CoordinatorBRegionBindingOverride {}
 
   /** HTTP client with credentials to access Coordinator A's encryption key vending service. */
   @BindingAnnotation

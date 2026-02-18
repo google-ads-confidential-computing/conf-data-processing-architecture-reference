@@ -21,9 +21,9 @@ def bazel_build_tools():
     maybe(
         http_archive,
         name = "com_github_bazelbuild_buildtools",
-        sha256 = "67e0d6b79724f413b98cebfa256db30cede6f9f14aae1ac50d0987da702f5054",
-        strip_prefix = "buildtools-6.3.3",
+        sha256 = "53119397bbce1cd7e4c590e117dcda343c2086199de62932106c80733526c261",
+        strip_prefix = "buildtools-8.2.1",
         urls = [
-            "https://github.com/bazelbuild/buildtools/archive/refs/tags/v6.3.3.zip",
+            "https://github.com/bazelbuild/buildtools/archive/refs/tags/v8.2.1.tar.gz",
         ],
     )

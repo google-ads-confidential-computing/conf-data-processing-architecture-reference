@@ -462,7 +462,7 @@ TEST_P(GcpKmsClientProviderTest, ShouldRetryKmsDecryptForRetriableStatusCode) {
   ExpectCallDecryptWithFailuresAndEventualSuccess(
       mock_gcp_key_management_service_client_, failure_times, GetParam());
 
-  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_)).Times(0);
+  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_)).Times(1);
 
   DecryptSuccessfully(client_.get(), kWipProvider);
 }

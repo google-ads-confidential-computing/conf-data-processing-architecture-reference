@@ -17,13 +17,11 @@
 package com.google.scp.operator.worker.selector;
 
 import com.google.inject.Module;
-import com.google.scp.operator.cpio.notificationclient.aws.AwsNotificationClientModule;
 import com.google.scp.operator.cpio.notificationclient.gcp.GcpNotificationClientModule;
 import com.google.scp.operator.cpio.notificationclient.local.LocalNotificationClientModule;
 
 /** CLI enum to select the notification implementation */
 public enum NotificationClientSelector {
-  AWS(new AwsNotificationClientModule()),
   GCP(new GcpNotificationClientModule()),
   LOCAL(new LocalNotificationClientModule());
 

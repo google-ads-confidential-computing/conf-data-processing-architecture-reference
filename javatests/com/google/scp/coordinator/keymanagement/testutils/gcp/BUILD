@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -45,7 +45,7 @@ java_library(
 
 java_library(
     name = "GcpKeyManagementIntegrationTestEnv",
-    srcs = glob(["GcpKeyManagementIntegrationTestEnv.java"]),
+    srcs = ["GcpKeyManagementIntegrationTestEnv.java"],
     deps = [
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keyhosting/service/common",
@@ -67,7 +67,7 @@ java_library(
 
 java_library(
     name = "GcpKeyGenerationTestEnv",
-    srcs = glob(["GcpKeyGenerationTestEnv.java"]),
+    srcs = ["GcpKeyGenerationTestEnv.java"],
     deps = [
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/common",
@@ -96,7 +96,6 @@ java_library(
         "//javatests/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:annotations",
-        "//javatests/com/google/scp/e2e/shared:testutils",
         "//javatests/com/google/scp/shared/gcp:constants",
         "//javatests/com/google/scp/shared/testutils/gcp",
         "//operator/protos/shared/backend:java_proto",

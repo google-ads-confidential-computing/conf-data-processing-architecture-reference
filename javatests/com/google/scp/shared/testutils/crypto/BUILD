@@ -12,29 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
 java_library(
     name = "tink_utils",
     srcs = [
-        "AwsTinkUtilsModule.java",
         "MockTinkUtils.java",
-        "TinkUtils.java",
     ],
     deps = [
-        "//java/com/google/crypto/tink/integration/awskmsv2",
-        "//java/com/google/scp/operator/cpio/cryptoclient:aws",
         "//java/com/google/scp/shared/util",
-        "//java/external:acai",
-        "//java/external:aws_apache_http",
-        "//java/external:aws_auth",
-        "//java/external:guice",
-        "//java/external:localstack_containers",
-        "//java/external:mockito",
         "//java/external:protobuf_java",
         "//java/external:tink",
-        "//javatests/com/google/scp/shared/testutils/aws",
     ],
 )

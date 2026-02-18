@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -26,21 +26,12 @@ java_library(
         "//java/com/google/scp/operator/frontend/service/converter",
         "//java/com/google/scp/operator/frontend/service/model",
         "//java/com/google/scp/operator/frontend/tasks",
-        "//java/com/google/scp/operator/frontend/tasks/aws",
         "//java/com/google/scp/operator/frontend/tasks/testing",
         "//java/com/google/scp/operator/frontend/tasks/validation",
         "//java/com/google/scp/operator/frontend/testing:fake_request_info_validator",
         "//java/com/google/scp/operator/shared/dao/jobqueue/common",
         "//java/com/google/scp/operator/shared/dao/jobqueue/testing",
-        "//java/com/google/scp/operator/shared/dao/metadatadb/common",
-        "//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_metadata_db",
-        "//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
         "//java/com/google/scp/operator/shared/injection/modules",
-        "//java/com/google/scp/operator/shared/injection/modules:aws_clients_module",
-        "//java/com/google/scp/operator/shared/injection/modules/testing:fake_data_module",
-        "//java/com/google/scp/operator/shared/model",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
         "//java/com/google/scp/shared/mapper",
         "//java/external:autoservice",
         "//java/external:autoservice_annotations",

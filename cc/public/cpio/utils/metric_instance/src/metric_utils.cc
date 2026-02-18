@@ -22,9 +22,11 @@
 
 #include "absl/container/flat_hash_map.h"
 
+using absl::StrCat;
 using google::cloud::Status;
 using google::cmrt::sdk::metric_service::v1::Metric;
 using google::cmrt::sdk::metric_service::v1::MetricType;
+using google::cmrt::sdk::metric_service::v1::MetricUnit;
 using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
@@ -44,6 +46,8 @@ constexpr char kComponentName[] = "ComponentName";
 constexpr char kMetricUtils[] = "MetricUtils";
 constexpr char kGcpKmsDecryptionErrorRateMetricName[] =
     "GcpKmsDecryptionErrorRate";
+constexpr char kGcpKmsDecryptionLatencyMetricName[] =
+    "GcpKmsDecryptionLatencyInMillis";
 constexpr char kGrpcErrorCodeLabel[] = "error_code";
 constexpr char kMetricValueOne[] = "1";
 }  // namespace
@@ -125,7 +129,27 @@ void MetricUtils::PushGcpKmsDecryptionErrorRateMetric(
   error_metric.set_type(MetricType::METRIC_TYPE_COUNTER);
   *error_metric.mutable_labels() = {labels.begin(), labels.end()};
 
-  PutMetric(metric_client, error_metric);
+  auto result = PutMetric(metric_client, error_metric);
+  if (!result.Successful()) {
+    SCP_ERROR(kMetricUtils, kZeroUuid, result,
+              "Failed to push GCP KMS Decryption Error Rate Metric.");
+  }
+}
+
+void MetricUtils::PushGcpKmsDecryptionLatencyMetric(
+    const shared_ptr<MetricClientInterface> metric_client,
+    const google::scp::core::Timestamp latency_in_millis) noexcept {
+  Metric counter_metric;
+  counter_metric.set_name(kGcpKmsDecryptionLatencyMetricName);
+  counter_metric.set_value(StrCat(latency_in_millis));
+  counter_metric.set_unit(MetricUnit::METRIC_UNIT_MILLISECONDS);
+  counter_metric.set_type(MetricType::METRIC_TYPE_HISTOGRAM);
+
+  auto result = PutMetric(metric_client, counter_metric);
+  if (!result.Successful()) {
+    SCP_ERROR(kMetricUtils, kZeroUuid, result,
+              "Failed to push GCP KMS Decryption Latency Metric.");
+  }
 }
 
 ExecutionResult MetricUtils::PutMetric(

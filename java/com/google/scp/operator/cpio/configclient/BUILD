@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -25,33 +25,15 @@ java_library(
 )
 
 java_library(
-    name = "aws",
+    name = "local",
     srcs = glob([
-        "aws/*.java",
         "local/*.java",
         "common/*.java",
     ]),
     deps = [
-        "//java/com/google/scp/operator/cpio/configclient",
-        "//java/com/google/scp/shared/api/util",
-        "//java/com/google/scp/shared/aws/credsprovider",
-        "//java/com/google/scp/shared/aws/util",
-        "//java/com/google/scp/shared/clients",
-        "//java/com/google/scp/shared/clients/configclient:aws",
+        ":configclient",
+        "//java/com/google/scp/shared/clients/configclient",
         "//java/com/google/scp/shared/clients/configclient:model",
-        "//java/external:apache_httpclient",
-        "//java/external:apache_httpclient5",
-        "//java/external:apache_httpcore",
-        "//java/external:apache_httpcore5",
-        "//java/external:aws_apache_http",
-        "//java/external:aws_auth",
-        "//java/external:aws_core",
-        "//java/external:aws_ec2",
-        "//java/external:aws_http_client_spi",
-        "//java/external:aws_regions",
-        "//java/external:aws_ssm",
-        "//java/external:aws_sts",
-        "//java/external:aws_utils",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
@@ -66,7 +48,7 @@ java_library(
         "common/*.java",
     ]),
     deps = [
-        "//java/com/google/scp/operator/cpio/configclient",
+        ":configclient",
         "//java/com/google/scp/shared/api/util",
         "//java/com/google/scp/shared/clients",
         "//java/com/google/scp/shared/clients/configclient:gcp",

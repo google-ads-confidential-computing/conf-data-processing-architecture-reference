@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -20,7 +20,7 @@ java_test(
     name = "LocalFileHybridEncryptionKeyServiceTest",
     srcs = ["LocalFileHybridEncryptionKeyServiceTest.java"],
     deps = [
-        "//java/com/google/scp/operator/cpio/cryptoclient:aws",
+        "//java/com/google/scp/operator/cpio/cryptoclient",
         "//java/external:acai",
         "//java/external:google_truth",
         "//java/external:guice",

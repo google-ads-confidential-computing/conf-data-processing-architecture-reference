@@ -17,14 +17,12 @@
 package com.google.scp.operator.worker.selector;
 
 import com.google.inject.Module;
-import com.google.scp.operator.cpio.jobclient.aws.AwsJobHandlerModule;
 import com.google.scp.operator.cpio.jobclient.gcp.GcpJobHandlerModule;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule;
 
 /** CLI enum to select the job puller implementation */
 public enum JobClientSelector {
   LOCAL_FILE(new LocalFileJobHandlerModule()),
-  AWS(new AwsJobHandlerModule()),
   GCP(new GcpJobHandlerModule());
 
   private final Module pullerGuiceModule;

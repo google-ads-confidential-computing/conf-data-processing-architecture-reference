@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -23,7 +23,6 @@ java_test(
     ],
     deps = [
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/aws",
         "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/testing",

@@ -38,6 +38,7 @@ public final class InMemoryKeyDbTestUtil {
 
   public static final Long SECONDS_PER_DAY = 86400L;
   public static final Long CACHE_CONTROL_MAX = 604800L;
+  public static final Integer KEY_LIMIT = 5;
 
   static {
     try {

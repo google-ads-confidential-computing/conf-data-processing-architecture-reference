@@ -67,7 +67,6 @@ variables {
   key_generation_alignment_period                               = 1
   key_generation_single_keyset_alignment_periods                = 0
   key_generation_create_alert_alignment_periods                 = 0
-  peer_coordinator_kms_key_uri                                  = ""
   key_storage_service_base_url                                  = ""
   key_storage_service_cloudfunction_url                         = ""
   peer_coordinator_wip_provider                                 = ""
@@ -88,6 +87,7 @@ variables {
   public_key_service_max_instances                              = 0
   public_key_service_execution_environment                      = ""
   enable_public_key_service_cdn                                 = false
+  public_key_service_load_balancer_protocol                     = "HTTP"
   public_key_service_cdn_default_ttl_seconds                    = 0
   public_key_service_cdn_max_ttl_seconds                        = 0
   public_key_service_cdn_serve_while_stale_seconds              = 0
@@ -96,7 +96,7 @@ variables {
   public_key_service_max_execution_time_max                     = 0
   public_key_service_5xx_threshold                              = 0
   public_key_service_cloud_run_alert_on_memory_usage_threshold  = 0
-  public_key_service_lb_max_latency_ms                          = ""
+  public_key_service_lb_max_latency_ms                          = 0
   public_key_service_lb_5xx_threshold                           = 0
   public_key_service_lb_5xx_ratio_threshold                     = 0
   public_key_service_empty_key_set_error_threshold              = 0
@@ -109,6 +109,7 @@ variables {
   private_key_service_cloud_run_concurrency                     = 0
   private_key_service_cloud_run_ingress                         = ""
   enable_private_key_service_cache                              = false
+  private_key_service_load_balancer_protocol                    = "HTTP"
   private_key_service_cache_refresh_in_minutes                  = 0
   private_key_service_load_balancing_scheme                     = ""
   private_key_service_cloud_run_memory_mb                       = 0
@@ -119,10 +120,12 @@ variables {
   private_key_service_cloud_run_max_execution_time_max          = 0
   private_key_service_cloud_run_5xx_threshold                   = 0
   private_key_service_cloud_run_alert_on_memory_usage_threshold = 0
-  private_key_service_lb_max_latency_ms                         = ""
+  private_key_service_lb_max_latency_ms                         = 0
   private_key_service_lb_5xx_threshold                          = 0
   private_key_service_lb_5xx_ratio_threshold                    = 0
   private_key_service_alarm_duration_sec                        = 0
+
+  use_vpc_new_module = false
 
   private_key_service_external_managed_migration_state              = "PREPARE"
   private_key_service_external_managed_migration_testing_percentage = 0
@@ -131,12 +134,30 @@ variables {
   private_key_service_external_managed_backend_bucket_migration_state              = null
   private_key_service_external_managed_backend_bucket_migration_testing_percentage = null
 
-  public_key_service_external_managed_migration_state               = "PREPARE"
-  public_key_service_external_managed_migration_testing_percentage  = 0
+  public_key_service_external_managed_migration_state              = "PREPARE"
+  public_key_service_external_managed_migration_testing_percentage = 0
 
   public_key_service_forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
   public_key_service_external_managed_backend_bucket_migration_state              = null
   public_key_service_external_managed_backend_bucket_migration_testing_percentage = null
+
+  public_key_service_lb_outlier_detection_enabled                               = false
+  public_key_service_lb_outlier_detection_consecutive_errors                    = 0
+  public_key_service_lb_outlier_detection_interval_seconds                      = 0
+  public_key_service_lb_outlier_detection_base_ejection_time_seconds            = 0
+  public_key_service_lb_outlier_detection_max_ejection_percent                  = 0
+  public_key_service_lb_outlier_detection_enforcing_consecutive_errors          = 0
+  public_key_service_lb_outlier_detection_consecutive_gateway_failure           = 0
+  public_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure = 0
+
+  private_key_service_lb_outlier_detection_enabled                               = false
+  private_key_service_lb_outlier_detection_consecutive_errors                    = 0
+  private_key_service_lb_outlier_detection_interval_seconds                      = 0
+  private_key_service_lb_outlier_detection_base_ejection_time_seconds            = 0
+  private_key_service_lb_outlier_detection_max_ejection_percent                  = 0
+  private_key_service_lb_outlier_detection_enforcing_consecutive_errors          = 0
+  private_key_service_lb_outlier_detection_consecutive_gateway_failure           = 0
+  private_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure = 0
 
   key_sets_config = {
     key_sets = []
@@ -223,6 +244,25 @@ run "doesnt_create_key_migration_tool" {
   assert {
     condition     = length(module.key_migration_tool) == 0
     error_message = "Created tool"
+  }
+}
+
+run "creates_both_vpc_modules" {
+  command = plan
+
+  assert {
+    condition     = module.vpc.egress_internet_tag == "egress-internet"
+    error_message = "Should have created old VPC module"
+  }
+
+  assert {
+    condition     = module.vpc_new.egress_internet_tag == "vpc-egress-internet"
+    error_message = "Should have created new VPC module"
+  }
+
+  assert {
+    condition     = length(module.vpc_nat) == 2
+    error_message = "Should have created new VPC NAT module for each region"
   }
 }
 

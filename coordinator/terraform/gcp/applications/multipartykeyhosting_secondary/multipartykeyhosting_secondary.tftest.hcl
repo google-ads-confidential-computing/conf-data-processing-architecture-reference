@@ -91,7 +91,7 @@ variables {
   key_storage_service_cloud_run_max_execution_time_max          = 0
   key_storage_service_cloud_run_5xx_threshold                   = 0
   key_storage_service_cloud_run_alert_on_memory_usage_threshold = 0
-  key_storage_service_lb_max_latency_ms                         = ""
+  key_storage_service_lb_max_latency_ms                         = 0
   key_storage_service_lb_5xx_threshold                          = 0
   key_storage_service_lb_5xx_ratio_threshold                    = 0
   key_storage_service_alarm_duration_sec                        = 0
@@ -99,7 +99,7 @@ variables {
   private_key_service_cloud_run_max_execution_time_max          = 0
   private_key_service_cloud_run_5xx_threshold                   = 0
   private_key_service_cloud_run_alert_on_memory_usage_threshold = 0
-  private_key_service_lb_max_latency_ms                         = ""
+  private_key_service_lb_max_latency_ms                         = 0
   private_key_service_lb_5xx_threshold                          = 0
   private_key_service_lb_5xx_ratio_threshold                    = 0
   private_key_service_alarm_duration_sec                        = 0
@@ -121,6 +121,25 @@ variables {
   key_storage_service_forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
   key_storage_service_external_managed_backend_bucket_migration_state              = null
   key_storage_service_external_managed_backend_bucket_migration_testing_percentage = null
+
+  private_key_service_load_balancer_protocol                                     = "HTTP"
+  private_key_service_lb_outlier_detection_enabled                               = false
+  private_key_service_lb_outlier_detection_consecutive_errors                    = 0
+  private_key_service_lb_outlier_detection_interval_seconds                      = 0
+  private_key_service_lb_outlier_detection_base_ejection_time_seconds            = 0
+  private_key_service_lb_outlier_detection_max_ejection_percent                  = 0
+  private_key_service_lb_outlier_detection_enforcing_consecutive_errors          = 0
+  private_key_service_lb_outlier_detection_consecutive_gateway_failure           = 0
+  private_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure = 0
+
+  key_storage_service_lb_outlier_detection_enabled                               = false
+  key_storage_service_lb_outlier_detection_consecutive_errors                    = 0
+  key_storage_service_lb_outlier_detection_interval_seconds                      = 0
+  key_storage_service_lb_outlier_detection_base_ejection_time_seconds            = 0
+  key_storage_service_lb_outlier_detection_max_ejection_percent                  = 0
+  key_storage_service_lb_outlier_detection_enforcing_consecutive_errors          = 0
+  key_storage_service_lb_outlier_detection_consecutive_gateway_failure           = 0
+  key_storage_service_lb_outlier_detection_enforcing_consecutive_gateway_failure = 0
 
   key_sets_config = {
     key_sets = []

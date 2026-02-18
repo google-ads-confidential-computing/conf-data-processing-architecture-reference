@@ -48,36 +48,6 @@ variable "allowed_wip_service_accounts" {
   default     = []
 }
 
-variable "load_balancing_scheme" {
-  description = "Whether the backend will be used with internal or external load balancing."
-  type        = string
-}
-
-variable "external_managed_migration_state" {
-  description = "Defines what stage of the LB migration in."
-  type        = string
-}
-
-variable "external_managed_migration_testing_percentage" {
-  description = "Defines what percentage of traffic should be routed to upgraded LB."
-  type        = number
-}
-
-variable "forwarding_rule_load_balancing_scheme" {
-  description = "Specifies the load balancing scheme used for the forwarding rule."
-  type        = string
-}
-
-variable "external_managed_backend_bucket_migration_state" {
-  description = "Specifies the canary migration state for the backend buckets attached to this forwarding rule."
-  type        = string
-}
-
-variable "external_managed_backend_bucket_migration_testing_percentage" {
-  description = "Determines the fraction of requests to backend buckets that should be processed by the Global external Application Load Balancer."
-  type        = number
-}
-
 ################################################################################
 # Function Variables
 ################################################################################
@@ -154,16 +124,11 @@ variable "cloud_run_alert_on_memory_usage_threshold" {
 
 variable "lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
-  type        = string
+  type        = number
 }
 
 variable "lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = number
-}
-
-variable "lb_5xx_ratio_threshold" {
-  description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
   type        = number
 }
 
@@ -189,4 +154,48 @@ variable "kms_key_base_uri" {
 variable "migration_kms_key_base_uri" {
   description = "Migration kms encryption key base uri for composing kms encryption keys."
   type        = string
+}
+
+################################################################################
+# Load Balancer Outlier Detection Variables.
+################################################################################
+
+variable "lb_outlier_detection_enabled" {
+  description = "Enable outlier detection for the load balancer."
+  type        = bool
+}
+
+variable "lb_outlier_detection_consecutive_errors" {
+  description = "Number of consecutive errors before a backend is ejected."
+  type        = number
+}
+
+variable "lb_outlier_detection_interval_seconds" {
+  description = "The interval time in seconds for outlier detection."
+  type        = number
+}
+
+variable "lb_outlier_detection_base_ejection_time_seconds" {
+  description = "The base ejection time in seconds."
+  type        = number
+}
+
+variable "lb_outlier_detection_max_ejection_percent" {
+  description = "The maximum percentage of backends that can be ejected."
+  type        = number
+}
+
+variable "lb_outlier_detection_enforcing_consecutive_errors" {
+  description = "The percentage of backends that must have consecutive errors before outlier detection is enforced."
+  type        = number
+}
+
+variable "lb_outlier_detection_consecutive_gateway_failure" {
+  description = "Number of consecutive gateway failures before a backend is ejected."
+  type        = number
+}
+
+variable "lb_outlier_detection_enforcing_consecutive_gateway_failure" {
+  description = "The percentage of backends that must have consecutive gateway failures before outlier detection is enforced."
+  type        = number
 }

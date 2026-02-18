@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -39,62 +39,6 @@ java_library(
         "//java/external:apache_httpclient",
         "//java/external:apache_httpcore",
         "//java/external:autovalue",
-        "//java/external:gcp_api_gax",
-        "//java/external:gcp_gax_grpc",
-        "//java/external:google_api_client",
-        "//java/external:google_http_client",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:jackson_core",
-        "//java/external:jackson_databind",
-        "//java/external:protobuf_java",
-        "//java/external:protobuf_java_util",
-        "//java/external:resilience4j_core",
-        "//java/external:resilience4j_retry",
-        "//java/external:slf4j",
-        "//java/external:tink",
-        "//shared/protos/api/v1:java_proto",
-    ],
-)
-
-java_library(
-    name = "aws",
-    srcs = glob([
-        "*.java",
-        "aws/*.java",
-        "local/*.java",
-        "model/*.java",
-        "testing/*.java",
-    ]),
-    deps = [
-        "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
-        "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
-        "//java/com/google/crypto/tink/integration/awskmsv2",
-        "//java/com/google/scp/operator/cpio/configclient",
-        "//java/com/google/scp/operator/cpio/configclient:aws",
-        "//java/com/google/scp/operator/cpio/metricclient",
-        "//java/com/google/scp/operator/cpio/metricclient:model",
-        "//java/com/google/scp/shared/api/exception",
-        "//java/com/google/scp/shared/api/model",
-        "//java/com/google/scp/shared/api/util",
-        "//java/com/google/scp/shared/aws/credsprovider",
-        "//java/com/google/scp/shared/clients/configclient:aws",
-        "//java/com/google/scp/shared/clients/configclient:model",
-        "//java/com/google/scp/shared/crypto/tink",
-        "//java/com/google/scp/shared/crypto/tink/aws",
-        "//java/com/google/scp/shared/crypto/tink/kmstoolenclave",
-        "//java/com/google/scp/shared/mapper",
-        "//java/com/google/scp/shared/util",
-        "//java/external:apache_commons_lang",
-        "//java/external:apache_httpclient",
-        "//java/external:apache_httpcore",
-        "//java/external:autovalue",
-        "//java/external:aws_apache_http",
-        "//java/external:aws_auth",
-        "//java/external:aws_core",
-        "//java/external:aws_http_client_spi",
-        "//java/external:aws_regions",
-        "//java/external:aws_sts",
         "//java/external:gcp_api_gax",
         "//java/external:gcp_gax_grpc",
         "//java/external:google_api_client",

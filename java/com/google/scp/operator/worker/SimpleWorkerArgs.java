@@ -26,24 +26,22 @@ import com.google.scp.operator.worker.selector.LifecycleClientSelector;
 import com.google.scp.operator.worker.selector.MetricClientSelector;
 import com.google.scp.operator.worker.selector.NotificationClientSelector;
 import com.google.scp.operator.worker.selector.ParameterClientSelector;
-import com.google.scp.operator.worker.selector.PrivacyBudgetClientSelector;
 import com.google.scp.operator.worker.selector.ResultLoggerModuleSelector;
 import com.google.scp.operator.worker.selector.StopwatchExporterSelector;
-import java.net.URI;
 import java.util.Optional;
 
 /** Provides CLI arguments with which to run the SimpleWorker using {@link SimpleWorkerModule} */
 public final class SimpleWorkerArgs {
 
   @Parameter(names = "--client_config_env", description = "Selects client config environment")
-  private ClientConfigSelector clientConfigSelector = ClientConfigSelector.AWS;
+  private ClientConfigSelector clientConfigSelector = ClientConfigSelector.GCP;
 
   @Parameter(names = "--job_client", description = "Job handler client implementation")
   private JobClientSelector jobClient = JobClientSelector.LOCAL_FILE;
 
   @Parameter(names = "--blob_storage_client", description = "Data client implementation")
   private BlobStorageClientSelector blobStorageClientSelector =
-      BlobStorageClientSelector.AWS_S3_CLIENT;
+      BlobStorageClientSelector.LOCAL_FS_CLIENT;
 
   @Parameter(names = "--lifecycle_client", description = "Lifecycle client implementation")
   private LifecycleClientSelector lifecycleClient = LifecycleClientSelector.LOCAL;
@@ -60,9 +58,6 @@ public final class SimpleWorkerArgs {
   @Parameter(names = "--result_logger", description = "How to log aggregation results")
   private ResultLoggerModuleSelector resultLoggerModuleSelector =
       ResultLoggerModuleSelector.LOCAL_TO_CLOUD;
-
-  @Parameter(names = "--pbs_client", description = "PBS client implementation")
-  private PrivacyBudgetClientSelector pbsclient = PrivacyBudgetClientSelector.LOCAL;
 
   @Parameter(
       names = "--local_file_single_puller_path",
@@ -93,8 +88,7 @@ public final class SimpleWorkerArgs {
       description =
           "Full URL (including protocol and api version path fragment) of the private key vending"
               + " service. Do not include trailing slash")
-  private String privateKeyServiceUrl =
-      "https://privatekeyservice-staging.aws.admcstesting.dev:443/v1alpha"; // "https://us-central1-adhcloud-tp1.cloudfunctions.net";
+  private String privateKeyServiceUrl = "";
 
   @Parameter(
       names = "--primary_encryption_key_service_base_url",
@@ -127,44 +121,6 @@ public final class SimpleWorkerArgs {
               + " only as audience for GCP authentication.This is temporary and will be replaced by"
               + " encryption key service url in the future. ")
   private String secondaryEncryptionKeyServiceCloudfunctionUrl = "";
-
-  @Parameter(
-      names = "--coordinator_a_privacy_budgeting_service_base_url",
-      description =
-          "Full URL (including protocol and api version path fragment) of coordinator A's privacy"
-              + " budgeting service. Do not include trailing slash")
-  private String coordinatorAPrivacyBudgetingServiceUrl = null;
-
-  @Parameter(
-      names = "--coordinator_a_privacy_budgeting_service_auth_endpoint",
-      description = "Auth endpoint of coordinator A's privacy budgeting service.")
-  private String coordinatorAPrivacyBudgetingServiceAuthEndpoint = null;
-
-  @Parameter(
-      names = "--coordinator_b_privacy_budgeting_service_base_url",
-      description =
-          "Full URL (including protocol and api version path fragment) of coordinator B's privacy"
-              + " budgeting service. Do not include trailing slash")
-  private String coordinatorBPrivacyBudgetingServiceUrl = null;
-
-  @Parameter(
-      names = "--coordinator_b_privacy_budgeting_service_auth_endpoint",
-      description = "Auth endpoint of coordinator B's privacy budgeting service.")
-  private String coordinatorBPrivacyBudgetingServiceAuthEndpoint = null;
-
-  @Parameter(
-      names = "--coordinator_a_assume_role_arn",
-      description =
-          "ARN of the role assumed for performing operations in coordinator A. ARGS param"
-              + " client should be selected to use this flag.")
-  private String coordinatorARoleArn = "";
-
-  @Parameter(
-      names = "--coordinator_b_assume_role_arn",
-      description =
-          "ARN of the role assumed for performing operations in coordinator B. ARGS param"
-              + " client should be selected to use this flag.")
-  private String coordinatorBRoleArn = "";
 
   @Parameter(
       names = "--autoscaling_endpoint_override",
@@ -244,13 +200,6 @@ public final class SimpleWorkerArgs {
       ""; // "gcp-kms://projects/adhcloud-tp1/locations/us/keyRings/keyring1/cryptoKeys/kek1";
 
   @Parameter(
-      names = "--aws_sqs_queue_url",
-      description =
-          "(Optional) Queue url for AWS SQS, if AWS job client is used, if AWS job client is used"
-              + " and ARGS param client is used.")
-  private String awsSqsQueueUrl = "";
-
-  @Parameter(
       names = "--max_job_num_attempts",
       description =
           "(Optional) Maximum number of times the job can be picked up by workers, if AWS job"
@@ -263,65 +212,6 @@ public final class SimpleWorkerArgs {
           "(Optional) Job queue message visibility timeout (in seconds), if AWS job client"
               + " is used and ARGS param client is used.")
   private String messageVisibilityTimeoutSeconds = "3600";
-
-  @Parameter(
-      names = "--scale-in-hook",
-      description = "(Optional) Scale in hook used for scaling in the instance.")
-  private String scaleInHook = "";
-
-  @Parameter(
-      names = "--aws_metadata_endpoint_override",
-      description =
-          "Optional ec2 metadata endpoint override URI. This is used to get EC2 metadata"
-              + " information including tags, and profile credentials. If this parameter is set,"
-              + " the instance credentials provider will be used.")
-  private String awsMetadataEndpointOverride = "";
-
-  @Parameter(
-      names = "--ec2_endpoint_override",
-      description = "Optional EC2 service endpoint override URI")
-  private String ec2EndpointOverride = "";
-
-  @Parameter(names = "--sqs_endpoint_override", description = "Optional Sqs Endpoint override URI")
-  private String sqsEndpointOverride = "";
-
-  @Parameter(names = "--ssm_endpoint_override", description = "Optional Ssm Endpoint override URI")
-  private String ssmEndpointOverride = "";
-
-  @Parameter(names = "--sts_endpoint_override", description = "Optional STS Endpoint override URI")
-  private String stsEndpointOverride = "";
-
-  @Parameter(
-      names = "--aws_metadatadb_table_name",
-      description =
-          "(Optional) Table name for AWS Dynamodb storing job metadata, if AWS job client"
-              + " is used, if AWS job client is used and ARGS param client is used.")
-  private String awsMetadatadbTableName = "";
-
-  @Parameter(names = "--ddb_endpoint_override", description = "Optional ddb endpoint override URI")
-  private String ddbEndpointOverride = "";
-
-  @Parameter(
-      names = "--cloudwatch_endpoint_override",
-      description = "Optional cloudwatch endpoint override URI")
-  private String cloudwatchEndpointOverride = "";
-
-  @Parameter(
-      names = "--adtech_region_override",
-      description = "Overrides the region of the compute instance.")
-  private String adtechRegionOverride = "";
-
-  @Parameter(
-      names = "--coordinator_a_region_override",
-      description = "Overrides the region of coordinator A's services.")
-  // TODO: set default to us-east-1 once services move there.
-  private String coordinatorARegionOverride = "us-west-2";
-
-  @Parameter(
-      names = "--coordinator_b_region_override",
-      description = "Overrides the region of coordinator B's services.")
-  // TODO: set default to us-east-1 once services move there.
-  private String coordinatorBRegionOverride = "us-west-2";
 
   @Parameter(
       names = "--result_working_directory_path",
@@ -337,23 +227,6 @@ public final class SimpleWorkerArgs {
               + " java.com.aggregate.simulation. Note this should only be done in a test"
               + " environment")
   private boolean simulationInputs = false;
-
-  @Parameter(names = "--s3_endpoint_override", description = "Optional S3 Endpoint override URI")
-  private String s3EndpointOverride = "";
-
-  @Parameter(
-      names = "--access_key",
-      description =
-          "Optional access key for AWS credentials. If this parameter (and --secret_key) is set,"
-              + " the static credentials provider will be used.")
-  private String accessKey = "";
-
-  @Parameter(
-      names = "--secret_key",
-      description =
-          "Optional secret key for AWS credentials.  If this parameter (and --access_key) is set,"
-              + " the static credentials provider will be used.")
-  private String secretKey = "";
 
   @Parameter(
       names = "--gcp_instance_id_override",
@@ -436,56 +309,12 @@ public final class SimpleWorkerArgs {
     return localFileJobInfoPath;
   }
 
-  String getAwsSqsQueueUrl() {
-    return awsSqsQueueUrl;
-  }
-
-  String getScaleInHook() {
-    return scaleInHook;
-  }
-
   String getMaxJobNumAttempts() {
     return maxJobNumAttempts;
   }
 
   String getMessageVisibilityTimeoutSeconds() {
     return messageVisibilityTimeoutSeconds;
-  }
-
-  String getAwsMetadatadbTableName() {
-    return awsMetadatadbTableName;
-  }
-
-  public URI getDdbEndpointOverride() {
-    return URI.create(ddbEndpointOverride);
-  }
-
-  public URI getCloudwatchEndpointOverride() {
-    return URI.create(cloudwatchEndpointOverride);
-  }
-
-  public String getAwsMetadataEndpointOverride() {
-    return awsMetadataEndpointOverride;
-  }
-
-  public URI getEc2EndpointOverride() {
-    return URI.create(ec2EndpointOverride);
-  }
-
-  public URI getSqsEndpointOverride() {
-    return URI.create(sqsEndpointOverride);
-  }
-
-  public URI getSsmEndpointOverride() {
-    return URI.create(ssmEndpointOverride);
-  }
-
-  public URI getStsEndpointOverride() {
-    return URI.create(stsEndpointOverride);
-  }
-
-  public URI getKmsEndpointOverride() {
-    return URI.create(kmsEndpointOverride);
   }
 
   public String getGcpProjectId() {
@@ -536,10 +365,6 @@ public final class SimpleWorkerArgs {
     return coordinatorBServiceAccount;
   }
 
-  public URI getAutoScalingEndpointOverride() {
-    return URI.create(autoScalingEndpointOverride);
-  }
-
   public String getKmsSymmetricKey() {
     return kmsSymmetricKey;
   }
@@ -550,14 +375,6 @@ public final class SimpleWorkerArgs {
 
   public String getCoodinatorBKmsKey() {
     return coodinatorBKmsKey;
-  }
-
-  public String getAccessKey() {
-    return accessKey;
-  }
-
-  public String getSecretKey() {
-    return secretKey;
   }
 
   public HybridEncryptionKeyServiceSelector getHybridEncryptionKeyServiceSelector() {
@@ -590,42 +407,6 @@ public final class SimpleWorkerArgs {
         .filter(id -> !id.isEmpty());
   }
 
-  String getCoordinatorAPrivacyBudgetingServiceUrl() {
-    return coordinatorAPrivacyBudgetingServiceUrl;
-  }
-
-  String getCoordinatorAPrivacyBudgetingServiceAuthEndpoint() {
-    return coordinatorAPrivacyBudgetingServiceAuthEndpoint;
-  }
-
-  String getCoordinatorBPrivacyBudgetingServiceUrl() {
-    return coordinatorBPrivacyBudgetingServiceUrl;
-  }
-
-  String getCoordinatorBPrivacyBudgetingServiceAuthEndpoint() {
-    return coordinatorBPrivacyBudgetingServiceAuthEndpoint;
-  }
-
-  String getCoordinatorARoleArn() {
-    return coordinatorARoleArn;
-  }
-
-  String getCoordinatorBRoleArn() {
-    return coordinatorBRoleArn;
-  }
-
-  String getAdtechRegionOverride() {
-    return adtechRegionOverride;
-  }
-
-  String getCoordinatorARegionOverride() {
-    return coordinatorARegionOverride;
-  }
-
-  String getCoordinatorBRegionOverride() {
-    return coordinatorBRegionOverride;
-  }
-
   String getResultWorkingDirectoryPathString() {
     return resultWorkingDirectoryPath;
   }
@@ -636,10 +417,6 @@ public final class SimpleWorkerArgs {
 
   BlobStorageClientSelector getBlobStorageClientSelector() {
     return blobStorageClientSelector;
-  }
-
-  public URI getS3EndpointOverride() {
-    return URI.create(s3EndpointOverride);
   }
 
   public Optional<String> getSpannerEndpoint() {

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -35,7 +35,6 @@ java_library(
         "//java/external:guice",
         "//java/external:jackson_core",
         "//java/external:jackson_databind",
-        "//java/external:org_threeten_bp",
         "//java/external:protobuf_java",
         "//java/external:protobuf_java_util",
         "//java/external:slf4j",

@@ -16,7 +16,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google-beta"
-      version = ">= 4.36"
+      version = "7.15"
     }
   }
 }
@@ -41,6 +41,8 @@ locals {
   public_key_domain             = var.environment != "prod" ? "${var.public_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.public_key_service_subdomain}.${var.parent_domain_name}"
   private_key_domain            = "${var.private_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
   private_key_domain_additional = "${var.private_key_service_subdomain}-${local.private_key_service_addtional_environment}.${var.parent_domain_name}"
+
+  region_map = { for reg in [var.primary_region, var.secondary_region] : reg => reg }
 
   key_sets = flatten([
     for key_set in var.key_sets_config.key_sets : key_set.name
@@ -143,6 +145,23 @@ module "vpc" {
   regions     = toset([var.primary_region, var.secondary_region])
 }
 
+module "vpc_new" {
+  source = "../../modules/vpc_new"
+
+  environment = var.environment
+  project_id  = var.project_id
+}
+
+module "vpc_nat" {
+  source = "../../modules/vpc_nat"
+
+  for_each    = local.region_map
+  project_id  = var.project_id
+  environment = var.environment
+  region      = each.value
+  network     = module.vpc_new.network
+}
+
 module "keydb" {
   source                                     = "../../modules/keydb"
   project_id                                 = var.project_id
@@ -160,10 +179,10 @@ module "keygenerationservice" {
 
   project_id                = var.project_id
   environment               = var.environment
-  network                   = module.vpc.network
+  network                   = var.use_vpc_new_module ? module.vpc_new.network : module.vpc.network
   region                    = var.key_generation_region
   allow_stopping_for_update = var.key_generation_allow_stopping_for_update
-  egress_internet_tag       = module.vpc.egress_internet_tag
+  egress_internet_tag       = var.use_vpc_new_module ? module.vpc_new.egress_internet_tag : module.vpc.egress_internet_tag
 
   # Data args
   container_image_url               = var.key_generation_service_container_image_url
@@ -212,11 +231,7 @@ module "key_set_acl_kek_pool" {
   key_ring_id      = module.key_management_service.kms_key_ring_id
   allowed_operator = each.value
   pool_name        = each.key
-}
-
-moved {
-  from = module.key_management_service[0]
-  to   = module.key_management_service
+  depends_on       = [module.key_management_service]
 }
 
 module "key_management_service" {
@@ -232,10 +247,11 @@ module "key_management_service" {
 module "public_key_service" {
   source = "../public_key_service"
 
-  environment    = var.environment
-  project_id     = var.project_id
-  regions        = concat([var.primary_region, var.secondary_region], var.public_key_service_cr_regions)
-  service_domain = local.public_key_domain
+  environment            = var.environment
+  project_id             = var.project_id
+  regions                = concat([var.primary_region, var.secondary_region], var.public_key_service_cr_regions)
+  service_domain         = local.public_key_domain
+  load_balancer_protocol = var.public_key_service_load_balancer_protocol
 
   source_container_image_url = var.public_key_service_container_image_url
 
@@ -246,6 +262,16 @@ module "public_key_service" {
   forwarding_rule_load_balancing_scheme                        = var.public_key_service_forwarding_rule_load_balancing_scheme
   external_managed_backend_bucket_migration_state              = var.public_key_service_external_managed_backend_bucket_migration_state
   external_managed_backend_bucket_migration_testing_percentage = var.public_key_service_external_managed_backend_bucket_migration_testing_percentage
+
+  # Load Balancer Outlier Detection
+  lb_outlier_detection_enabled                               = var.public_key_service_lb_outlier_detection_enabled
+  lb_outlier_detection_consecutive_errors                    = var.public_key_service_lb_outlier_detection_consecutive_errors
+  lb_outlier_detection_interval_seconds                      = var.public_key_service_lb_outlier_detection_interval_seconds
+  lb_outlier_detection_base_ejection_time_seconds            = var.public_key_service_lb_outlier_detection_base_ejection_time_seconds
+  lb_outlier_detection_max_ejection_percent                  = var.public_key_service_lb_outlier_detection_max_ejection_percent
+  lb_outlier_detection_enforcing_consecutive_errors          = var.public_key_service_lb_outlier_detection_enforcing_consecutive_errors
+  lb_outlier_detection_consecutive_gateway_failure           = var.public_key_service_lb_outlier_detection_consecutive_gateway_failure
+  lb_outlier_detection_enforcing_consecutive_gateway_failure = var.public_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure
 
   # Cloud Run settings
   cpu_count             = var.public_key_service_cloud_run_cpu_count
@@ -275,7 +301,6 @@ module "public_key_service" {
   general_error_threshold       = var.public_key_service_general_error_threshold
   lb_max_latency_ms             = var.public_key_service_lb_max_latency_ms
   lb_5xx_threshold              = var.public_key_service_lb_5xx_threshold
-  lb_5xx_ratio_threshold        = var.public_key_service_lb_5xx_ratio_threshold
 
   cloud_run_5xx_threshold                   = var.public_key_service_5xx_threshold
   cloud_run_max_execution_time_max          = var.public_key_service_max_execution_time_max
@@ -291,7 +316,8 @@ module "private_key_service" {
     [var.primary_region, var.secondary_region],
     var.private_key_service_additional_regions
   )
-  service_domain = local.private_key_domain
+  service_domain         = local.private_key_domain
+  load_balancer_protocol = var.private_key_service_load_balancer_protocol
 
   # Migration to external managed LB
   load_balancing_scheme                                        = var.private_key_service_load_balancing_scheme
@@ -300,6 +326,16 @@ module "private_key_service" {
   forwarding_rule_load_balancing_scheme                        = var.private_key_service_forwarding_rule_load_balancing_scheme
   external_managed_backend_bucket_migration_state              = var.private_key_service_external_managed_backend_bucket_migration_state
   external_managed_backend_bucket_migration_testing_percentage = var.private_key_service_external_managed_backend_bucket_migration_testing_percentage
+
+  # Outlier Detection
+  lb_outlier_detection_enabled                               = var.private_key_service_lb_outlier_detection_enabled
+  lb_outlier_detection_consecutive_errors                    = var.private_key_service_lb_outlier_detection_consecutive_errors
+  lb_outlier_detection_interval_seconds                      = var.private_key_service_lb_outlier_detection_interval_seconds
+  lb_outlier_detection_base_ejection_time_seconds            = var.private_key_service_lb_outlier_detection_base_ejection_time_seconds
+  lb_outlier_detection_max_ejection_percent                  = var.private_key_service_lb_outlier_detection_max_ejection_percent
+  lb_outlier_detection_enforcing_consecutive_errors          = var.private_key_service_lb_outlier_detection_enforcing_consecutive_errors
+  lb_outlier_detection_consecutive_gateway_failure           = var.private_key_service_lb_outlier_detection_consecutive_gateway_failure
+  lb_outlier_detection_enforcing_consecutive_gateway_failure = var.private_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure
 
   allowed_invoker_service_account_emails = local.all_service_accounts
   allowed_operator_user_group            = var.allowed_operator_user_group
@@ -339,9 +375,8 @@ module "private_key_service" {
   cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloud_run_alert_on_memory_usage_threshold
   cloud_run_max_execution_time_max          = var.private_key_service_cloud_run_max_execution_time_max
 
-  lb_5xx_threshold       = var.private_key_service_lb_5xx_threshold
-  lb_5xx_ratio_threshold = var.private_key_service_lb_5xx_ratio_threshold
-  lb_max_latency_ms      = var.private_key_service_lb_max_latency_ms
+  lb_5xx_threshold  = var.private_key_service_lb_5xx_threshold
+  lb_max_latency_ms = var.private_key_service_lb_max_latency_ms
 }
 
 module "private_key_service_addon" {
@@ -358,11 +393,22 @@ module "private_key_service_addon" {
   service_domain                                               = local.private_key_domain_additional
   display_identifier                                           = "Pre${var.environment}"
   load_balancing_scheme                                        = "EXTERNAL_MANAGED"
+  load_balancer_protocol                                       = var.private_key_service_load_balancer_protocol
   external_managed_migration_state                             = null
   external_managed_migration_testing_percentage                = null
   forwarding_rule_load_balancing_scheme                        = var.private_key_service_forwarding_rule_load_balancing_scheme
   external_managed_backend_bucket_migration_state              = var.private_key_service_external_managed_backend_bucket_migration_state
   external_managed_backend_bucket_migration_testing_percentage = var.private_key_service_external_managed_backend_bucket_migration_testing_percentage
+
+  # Load Balancer Outlier Detection
+  lb_outlier_detection_enabled                               = var.private_key_service_lb_outlier_detection_enabled
+  lb_outlier_detection_consecutive_errors                    = var.private_key_service_lb_outlier_detection_consecutive_errors
+  lb_outlier_detection_interval_seconds                      = var.private_key_service_lb_outlier_detection_interval_seconds
+  lb_outlier_detection_base_ejection_time_seconds            = var.private_key_service_lb_outlier_detection_base_ejection_time_seconds
+  lb_outlier_detection_max_ejection_percent                  = var.private_key_service_lb_outlier_detection_max_ejection_percent
+  lb_outlier_detection_enforcing_consecutive_errors          = var.private_key_service_lb_outlier_detection_enforcing_consecutive_errors
+  lb_outlier_detection_consecutive_gateway_failure           = var.private_key_service_lb_outlier_detection_consecutive_gateway_failure
+  lb_outlier_detection_enforcing_consecutive_gateway_failure = var.private_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure
 
   allowed_invoker_service_account_emails = local.all_service_accounts
   allowed_operator_user_group            = var.allowed_operator_user_group
@@ -401,9 +447,8 @@ module "private_key_service_addon" {
   cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloud_run_alert_on_memory_usage_threshold
   cloud_run_max_execution_time_max          = var.private_key_service_cloud_run_max_execution_time_max
 
-  lb_5xx_threshold       = var.private_key_service_lb_5xx_threshold
-  lb_5xx_ratio_threshold = var.private_key_service_lb_5xx_ratio_threshold
-  lb_max_latency_ms      = var.private_key_service_lb_max_latency_ms
+  lb_5xx_threshold  = var.private_key_service_lb_5xx_threshold
+  lb_max_latency_ms = var.private_key_service_lb_max_latency_ms
 }
 
 module "key_migration_tool" {
@@ -508,7 +553,7 @@ module "key_storage_service_base_url" {
   parameter_value = var.key_storage_service_base_url
 }
 
-# TODO: b/275758643
+# TODO: b/275758643 NOLINT - needs investigation on this completeness of this task
 module "key_storage_service_cloudfunction_url" {
   source          = "../../modules/parameters"
   environment     = var.environment

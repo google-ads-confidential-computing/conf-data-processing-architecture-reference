@@ -95,6 +95,8 @@ constexpr char kPublicKeySignature[] = "publicKeySignature";
 constexpr char kKeyEncryptionKeyUri[] = "keyEncryptionKeyUri";
 constexpr char kKeyMaterial[] = "keyMaterial";
 constexpr char kKeysetActiveKeyCount[] = "activeKeyCount";
+constexpr char kKeysetBackfillDays[] = "backfillDays";
+constexpr char kKeysetActiveKeyCadenceDays[] = "activeKeyCadenceDays";
 }  // namespace
 
 namespace google::scp::cpio::client_providers {
@@ -151,6 +153,10 @@ ExecutionResult PrivateKeyFetchingClientUtils::ParseFetchingResponse(
         nlohmann::json::parse(body.bytes->begin(), body.bytes->end());
     response.active_key_count =
         json_response.find(kKeysetActiveKeyCount).value().get<int>();
+    response.backfill_days =
+        json_response.find(kKeysetBackfillDays).value().get<int>();
+    response.active_key_cadence_days =
+        json_response.find(kKeysetActiveKeyCadenceDays).value().get<int>();
   } catch (std::exception& e) {
     auto execution_result = core::FailureExecutionResult(
         core::errors::SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_JSON);

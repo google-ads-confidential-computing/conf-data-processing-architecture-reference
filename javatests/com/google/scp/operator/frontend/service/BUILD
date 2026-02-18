@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library", "java_test")
+load("@rules_java//java:java_library.bzl", "java_library")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -35,7 +36,6 @@ java_test(
         "//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_job_db",
         "//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_metadata_db",
         "//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
-        "//java/com/google/scp/operator/shared/injection/modules:aws_clients_module",
         "//java/com/google/scp/operator/shared/injection/modules/testing:fake_data_module",
         "//java/com/google/scp/operator/shared/model",
         "//java/com/google/scp/shared/api/exception",

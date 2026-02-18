@@ -17,31 +17,17 @@
 package com.google.scp.operator.worker.selector;
 
 import com.google.inject.Module;
-import com.google.scp.operator.cpio.cryptoclient.aws.AwsEnclaveHybridEncryptionKeyServiceModule;
-import com.google.scp.operator.cpio.cryptoclient.aws.AwsEnclaveMultiPartyHybridEncryptionKeyServiceModule;
-import com.google.scp.operator.cpio.cryptoclient.aws.AwsKmsHybridEncryptionKeyServiceModule;
-import com.google.scp.operator.cpio.cryptoclient.aws.AwsKmsMultiPartyHybridEncryptionKeyServiceModule;
 import com.google.scp.operator.cpio.cryptoclient.gcp.GcpKmsHybridEncryptionKeyServiceModule;
 import com.google.scp.operator.cpio.cryptoclient.gcp.GcpKmsMultiPartyHybridEncryptionKeyServiceModule;
 import com.google.scp.operator.cpio.cryptoclient.local.LocalFileHybridEncryptionKeyServiceModule;
 
 public enum HybridEncryptionKeyServiceSelector {
   LOCAL_FILE_DECRYPTION_KEY_SERVICE(new LocalFileHybridEncryptionKeyServiceModule()),
-  // Non-enclave implementation.
-  AWS_KMS_DECRYPTION_KEY_SERVICE(new AwsKmsHybridEncryptionKeyServiceModule()),
-  // Enclave implementation.
-  AWS_ENCLAVE_CLI_DECRYPTION_KEY_SERVICE(new AwsEnclaveHybridEncryptionKeyServiceModule()),
   // GCP single party implementation
   GCP_KMS_DECRYPTION_KEY_SERVICE(new GcpKmsHybridEncryptionKeyServiceModule()),
   // GCP multiparty implementation
   GCP_KMS_MULTI_PARTY_DECRYPTION_KEY_SERVICE(
-      new GcpKmsMultiPartyHybridEncryptionKeyServiceModule()),
-  // Multi-party Non-enclave implementation.
-  AWS_KMS_MULTI_PARTY_DECRYPTION_KEY_SERVICE(
-      new AwsKmsMultiPartyHybridEncryptionKeyServiceModule()),
-  // Multi-party enclave implementation.
-  AWS_ENCLAVE_CLI_MULTI_PARTY_DECRYPTION_KEY_SERVICE(
-      new AwsEnclaveMultiPartyHybridEncryptionKeyServiceModule());
+      new GcpKmsMultiPartyHybridEncryptionKeyServiceModule());
 
   private final Module hybridEncryptionKeyServiceModule;
 

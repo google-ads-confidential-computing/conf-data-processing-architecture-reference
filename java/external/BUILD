@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library", "java_plugin")
+load("@rules_java//java:java_library.bzl", "java_library")
+load("@rules_java//java:java_plugin.bzl", "java_plugin")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -121,11 +122,6 @@ alias(
 alias(
     name = "javax_inject",
     actual = "@maven//:javax_inject_javax_inject",
-)
-
-alias(
-    name = "jayway_jsonpath",
-    actual = "@maven//:com_jayway_jsonpath_json_path",
 )
 
 alias(
@@ -247,93 +243,13 @@ alias(
 )
 
 alias(
-    name = "aws_api_gateway_v1",
-    actual = "@maven//:software_amazon_awssdk_apigateway",
-)
-
-alias(
-    name = "aws_arns",
-    actual = "@maven//:software_amazon_awssdk_arns",
-)
-
-alias(
-    name = "aws_auto_scaling",
-    actual = "@maven//:software_amazon_awssdk_autoscaling",
-)
-
-alias(
-    name = "aws_cloudwatch",
-    actual = "@maven//:software_amazon_awssdk_cloudwatch",
-)
-
-alias(
-    name = "aws_sdk",
-    actual = "@maven//:software_amazon_awssdk_aws_sdk_java",
-)
-
-alias(
-    name = "aws_ec2",
-    actual = "@maven//:software_amazon_awssdk_ec2",
-)
-
-alias(
-    name = "aws_pricing",
-    actual = "@maven//:software_amazon_awssdk_pricing",
-)
-
-alias(
-    name = "aws_s3",
-    actual = "@maven//:software_amazon_awssdk_s3",
-)
-
-alias(
-    name = "aws_sns",
-    actual = "@maven//:software_amazon_awssdk_sns",
-)
-
-alias(
-    name = "aws_ssm",
-    actual = "@maven//:software_amazon_awssdk_ssm",
-)
-
-alias(
     name = "aws_sts",
     actual = "@maven//:software_amazon_awssdk_sts",
 )
 
 alias(
-    name = "aws_sqs",
-    actual = "@maven//:software_amazon_awssdk_sqs",
-)
-
-alias(
     name = "aws_regions",
     actual = "@maven//:software_amazon_awssdk_regions",
-)
-
-alias(
-    name = "aws_dynamodb",
-    actual = "@maven//:software_amazon_awssdk_dynamodb",
-)
-
-alias(
-    name = "aws_dynamodb_enhanced",
-    actual = "@maven//:software_amazon_awssdk_dynamodb_enhanced",
-)
-
-alias(
-    name = "aws_lambda_java_core",
-    actual = "@maven//:com_amazonaws_aws_lambda_java_core",
-)
-
-alias(
-    name = "aws_lambda_java_events",
-    actual = "@maven//:com_amazonaws_aws_lambda_java_events",
-)
-
-alias(
-    name = "aws_lambda_java_events_sdk_transformer",
-    actual = "@maven//:com_amazonaws_aws_lambda_java_events_sdk_transformer",
 )
 
 alias(
@@ -413,33 +329,8 @@ alias(
 )
 
 alias(
-    name = "aws_url_connection_client",
-    actual = "@maven//:software_amazon_awssdk_url_connection_client",
-)
-
-alias(
     name = "aws_apache_http",
     actual = "@maven//:software_amazon_awssdk_apache_client",
-)
-
-alias(
-    name = "aws_lambda_v2",
-    actual = "@maven//:software_amazon_awssdk_lambda",
-)
-
-alias(
-    name = "mockserver_core",
-    actual = "@maven//:org_mock_server_mockserver_core",
-)
-
-alias(
-    name = "mockserver_client",
-    actual = "@maven//:org_mock_server_mockserver_client_java",
-)
-
-alias(
-    name = "mockserver_junit_rule",
-    actual = "@maven//:org_mock_server_mockserver_junit_rule",
 )
 
 alias(
@@ -485,38 +376,6 @@ alias(
 alias(
     name = "localstack_containers",
     actual = "@maven//:org_testcontainers_localstack",
-)
-
-alias(
-    # localstack_containers uses this dependency in the background.
-    # We do not directly use this outdated version of the API.
-    name = "aws_sqs_java_sdk1",
-    actual = "@maven//:com_amazonaws_aws_java_sdk_sqs",
-    visibility = ["//javatests:__subpackages__"],
-)
-
-alias(
-    # localstack_containers uses this dependency in the background.
-    # We do not directly use this outdated version of the API.
-    name = "aws_s3_java_sdk1",
-    actual = "@maven//:com_amazonaws_aws_java_sdk_s3",
-    visibility = ["//javatests:__subpackages__"],
-)
-
-alias(
-    # localstack_containers uses this dependency in the background.
-    # We do not directly use this outdated version of the API.
-    name = "aws_kms_java_sdk1",
-    actual = "@maven//:com_amazonaws_aws_java_sdk_kms",
-    visibility = ["//javatests:__subpackages__"],
-)
-
-alias(
-    # localstack_containers uses this dependency in the background.
-    # We do not directly use this outdated version of the API.
-    name = "aws_core_java_sdk1",
-    actual = "@maven//:com_amazonaws_aws_java_sdk_core",
-    visibility = ["//javatests:__subpackages__"],
 )
 
 alias(
@@ -622,11 +481,6 @@ alias(
 )
 
 alias(
-    name = "aws_core2",
-    actual = "@maven//:software_amazon_awssdk_aws_core",
-)
-
-alias(
     name = "junit",
     actual = "@maven//:junit_junit",
 )
@@ -644,11 +498,6 @@ alias(
 alias(
     name = "gcp_function_invoker",
     actual = "@maven//:com_google_cloud_functions_invoker_java_function_invoker",
-)
-
-alias(
-    name = "bazel_runfiles",
-    actual = "@bazel_tools//tools/java/runfiles",
 )
 
 alias(
@@ -687,21 +536,6 @@ alias(
 )
 
 alias(
-    name = "grpc_netty",
-    actual = "@maven//:io_grpc_grpc_netty",
-)
-
-alias(
-    name = "grcp_netty_shaded",
-    actual = "@maven//:io_grpc_grpc_netty_shaded",
-)
-
-alias(
-    name = "conscrypt_openjdk",
-    actual = "@maven//:org_conscrypt_conscrypt_openjdk_uber",
-)
-
-alias(
     name = "opentelemetry_api",
     actual = "@maven//:io_opentelemetry_opentelemetry_api",
 )
@@ -734,11 +568,6 @@ alias(
 alias(
     name = "google_cloud_opentelemetry_detector_resources",
     actual = "@maven//:com_google_cloud_opentelemetry_detector_resources",
-)
-
-alias(
-    name = "org_threeten_bp",
-    actual = "@maven//:org_threeten_threetenbp",
 )
 
 alias(

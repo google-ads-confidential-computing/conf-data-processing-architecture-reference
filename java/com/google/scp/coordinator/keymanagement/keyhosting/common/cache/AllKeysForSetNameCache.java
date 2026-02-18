@@ -44,10 +44,7 @@ public class AllKeysForSetNameCache extends KeyDbCache<String, ImmutableList<Enc
   @VisibleForTesting
   AllKeysForSetNameCache(
       KeyDb keyDb, Integer cacheRefresh, TimeUnit timeUnit, LogMetricHelper logMetricHelper) {
-    super(
-        CacheBuilder.newBuilder().refreshAfterWrite(cacheRefresh, timeUnit).maximumSize(200),
-        "allKeysForSetNameCache",
-        logMetricHelper);
+    super(CacheBuilder.newBuilder().refreshAfterWrite(cacheRefresh, timeUnit).maximumSize(200));
     this.keyDb = keyDb;
   }
 

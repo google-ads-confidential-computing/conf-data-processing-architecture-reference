@@ -18,10 +18,7 @@ package com.google.scp.operator.shared.injection.modules;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
-import com.google.scp.operator.shared.dao.metadatadb.aws.DynamoMetadataDb.MetadataDbDynamoTableName;
-import com.google.scp.operator.shared.dao.metadatadb.aws.DynamoMetadataDb.MetadataDbDynamoTtlDays;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb;
-import com.google.scp.operator.shared.injection.factories.ModuleFactory;
 import java.time.Clock;
 
 /** Allows swappable/discoverable DataModules when an inheritor's package is referenced. */
@@ -33,12 +30,6 @@ public abstract class BaseDataModule extends AbstractModule {
    */
   protected void configureModule() {}
 
-  /** Gets the job metadata table name. */
-  public abstract String getJobMetadataTableName();
-
-  /** Gets the number of days that a job metadata record is live before expiration. */
-  public abstract int getJobMetadataTtl();
-
   /** Gets the implementation of the {@code Clock} class. */
   public abstract Clock provideClock();
 
@@ -48,13 +39,9 @@ public abstract class BaseDataModule extends AbstractModule {
   /** Configures injected dependencies for this module. */
   @Override
   protected void configure() {
-    install(ModuleFactory.getModule(BaseAwsClientsModule.class));
-    bind(String.class)
-        .annotatedWith(MetadataDbDynamoTableName.class)
-        .toInstance(getJobMetadataTableName());
-    bind(int.class).annotatedWith(MetadataDbDynamoTtlDays.class).toInstance(getJobMetadataTtl());
     bind(getJobMetadataDbImplementation()).in(Singleton.class);
     bind(JobMetadataDb.class).to(getJobMetadataDbImplementation()).in(Singleton.class);
+    bind(Clock.class).toInstance(provideClock());
     configureModule();
   }
 }

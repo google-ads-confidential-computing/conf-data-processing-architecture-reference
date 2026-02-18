@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -31,7 +31,6 @@ java_library(
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
         "//java/com/google/scp/shared/api/util",
-        "//java/com/google/scp/shared/clients/configclient:aws",
         "//java/com/google/scp/shared/mapper",
         "//java/external:apache_httpclient",
         "//java/external:apache_httpcore",

@@ -17,26 +17,17 @@
 package com.google.scp.operator.shared.dao.metadatadb.testing;
 
 import static com.google.cmrt.sdk.job_service.v1.JobStatus.JOB_STATUS_CREATED;
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.scp.shared.proto.ProtoUtil.toJavaInstant;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.amazonaws.services.lambda.runtime.events.DynamodbEvent.DynamodbStreamRecord;
-import com.amazonaws.services.lambda.runtime.events.models.dynamodb.AttributeValue;
-import com.amazonaws.services.lambda.runtime.events.models.dynamodb.StreamRecord;
 import com.google.cmrt.sdk.job_service.v1.Job;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.scp.operator.protos.shared.backend.ErrorCountProto.ErrorCount;
 import com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory;
-import com.google.scp.operator.protos.shared.backend.JobKeyProto.JobKey;
 import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
 import com.google.scp.operator.protos.shared.backend.metadatadb.JobMetadataProto.JobMetadata;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.time.Instant;
-import java.util.Date;
-import java.util.Map;
 import java.util.UUID;
 
 /** Provides fake Job related objects for testing. */
@@ -46,8 +37,6 @@ public final class JobGenerator {
   private static final String DATA_HANDLE_BUCKET = "bucket";
   private static final String POSTBACK_URL = "http://postback.com";
   private static final String ACCOUNT_IDENTITY = "service-account@testing.com";
-  private static final ImmutableList<String> PRIVACY_BUDGET_KEYS =
-      ImmutableList.of("privacyBudgetKey1", "privacyBudgetKey2");
   private static final String ATTRIBUTION_REPORT_TO = "foo.com";
   private static final Integer DEBUG_PRIVACY_BUDGET_LIMIT = 5;
   private static final Instant REQUEST_RECEIVED_AT = Instant.parse("2019-10-01T08:25:24.00Z");
@@ -105,113 +94,6 @@ public final class JobGenerator {
 
   private static final Instant CREATED_TIME = Instant.parse("2023-10-01T08:25:24.00Z");
   private static final Instant UPDATED_TIME = Instant.parse("2023-10-01T08:29:56.00Z");
-
-  /**
-   * Generate a stream record with a new image that matches the one returned by
-   * createFakeJobMetadata. The old image is the same fields as the new image but has
-   * jobStatus=RECEIVED and recordVersion=1.
-   */
-  public static DynamodbStreamRecord createFakeDynamodbStreamRecord(String requestId) {
-    StreamRecord streamRecord = new StreamRecord();
-    DynamodbStreamRecord dynamodbStreamRecord = new DynamodbStreamRecord();
-    dynamodbStreamRecord.setDynamodb(streamRecord);
-    ImmutableMap<String, AttributeValue> createJobRequestMap =
-        ImmutableMap.<String, AttributeValue>builder()
-            .put("JobRequestId", new AttributeValue().withS(requestId))
-            .put("InputDataBlobPrefix", new AttributeValue().withS(DATA_HANDLE))
-            .put("InputDataBlobBucket", new AttributeValue().withS(DATA_HANDLE_BUCKET))
-            .put("OutputDataBlobPrefix", new AttributeValue().withS(DATA_HANDLE))
-            .put("OutputDataBlobBucket", new AttributeValue().withS(DATA_HANDLE_BUCKET))
-            .put("PostbackUrl", new AttributeValue().withS(POSTBACK_URL))
-            .put("AttributionReportTo", new AttributeValue().withS(ATTRIBUTION_REPORT_TO))
-            .put(
-                "DebugPrivacyBudgetLimit",
-                new AttributeValue().withN(DEBUG_PRIVACY_BUDGET_LIMIT.toString()))
-            .put(
-                "JobParameters",
-                new AttributeValue()
-                    .withM(
-                        ImmutableMap.of(
-                            JOB_PARAM_ATTRIBUTION_REPORT_TO,
-                            attributeValueS(ATTRIBUTION_REPORT_TO),
-                            JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
-                            attributeValueS(DEBUG_PRIVACY_BUDGET_LIMIT.toString()))))
-            .build();
-
-    JobKey jobKey = JobKey.newBuilder().setJobRequestId(requestId).build();
-
-    ImmutableMap<String, AttributeValue> requestInfoMap =
-        ImmutableMap.<String, AttributeValue>builder()
-            .put("JobRequestId", new AttributeValue().withS(requestId))
-            .put("InputDataBlobPrefix", new AttributeValue().withS(DATA_HANDLE))
-            .put("InputDataBlobBucket", new AttributeValue().withS(DATA_HANDLE_BUCKET))
-            .put("OutputDataBlobPrefix", new AttributeValue().withS(DATA_HANDLE))
-            .put("OutputDataBlobBucket", new AttributeValue().withS(DATA_HANDLE_BUCKET))
-            .put("PostbackUrl", new AttributeValue().withS(POSTBACK_URL))
-            .put(
-                "JobParameters",
-                new AttributeValue()
-                    .withM(
-                        ImmutableMap.of(
-                            JOB_PARAM_ATTRIBUTION_REPORT_TO,
-                            attributeValueS(ATTRIBUTION_REPORT_TO),
-                            JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
-                            attributeValueS(DEBUG_PRIVACY_BUDGET_LIMIT.toString()))))
-            .build();
-
-    AttributeValue resultInfo =
-        new AttributeValue()
-            .withM(
-                ImmutableMap.of(
-                    "ReturnMessage",
-                    new AttributeValue().withS(RESULT_INFO_SHARED.getReturnMessage()),
-                    "FinishedAt",
-                    new AttributeValue()
-                        .withS(toJavaInstant(RESULT_INFO_SHARED.getFinishedAt()).toString()),
-                    "ReturnCode",
-                    new AttributeValue().withS(RESULT_INFO_SHARED.getReturnCode().toString()),
-                    "ErrorSummary",
-                    createFakeErrorSummaryAttributeValue(),
-                    "ResultMetadata",
-                    createFakeResultMetadataAttributeValue()));
-
-    ImmutableMap<String, AttributeValue> commonImageValues =
-        ImmutableMap.<String, AttributeValue>builder()
-            .put("JobKey", new AttributeValue().withS(jobKey.getJobRequestId()))
-            .put("CreateJobRequest", new AttributeValue().withM(createJobRequestMap))
-            .put("RequestReceivedAt", new AttributeValue().withS(REQUEST_RECEIVED_AT.toString()))
-            .put("NumAttempts", new AttributeValue().withN("0"))
-            .put("RequestInfo", new AttributeValue().withM(requestInfoMap))
-            .put("ResultInfo", resultInfo)
-            .build();
-
-    ImmutableMap<String, AttributeValue> oldImage =
-        ImmutableMap.<String, AttributeValue>builder()
-            .putAll(commonImageValues)
-            .put("JobStatus", new AttributeValue().withS(JOB_STATUS_OLD_IMAGE_SHARED.toString()))
-            .put("RequestUpdatedAt", new AttributeValue().withS(REQUEST_RECEIVED_AT.toString()))
-            .put(
-                "RecordVersion",
-                new AttributeValue().withS(String.valueOf(RECORD_VERSION_OLD_IMAGE)))
-            .build();
-
-    ImmutableMap<String, AttributeValue> newImage =
-        ImmutableMap.<String, AttributeValue>builder()
-            .putAll(commonImageValues)
-            .put("JobStatus", new AttributeValue().withS(JOB_STATUS_NEW_IMAGE_SHARED.toString()))
-            .put("RequestUpdatedAt", new AttributeValue().withS(REQUEST_UPDATED_AT.toString()))
-            .put(
-                "RecordVersion",
-                new AttributeValue().withS(String.valueOf(RECORD_VERSION_NEW_IMAGE)))
-            .build();
-
-    streamRecord.setOldImage(oldImage);
-    streamRecord.setNewImage(newImage);
-    streamRecord.setApproximateCreationDateTime(Date.from(REQUEST_RECEIVED_AT));
-    streamRecord.setKeys(
-        ImmutableMap.of("JobKey", new AttributeValue().withS(jobKey.getJobRequestId())));
-    return dynamodbStreamRecord;
-  }
 
   /** Creates an instance of the {@code JobMetadata} class with fake values. */
   public static JobMetadata createFakeJobMetadata(String requestId) {
@@ -325,42 +207,5 @@ public final class JobGenerator {
             .build();
 
     return job;
-  }
-
-  private static AttributeValue createFakeErrorSummaryAttributeValue() {
-    return new AttributeValue()
-        .withM(
-            ImmutableMap.of(
-                "ErrorCounts",
-                new AttributeValue()
-                    .withL(
-                        RESULT_INFO_SHARED.getErrorSummary().getErrorCountsList().stream()
-                            .map(
-                                i ->
-                                    new AttributeValue()
-                                        .withM(
-                                            ImmutableMap.of(
-                                                "Category",
-                                                new AttributeValue()
-                                                    .withS(i.getCategory().toString()),
-                                                "Count",
-                                                new AttributeValue()
-                                                    .withN(Long.toString(i.getCount())),
-                                                "Description",
-                                                new AttributeValue()
-                                                    .withS(i.getDescription().toString()))))
-                            .collect(toImmutableList()))));
-  }
-
-  private static AttributeValue createFakeResultMetadataAttributeValue() {
-    return new AttributeValue()
-        .withM(
-            RESULT_INFO_SHARED.getResultMetadata().entrySet().stream()
-                .collect(
-                    toImmutableMap(Map.Entry::getKey, entry -> attributeValueS(entry.getValue()))));
-  }
-
-  private static AttributeValue attributeValueS(String s) {
-    return new AttributeValue().withS(s);
   }
 }

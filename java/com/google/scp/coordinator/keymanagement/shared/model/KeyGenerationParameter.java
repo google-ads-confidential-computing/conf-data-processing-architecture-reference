@@ -24,17 +24,8 @@ public final class KeyGenerationParameter {
   public static final String KMS_KEY_BASE_URI = "KMS_KEY_BASE_URI";
   public static final String MIGRATION_KMS_KEY_BASE_URI = "MIGRATION_KMS_KEY_BASE_URI";
 
-  // AWS
-  public static final String KMS_KEY_URI = "KMS_KEY_URI";
-  public static final String KEY_GENERATION_QUEUE_URL = "KEY_GENERATION_QUEUE_URL";
-  public static final String KEY_STORAGE_SERVICE_BASE_URL = "KEY_STORAGE_SERVICE_BASE_URL";
-  public static final String KEY_DB_REGION = "KEY_DB_REGION";
-  public static final String COORDINATOR_B_ASSUME_ROLE_ARN = "COORDINATOR_B_ASSUME_ROLE_ARN";
-  public static final String ENCRYPTION_KEY_SIGNATURE_KEY_ID = "ENCRYPTION_KEY_SIGNATURE_KEY_ID";
-  public static final String ENCRYPTION_KEY_SIGNATURE_ALGORITHM =
-      "ENCRYPTION_KEY_SIGNATURE_ALGORITHM";
-
   // GCP
+  public static final String KEY_STORAGE_SERVICE_BASE_URL = "KEY_STORAGE_SERVICE_BASE_URL";
   public static final String SPANNER_INSTANCE = "SPANNER_INSTANCE";
   public static final String SUBSCRIPTION_ID = "SUBSCRIPTION_ID";
   public static final String NUMBER_OF_KEYS_TO_CREATE = "NUMBER_OF_KEYS_TO_CREATE";

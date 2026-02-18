@@ -14,7 +14,7 @@
 
 module "serverless-connector" {
   count      = var.create_connectors ? 1 : 0
-  version    = ">= 7.4.0"
+  version    = "~> 15.2.0"
   source     = "terraform-google-modules/network/google//modules/vpc-serverless-connector-beta"
   project_id = var.project_id
   vpc_connectors = [

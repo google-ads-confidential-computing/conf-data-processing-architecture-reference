@@ -18,6 +18,20 @@ package(default_visibility = ["//visibility:public"])
 
 buildifier(
     name = "buildifier_check",
+    lint_mode = "warn",
+    # TODO(b/478054650): cleanup these lint warnings then remove each from this list.
+    lint_warnings = [
+        "-attr-licenses",
+        "-constant-glob",
+        "-function-docstring",
+        "-function-docstring-args",
+        "-function-docstring-header",
+        "-function-docstring-return",
+        "-module-docstring",
+        "-no-effect",
+        "-print",
+        "-unused-variable",
+    ],
     mode = "check",
 )
 

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -38,7 +38,6 @@ java_test(
         "GcpParameterClientTest.java",
     ],
     deps = [
-        "//java/com/google/scp/shared/clients/configclient:aws",
         "//java/com/google/scp/shared/clients/configclient:gcp",
         "//java/external:gcp_api_gax",
         "//java/external:gcp_gax_grpc",
@@ -74,7 +73,6 @@ java_test(
     ],
     tags = ["manual"],
     deps = [
-        "//java/com/google/scp/shared/clients/configclient:aws",
         "//java/com/google/scp/shared/clients/configclient:gcp",
         "//java/external:gcp_secretmanager",
         "//java/external:gcp_secretmanager_proto",

@@ -39,13 +39,11 @@ import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbTestM
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActiveEncryptionKeysResponseProto.GetActiveEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetKeysetMetadataResponseProto.GetKeysetMetadataResponse;
-import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.ListRecentEncryptionKeysResponseProto.ListRecentEncryptionKeysResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer;
 import com.google.scp.shared.testutils.gcp.SpannerEmulatorContainer;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Optional;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
@@ -92,83 +90,17 @@ public final class PrivateKeyServiceTest {
   }
 
   @Test
-  public void v1alphaGetEncryptionKey_existingKey_returnsExpected() throws Exception {
-    getExistingKeyTest("v1alpha");
-  }
-
-  @Test
   public void v1betaGetEncryptionKey_existingKey_returnsExpected() throws Exception {
-    getExistingKeyTest("v1beta");
-  }
-
-  private void getExistingKeyTest(String version) throws Exception {
-    String endpoint =
-        String.format("/%s/encryptionKeys/%s", version, TEST_KEYS.getFirst().getKeyId());
+    String endpoint = String.format("/v1beta/encryptionKeys/%s", TEST_KEYS.getFirst().getKeyId());
     EncryptionKeyProto.EncryptionKey key = getEncryptionKey(endpoint);
     assertThat(key.getName()).endsWith(TEST_KEYS.getFirst().getKeyId());
   }
 
   @Test
-  public void v1alphaGetEncryptionKey_nonExistingKey_returnsNotFound() throws Exception {
-    getNonExistingKeyTest("v1alpha");
-  }
-
-  @Test
   public void v1betaGetEncryptionKey_nonExistingKey_returnsNotFound() throws Exception {
-    getNonExistingKeyTest("v1beta");
-  }
-
-  private void getNonExistingKeyTest(String version) throws Exception {
-    String endpoint = String.format("/%s/encryptionKeys/does-not-exist-key", version);
+    String endpoint = "/v1beta/encryptionKeys/does-not-exist-key";
     HttpResponse response = getHttpResponse(endpoint);
     assertThat(response.getStatusLine().getStatusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
-  }
-
-  @Test
-  public void v1betaListRecentEncryptionKeys_emptySetName_returnsExpected() throws Exception {
-    listRecentEncryptionKeysTest("", ofDays(7), 0);
-    listRecentEncryptionKeysTest("", ofDays(8), 1);
-    listRecentEncryptionKeysTest("", ofDays(15), 2);
-  }
-
-  @Test
-  public void v1betaListRecentEncryptionKeys_specificSetName_returnsExpected() throws Exception {
-    listRecentEncryptionKeysTest("test-set", ofDays(7), 0);
-    listRecentEncryptionKeysTest("test-set", ofDays(8), 1);
-    listRecentEncryptionKeysTest("test-set", ofDays(15), 2);
-    listRecentEncryptionKeysTest("test-set", ofDays(22), 3);
-  }
-
-  @Test
-  public void v1betaListRecentEncryptionKeys_setName2_returnsExpected() throws Exception {
-    listRecentEncryptionKeysTest("test-set-2", ofDays(1), 2);
-    listRecentEncryptionKeysTest("test-set-2", ofDays(8), 3);
-  }
-
-  @Test
-  public void v1betaListRecentEncryptionKeys_badKeySet_returnsNothing() throws Exception {
-    listRecentEncryptionKeysTest("does-not-exist-test-set", ofDays(25), 0);
-  }
-
-  private void listRecentEncryptionKeysTest(String setName, Duration expiry, int expectedSize)
-      throws Exception {
-    var daysInSecs = expiry.toSeconds();
-    String endpoint =
-        String.format(
-            "/v1beta/sets/%s/encryptionKeys:recent?maxAgeSeconds=%s", setName, daysInSecs);
-    assertThat(listRecentEncryptionKeys(endpoint).getKeysList()).hasSize(expectedSize);
-  }
-
-  @Test
-  public void v1betaListRecentEncryptionKeys_missingSetName_returnsExpectedError()
-      throws Exception {
-    invalidArgumentTest("/v1beta/sets//encryptionKeys:recent");
-  }
-
-  @Test
-  public void v1betaListRecentEncryptionKeys_missingMaxAgeSeconds_returnsExpectedError()
-      throws Exception {
-    invalidArgumentTest("/v1beta/sets/test-set/encryptionKeys:recent");
   }
 
   @Test
@@ -273,15 +205,6 @@ public final class PrivateKeyServiceTest {
     String body = getHttpBody(endpoint);
     EncryptionKeyProto.EncryptionKey.Builder keysBuilder =
         EncryptionKeyProto.EncryptionKey.newBuilder();
-    JsonFormat.parser().merge(body, keysBuilder);
-    return keysBuilder.build();
-  }
-
-  private ListRecentEncryptionKeysResponse listRecentEncryptionKeys(String endpoint)
-      throws IOException {
-    String body = getHttpBody(endpoint);
-    ListRecentEncryptionKeysResponse.Builder keysBuilder =
-        ListRecentEncryptionKeysResponse.newBuilder();
     JsonFormat.parser().merge(body, keysBuilder);
     return keysBuilder.build();
   }

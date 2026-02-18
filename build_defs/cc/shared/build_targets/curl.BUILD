@@ -16,7 +16,7 @@
 #   curl is a tool for talking to web servers.
 
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 licenses(["notice"])  # MIT/X derivative license
 

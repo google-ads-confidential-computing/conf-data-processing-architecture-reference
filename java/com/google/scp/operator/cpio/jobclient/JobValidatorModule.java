@@ -22,7 +22,7 @@ import com.google.inject.Provides;
 import com.google.scp.operator.cpio.jobclient.JobHandlerModule.JobClientJobMaxNumAttemptsBinding;
 import com.google.scp.operator.cpio.jobclient.JobHandlerModule.JobClientJobValidatorsBinding;
 
-/** Guice module for binding the AWS job client functionality */
+/** Guice module for binding the job client functionality */
 public final class JobValidatorModule extends AbstractModule {
 
   /** Provider for a list of job validators. */

@@ -20,7 +20,8 @@ option java_package = "com.google.scp.coordinator.protos.keymanagement.keyhostin
 option java_outer_classname = "GetKeysetMetadataResponseProto";
 
 /** Response for request to get number of active encryption keys. */
-message GetKeysetMetadataResponse {
+message GetKeysetMetadataResponse
+{
 
   /** Expected number active encryption keys. */
   int32 active_key_count = 1;

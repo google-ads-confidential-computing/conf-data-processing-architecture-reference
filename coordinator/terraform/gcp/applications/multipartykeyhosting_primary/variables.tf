@@ -102,6 +102,15 @@ variable "spanner_custom_configuration_read_replica_location" {
 }
 
 ################################################################################
+# VPC Variables.
+################################################################################
+
+variable "use_vpc_new_module" {
+  description = "Bool to control switching VPC creation with new module."
+  type        = bool
+}
+
+################################################################################
 # Key Generation Variables.
 ################################################################################
 
@@ -319,6 +328,11 @@ variable "public_key_service_container_image_url" {
   nullable    = false
 }
 
+variable "public_key_service_load_balancer_protocol" {
+  description = "The protocol the load balancer uses to communicate with backends."
+  type        = string
+}
+
 variable "public_key_service_load_balancing_scheme" {
   description = "Whether the Public KS will be used with internal or external load balancing."
   type        = string
@@ -457,6 +471,11 @@ variable "private_key_service_forwarding_rule_load_balancing_scheme" {
   type        = string
 }
 
+variable "private_key_service_load_balancer_protocol" {
+  description = "The protocol the load balancer uses to communicate with backends."
+  type        = string
+}
+
 variable "private_key_service_external_managed_backend_bucket_migration_state" {
   description = "Specifies the canary migration state for the backend buckets attached to this forwarding rule."
   type        = string
@@ -549,16 +568,11 @@ variable "public_key_service_cloud_run_alert_on_memory_usage_threshold" {
 
 variable "public_key_service_lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
-  type        = string
+  type        = number
 }
 
 variable "public_key_service_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = number
-}
-
-variable "public_key_service_lb_5xx_ratio_threshold" {
-  description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
   type        = number
 }
 
@@ -569,6 +583,50 @@ variable "public_key_service_empty_key_set_error_threshold" {
 
 variable "public_key_service_general_error_threshold" {
   description = "Get Public Key General error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+################################################################################
+# Public Key Service Load Balancer Outlier Detection Variables.
+################################################################################
+
+variable "public_key_service_lb_outlier_detection_enabled" {
+  description = "Enable outlier detection for the public key service load balancer."
+  type        = bool
+}
+
+variable "public_key_service_lb_outlier_detection_consecutive_errors" {
+  description = "Number of consecutive errors before a backend is ejected for the public key service load balancer."
+  type        = number
+}
+
+variable "public_key_service_lb_outlier_detection_interval_seconds" {
+  description = "The interval time in seconds for outlier detection for the public key service load balancer."
+  type        = number
+}
+
+variable "public_key_service_lb_outlier_detection_base_ejection_time_seconds" {
+  description = "The base ejection time in seconds for the public key service load balancer."
+  type        = number
+}
+
+variable "public_key_service_lb_outlier_detection_max_ejection_percent" {
+  description = "The maximum percentage of backends that can be ejected for the public key service load balancer."
+  type        = number
+}
+
+variable "public_key_service_lb_outlier_detection_enforcing_consecutive_errors" {
+  description = "The percentage of backends that must have consecutive errors before outlier detection is enforced for the public key service load balancer."
+  type        = number
+}
+
+variable "public_key_service_lb_outlier_detection_consecutive_gateway_failure" {
+  description = "The number of consecutive gateway failures before a backend is ejected for the public key service load balancer."
+  type        = number
+}
+
+variable "public_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure" {
+  description = "The percentage of backends that must have consecutive gateway failures before outlier detection is enforced for the public key service load balancer."
   type        = number
 }
 
@@ -598,16 +656,11 @@ variable "private_key_service_cloud_run_alert_on_memory_usage_threshold" {
 
 variable "private_key_service_lb_max_latency_ms" {
   description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
-  type        = string
+  type        = number
 }
 
 variable "private_key_service_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
-  type        = number
-}
-
-variable "private_key_service_lb_5xx_ratio_threshold" {
-  description = "Load Balancer ratio of 5xx/all requests greater than this to send alarm. Example: 0."
   type        = number
 }
 
@@ -661,6 +714,52 @@ variable "private_key_service_config_read_alert_threshold" {
   description = "Private KS config read error count greater than this to send alarm. Example: 0."
   type        = number
 }
+
+################################################################################
+# Encryption Key Service Load Balancer Outlier Detection Variables.
+################################################################################
+
+variable "private_key_service_lb_outlier_detection_enabled" {
+  description = "Enable outlier detection for the private key service load balancer."
+  type        = bool
+}
+
+variable "private_key_service_lb_outlier_detection_consecutive_errors" {
+  description = "Number of consecutive errors before a backend is ejected for the private key service load balancer."
+  type        = number
+}
+
+variable "private_key_service_lb_outlier_detection_interval_seconds" {
+  description = "The interval time in seconds for outlier detection for the private key service load balancer."
+  type        = number
+}
+
+variable "private_key_service_lb_outlier_detection_base_ejection_time_seconds" {
+  description = "The base ejection time in seconds for the private key service load balancer."
+  type        = number
+}
+
+variable "private_key_service_lb_outlier_detection_max_ejection_percent" {
+  description = "The maximum percentage of backends that can be ejected for the private key service load balancer."
+  type        = number
+}
+
+variable "private_key_service_lb_outlier_detection_enforcing_consecutive_errors" {
+  description = "The percentage of backends that must have consecutive errors before outlier detection is enforced for the private key service load balancer."
+  type        = number
+}
+
+variable "private_key_service_lb_outlier_detection_consecutive_gateway_failure" {
+  description = "The number of consecutive gateway failures before a backend is ejected for the private key service load balancer."
+  type        = number
+}
+
+variable "private_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure" {
+  description = "The percentage of backends that must have consecutive gateway failures before outlier detection is enforced for the private key service load balancer."
+  type        = number
+}
+
+################################################################################
 
 variable "alert_severity_overrides" {
   description = "Alerts severity overrides."

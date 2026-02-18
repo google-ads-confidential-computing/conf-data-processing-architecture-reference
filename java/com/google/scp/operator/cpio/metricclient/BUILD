@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -43,32 +43,6 @@ java_library(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_annotations",
-    ],
-)
-
-java_library(
-    name = "aws",
-    srcs = glob([
-        "*.java",
-        "aws/*.java",
-        "local/*.java",
-    ]),
-    deps = [
-        ":model",
-        "//java/com/google/scp/operator/cpio/configclient",
-        "//java/com/google/scp/operator/cpio/metricclient",
-        "//java/com/google/scp/shared/clients/configclient",
-        "//java/com/google/scp/shared/clients/configclient:model",
-        "//java/external:aws_auth",
-        "//java/external:aws_cloudwatch",
-        "//java/external:aws_core",
-        "//java/external:aws_http_client_spi",
-        "//java/external:aws_regions",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:javax_inject",
-        "//java/external:opentelemetry_exporter_otlp",
-        "//java/external:opentelemetry_sdk_metrics",
     ],
 )
 

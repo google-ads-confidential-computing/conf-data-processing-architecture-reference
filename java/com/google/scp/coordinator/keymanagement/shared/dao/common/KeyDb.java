@@ -18,10 +18,8 @@ package com.google.scp.coordinator.keymanagement.shared.dao.common;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
-import com.google.scp.shared.api.model.Code;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.stream.Stream;
@@ -29,19 +27,8 @@ import java.util.stream.Stream;
 /** Interface for Key database properties */
 public interface KeyDb {
 
+  // TODO(b/484326902): Cleanup/remove uses of this variable
   String DEFAULT_SET_NAME = "";
-
-  /**
-   * Returns keys that are active at a specific {@code instant} up to given {@code keyLimit}. Keys
-   * are sorted by expiration time in descending order.
-   *
-   * @deprecated Use {@link #getActiveKeys(String, int, Instant)} and specify set name.
-   */
-  @Deprecated
-  default ImmutableList<EncryptionKey> getActiveKeys(int keyLimit, Instant instant)
-      throws ServiceException {
-    return getActiveKeys(DEFAULT_SET_NAME, keyLimit, instant);
-  }
 
   /**
    * Returns active keys in descending expiration time order.
@@ -93,33 +80,6 @@ public interface KeyDb {
 
   /** Returns all keys for a given setName in the database */
   ImmutableList<EncryptionKey> listAllKeysForSetName(String setName) throws ServiceException;
-
-  /**
-   * Returns all the keys of a specified maximum age based on their creation timestamp.
-   *
-   * @deprecated Use {@link #listRecentKeys(String, Duration)} and specify set name.
-   * @param maxAge the maximum age of returned keys.
-   */
-  @Deprecated
-  default Stream<EncryptionKey> listRecentKeys(Duration maxAge) throws ServiceException {
-    return listRecentKeys(DEFAULT_SET_NAME, maxAge);
-  }
-
-  /**
-   * all recently created {@link EncryptionKey}s up to a specific age.
-   *
-   * @param maxAgeSeconds Maximum age of {@link EncryptionKey} that should be returned.
-   */
-  @Deprecated
-  default Stream<EncryptionKey> listRecentKeys(int maxAgeSeconds) throws ServiceException {
-    if (maxAgeSeconds < 0) {
-      throw new ServiceException(
-          Code.INVALID_ARGUMENT,
-          KeyManagementErrorReason.INVALID_ARGUMENT.name(),
-          String.format("%s should be positive.", maxAgeSeconds));
-    }
-    return listRecentKeys(Duration.ofSeconds(maxAgeSeconds));
-  }
 
   /**
    * Returns all the keys of a specified maximum age based on their creation timestamp.

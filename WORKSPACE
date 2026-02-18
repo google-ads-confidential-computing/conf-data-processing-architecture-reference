@@ -223,14 +223,6 @@ container_pull(
     repository = "distroless/java17-debian11",
 )
 
-container_pull(
-    name = "java_base_21",
-    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2025-01-12.
-    digest = "sha256:d6ba76b612098d03aa8f0782295c859a7b24476528f96401ca4bdf5bfe38161f",
-    registry = "gcr.io",
-    repository = "distroless/java21-debian12",
-)
-
 oci_pull(
     name = "java_base_21_oci",
     # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2025-11-17.

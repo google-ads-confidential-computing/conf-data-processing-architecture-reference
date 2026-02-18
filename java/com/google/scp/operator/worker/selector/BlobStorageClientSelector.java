@@ -17,13 +17,11 @@
 package com.google.scp.operator.worker.selector;
 
 import com.google.inject.Module;
-import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.GcsBlobStorageClientModule;
 import com.google.scp.operator.cpio.blobstorageclient.testing.FSBlobStorageClientModule;
 
 /** CLI enum to select the data handler client implementation */
 public enum BlobStorageClientSelector {
-  AWS_S3_CLIENT(new S3BlobStorageClientModule()),
   GCP_CS_CLIENT(new GcsBlobStorageClientModule()),
   LOCAL_FS_CLIENT(new FSBlobStorageClientModule());
 

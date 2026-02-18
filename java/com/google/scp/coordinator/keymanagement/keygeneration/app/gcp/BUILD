@@ -12,14 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_java//java:java_binary.bzl", "java_binary")
+load("@rules_java//java:java_library.bzl", "java_library")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
-
-# TODO(b/386426300): the load statement below is needed due to a cherry-pick that
-# happens during the ks release process. Once that cherry-pick is removed, the pkg_files load can be removed.
-
-load("@rules_pkg//:mappings.bzl", "pkg_files")
 
 package(default_visibility = ["//visibility:public"])
 

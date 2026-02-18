@@ -132,6 +132,10 @@ void PrivateKeyClientProvider::OnFetchMetadataCallback(
   GetKeysetMetadataResponse response;
   response.set_active_key_count(
       fetch_keyset_metadata_context.response->active_key_count);
+  response.set_backfill_days(
+      fetch_keyset_metadata_context.response->backfill_days);
+  response.set_active_key_cadence_days(
+      fetch_keyset_metadata_context.response->active_key_cadence_days);
   get_keyset_metadata_context.response =
       make_shared<GetKeysetMetadataResponse>(response);
   get_keyset_metadata_context.result = SuccessExecutionResult();

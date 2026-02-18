@@ -17,8 +17,6 @@
 package com.google.scp.operator.shared.injection.modules.testing;
 
 import com.google.auto.service.AutoService;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
 import com.google.scp.operator.shared.dao.metadatadb.common.JobMetadataDb;
 import com.google.scp.operator.shared.dao.metadatadb.testing.FakeMetadataDb;
 import com.google.scp.operator.shared.injection.modules.BaseDataModule;
@@ -30,18 +28,6 @@ import java.time.Clock;
 public final class FakeDataModule extends BaseDataModule {
 
   @Override
-  public String getJobMetadataTableName() {
-    return "JOB_METADATA_TABLE";
-  }
-
-  @Override
-  public int getJobMetadataTtl() {
-    return 90;
-  }
-
-  @Override
-  @Provides
-  @Singleton
   public Clock provideClock() {
     return new FakeClock();
   }

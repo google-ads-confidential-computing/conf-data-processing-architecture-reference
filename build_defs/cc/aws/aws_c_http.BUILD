@@ -15,7 +15,7 @@
 # Description:
 #   AWS C HTTP/1.1 and HTTP/2 implementation
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 

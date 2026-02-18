@@ -62,10 +62,6 @@ public final class PrivateKeyServiceIntegrationTest {
 
   private static final HttpClient client = HttpClient.newHttpClient();
 
-  // GetEncryptionKeys v1alpha
-  private static final String correctPathAlpha = "/v1alpha/encryptionKeys/";
-  private static final String incorrectPathAlpha = "/v1alpha/wrongPath/";
-
   // GetEncryptionKeys v1beta
   private static final String correctPathBeta = "/v1beta/encryptionKeys/";
   private static final String incorrectPathBeta = "/v1beta/wrongPath/";
@@ -91,23 +87,17 @@ public final class PrivateKeyServiceIntegrationTest {
     dbClient.write(ImmutableList.of(Mutation.delete(SPANNER_KEY_TABLE_NAME, KeySet.all())));
   }
 
-  // GetEncryptionKeys v1alpha & v1beta
-  @Test(timeout = 25_000)
-  public void getEncryptionKeys_alphaSuccess() throws ServiceException {
-    getEncryptionKeysSuccess(correctPathAlpha);
-  }
-
+  // GetEncryptionKeys v1beta
   @Test(timeout = 25_000)
   public void getEncryptionKeys_betaSuccess() throws ServiceException {
-    getEncryptionKeysSuccess(correctPathBeta);
-  }
-
-  private void getEncryptionKeysSuccess(String path) throws ServiceException {
     EncryptionKey encryptionKey = FakeEncryptionKey.create();
 
     keyDb.createKey(encryptionKey);
     HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(path + encryptionKey.getKeyId())).GET().build();
+        HttpRequest.newBuilder()
+            .uri(getFunctionUri(correctPathBeta + encryptionKey.getKeyId()))
+            .GET()
+            .build();
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
 
@@ -119,18 +109,9 @@ public final class PrivateKeyServiceIntegrationTest {
   }
 
   @Test(timeout = 25_000)
-  public void getEncryptionKeys_alphaNotFoundTest() {
-    getEncryptionKeysNotFound(correctPathAlpha);
-  }
-
-  @Test(timeout = 25_000)
   public void getEncryptionKeys_betaNotFoundTest() {
-    getEncryptionKeysNotFound(correctPathBeta);
-  }
-
-  public void getEncryptionKeysNotFound(String path) {
     HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(path + "invalid")).GET().build();
+        HttpRequest.newBuilder().uri(getFunctionUri(correctPathBeta + "invalid")).GET().build();
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
 
     assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
@@ -141,37 +122,23 @@ public final class PrivateKeyServiceIntegrationTest {
     assertThat(response.getDetailsList().toString()).contains("MISSING_KEY");
   }
 
-  @Test(timeout = 25_000)
-  public void getEncryptionKeys_alphaWrongPath() {
-    getEncryptionKeysWrongPath(incorrectPathAlpha);
-  }
 
   @Test(timeout = 25_000)
   public void getEncryptionKeys_betaWrongPath() {
-    getEncryptionKeysWrongPath(incorrectPathBeta);
-  }
-
-  public void getEncryptionKeysWrongPath(String path) {
-    HttpRequest getRequest = HttpRequest.newBuilder().uri(getFunctionUri(path)).GET().build();
+    HttpRequest getRequest =
+        HttpRequest.newBuilder().uri(getFunctionUri(incorrectPathBeta)).GET().build();
 
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
     verifyNotFoundResponse(httpResponse);
   }
 
   @Test(timeout = 25_000)
-  public void getEncryptionKeys_alphaWrongMethod() {
-    getEncryptionKeysWrongMethod(correctPathAlpha);
-  }
-
-  @Test(timeout = 25_000)
   public void getEncryptionKeys_betaWrongMethod() {
-    getEncryptionKeysWrongMethod(correctPathBeta);
-  }
-
-  public void getEncryptionKeysWrongMethod(String path) {
     HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(path)).POST(BodyPublishers.noBody()).build();
-
+        HttpRequest.newBuilder()
+            .uri(getFunctionUri(correctPathBeta))
+            .POST(BodyPublishers.noBody())
+            .build();
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
     verifyNotFoundResponse(httpResponse);
   }

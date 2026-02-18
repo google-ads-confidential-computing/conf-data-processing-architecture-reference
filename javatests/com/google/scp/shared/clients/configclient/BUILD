@@ -12,28 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_visibility = ["//visibility:public"])
-
-java_test(
-    name = "InstanceProfileCredentialsWithRetryProviderTest",
-    srcs = [
-        "InstanceProfileCredentialsWithRetryProviderTest.java",
-    ],
-    deps = [
-        "//java/com/google/scp/shared/clients/configclient:aws",
-        "//java/external:aws_auth",
-        "//java/external:aws_core",
-        "//java/external:aws_utils",
-        "//java/external:google_truth",
-        "//java/external:mockserver_client",
-        "//java/external:mockserver_core",
-        "//java/external:mockserver_junit_rule",
-        "//java/external:resilience4j_core",
-        "//java/external:resilience4j_retry",
-    ],
-)
 
 java_test(
     name = "ParameterClientUtilsTest",

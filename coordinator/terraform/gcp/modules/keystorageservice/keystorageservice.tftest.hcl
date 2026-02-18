@@ -25,7 +25,7 @@ mock_provider "google" {
 }
 
 variables {
-  project_id                                = ""
+  project_id                                = "project"
   environment                               = "environment"
   region                                    = ""
   key_storage_domain                        = ""
@@ -43,7 +43,7 @@ variables {
   cloud_run_max_execution_time_max          = 0
   cloud_run_5xx_threshold                   = 0
   cloud_run_alert_on_memory_usage_threshold = 0
-  lb_max_latency_ms                         = ""
+  lb_max_latency_ms                         = 5
   lb_5xx_threshold                          = 0
   lb_5xx_ratio_threshold                    = 0
   key_storage_severity_map                  = {}
@@ -53,10 +53,19 @@ variables {
 
   external_managed_migration_state              = "PREPARE"
   external_managed_migration_testing_percentage = 0
-  
+
   forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
   external_managed_backend_bucket_migration_state              = null
   external_managed_backend_bucket_migration_testing_percentage = null
+
+  lb_outlier_detection_enabled                               = false
+  lb_outlier_detection_consecutive_errors                    = 0
+  lb_outlier_detection_interval_seconds                      = 0
+  lb_outlier_detection_base_ejection_time_seconds            = 0
+  lb_outlier_detection_max_ejection_percent                  = 0
+  lb_outlier_detection_enforcing_consecutive_errors          = 0
+  lb_outlier_detection_consecutive_gateway_failure           = 0
+  lb_outlier_detection_enforcing_consecutive_gateway_failure = 0
 }
 
 # All run blocks should have "command = plan".

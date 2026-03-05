@@ -21,12 +21,6 @@ cc_library(
     deps =
         select(
             {
-                "//cc/public/cpio/interface:aws_cpio_lib_inside_tee": [
-                    "//cc/cpio/client_providers/kms_client_provider/src/aws:tee_aws_kms_client_provider_lib",
-                ],
-                "//cc/public/cpio/interface:aws_cpio_lib_outside_tee": [
-                    "//cc/cpio/client_providers/kms_client_provider/src/aws:nontee_aws_kms_client_provider_lib",
-                ],
                 "//cc/public/cpio/interface:gcp_cpio_lib_inside_tee": [
                     "//cc/cpio/client_providers/kms_client_provider/src/gcp:tee_gcp_kms_client_provider_lib",
                 ],
@@ -34,6 +28,6 @@ cc_library(
                     "//cc/cpio/client_providers/kms_client_provider/src/gcp:nontee_gcp_kms_client_provider_lib",
                 ],
             },
-            no_match_error = "Please build for AWS or GCP, inside TEE or outside TEE",
+            no_match_error = "Please build for GCP, inside TEE or outside TEE",
         ),
 )

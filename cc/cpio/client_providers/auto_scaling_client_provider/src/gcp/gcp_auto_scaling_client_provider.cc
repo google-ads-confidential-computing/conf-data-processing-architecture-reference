@@ -177,8 +177,8 @@ void GcpAutoScalingClientProvider::TryFinishInstanceTermination(
   AsyncContext<GetInstanceByNameRequest, GetInstanceByNameResponse>
       get_instance_context(
           move(request),
-          bind(&GcpAutoScalingClientProvider::OnGetInstanceByNameCallback, this,
-               try_termination_context, _1),
+          std::bind(&GcpAutoScalingClientProvider::OnGetInstanceByNameCallback,
+                    this, try_termination_context, _1),
           try_termination_context);
   instance_database_client_provider_->GetInstanceByName(get_instance_context);
 }
@@ -229,8 +229,8 @@ void GcpAutoScalingClientProvider::OnGetInstanceByNameCallback(
       ->DeleteInstances(current_project_id_, current_region_,
                         try_termination_context.request->scale_in_hook_name(),
                         delete_instance_request)
-      .then(bind(&GcpAutoScalingClientProvider::OnDeleteInstanceCallback, this,
-                 try_termination_context, _1));
+      .then(std::bind(&GcpAutoScalingClientProvider::OnDeleteInstanceCallback,
+                      this, try_termination_context, _1));
 }
 
 void GcpAutoScalingClientProvider::OnDeleteInstanceCallback(

@@ -26,7 +26,6 @@
 #include "core/test/utils/conditional_wait.h"
 #include "core/test/utils/scp_test_base.h"
 #include "cpio/client_providers/auth_token_provider/mock/mock_auth_token_provider.h"
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
 #include "cpio/client_providers/role_credentials_provider/mock/aws/mock_aws_role_credentials_provider_with_overrides.h"
 #include "cpio/client_providers/role_credentials_provider/mock/aws/mock_aws_sts_client.h"
 #include "cpio/client_providers/role_credentials_provider/src/aws/error_codes.h"
@@ -74,8 +73,6 @@ using std::string;
 using std::vector;
 
 namespace {
-constexpr char kResourceNameMock[] =
-    "arn:aws:ec2:us-east-1:123456789012:instance/i-0e9801d129EXAMPLE";
 constexpr char kAssumeRoleArn[] = "assume_role_arn";
 constexpr char kSessionName[] = "session_name";
 constexpr char kKeyId[] = "key_id";
@@ -100,12 +97,12 @@ class AwsRoleCredentialsProviderTest : public ScpTestBase {
   }
 
   void SetUp() override {
+    auto options = make_shared<RoleCredentialsProviderOptions>();
+    options->region = "us-east-1";
     role_credentials_provider_ =
         make_shared<MockAwsRoleCredentialsProviderWithOverrides>(
-            make_shared<RoleCredentialsProviderOptions>());
+            std::move(options));
     EXPECT_SUCCESS(role_credentials_provider_->Init());
-    role_credentials_provider_->GetInstanceClientProvider()
-        ->instance_resource_name = kResourceNameMock;
     EXPECT_SUCCESS(role_credentials_provider_->Run());
     mock_sts_client_ = role_credentials_provider_->GetSTSClient();
     mock_auth_token_provider_ =
@@ -396,14 +393,12 @@ TEST_F(AwsRoleCredentialsProviderTest, AssumRoleWithWebIdentityFailure) {
   WaitUntil([&]() { return finished.load(); });
 }
 
-TEST_F(AwsRoleCredentialsProviderTest,
-       NullInstanceClientProviderAndEmptyRegion) {
+TEST_F(AwsRoleCredentialsProviderTest, EmptyRegion) {
   auto role_credentials_provider = make_shared<AwsRoleCredentialsProvider>(
-      make_shared<RoleCredentialsProviderOptions>(), nullptr,
+      make_shared<RoleCredentialsProviderOptions>(),
       make_shared<MockAsyncExecutor>(), make_shared<MockAsyncExecutor>(),
       make_shared<MockAuthTokenProvider>());
-  EXPECT_SUCCESS(role_credentials_provider->Init());
-  EXPECT_THAT(role_credentials_provider->Run(),
+  EXPECT_THAT(role_credentials_provider->Init(),
               ResultIs(FailureExecutionResult(
                   SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED)));
 }
@@ -412,7 +407,7 @@ TEST_F(AwsRoleCredentialsProviderTest, InputRegion) {
   auto options = make_shared<RoleCredentialsProviderOptions>();
   options->region = "us-east-1";
   auto role_credentials_provider = make_shared<AwsRoleCredentialsProvider>(
-      std::move(options), nullptr, make_shared<MockAsyncExecutor>(),
+      std::move(options), make_shared<MockAsyncExecutor>(),
       make_shared<MockAsyncExecutor>(), make_shared<MockAuthTokenProvider>());
   EXPECT_SUCCESS(role_credentials_provider->Init());
   EXPECT_SUCCESS(role_credentials_provider->Run());
@@ -421,11 +416,9 @@ TEST_F(AwsRoleCredentialsProviderTest, InputRegion) {
 
 TEST_F(AwsRoleCredentialsProviderTest, NullCpuAsyncExecutor) {
   auto role_credentials_provider = make_shared<AwsRoleCredentialsProvider>(
-      make_shared<RoleCredentialsProviderOptions>(),
-      make_shared<mock::MockInstanceClientProvider>(), nullptr,
+      make_shared<RoleCredentialsProviderOptions>(), nullptr,
       make_shared<MockAsyncExecutor>(), make_shared<MockAuthTokenProvider>());
-  EXPECT_SUCCESS(role_credentials_provider->Init());
-  EXPECT_THAT(role_credentials_provider->Run(),
+  EXPECT_THAT(role_credentials_provider->Init(),
               ResultIs(FailureExecutionResult(
                   SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED)));
 }
@@ -433,11 +426,9 @@ TEST_F(AwsRoleCredentialsProviderTest, NullCpuAsyncExecutor) {
 TEST_F(AwsRoleCredentialsProviderTest, NullIoAsyncExecutor) {
   auto role_credentials_provider = make_shared<AwsRoleCredentialsProvider>(
       make_shared<RoleCredentialsProviderOptions>(),
-      make_shared<mock::MockInstanceClientProvider>(),
       make_shared<MockAsyncExecutor>(), nullptr,
       make_shared<MockAuthTokenProvider>());
-  EXPECT_SUCCESS(role_credentials_provider->Init());
-  EXPECT_THAT(role_credentials_provider->Run(),
+  EXPECT_THAT(role_credentials_provider->Init(),
               ResultIs(FailureExecutionResult(
                   SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED)));
 }
@@ -445,11 +436,9 @@ TEST_F(AwsRoleCredentialsProviderTest, NullIoAsyncExecutor) {
 TEST_F(AwsRoleCredentialsProviderTest, NullAuthTokenProvider) {
   auto role_credentials_provider = make_shared<AwsRoleCredentialsProvider>(
       make_shared<RoleCredentialsProviderOptions>(),
-      make_shared<mock::MockInstanceClientProvider>(),
       make_shared<MockAsyncExecutor>(), make_shared<MockAsyncExecutor>(),
       nullptr);
-  EXPECT_SUCCESS(role_credentials_provider->Init());
-  EXPECT_THAT(role_credentials_provider->Run(),
+  EXPECT_THAT(role_credentials_provider->Init(),
               ResultIs(FailureExecutionResult(
                   SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED)));
 }

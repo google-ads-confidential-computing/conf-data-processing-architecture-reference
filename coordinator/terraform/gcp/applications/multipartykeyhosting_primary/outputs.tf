@@ -40,6 +40,10 @@ output "private_key_base_url_additional" {
   value = "https://${local.private_key_domain_additional}"
 }
 
+output "private_key_service_latest_revisions" {
+  value = module.private_key_service.latest_revisions
+}
+
 output "key_generation_service_account" {
   value = module.keygenerationservice.key_generation_service_account
 }

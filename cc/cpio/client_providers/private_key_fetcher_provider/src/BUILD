@@ -20,14 +20,10 @@ cc_library(
     name = "private_key_fetcher_provider_select_lib",
     deps = select(
         {
-            "//cc/public/cpio/interface:aws_cpio_lib": [
-                "//cc/cpio/client_providers/private_key_fetcher_provider/src/aws:aws_private_key_fetcher_provider_lib",
-            ],
             "//cc/public/cpio/interface:gcp_cpio_lib": [
                 "//cc/cpio/client_providers/private_key_fetcher_provider/src/gcp:gcp_private_key_fetcher_provider_lib",
             ],
         },
-        no_match_error = "Please build for AWS or GCP",
     ),
 )
 

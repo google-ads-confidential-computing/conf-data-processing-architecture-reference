@@ -117,7 +117,6 @@ TEST(LibCpioProviderTest, RoleCredentialsProviderNotCreatedInInit) {
       lib_cpio_provider->GetRoleCredentialsProvider(role_credentials_provider));
   EXPECT_THAT(role_credentials_provider, NotNull());
   EXPECT_THAT(lib_cpio_provider->GetAuthTokenProviderMember(), NotNull());
-  EXPECT_THAT(lib_cpio_provider->GetInstanceClientProviderMember(), NotNull());
   EXPECT_THAT(lib_cpio_provider->GetCpuAsyncExecutorMember(), NotNull());
   EXPECT_THAT(lib_cpio_provider->GetIoAsyncExecutorMember(), NotNull());
 

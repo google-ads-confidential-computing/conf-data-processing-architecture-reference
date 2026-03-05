@@ -58,7 +58,7 @@ public class GetKeysetMetadataTask extends ApiTask {
           GetKeysetMetadataResponse.newBuilder()
               .setActiveKeyCount(computeExpectedActiveKeyCount(keySetConfigMap.get(setName)))
               .setActiveKeyCadenceDays(computeActiveKeyCadence(keySetConfigMap.get(setName)))
-              .setBackfillDays(keySetConfigMap.get(setName).getBackfillDays())
+              .setBackfillDays(keySetConfigMap.get(setName).backfillDays())
               .build());
     } else {
       throw new ServiceException(
@@ -67,14 +67,14 @@ public class GetKeysetMetadataTask extends ApiTask {
   }
 
   private static int computeActiveKeyCadence(KeySetConfig config) {
-    return config.getOverlapPeriodDays() > 0
-        ? config.getValidityInDays() - config.getOverlapPeriodDays()
-        : config.getValidityInDays();
+    return config.overlapPeriodDays() > 0
+        ? config.validityInDays() - config.overlapPeriodDays()
+        : config.validityInDays();
   }
 
   private static int computeExpectedActiveKeyCount(KeySetConfig config) {
-    return config.getOverlapPeriodDays() > 0
-        ? config.getValidityInDays() / (config.getValidityInDays() - config.getOverlapPeriodDays())
-        : config.getCount();
+    return config.overlapPeriodDays() > 0
+        ? config.validityInDays() / (config.validityInDays() - config.overlapPeriodDays())
+        : config.count();
   }
 }

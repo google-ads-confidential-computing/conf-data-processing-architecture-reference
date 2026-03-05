@@ -24,32 +24,6 @@ bool_flag(
 )
 
 config_setting(
-    name = "aws_server",
-    flag_values = {
-        "//cc/public/cpio/interface:platform": "aws",
-        ":is_test_server": "False",
-    },
-)
-
-config_setting(
-    name = "aws_server_inside_tee",
-    flag_values = {
-        "//cc/public/cpio/interface:platform": "aws",
-        "//cc/public/cpio/interface:run_inside_tee": "True",
-        ":is_test_server": "False",
-    },
-)
-
-config_setting(
-    name = "aws_server_outside_tee",
-    flag_values = {
-        "//cc/public/cpio/interface:platform": "aws",
-        "//cc/public/cpio/interface:run_inside_tee": "False",
-        ":is_test_server": "False",
-    },
-)
-
-config_setting(
     name = "gcp_server",
     flag_values = {
         "//cc/public/cpio/interface:platform": "gcp",
@@ -72,14 +46,6 @@ config_setting(
         "//cc/public/cpio/interface:platform": "gcp",
         "//cc/public/cpio/interface:run_inside_tee": "False",
         ":is_test_server": "False",
-    },
-)
-
-config_setting(
-    name = "test_aws_server",
-    flag_values = {
-        "//cc/public/cpio/interface:platform": "aws",
-        ":is_test_server": "True",
     },
 )
 

@@ -69,7 +69,6 @@ public abstract class KeySetsConfig {
 
     public abstract Optional<Integer> backfillDays();
 
-
     @JsonIgnoreProperties(ignoreUnknown = true)
     @AutoValue.Builder
     abstract static class Builder {

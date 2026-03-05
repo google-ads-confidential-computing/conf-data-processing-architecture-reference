@@ -16,7 +16,6 @@
 
 package com.google.scp.coordinator.keymanagement.keystorage.tasks.common;
 
-import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 
@@ -33,22 +32,5 @@ public interface CreateKeyTask {
    */
   EncryptionKey createKey(
       EncryptionKey encryptionKey, String encryptedKeySplit, String migrationEncryptedKeySplit)
-      throws ServiceException;
-
-  /**
-   * Creates the key in the database, returning the created and stored key. For operating on keys
-   * encrypted using a {@link DataKey}.
-   *
-   * @param encryptionKey EncryptionKey containing the metadata to copy to the newly created
-   *     encryption key. The contained private key material (if any) is ignored.
-   * @param dataKey The DataKey used to encrypt {@code encryptedKeySplit}.
-   * @param encryptedKeySplit The keysplit payload encrypted using {@code dataKey}. The keysplit is
-   *     decrypted, re-encrypted, and added to the returned and stored EncryptionKey.
-   */
-  EncryptionKey createKey(
-      EncryptionKey encryptionKey,
-      DataKey dataKey,
-      String encryptedKeySplit,
-      String migrationEncryptedKeySplit)
       throws ServiceException;
 }

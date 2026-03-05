@@ -21,10 +21,7 @@ import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keystorage.converters.EncryptionKeyConverter;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.GetDataKeyTask;
-import com.google.scp.coordinator.keymanagement.shared.converter.DataKeyConverter;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.CreateKeyRequestProto.CreateKeyRequest;
-import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 
@@ -32,12 +29,10 @@ import com.google.scp.shared.api.exception.ServiceException;
 public final class KeyStorageService {
 
   private final CreateKeyTask createKeyTask;
-  private final GetDataKeyTask getDataKeyTask;
 
   @Inject
-  public KeyStorageService(CreateKeyTask createKeyTask, GetDataKeyTask getDataKeyTask) {
+  public KeyStorageService(CreateKeyTask createKeyTask) {
     this.createKeyTask = createKeyTask;
-    this.getDataKeyTask = getDataKeyTask;
   }
 
   /**
@@ -50,44 +45,14 @@ public final class KeyStorageService {
     try {
       var receivedKey =
           EncryptionKeyConverter.toStorageEncryptionKey(request.getKeyId(), request.getKey());
-
-      com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto
-              .EncryptionKey
-          storedKey;
-      switch (request.getKeySplitEncryptionType()) {
-        case UNKNOWN: // fall through.
-        case DIRECT:
-          storedKey =
-              createKeyTask.createKey(
-                  receivedKey,
-                  request.getEncryptedKeySplit(),
-                  request.getMigrationEncryptedKeySplit());
-          break;
-        case DATA_KEY:
-          var dataKey =
-              DataKeyConverter.INSTANCE.reverse().convert(request.getEncryptedKeySplitDataKey());
-          storedKey =
-              createKeyTask.createKey(
-                  receivedKey,
-                  dataKey,
-                  request.getEncryptedKeySplit(),
-                  request.getMigrationEncryptedKeySplit());
-          break;
-        default:
-          throw new IllegalArgumentException(
-              String.format(
-                  "Invalid keySplitEncryptionType (%s)", request.getKeySplitEncryptionType()));
-      }
+      var storedKey =
+          createKeyTask.createKey(
+              receivedKey, request.getEncryptedKeySplit(), request.getMigrationEncryptedKeySplit());
 
       // TODO(b/206030473): this will eventually also populate with signatures
       return EncryptionKeyConverter.toApiEncryptionKey(storedKey);
     } catch (IllegalArgumentException ex) {
       throw new ServiceException(INVALID_ARGUMENT, INVALID_ARGUMENT.name(), ex.getMessage(), ex);
     }
-  }
-
-  /** Gets a new set of data keys used for the split key exchange. */
-  public DataKey getDataKey() throws ServiceException {
-    return DataKeyConverter.INSTANCE.convert(getDataKeyTask.getDataKey());
   }
 }

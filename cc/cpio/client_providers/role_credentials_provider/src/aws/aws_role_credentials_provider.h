@@ -34,13 +34,10 @@ class AwsRoleCredentialsProvider : public RoleCredentialsProviderInterface {
  public:
   AwsRoleCredentialsProvider(
       const std::shared_ptr<RoleCredentialsProviderOptions>& options,
-      const std::shared_ptr<InstanceClientProviderInterface>&
-          instance_client_provider,
       const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
       const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
       const std::shared_ptr<AuthTokenProviderInterface>& auth_token_provider)
       : options_(options),
-        instance_client_provider_(instance_client_provider),
         cpu_async_executor_(cpu_async_executor),
         io_async_executor_(io_async_executor),
         auth_token_provider_(auth_token_provider) {}
@@ -104,9 +101,6 @@ class AwsRoleCredentialsProvider : public RoleCredentialsProviderInterface {
   CreateClientConfiguration(const std::string& region) noexcept;
 
   const std::shared_ptr<RoleCredentialsProviderOptions> options_;
-
-  /// Instance client provider to fetch cloud metadata.
-  std::shared_ptr<InstanceClientProviderInterface> instance_client_provider_;
 
   /// Instances of the async executor to execute call.
   const std::shared_ptr<core::AsyncExecutorInterface> cpu_async_executor_,

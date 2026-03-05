@@ -20,7 +20,6 @@ import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.Retu
 import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.INTERNAL_ERROR;
 import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.OUTPUT_DATAWRITE_FAILED;
 import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.SUCCESS;
-import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.UNSPECIFIED_ERROR;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -132,14 +131,14 @@ public class SimpleProcessor implements JobProcessor {
           ErrorSummaryAggregator.createErrorSummary(ImmutableList.copyOf(resultsWithErrors));
 
       return jobResultBuilder
-                  .setResultInfo(
-                      ResultInfo.newBuilder()
-                          .setReturnCode(SUCCESS.name())
-                          .setReturnMessage(RESULT_SUCCESS_MESSAGE)
-                          .setErrorSummary(errorSummary)
-                          .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                          .build())
-                  .build();
+          .setResultInfo(
+              ResultInfo.newBuilder()
+                  .setReturnCode(SUCCESS.name())
+                  .setReturnMessage(RESULT_SUCCESS_MESSAGE)
+                  .setErrorSummary(errorSummary)
+                  .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
+                  .build())
+          .build();
     } catch (RecordReadException e) {
       // Error occurred in data read
       logger.error("Exception occurred during input data read. Reporting processing failure.", e);

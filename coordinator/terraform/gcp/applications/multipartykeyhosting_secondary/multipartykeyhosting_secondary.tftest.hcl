@@ -75,13 +75,16 @@ variables {
   private_key_service_execution_environment                     = ""
   enable_private_key_service_cache                              = false
   private_key_service_cache_refresh_in_minutes                  = 0
+  private_key_service_enable_canary_feature                     = false
+  private_key_service_stable_revision                           = null
+  private_key_service_canary_revision                           = null
+  private_key_service_canary_traffic_percentage                 = 0
   key_storage_service_memory_mb                                 = 0
   key_storage_service_min_instances                             = 0
   key_storage_service_max_instances                             = 0
   key_storage_service_execution_environment                     = ""
   location_new_key_ring                                         = ""
   key_storage_service_container_image_url                       = ""
-  key_storage_service_load_balancing_scheme                     = ""
   enable_attestation                                            = false
   assertion_tee_swname                                          = ""
   assertion_tee_support_attributes                              = []
@@ -108,6 +111,12 @@ variables {
   private_key_service_config_read_alert_threshold               = 0
   alert_severity_overrides                                      = {}
 
+  quota_alert_duration_sec        = 60
+  quota_alert_eval_period_sec     = 180
+  quota_alert_max_over_minutes    = 5
+  quota_alert_threshold_important = 0.6
+  quota_alert_threshold_urgent    = 0.8
+
   private_key_service_external_managed_migration_state              = "PREPARE"
   private_key_service_external_managed_migration_testing_percentage = 0
 
@@ -115,12 +124,12 @@ variables {
   private_key_service_external_managed_backend_bucket_migration_state              = null
   private_key_service_external_managed_backend_bucket_migration_testing_percentage = null
 
+  private_key_service_addon_forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
+  private_key_service_addon_external_managed_backend_bucket_migration_state              = null
+  private_key_service_addon_external_managed_backend_bucket_migration_testing_percentage = null
+
   key_storage_service_external_managed_migration_state              = "PREPARE"
   key_storage_service_external_managed_migration_testing_percentage = 0
-
-  key_storage_service_forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
-  key_storage_service_external_managed_backend_bucket_migration_state              = null
-  key_storage_service_external_managed_backend_bucket_migration_testing_percentage = null
 
   private_key_service_load_balancer_protocol                                     = "HTTP"
   private_key_service_lb_outlier_detection_enabled                               = false

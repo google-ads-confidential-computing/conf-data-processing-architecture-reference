@@ -20,6 +20,7 @@ java_library(
     name = "common",
     srcs = glob(["*.java"]),
     deps = [
+        "//java/com/google/scp/coordinator/keymanagement/shared/model",
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",

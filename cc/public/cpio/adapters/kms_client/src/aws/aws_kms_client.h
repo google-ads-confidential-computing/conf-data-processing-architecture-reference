@@ -63,12 +63,10 @@ class AwsKmsClient : public KmsClient {
 class AwsRoleCredentialsProviderFactory {
  public:
   virtual std::shared_ptr<client_providers::RoleCredentialsProviderInterface>
-  Create(
-      const std::string& region,
-      const std::shared_ptr<client_providers::InstanceClientProviderInterface>&,
-      const std::shared_ptr<core::AsyncExecutorInterface>&,
-      const std::shared_ptr<core::AsyncExecutorInterface>&,
-      const std::shared_ptr<client_providers::AuthTokenProviderInterface>&);
+  Create(const std::string& region,
+         const std::shared_ptr<core::AsyncExecutorInterface>&,
+         const std::shared_ptr<core::AsyncExecutorInterface>&,
+         const std::shared_ptr<client_providers::AuthTokenProviderInterface>&);
 };
 
 class AwsKmsClientProviderFactory {

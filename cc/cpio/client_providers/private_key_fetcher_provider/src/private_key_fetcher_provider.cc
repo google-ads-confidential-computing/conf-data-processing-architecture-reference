@@ -72,9 +72,9 @@ void PrivateKeyFetcherProvider::FetchPrivateKey(
   AsyncContext<PrivateKeyFetchingRequest, HttpRequest>
       sign_http_request_context(
           private_key_fetching_context.request,
-          bind(&PrivateKeyFetcherProvider::SignHttpRequestCallback<
-                   PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>,
-               this, private_key_fetching_context, _1),
+          std::bind(&PrivateKeyFetcherProvider::SignHttpRequestCallback<
+                        PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>,
+                    this, private_key_fetching_context, _1),
           private_key_fetching_context);
 
   SignHttpRequest(sign_http_request_context);
@@ -86,10 +86,10 @@ void PrivateKeyFetcherProvider::FetchKeysetMetadata(
   AsyncContext<KeysetMetadataFetchingRequest, HttpRequest>
       sign_http_request_context(
           keyset_metadata_fetching_context.request,
-          bind(&PrivateKeyFetcherProvider::SignHttpRequestCallback<
-                   KeysetMetadataFetchingRequest,
-                   KeysetMetadataFetchingResponse>,
-               this, keyset_metadata_fetching_context, _1),
+          std::bind(&PrivateKeyFetcherProvider::SignHttpRequestCallback<
+                        KeysetMetadataFetchingRequest,
+                        KeysetMetadataFetchingResponse>,
+                    this, keyset_metadata_fetching_context, _1),
           keyset_metadata_fetching_context);
 
   SignHttpRequest(sign_http_request_context);

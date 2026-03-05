@@ -65,19 +65,6 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface CoordinatorBHttpClient {}
 
-  /**
-   * Provides an {@code Optional<String>} binding to a URL to use for accessing the getDataKey
-   * endpoint if present. Used when an external limitation makes it difficult for CreateKey and
-   * GetDataKey to share a base URL.
-   *
-   * <p>One example of this is LocalStack not allowing the deployment of ApiGatewayV1 routes
-   * containing colons in its path segments.
-   */
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface GetDataKeyBaseUrlOverride {}
-
   /** Key storage service cloud function url */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})

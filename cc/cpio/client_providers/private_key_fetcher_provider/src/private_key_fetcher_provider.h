@@ -128,10 +128,10 @@ class PrivateKeyFetcherProvider : public PrivateKeyFetcherProviderInterface {
     core::AsyncContext<core::HttpRequest, core::HttpResponse>
         http_client_context(
             std::move(sign_http_request_context.response),
-            bind(&PrivateKeyFetcherProvider::PrivateKeyFetchingCallback<
-                     FetchingRequestType, FetchingResponseType>,
-                 this, private_key_service_fetching_context,
-                 std::placeholders::_1),
+            std::bind(&PrivateKeyFetcherProvider::PrivateKeyFetchingCallback<
+                          FetchingRequestType, FetchingResponseType>,
+                      this, private_key_service_fetching_context,
+                      std::placeholders::_1),
             private_key_service_fetching_context);
     SCP_DEBUG_CONTEXT(kPrivateKeyFetcherProvider,
                       private_key_service_fetching_context,

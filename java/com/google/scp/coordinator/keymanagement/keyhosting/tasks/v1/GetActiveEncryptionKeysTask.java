@@ -22,6 +22,8 @@ import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.common.R
 import static com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestHeaderParsingUtil.getCallerEmail;
 import static java.time.Instant.ofEpochMilli;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
@@ -35,15 +37,21 @@ import com.google.scp.coordinator.keymanagement.shared.serverless.common.Request
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActiveEncryptionKeysResponseProto.GetActiveEncryptionKeysResponse;
+import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.exception.SharedErrorReason;
 import com.google.scp.shared.api.model.Code;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GetActiveEncryptionKeysTask extends ApiTask {
+  private static final Logger logger = LoggerFactory.getLogger(GetActiveEncryptionKeysTask.class);
 
   static final String START_EPOCH_MILLI_PARAM = "startEpochMillis";
   static final String END_EPOCH_MILLI_PARAM = "endEpochMillis";
@@ -90,14 +98,15 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
     }
 
     String email = getCallerEmail(request).orElse("unknown");
-    var keys = getActiveKeys(matcher.group("name"), start, end, email);
-    response.setBody(
-        GetActiveEncryptionKeysResponse.newBuilder()
-            .addAllKeys(
-                keys.map(
-                        key -> vendAccordingToConfig(key, email, allowedMigrators, logMetricHelper))
-                    .map(EncryptionKeyConverter::toApiEncryptionKey)
-                    .collect(toImmutableList())));
+    var setName = matcher.group("name");
+    var keys = getActiveKeys(setName, start, end, email);
+    var keysImmutable =
+        keys.map(key -> vendAccordingToConfig(key, email, allowedMigrators, logMetricHelper))
+            .map(EncryptionKeyConverter::toApiEncryptionKey)
+            .collect(toImmutableList());
+    logMaxAge(keysImmutable, setName);
+
+    response.setBody(GetActiveEncryptionKeysResponse.newBuilder().addAllKeys(keysImmutable));
   }
 
   private Stream<EncryptionKey> getActiveKeys(
@@ -107,6 +116,24 @@ public class GetActiveEncryptionKeysTask extends ApiTask {
         : keyDb
             .getActiveKeys(setName, 0, ofEpochMilli(startMilli), ofEpochMilli(endMilli))
             .stream();
+  }
+
+  private void logMaxAge(ImmutableList<EncryptionKeyProto.EncryptionKey> keys, String setName) {
+    if (keys.isEmpty()) {
+      return;
+    }
+    var activationTime =
+        keys.stream()
+            .map(EncryptionKeyProto.EncryptionKey::getActivationTime)
+            .min(Long::compareTo)
+            .orElse(0L);
+    var oldest = Instant.ofEpochMilli(activationTime);
+    var now = Instant.now();
+    var maxDays = ChronoUnit.DAYS.between(oldest, now);
+    logger.info(
+        logMetricHelper.format(
+            "get_active_encryption_keys/age_in_days",
+            ImmutableMap.of("setName", setName, "days", Long.toString(maxDays))));
   }
 
   // This replicates the filtering done by SpannerKeyDb.listRecentKeys

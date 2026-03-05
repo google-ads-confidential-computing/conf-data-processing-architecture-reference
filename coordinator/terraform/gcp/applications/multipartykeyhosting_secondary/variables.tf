@@ -65,6 +65,31 @@ variable "alarms_enabled" {
   type        = bool
 }
 
+variable "quota_alert_duration_sec" {
+  description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
+  type        = number
+}
+
+variable "quota_alert_eval_period_sec" {
+  description = "Amount of time (in seconds) for alarm evaluation of quota usage. Example: '60'."
+  type        = number
+}
+
+variable "quota_alert_max_over_minutes" {
+  description = "Number of minutes over which to get a max quota usage."
+  type        = number
+}
+
+variable "quota_alert_threshold_important" {
+  description = "Percentage of quota usage that triggers an important alert. Example: 0.6"
+  type        = number
+}
+
+variable "quota_alert_threshold_urgent" {
+  description = "Percentage of quota usage that triggers an urgent alert. Example: 0.9"
+  type        = number
+}
+
 ################################################################################
 # Spanner Variables.
 ################################################################################
@@ -270,10 +295,35 @@ variable "key_storage_service_container_image_url" {
 }
 
 ################################################################################
+# CR Canary Variables.
+################################################################################
+
+variable "private_key_service_enable_revision_pinning" {
+  description = "Enables the canary feature. When enabled valid stable_revisions must be provided."
+  nullable    = false
+  type        = bool
+}
+
+variable "private_key_service_stable_revisions" {
+  description = "Map of regions to their stable revision name used for version pinning."
+  type        = map(string)
+}
+
+variable "private_key_service_canary_revision" {
+  description = "The revision name for the canary service used for version pinning."
+  type        = string
+}
+
+variable "private_key_service_canary_traffic_percentage" {
+  description = "The percentage of traffic to route to the canary service."
+  nullable    = false
+  type        = number
+}
+
+################################################################################
 # Key Management Variables.
 ################################################################################
 
-# TODO: Manage group in terraform
 variable "allowed_wip_user_group" {
   description = "Google Group to manage allowed coordinator users."
   type        = string
@@ -329,7 +379,6 @@ variable "allowed_operators" {
     value.image_signature_key_ids (string) - The list of allowed signature key IDs for attested access.
   EOT
   type = map(object({
-    # TODO Leverage optional() when upgrade Terraform to > 1.3.
     service_accounts        = list(string)
     key_sets                = list(string)
     image_references        = list(string)

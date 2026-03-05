@@ -43,6 +43,7 @@ cc_library(
         "//cc/cpio/client_providers/global_cpio/src:global_cpio_lib",
         "//cc/cpio/client_providers/kms_client_provider/src/aws:nontee_aws_kms_client_provider_no_factory",
         "//cc/cpio/client_providers/role_credentials_provider/src/aws:aws_role_credentials_provider_no_factory",
+        "//cc/cpio/common/src/aws:aws_utils_lib",
         "//cc/public/cpio/interface:type_def",
         "//cc/public/cpio/interface/kms_client",
         "//cc/public/cpio/interface/kms_client:type_def",

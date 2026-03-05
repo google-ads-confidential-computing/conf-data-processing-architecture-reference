@@ -30,7 +30,6 @@ import com.google.cloud.functions.HttpResponse;
 import com.google.crypto.tink.KmsClient;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keystorage.service.common.KeyStorageService;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.GetDataKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.FakeKmsClient;
@@ -60,23 +59,19 @@ public final class CreateKeyRequestHandlerTest {
 
   @Mock private HttpRequest httpRequest;
   @Mock private HttpResponse httpResponse;
-  // Unused in GCP implementation.
-  @Mock GetDataKeyTask getDataKeyTask;
 
   private BufferedWriter writer;
   private CreateKeyRequestHandler requestHandler;
   private KmsClient kmsClient;
-  private KmsClient migrationKmsClient;
 
   @Before
   public void before() throws IOException {
     kmsClient = new FakeKmsClient();
-    migrationKmsClient = new FakeKmsClient();
+    var migrationClient = new FakeKmsClient();
     KeyStorageService keyStorageService =
         new KeyStorageService(
             new GcpCreateKeyTask(
-                keyDb, kmsClient, "fake-kms://$setName$_fake_key_b", migrationKmsClient, "", false),
-            getDataKeyTask);
+                keyDb, kmsClient, "fake-kms://$setName$_fake_key_b", migrationClient, "", false));
     requestHandler = new CreateKeyRequestHandler(keyStorageService);
     writer = new BufferedWriter(new StringWriter());
     when(httpResponse.getWriter()).thenReturn(writer);
@@ -155,7 +150,7 @@ public final class CreateKeyRequestHandlerTest {
   }
 
   @Test
-  public void handleRequest_invalidHttpMethod() throws IOException, GeneralSecurityException {
+  public void handleRequest_invalidHttpMethod() throws IOException {
     String keyId = "12345";
     String name = "keys/" + keyId;
     String publicKey = "myPublicKey";

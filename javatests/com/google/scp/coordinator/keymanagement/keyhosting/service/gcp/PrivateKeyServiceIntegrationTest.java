@@ -122,7 +122,6 @@ public final class PrivateKeyServiceIntegrationTest {
     assertThat(response.getDetailsList().toString()).contains("MISSING_KEY");
   }
 
-
   @Test(timeout = 25_000)
   public void getEncryptionKeys_betaWrongPath() {
     HttpRequest getRequest =

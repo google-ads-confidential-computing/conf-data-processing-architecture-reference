@@ -40,27 +40,6 @@ cc_test(
 )
 
 cc_test(
-    name = "tee_aws_kms_client_provider_test",
-    size = "small",
-    timeout = "long",
-    srcs =
-        ["tee_aws_kms_client_provider_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
-    deps = [
-        "//cc:cc_base_include_dir",
-        "//cc/core/interface:interface_lib",
-        "//cc/core/test/utils:utils_lib",
-        "//cc/cpio/client_providers/kms_client_provider/mock/aws:aws_kms_client_provider_mock",
-        "//cc/cpio/client_providers/kms_client_provider/src/aws:tee_aws_kms_client_provider_lib",
-        "//cc/cpio/client_providers/role_credentials_provider/mock:role_credentials_provider_mock",
-        "//cc/public/core/test/interface:execution_result_matchers",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_test(
     name = "aws_kms_client_provider_utils_test",
     size = "small",
     srcs =
@@ -71,21 +50,6 @@ cc_test(
         "//cc/core/test/utils:utils_lib",
         "//cc/cpio/client_providers/kms_client_provider/src/aws:nontee_aws_kms_client_provider_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "tee_aws_kms_client_provider_utils_test",
-    size = "small",
-    srcs =
-        ["tee_aws_kms_client_provider_utils_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
-    deps = [
-        "//cc:cc_base_include_dir",
-        "//cc/cpio/client_providers/kms_client_provider/src/aws:tee_aws_kms_client_provider_lib",
         "@com_google_googletest//:gtest_main",
     ],
 )

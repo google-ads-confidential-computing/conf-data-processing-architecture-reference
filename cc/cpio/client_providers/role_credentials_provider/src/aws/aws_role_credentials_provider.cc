@@ -28,7 +28,6 @@
 #include "cc/core/common/uuid/src/uuid.h"
 #include "core/async_executor/src/aws/aws_async_executor.h"
 #include "core/common/time_provider/src/time_provider.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_utils.h"
 #include "cpio/client_providers/role_credentials_provider/src/aws/sts_error_converter.h"
 #include "cpio/common/src/aws/aws_utils.h"
 
@@ -55,7 +54,6 @@ using google::scp::core::errors::
     SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED;
 using google::scp::core::errors::
     SC_AWS_ROLE_CREDENTIALS_PROVIDER_INVALID_REQUEST;
-using google::scp::cpio::client_providers::AwsInstanceClientUtils;
 using std::make_shared;
 using std::shared_ptr;
 using std::string;
@@ -80,16 +78,11 @@ AwsRoleCredentialsProvider::CreateClientConfiguration(
 }
 
 ExecutionResult AwsRoleCredentialsProvider::Init() noexcept {
-  return SuccessExecutionResult();
-};
-
-ExecutionResult AwsRoleCredentialsProvider::Run() noexcept {
-  if (!instance_client_provider_ && options_->region.empty()) {
+  if (options_->region.empty()) {
     auto execution_result = FailureExecutionResult(
         SC_AWS_ROLE_CREDENTIALS_PROVIDER_INITIALIZATION_FAILED);
     SCP_ERROR(kAwsRoleCredentialsProvider, kZeroUuid, execution_result,
-              "InstanceClientProvider and region in the option cannot be both "
-              "null or empty.");
+              "Region option cannot be empty.");
     return execution_result;
   }
 
@@ -109,21 +102,7 @@ ExecutionResult AwsRoleCredentialsProvider::Run() noexcept {
     return execution_result;
   }
 
-  string region;
-  if (options_->region.empty()) {
-    auto region_code_or =
-        AwsInstanceClientUtils::GetCurrentRegionCode(instance_client_provider_);
-    if (!region_code_or.Successful()) {
-      SCP_ERROR(kAwsRoleCredentialsProvider, kZeroUuid, region_code_or.result(),
-                "Failed to get region code for current instance");
-      return region_code_or.result();
-    }
-    region = std::move(*region_code_or);
-  } else {
-    region = options_->region;
-  }
-
-  auto client_config = CreateClientConfiguration(region);
+  auto client_config = CreateClientConfiguration(options_->region);
   client_config->executor = make_shared<AwsAsyncExecutor>(io_async_executor_);
   sts_client_ = make_shared<STSClient>(*client_config);
 
@@ -131,6 +110,10 @@ ExecutionResult AwsRoleCredentialsProvider::Run() noexcept {
       to_string(TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks());
   session_name_ = make_shared<string>(timestamp);
 
+  return SuccessExecutionResult();
+}
+
+ExecutionResult AwsRoleCredentialsProvider::Run() noexcept {
   return SuccessExecutionResult();
 }
 
@@ -166,10 +149,11 @@ void AwsRoleCredentialsProvider::GetRoleCredentials(
       get_token_request->key_ids = move(key_ids);
     }
     AsyncContext<GetTeeSessionTokenRequest, GetSessionTokenResponse>
-        get_token_context(std::move(get_token_request),
-                          bind(&AwsRoleCredentialsProvider::OnGetTokenCallback,
-                               this, get_credentials_context, _1),
-                          get_credentials_context);
+        get_token_context(
+            std::move(get_token_request),
+            std::bind(&AwsRoleCredentialsProvider::OnGetTokenCallback, this,
+                      get_credentials_context, _1),
+            get_credentials_context);
 
     auth_token_provider_->GetTeeSessionToken(get_token_context);
   } else {
@@ -180,8 +164,8 @@ void AwsRoleCredentialsProvider::GetRoleCredentials(
 
     sts_client_->AssumeRoleAsync(
         sts_request,
-        bind(&AwsRoleCredentialsProvider::OnGetRoleCredentialsCallback, this,
-             get_credentials_context, _1, _2, _3, _4),
+        std::bind(&AwsRoleCredentialsProvider::OnGetRoleCredentialsCallback,
+                  this, get_credentials_context, _1, _2, _3, _4),
         nullptr);
   }
 }
@@ -207,9 +191,9 @@ void AwsRoleCredentialsProvider::OnGetTokenCallback(
 
   sts_client_->AssumeRoleWithWebIdentityAsync(
       sts_request,
-      bind(&AwsRoleCredentialsProvider::
-               OnGetRoleCredentialsWithWebIdentityCallback,
-           this, get_credentials_context, _1, _2, _3, _4),
+      std::bind(&AwsRoleCredentialsProvider::
+                    OnGetRoleCredentialsWithWebIdentityCallback,
+                this, get_credentials_context, _1, _2, _3, _4),
       nullptr);
 }
 

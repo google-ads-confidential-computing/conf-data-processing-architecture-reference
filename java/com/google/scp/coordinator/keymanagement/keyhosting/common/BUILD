@@ -20,8 +20,6 @@ java_library(
     name = "common",
     srcs = glob(["*.java"]),
     deps = [
-        "//java/external:autovalue",
-        "//java/external:autovalue_annotations",
         "//java/external:guice",
     ],
 )

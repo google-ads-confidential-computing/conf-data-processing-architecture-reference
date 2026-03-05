@@ -19,21 +19,13 @@ package(default_visibility = ["//visibility:public"])
 
 # Flag to determine which platform the system will be built and run on.
 # Example:
-# bazel build target --//cc/public/cpio/interface:platform=aws
+# bazel build target --//cc/public/cpio/interface:platform=gcp
 string_flag(
     name = "platform",
-    build_setting_default = "aws",
+    build_setting_default = "gcp",
     values = [
-        "aws",
         "gcp",
     ],
-)
-
-config_setting(
-    name = "aws_cpio_lib",
-    flag_values = {
-        ":platform": "aws",
-    },
 )
 
 config_setting(
@@ -50,26 +42,10 @@ bool_flag(
 )
 
 config_setting(
-    name = "aws_cpio_lib_inside_tee",
-    flag_values = {
-        ":platform": "aws",
-        ":run_inside_tee": "True",
-    },
-)
-
-config_setting(
     name = "gcp_cpio_lib_inside_tee",
     flag_values = {
         ":platform": "gcp",
         ":run_inside_tee": "True",
-    },
-)
-
-config_setting(
-    name = "aws_cpio_lib_outside_tee",
-    flag_values = {
-        ":platform": "aws",
-        ":run_inside_tee": "False",
     },
 )
 

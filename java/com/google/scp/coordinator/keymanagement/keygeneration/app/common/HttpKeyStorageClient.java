@@ -16,7 +16,6 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.app.common;
 
-import static com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.GetDataKeyBaseUrlOverride;
 import static com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceBaseUrl;
 
 import com.google.common.primitives.Ints;
@@ -25,12 +24,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.CoordinatorBHttpClient;
 import com.google.scp.coordinator.keymanagement.keystorage.converters.EncryptionKeyConverter;
-import com.google.scp.coordinator.keymanagement.shared.converter.DataKeyConverter;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.CreateKeyRequestProto.CreateKeyRequest;
-import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.DataKeyProto;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.KeySplitEncryptionTypeProto.KeySplitEncryptionType;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto;
-import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.util.ErrorUtil;
 import java.io.IOException;
@@ -45,8 +41,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * HTTP Client to communicate with the Key Storage Service to send and store {@link EncryptionKey}
@@ -67,18 +61,14 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
           .build();
   // Base URL (e.g. `https://foo.com/v1`).
   private final String createKeyBaseUrl;
-  private final String getDataKeyBaseUrl;
   private final HttpClient httpClient;
-  private final Logger logger = LoggerFactory.getLogger(HttpKeyStorageClient.class);
 
   /** Creates a new instance of the {@code HttpKeyStorageClient} class. */
   @Inject
   public HttpKeyStorageClient(
       @KeyStorageServiceBaseUrl String keyStorageServiceBaseUrl,
-      @CoordinatorBHttpClient HttpClient httpClient,
-      @GetDataKeyBaseUrlOverride Optional<String> getDataKeyBaseUrlOverride) {
+      @CoordinatorBHttpClient HttpClient httpClient) {
     this.createKeyBaseUrl = keyStorageServiceBaseUrl;
-    this.getDataKeyBaseUrl = getDataKeyBaseUrlOverride.orElse(keyStorageServiceBaseUrl);
     this.httpClient = httpClient;
   }
 
@@ -100,46 +90,6 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
             .build();
 
     return executeCreateKeyRequest(createKeyRequest);
-  }
-
-  @Override
-  public EncryptionKey createKey(
-      EncryptionKey encryptionKey,
-      DataKey dataKey,
-      String encryptedKeySplit,
-      Optional<String> migrationEncryptedKeySplit)
-      throws KeyStorageServiceException {
-    var apiKey = EncryptionKeyConverter.toApiEncryptionKey(encryptionKey);
-
-    var createKeyRequest =
-        CreateKeyRequest.newBuilder()
-            .setKeyId(encryptionKey.getKeyId())
-            .setKey(apiKey)
-            .setKeySplitEncryptionType(KeySplitEncryptionType.DATA_KEY)
-            .setEncryptedKeySplit(encryptedKeySplit)
-            .setEncryptedKeySplitDataKey(DataKeyConverter.INSTANCE.convert(dataKey))
-            .setMigrationEncryptedKeySplit(migrationEncryptedKeySplit.orElse(""))
-            .build();
-
-    return executeCreateKeyRequest(createKeyRequest);
-  }
-
-  /**
-   * Performs a getDataKey HTTP request and returns the fetched DataKey. See {@link
-   * KeyStorageClient#fetchDataKey()}.
-   */
-  @Override
-  public DataKey fetchDataKey() throws KeyStorageServiceException {
-    var request = new HttpPost(getGetDataKeyUri());
-
-    // Send an empty request.
-    var payload = "{}";
-    var httpResponse = executeJsonRequest(request, payload);
-    var successResponse = getSuccessResponseBody(httpResponse);
-
-    return DataKeyConverter.INSTANCE
-        .reverse()
-        .convert(parseSuccessGetDataKeyResponse(successResponse));
   }
 
   private EncryptionKey executeCreateKeyRequest(CreateKeyRequest createKeyRequest)
@@ -206,17 +156,6 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
     return responseBody;
   }
 
-  private DataKeyProto.DataKey parseSuccessGetDataKeyResponse(String responseBody)
-      throws KeyStorageServiceException {
-    try {
-      DataKeyProto.DataKey.Builder builder = DataKeyProto.DataKey.newBuilder();
-      JsonFormat.parser().merge(responseBody, builder);
-      return builder.build();
-    } catch (InvalidProtocolBufferException e) {
-      throw new KeyStorageServiceException("Failed to parse success response as DataKey", e);
-    }
-  }
-
   /**
    * Attempts to read the body of a 200 response and convert it to a {@link EncryptionKey}, wrapping
    * parsing errors in a {@link KeyStorageServiceException}
@@ -237,9 +176,5 @@ public final class HttpKeyStorageClient implements KeyStorageClient {
 
   private URI getCreateUri() {
     return URI.create(String.format("%s/encryptionKeys", createKeyBaseUrl));
-  }
-
-  private URI getGetDataKeyUri() {
-    return URI.create(String.format("%s/encryptionKeys:getDataKey", getDataKeyBaseUrl));
   }
 }

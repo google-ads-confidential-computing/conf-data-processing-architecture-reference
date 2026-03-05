@@ -56,6 +56,16 @@
       __UNIQUE_VAR_NAME_LOG_EVERY_PERIOD(next_log, __LINE__), period,          \
       component_name, activity_id, result, message, ##__VA_ARGS__)
 
+// Same as SCP_ERROR_WITHOUT_RESULT except only prints out if period has passed
+// since the last encounter, where period is a std::duration.
+#define SCP_ERROR_EVERY_PERIOD_WITHOUT_RESULT(period, component_name,    \
+                                              activity_id, message, ...) \
+  __SCP_EVERY_PERIOD_HELPER(                                             \
+      ERROR_WITHOUT_RESULT,                                              \
+      __UNIQUE_VAR_NAME_LOG_EVERY_PERIOD(next_log_timestamp, __LINE__),  \
+      __UNIQUE_VAR_NAME_LOG_EVERY_PERIOD(next_log, __LINE__), period,    \
+      component_name, activity_id, message, ##__VA_ARGS__)
+
 // Same as SCP_CRITICAL except only prints out if period has passed since the
 // last encounter, where period is a std::duration.
 #define SCP_CRITICAL_EVERY_PERIOD(period, component_name, activity_id, result, \

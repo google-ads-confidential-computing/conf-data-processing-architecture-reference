@@ -37,17 +37,11 @@ provider "google" {
 locals {
   private_key_service_addtional_environment = "pre-${var.environment}"
 
+  # Service Domains
   service_subdomain_suffix      = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
   key_storage_domain            = var.environment != "prod" ? "${var.key_storage_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.key_storage_service_subdomain}.${var.parent_domain_name}"
   private_key_domain            = "${var.private_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
   private_key_domain_additional = "${var.private_key_service_subdomain}-${local.private_key_service_addtional_environment}.${var.parent_domain_name}"
-
-  region_map = { for reg in [var.primary_region, var.secondary_region] : reg => reg }
-
-  key_sets = flatten([
-    for key_set in var.key_sets_config.key_sets : key_set.name
-  ])
-
   service_domain_to_address_map = (
     var.private_key_service_addon_container_image_url == ""
     ? {
@@ -61,10 +55,21 @@ locals {
     }
   )
 
+  # Service Regions
+  private_key_service_regions = concat(
+    [var.primary_region, var.secondary_region],
+    var.private_key_service_additional_regions
+  )
+
+  key_sets = flatten([
+    for key_set in var.key_sets_config.key_sets : key_set.name
+  ])
+
   all_service_accounts = flatten([
     for _, operator in var.allowed_operators : operator.service_accounts
   ])
 
+  # KMS Base URIs
   kms_key_base_uri           = "gcp-kms://${module.key_management_service.kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
   migration_kms_key_base_uri = "gcp-kms://${module.key_management_service.kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
 
@@ -126,6 +131,19 @@ Invalid configuration for running the Key Migration Tool. Please check the requi
 EOF
     }
   }
+}
+
+module "alerts_on_quota" {
+  source = "../../modules/alert_on_quota"
+
+  project     = var.project_id
+  environment = var.environment
+
+  alert_duration_sec        = var.quota_alert_duration_sec
+  alert_eval_period_sec     = var.quota_alert_eval_period_sec
+  alert_max_over_minutes    = var.quota_alert_max_over_minutes
+  alert_threshold_important = var.quota_alert_threshold_important
+  alert_threshold_urgent    = var.quota_alert_threshold_urgent
 }
 
 module "keydb" {
@@ -191,12 +209,9 @@ module "keystorageservice" {
 module "private_key_service" {
   source = "../private_key_service"
 
-  environment = var.environment
-  project_id  = var.project_id
-  regions = concat(
-    [var.primary_region, var.secondary_region],
-    var.private_key_service_additional_regions
-  )
+  environment            = var.environment
+  project_id             = var.project_id
+  regions                = local.private_key_service_regions
   service_domain         = local.private_key_domain
   load_balancer_protocol = var.private_key_service_load_balancer_protocol
 
@@ -223,12 +238,17 @@ module "private_key_service" {
   source_container_image_url             = var.private_key_service_container_image_url
 
   # Cloud Run settings
-  cpu_count             = var.private_key_service_cloud_run_cpu_count
-  memory_mb             = var.private_key_service_cloud_run_memory_mb
-  concurrency           = var.private_key_service_cloud_run_concurrency
-  min_instance_count    = var.private_key_service_cloud_run_min_instances
-  max_instance_count    = var.private_key_service_cloud_run_max_instances
-  execution_environment = var.private_key_service_execution_environment
+  cpu_count                 = var.private_key_service_cloud_run_cpu_count
+  memory_mb                 = var.private_key_service_cloud_run_memory_mb
+  concurrency               = var.private_key_service_cloud_run_concurrency
+  min_instance_count        = var.private_key_service_cloud_run_min_instances
+  max_instance_count        = var.private_key_service_cloud_run_max_instances
+  execution_environment     = var.private_key_service_execution_environment
+  enable_revision_pinning   = var.private_key_service_enable_revision_pinning
+  canary_region             = var.primary_region
+  stable_revisions          = var.private_key_service_stable_revisions
+  canary_revision           = var.private_key_service_canary_revision
+  canary_traffic_percentage = var.private_key_service_canary_traffic_percentage
 
   # Spanner configs
   spanner_database_name      = module.keydb.keydb_name
@@ -265,20 +285,19 @@ module "private_key_service_addon" {
 
   environment = local.private_key_service_addtional_environment
   project_id  = var.project_id
-  regions = concat(
-    [var.primary_region, var.secondary_region],
-    var.private_key_service_additional_regions
-  )
+  regions     = local.private_key_service_regions
 
-  service_domain                                               = local.private_key_domain_additional
-  display_identifier                                           = "Pre${var.environment}"
-  load_balancing_scheme                                        = "EXTERNAL_MANAGED"
+  service_domain         = local.private_key_domain_additional
+  display_identifier     = "Pre${var.environment}"
+  load_balancing_scheme  = "EXTERNAL_MANAGED"
+  load_balancer_protocol = var.private_key_service_load_balancer_protocol
+
+  # LB Migration
   external_managed_migration_state                             = null
   external_managed_migration_testing_percentage                = null
-  forwarding_rule_load_balancing_scheme                        = var.private_key_service_forwarding_rule_load_balancing_scheme
-  load_balancer_protocol                                       = var.private_key_service_load_balancer_protocol
-  external_managed_backend_bucket_migration_state              = var.private_key_service_external_managed_backend_bucket_migration_state
-  external_managed_backend_bucket_migration_testing_percentage = var.private_key_service_external_managed_backend_bucket_migration_testing_percentage
+  forwarding_rule_load_balancing_scheme                        = "EXTERNAL_MANAGED"
+  external_managed_backend_bucket_migration_state              = null
+  external_managed_backend_bucket_migration_testing_percentage = null
 
   # Load Balancer Outlier Detection
   lb_outlier_detection_enabled                               = var.private_key_service_lb_outlier_detection_enabled
@@ -301,6 +320,13 @@ module "private_key_service_addon" {
   min_instance_count    = var.private_key_service_cloud_run_min_instances
   max_instance_count    = var.private_key_service_cloud_run_max_instances
   execution_environment = var.private_key_service_execution_environment
+
+  # private_key_service_addon does not use canary deployments
+  enable_revision_pinning   = false
+  canary_region             = var.primary_region
+  stable_revisions          = {}
+  canary_revision           = null
+  canary_traffic_percentage = 0
 
   # Spanner configs
   spanner_database_name      = module.keydb.keydb_name

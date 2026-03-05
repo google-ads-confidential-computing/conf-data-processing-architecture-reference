@@ -16,7 +16,7 @@ abstract class AvroSchemaSupplier implements Supplier<Schema> {
 
   // Memoized supplier to provide the parsed schema. The schema can't change during runtime so it
   // can be memoized. Parsing logic is only executed once.
-  private final Supplier<Schema> memoizedSupplier;
+  private final com.google.common.base.Supplier<Schema> memoizedSupplier;
 
   AvroSchemaSupplier() {
     memoizedSupplier = Suppliers.memoize(() -> parseAvroSchemaFromResources(schemaResourcePath()));

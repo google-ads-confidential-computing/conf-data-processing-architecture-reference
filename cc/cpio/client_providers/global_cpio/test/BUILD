@@ -27,30 +27,21 @@ cc_library(
     copts =
         select(
             {
-                "//cc/public/cpio/interface:aws_cpio_lib": [
-                    "-DAWS_TEST=1",
-                ],
                 "//cc/public/cpio/interface:gcp_cpio_lib": [
                     "-DGCP_TEST=1",
                 ],
             },
-            no_match_error = "Please build for AWS or GCP",
         ) + [
             "-DTEST_CPIO=1",
         ],
     deps =
         select(
             {
-                "//cc/public/cpio/interface:aws_cpio_lib": [
-                    "//cc/cpio/client_providers/instance_client_provider/test/aws:test_aws_instance_client_provider_lib",
-                    "//cc/cpio/client_providers/role_credentials_provider/test/aws:test_aws_role_credentials_provider_lib",
-                ],
                 "//cc/public/cpio/interface:gcp_cpio_lib": [
                     "//cc/cpio/client_providers/instance_client_provider/test/gcp:test_gcp_instance_client_provider_lib",
                     "//cc/cpio/client_providers/role_credentials_provider/src/gcp:gcp_role_credentials_provider_lib",
                 ],
             },
-            no_match_error = "Please build for AWS or GCP",
         ) + [
             "//cc:cc_base_include_dir",
             "//cc/cpio/client_providers/global_cpio/src/cpio_provider:cpio_provider_deps",

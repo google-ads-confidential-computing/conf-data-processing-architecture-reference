@@ -20,13 +20,9 @@ cc_library(
     name = "cloud_initializer_select_lib",
     deps = select(
         {
-            "//cc/public/cpio/interface:aws_cpio_lib": [
-                "//cc/cpio/client_providers/cloud_initializer/src/aws:aws_initializer_lib",
-            ],
             "//cc/public/cpio/interface:gcp_cpio_lib": [
                 "//cc/cpio/client_providers/cloud_initializer/src/gcp:no_op_initializer_lib",
             ],
         },
-        no_match_error = "Please build for AWS or GCP",
     ),
 )

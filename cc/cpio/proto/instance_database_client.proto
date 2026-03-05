@@ -27,7 +27,6 @@ option java_package = "com.google.cmrt.sdk.instance_database_client";
 option cc_enable_arenas = true;
 
 // Request to get the instance by name.
-// In AWS, it is the instance ID.
 // In GCP, it is of format:
 // https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances/%s
 message GetInstanceByNameRequest {

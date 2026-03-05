@@ -61,6 +61,31 @@ variable "alarms_enabled" {
   type        = bool
 }
 
+variable "quota_alert_duration_sec" {
+  description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
+  type        = number
+}
+
+variable "quota_alert_eval_period_sec" {
+  description = "Amount of time (in seconds) for alarm evaluation of quota usage. Example: '60'."
+  type        = number
+}
+
+variable "quota_alert_max_over_minutes" {
+  description = "Number of minutes over which to get a max quota usage."
+  type        = number
+}
+
+variable "quota_alert_threshold_important" {
+  description = "Percentage of quota usage that triggers an important alert. Example: 0.6"
+  type        = number
+}
+
+variable "quota_alert_threshold_urgent" {
+  description = "Percentage of quota usage that triggers an urgent alert. Example: 0.9"
+  type        = number
+}
+
 ################################################################################
 # Spanner Variables.
 ################################################################################
@@ -99,15 +124,6 @@ variable "spanner_custom_configuration_base_config" {
 variable "spanner_custom_configuration_read_replica_location" {
   description = "Region used in custom configuration as an additional read replica."
   type        = string
-}
-
-################################################################################
-# VPC Variables.
-################################################################################
-
-variable "use_vpc_new_module" {
-  description = "Bool to control switching VPC creation with new module."
-  type        = bool
 }
 
 ################################################################################
@@ -242,12 +258,16 @@ variable "key_generation_create_alert_alignment_periods" {
   type        = number
 }
 
+variable "use_only_key_storage_service_base_url" {
+  description = "Flag to indicate if only key storage service base url should be used for peer coordinator."
+  type        = bool
+}
+
 variable "key_storage_service_base_url" {
   description = "Base url for key storage service for peer coordinator."
   type        = string
 }
 
-// TODO(b/275758643)
 variable "key_storage_service_cloudfunction_url" {
   description = "Cloud function url for peer coordinator."
   type        = string
@@ -280,7 +300,6 @@ variable "allowed_operators" {
     value.image_signature_key_ids (string) - The list of required signature algorithm key ids.
   EOT
   type = map(object({
-    # TODO Leverage optional() when upgrade Terraform to > 1.3.
     service_accounts        = list(string)
     key_sets                = list(string)
     image_references        = list(string)
@@ -451,6 +470,11 @@ variable "private_key_service_cache_refresh_in_minutes" {
   type        = number
 }
 
+variable "private_key_service_load_balancer_protocol" {
+  description = "The protocol the load balancer uses to communicate with backends."
+  type        = string
+}
+
 variable "private_key_service_load_balancing_scheme" {
   description = "Whether the Private KS will be used with internal or external load balancing."
   type        = string
@@ -468,11 +492,6 @@ variable "private_key_service_external_managed_migration_testing_percentage" {
 
 variable "private_key_service_forwarding_rule_load_balancing_scheme" {
   description = "Specifies the load balancing scheme used for the forwarding rule."
-  type        = string
-}
-
-variable "private_key_service_load_balancer_protocol" {
-  description = "The protocol the load balancer uses to communicate with backends."
   type        = string
 }
 
@@ -511,6 +530,32 @@ variable "private_key_service_execution_environment" {
   description = "The sandbox environment to host Private KS."
   type        = string
   nullable    = false
+}
+
+################################################################################
+# CR Canary Variables.
+################################################################################
+
+variable "private_key_service_enable_revision_pinning" {
+  description = "Enables the canary feature. When enabled valid stable_revisions must be provided."
+  nullable    = false
+  type        = bool
+}
+
+variable "private_key_service_stable_revisions" {
+  description = "Map of regions to their stable revision name used for version pinning."
+  type        = map(string)
+}
+
+variable "private_key_service_canary_revision" {
+  description = "The revision name for the canary service used for version pinning."
+  type        = string
+}
+
+variable "private_key_service_canary_traffic_percentage" {
+  description = "The percentage of traffic to route to the canary service."
+  nullable    = false
+  type        = number
 }
 
 ################################################################################

@@ -20,9 +20,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
-import java.time.Duration;
 import java.time.Instant;
-import java.util.stream.Stream;
 
 /** Interface for Key database properties */
 public interface KeyDb {
@@ -80,14 +78,6 @@ public interface KeyDb {
 
   /** Returns all keys for a given setName in the database */
   ImmutableList<EncryptionKey> listAllKeysForSetName(String setName) throws ServiceException;
-
-  /**
-   * Returns all the keys of a specified maximum age based on their creation timestamp.
-   *
-   * @param setName the key set name.
-   * @param maxAge the maximum age of returned keys.
-   */
-  Stream<EncryptionKey> listRecentKeys(String setName, Duration maxAge) throws ServiceException;
 
   /**
    * Performs a lookup of a single key, throwing a ServiceException if the key is not found.

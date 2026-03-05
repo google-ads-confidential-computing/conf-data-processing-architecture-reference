@@ -25,7 +25,6 @@ import com.google.crypto.tink.signature.EcdsaSignKeyManager;
 import com.google.crypto.tink.signature.SignatureConfig;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
 import com.google.scp.coordinator.keymanagement.testutils.FakeDataKeyUtil;
-import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import java.security.GeneralSecurityException;
 import java.util.Optional;
@@ -85,22 +84,5 @@ public class FakeKeyStorageClient implements KeyStorageClient {
     } catch (GeneralSecurityException e) {
       throw new KeyStorageServiceException("Encryption Key Signature Key error", e);
     }
-  }
-
-  @Override
-  public EncryptionKey createKey(
-      EncryptionKey encryptionKey,
-      DataKey dataKey,
-      String encryptedKeySplit,
-      Optional<String> migrationEncryptedKeySplit)
-      throws KeyStorageServiceException {
-    // Disregard data key.
-    return createKey(encryptionKey, encryptedKeySplit, migrationEncryptedKeySplit);
-  }
-
-  /** Fetches a data key usable with {@link FakeDataKeyUtil}. */
-  @Override
-  public DataKey fetchDataKey() throws KeyStorageServiceException {
-    return FakeDataKeyUtil.createDataKey();
   }
 }

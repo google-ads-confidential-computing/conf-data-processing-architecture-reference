@@ -61,7 +61,8 @@ AuthorizationProxyBase::AuthorizationProxyBase(
     : cache_(auth_cache_entry_lifetime.count(),
              false /* extend_entry_lifetime_on_access */,
              false /* block_entry_while_eviction */,
-             bind(&OnBeforeGarbageCollection, _1, _2, _3), async_executor) {}
+             std::bind(&OnBeforeGarbageCollection, _1, _2, _3),
+             async_executor) {}
 
 ExecutionResult AuthorizationProxyBase::Authorize(
     AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>&
@@ -121,8 +122,8 @@ ExecutionResult AuthorizationProxyBase::Authorize(
   AsyncContext<AuthorizationProxyRequest, AuthorizationProxyResponse>
       authorization_context_internal(
           authorization_context.request,
-          bind(&AuthorizationProxyBase::HandleAuthorizeInternalResponse, this,
-               authorization_context, key_value_pair.first, _1),
+          std::bind(&AuthorizationProxyBase::HandleAuthorizeInternalResponse,
+                    this, authorization_context, key_value_pair.first, _1),
           authorization_context);
 
   execution_result = AuthorizeInternal(authorization_context_internal);

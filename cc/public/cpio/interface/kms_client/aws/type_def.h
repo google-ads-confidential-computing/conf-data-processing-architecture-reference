@@ -24,9 +24,7 @@
 namespace google::scp::cpio {
 /// KmsClientOptions for AWS.
 struct AwsKmsClientOptions : public KmsClientOptions {
-  /// Optional. If not set, fetch it using InstanceClient.
-  /// If the code is not running on the corresponding cloud instance,
-  /// InstanceClient will not work.
+  // Required. AWS region.
   std::string region;
 
   // If present, fetch the role credentials with web identity in the http

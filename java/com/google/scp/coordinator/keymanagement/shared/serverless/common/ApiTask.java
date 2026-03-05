@@ -16,6 +16,7 @@
 
 package com.google.scp.coordinator.keymanagement.shared.serverless.common;
 
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.MISSING_KEY;
 import static com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestHeaderParsingUtil.getCallerEmail;
 
 import com.google.common.collect.ImmutableMap;
@@ -77,7 +78,10 @@ public abstract class ApiTask {
       logError(e.getMessage(), getCallerEmail(request).orElse("unknown"));
       throw e;
     } catch (ServiceException e) {
-      logError(e.getErrorReason(), getCallerEmail(request).orElse("unknown"));
+      // Don't log MISSING_KEY exceptions since already handled by GetEncryptedPrivateKeyTask
+      if (!e.getErrorReason().equals(MISSING_KEY.name())) {
+        logError(e.getErrorReason(), getCallerEmail(request).orElse("unknown"));
+      }
       throw e;
     }
     return true;

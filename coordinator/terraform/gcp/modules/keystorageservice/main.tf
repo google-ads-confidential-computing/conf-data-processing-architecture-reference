@@ -67,6 +67,12 @@ module "cloud_run" {
     POPULATE_MIGRATION_KEY_DATA = var.populate_migration_key_data
   }
 
+  # Key Storage Service does not use canary deployments
+  enable_revision_pinning   = false
+  stable_revision           = null
+  canary_revision           = null
+  canary_traffic_percentage = 0
+
   # Alert settings
   alarms_enabled           = var.alarms_enabled
   alert_name_suffix        = "Key Storage Service"
@@ -143,7 +149,7 @@ resource "google_spanner_database_iam_member" "keydb_iam_policy" {
 }
 
 module "service_monitoring_dashboard" {
-  source                           = "../shared/service_dashboards"
+  source                           = "../service_dashboards"
   environment                      = var.environment
   service_name                     = "Key Storage Service"
   load_balancer_url_map_name_regex = ".*${local.service_id}-loadbalancer"

@@ -54,51 +54,10 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "tee_aws_kms_client_provider_no_factory",
-    srcs = [
-        ":tee_aws_kms_client_provider_srcs",
-    ],
-    deps = [
-        "//cc:cc_base_include_dir",
-        "//cc/core/common/uuid/src:uuid_lib",
-        "//cc/core/interface:async_context_lib",
-        "//cc/core/interface:interface_lib",
-        "//cc/core/utils/src:core_utils",
-        "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
-        "//cc/cpio/common/src/aws:aws_utils_lib",
-        "//cc/public/cpio/interface:cpio_errors",
-        "//cc/public/cpio/interface/kms_client:type_def",
-        "@aws_sdk_cpp//:kms",
-        "@tink_cc//tink:tink_cc",
-    ],
-)
-
-cc_library(
-    name = "tee_aws_kms_client_provider_lib",
-    srcs = [
-        "tee_aws_kms_client_provider_factory.cc",
-    ],
-    deps = [
-        ":tee_aws_kms_client_provider_no_factory",
-        "//cc:cc_base_include_dir",
-        "//cc/core/interface:interface_lib",
-        "//cc/cpio/client_providers/interface:cpio_client_providers_interface_lib",
-        "//cc/cpio/common/src/aws:aws_utils_lib",
-        "//cc/public/cpio/interface/kms_client:type_def",
-        "//cc/public/cpio/interface/kms_client/aws:type_def",
-    ],
-)
-
 exports_files([
     "nontee_aws_kms_client_provider.h",
     "nontee_aws_kms_client_provider.cc",
     "nontee_error_codes.h",
-    "tee_aws_kms_client_provider.h",
-    "tee_aws_kms_client_provider.cc",
-    "tee_aws_kms_client_provider_utils.h",
-    "tee_aws_kms_client_provider_utils.cc",
-    "tee_error_codes.h",
 ])
 
 filegroup(
@@ -109,16 +68,5 @@ filegroup(
         ":nontee_aws_kms_client_provider.cc",
         ":nontee_aws_kms_client_provider.h",
         ":nontee_error_codes.h",
-    ],
-)
-
-filegroup(
-    name = "tee_aws_kms_client_provider_srcs",
-    srcs = [
-        ":tee_aws_kms_client_provider.cc",
-        ":tee_aws_kms_client_provider.h",
-        ":tee_aws_kms_client_provider_utils.cc",
-        ":tee_aws_kms_client_provider_utils.h",
-        ":tee_error_codes.h",
     ],
 )

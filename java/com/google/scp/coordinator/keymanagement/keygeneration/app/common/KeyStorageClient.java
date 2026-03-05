@@ -16,7 +16,6 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.app.common;
 
-import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import java.util.Optional;
 
@@ -42,28 +41,6 @@ public interface KeyStorageClient {
       String encryptedKeySplit,
       Optional<String> migrationEncryptedKeySplit)
       throws KeyStorageServiceException;
-
-  /**
-   * Sends a key to key storage service and returns the signed key back as a response.
-   *
-   * @param dataKey The DataKey used to encrypt {@code encryptedKeySplit}
-   * @param encryptedKeySplit The key split to send to this coordinator, encrypted using {@code
-   *     dataKey}
-   * @param migrationEncryptedKeySplit The key split encrypted with a migration key encryption key
-   *     owned by coordinator B.
-   */
-  EncryptionKey createKey(
-      EncryptionKey encryptionKey,
-      DataKey dataKey,
-      String encryptedKeySplit,
-      Optional<String> migrationEncryptedKeySplit)
-      throws KeyStorageServiceException;
-
-  /**
-   * Fetches a new Data Key from KeyStorageService to be used to encrypt the "encryptedKeySplit"
-   * sent to key storage service using {@link #createKey(EncryptionKey, String)}
-   */
-  public DataKey fetchDataKey() throws KeyStorageServiceException;
 
   /**
    * Represents an exception thrown by the {@code KeyStorageClient} class, for service errors from

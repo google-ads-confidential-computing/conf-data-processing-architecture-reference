@@ -53,20 +53,20 @@ public final class ActuateKeySetTask {
       logger.info("Key set config: {}.", config.toString());
       try {
         createSplitKeyTask.create(
-            config.getName(),
-            config.getTinkTemplate(),
-            config.getCount(),
-            config.getValidityInDays(),
-            config.getTtlInDays(),
-            config.getCreateMaxDaysAhead(),
-            config.getOverlapPeriodDays(),
-            config.getBackfillDays());
+            config.name(),
+            config.tinkTemplate(),
+            config.count(),
+            config.validityInDays(),
+            config.ttlInDays(),
+            config.createMaxDaysAhead(),
+            config.overlapPeriodDays(),
+            config.backfillDays());
       } catch (Exception exception) {
         if (exception instanceof InterruptedException) {
           Thread.currentThread().interrupt();
         }
-        logger.error(format(config.getName(), exception.toString()));
-        logger.error("Key set '{}' actuation failed.", config.getName(), exception);
+        logger.error(format(config.name(), exception.toString()));
+        logger.error("Key set '{}' actuation failed.", config.name(), exception);
       }
     }
   }

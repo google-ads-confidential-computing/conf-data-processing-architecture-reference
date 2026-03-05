@@ -207,7 +207,7 @@ public final class KeySetManagerTest {
 
     // Then
     assertThat(configs)
-        .containsExactly(KeySetConfig.create("set1", "test_template", 5, 0, 0, 13, 24, 12));
+        .containsExactly(new KeySetConfig("set1", "test_template", 5, 0, 0, 13, 24, 12));
   }
 
   private static KeySetManager createKeySetManager(String config) {
@@ -232,7 +232,7 @@ public final class KeySetManagerTest {
   }
 
   private static KeySetConfig createKeySetConfig(String setName) {
-    return KeySetConfig.create(
+    return new KeySetConfig(
         setName,
         DEFAULT_TINK_TEMPLATE,
         TEST_COUNT,

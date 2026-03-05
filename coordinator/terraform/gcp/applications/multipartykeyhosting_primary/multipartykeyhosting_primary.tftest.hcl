@@ -101,6 +101,10 @@ variables {
   public_key_service_lb_5xx_ratio_threshold                     = 0
   public_key_service_empty_key_set_error_threshold              = 0
   public_key_service_general_error_threshold                    = 0
+  public_key_service_enable_canary_feature                      = false
+  public_key_service_stable_revision                            = null
+  public_key_service_canary_revision                            = null
+  public_key_service_canary_traffic_percentage                  = 0
   private_key_service_additional_regions                        = []
   private_key_service_subdomain                                 = ""
   private_key_service_container_image_url                       = ""
@@ -124,8 +128,18 @@ variables {
   private_key_service_lb_5xx_threshold                          = 0
   private_key_service_lb_5xx_ratio_threshold                    = 0
   private_key_service_alarm_duration_sec                        = 0
+  private_key_service_enable_canary_feature                     = false
+  private_key_service_stable_revision                           = null
+  private_key_service_canary_revision                           = null
+  private_key_service_canary_traffic_percentage                 = 0
 
-  use_vpc_new_module = false
+  quota_alert_duration_sec        = 60
+  quota_alert_eval_period_sec     = 180
+  quota_alert_max_over_minutes    = 5
+  quota_alert_threshold_important = 0.6
+  quota_alert_threshold_urgent    = 0.8
+
+  use_only_key_storage_service_base_url = false
 
   private_key_service_external_managed_migration_state              = "PREPARE"
   private_key_service_external_managed_migration_testing_percentage = 0
@@ -247,13 +261,8 @@ run "doesnt_create_key_migration_tool" {
   }
 }
 
-run "creates_both_vpc_modules" {
+run "creates_vpc_modules" {
   command = plan
-
-  assert {
-    condition     = module.vpc.egress_internet_tag == "egress-internet"
-    error_message = "Should have created old VPC module"
-  }
 
   assert {
     condition     = module.vpc_new.egress_internet_tag == "vpc-egress-internet"

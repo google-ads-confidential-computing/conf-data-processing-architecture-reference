@@ -45,11 +45,9 @@ import com.google.scp.coordinator.protos.keymanagement.shared.backend.Encryption
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitDataList;
 import com.google.scp.shared.api.exception.ServiceException;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,47 +210,6 @@ public final class SpannerKeyDb implements KeyDb {
             .to(setName)
             .build();
     return retrieveKeys(statement);
-  }
-
-  @Override
-  public Stream<EncryptionKey> listRecentKeys(String setName, Duration maxAge)
-      throws ServiceException {
-    Instant maxCreation = Instant.now().minus(maxAge);
-    Statement statement =
-        Statement.newBuilder(
-                "SELECT * FROM "
-                    + TABLE_NAME
-                    + " WHERE "
-                    + CREATED_AT_COLUMN
-                    + " >= @nowParam "
-                    // Filter keys with matching set name, if it's the default set, includes keys
-                    // with null set name.
-                    + " AND (SetName = @setName"
-                    + " OR (@setName = @defaultSetName AND SetName IS NULL))"
-                    // Add expiry time to improve usage of KeySetsByNameExpiryActivationDesc.
-                    // Expiry time can be null for no rotation keys.
-                    + " AND ("
-                    + EXPIRY_TIME_COLUMN
-                    + " >= @nowParam OR "
-                    + EXPIRY_TIME_COLUMN
-                    + " IS NULL) "
-                    + " ORDER BY "
-                    + NATURAL_ORDERING)
-            .bind("nowParam")
-            .to(ofTimeSecondsAndNanos(maxCreation.getEpochSecond(), maxCreation.getNano()))
-            .bind("defaultSetName")
-            .to(KeyDb.DEFAULT_SET_NAME)
-            .bind("setName")
-            .to(setName)
-            .build();
-    Stream.Builder<EncryptionKey> keysBuilder = Stream.builder();
-    try (var readContext = dbClient.singleUse(stalenessBound)) {
-      var resultSet = readContext.executeQuery(statement);
-      while (resultSet.next()) {
-        keysBuilder.add(buildEncryptionKey(resultSet));
-      }
-    }
-    return keysBuilder.build();
   }
 
   @Override

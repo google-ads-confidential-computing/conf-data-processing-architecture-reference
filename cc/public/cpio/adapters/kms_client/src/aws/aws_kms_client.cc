@@ -26,6 +26,7 @@
 #include "cpio/client_providers/global_cpio/src/global_cpio.h"
 #include "cpio/client_providers/kms_client_provider/src/aws/nontee_aws_kms_client_provider.h"
 #include "cpio/client_providers/role_credentials_provider/src/aws/aws_role_credentials_provider.h"
+#include "cpio/common/src/aws/error_codes.h"
 #include "cpio/common/src/common_error_codes.h"
 #include "public/core/interface/execution_result_macros.h"
 #include "public/core/interface/execution_result_or_macros.h"
@@ -35,10 +36,10 @@ using google::scp::core::ExecutionResult;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
+using google::scp::core::errors::SC_AWS_INVALID_REQUEST;
 using google::scp::cpio::client_providers::AuthTokenProviderInterface;
 using google::scp::cpio::client_providers::AwsRoleCredentialsProvider;
 using google::scp::cpio::client_providers::GlobalCpio;
-using google::scp::cpio::client_providers::InstanceClientProviderInterface;
 using google::scp::cpio::client_providers::KmsClientProviderInterface;
 using google::scp::cpio::client_providers::RoleCredentialsProviderInterface;
 using google::scp::cpio::client_providers::RoleCredentialsProviderOptions;
@@ -56,7 +57,6 @@ namespace google::scp::cpio {
 shared_ptr<RoleCredentialsProviderInterface>
 AwsRoleCredentialsProviderFactory::Create(
     const string& region,
-    const shared_ptr<InstanceClientProviderInterface>& instance_client_provider,
     const shared_ptr<AsyncExecutorInterface>& io_async_executor,
     const shared_ptr<AsyncExecutorInterface>& cpu_async_executor,
     const shared_ptr<client_providers::AuthTokenProviderInterface>&
@@ -65,8 +65,8 @@ AwsRoleCredentialsProviderFactory::Create(
       make_shared<RoleCredentialsProviderOptions>();
   role_credentials_provider_options->region = region;
   return make_shared<AwsRoleCredentialsProvider>(
-      std::move(role_credentials_provider_options), instance_client_provider,
-      cpu_async_executor, io_async_executor, auth_token_provider);
+      std::move(role_credentials_provider_options), cpu_async_executor,
+      io_async_executor, auth_token_provider);
 }
 
 shared_ptr<KmsClientProviderInterface> AwsKmsClientProviderFactory::Create(
@@ -90,7 +90,6 @@ ExecutionResult AwsKmsClient::Init() noexcept {
       GlobalCpio::GetGlobalCpio()->GetCpuAsyncExecutor(cpu_async_executor),
       kAwsKmsClient, kZeroUuid, "Failed to get CpuAsyncExecutor.");
 
-  shared_ptr<InstanceClientProviderInterface> instance_client_provider;
   auto aws_kms_client_options =
       std::dynamic_pointer_cast<AwsKmsClientOptions>(options_);
   if (!aws_kms_client_options) {
@@ -102,19 +101,19 @@ ExecutionResult AwsKmsClient::Init() noexcept {
   }
 
   if (aws_kms_client_options->region.empty()) {
-    RETURN_AND_LOG_IF_FAILURE(
-        GlobalCpio::GetGlobalCpio()->GetInstanceClientProvider(
-            instance_client_provider),
-        kAwsKmsClient, kZeroUuid, "Failed to get InstanceClientProvider.");
+    auto execution_result = FailureExecutionResult(SC_AWS_INVALID_REQUEST);
+    SCP_ERROR(kAwsKmsClient, kZeroUuid, execution_result,
+              "AwsKmsClientOptions region must not be empty");
+    return execution_result;
   }
 
-  shared_ptr<AuthTokenProviderInterface> auth_token_rovider;
+  shared_ptr<AuthTokenProviderInterface> auth_token_provider;
   RETURN_AND_LOG_IF_FAILURE(
-      GlobalCpio::GetGlobalCpio()->GetAuthTokenProvider(auth_token_rovider),
+      GlobalCpio::GetGlobalCpio()->GetAuthTokenProvider(auth_token_provider),
       kAwsKmsClient, kZeroUuid, "Failed to get AuthTokenProvider.");
   role_credentials_provider_ = role_credentials_provider_factory_->Create(
-      aws_kms_client_options->region, instance_client_provider,
-      cpu_async_executor, io_async_executor, auth_token_rovider);
+      aws_kms_client_options->region, cpu_async_executor, io_async_executor,
+      auth_token_provider);
 
   kms_client_provider_ = kms_client_provider_factory_->Create(
       aws_kms_client_options, role_credentials_provider_, cpu_async_executor,

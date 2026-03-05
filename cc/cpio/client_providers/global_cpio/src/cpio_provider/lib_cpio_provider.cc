@@ -25,7 +25,6 @@
 #include "core/http2_client/src/http2_client.h"
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/http_client_interface.h"
-#include "core/interface/message_router_interface.h"
 #include "core/interface/service_interface.h"
 #include "cpio/client_providers/interface/auth_token_provider_interface.h"
 #include "cpio/client_providers/interface/cloud_initializer_interface.h"
@@ -375,14 +374,13 @@ ExecutionResult LibCpioProvider::GetInstanceClientProvider(
 
 shared_ptr<RoleCredentialsProviderInterface>
 LibCpioProvider::CreateRoleCredentialsProvider(
-    const shared_ptr<InstanceClientProviderInterface>& instance_client_provider,
     const shared_ptr<AsyncExecutorInterface>& cpu_async_executor,
     const shared_ptr<AsyncExecutorInterface>& io_async_executor,
     const shared_ptr<AuthTokenProviderInterface>&
         auth_token_provider) noexcept {
   return RoleCredentialsProviderFactory::Create(
-      make_shared<RoleCredentialsProviderOptions>(), instance_client_provider,
-      cpu_async_executor, io_async_executor, auth_token_provider);
+      make_shared<RoleCredentialsProviderOptions>(), cpu_async_executor,
+      io_async_executor, auth_token_provider);
 }
 
 ExecutionResult LibCpioProvider::GetRoleCredentialsProvider(
@@ -409,14 +407,6 @@ ExecutionResult LibCpioProvider::GetRoleCredentialsProvider(
     return execution_result;
   }
 
-  shared_ptr<InstanceClientProviderInterface> instance_client;
-  execution_result = GetInstanceClientProvider(instance_client);
-  if (!execution_result.Successful()) {
-    SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
-              "Failed to get instance client.");
-    return execution_result;
-  }
-
   shared_ptr<AuthTokenProviderInterface> auth_token_provider;
   execution_result = GetAuthTokenProvider(auth_token_provider);
   if (!execution_result.Successful()) {
@@ -425,9 +415,8 @@ ExecutionResult LibCpioProvider::GetRoleCredentialsProvider(
     return execution_result;
   }
 
-  role_credentials_provider_ =
-      CreateRoleCredentialsProvider(instance_client, cpu_async_executor,
-                                    io_async_executor, auth_token_provider);
+  role_credentials_provider_ = CreateRoleCredentialsProvider(
+      cpu_async_executor, io_async_executor, auth_token_provider);
   execution_result = role_credentials_provider_->Init();
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,
@@ -540,11 +529,9 @@ ExecutionResult LibCpioProvider::GetMetricClient(
 
 shared_ptr<MetricClientInterface> LibCpioProvider::CreateMetricClient(
     const shared_ptr<MetricClientOptions>& metric_options,
-    const shared_ptr<InstanceClientProviderInterface>&
-        instance_client_provider,
+    const shared_ptr<InstanceClientProviderInterface>& instance_client_provider,
     const shared_ptr<AsyncExecutorInterface>& cpu_async_executor,
-    const shared_ptr<AsyncExecutorInterface>&
-        io_async_executor) noexcept {
+    const shared_ptr<AsyncExecutorInterface>& io_async_executor) noexcept {
   if (metric_options->enable_remote_metric_aggregation) {
     return OtelMetricClientProviderFactory::Create(metric_options,
                                                    instance_client_provider);

@@ -69,8 +69,8 @@ class GcpKmsClientProvider : public KmsClientProviderInterface {
                 kms_client_options->gcp_kms_client_retry_initial_interval
                     .count(),
                 kms_client_options->gcp_kms_client_retry_total_retries),
-            bind(&GcpKmsClientProvider::RetryInformationEventHandler, this,
-                 std::placeholders::_1)) {}
+            std::bind(&GcpKmsClientProvider::RetryInformationEventHandler, this,
+                      std::placeholders::_1)) {}
 
   core::ExecutionResult Init() noexcept override;
 

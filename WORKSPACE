@@ -1,15 +1,13 @@
 # LINT.IfChange
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
 ################################################################################
 # Download all http_archives and git_repositories: Begin
 ################################################################################
 
 # Declare explicit protobuf version and hash, to override any implicit dependencies.
 # Please update both while upgrading to new versions.
-PROTOBUF_CORE_VERSION_FOR_CC = "28.0"
+PROTOBUF_CORE_VERSION_FOR_CC = "29.5"
 
-PROTOBUF_SHA_256_FOR_CC = "13e7749c30bc24af6ee93e092422f9dc08491c7097efa69461f88eb5f61805ce"
+PROTOBUF_SHA_256_FOR_CC = "955ef3235be41120db4d367be81efe6891c9544b3a71194d80c3055865b26e09"
 
 #############################
 # CC SDK Dependencies Rules #
@@ -261,26 +259,6 @@ container_pull(
     tag = "latest",
 )
 
-# Needed for reproducibly building AL2 binaries (e.g. //cc/proxy)
-container_pull(
-    name = "amazonlinux_2",
-    # Latest as of 2023-06-12.
-    digest = "sha256:cd3d9deffbb15db51382022a67ad717c02e0573c45c312713c046e4c2ac07771",
-    registry = "index.docker.io",
-    repository = "amazonlinux",
-    tag = "2.0.20230530.0",
-)
-
-# Needed for reproducibly building AL2023 binaries (e.g. //cc/proxy)
-container_pull(
-    name = "amazonlinux_2023",
-    # Latest as of Aug 29, 2023.
-    digest = "sha256:adde60852d11d75196f747c54ae32509d97827369499839b607a6c34c23b2165",
-    registry = "index.docker.io",
-    repository = "amazonlinux",
-    tag = "2023.1.20230825.0",
-)
-
 # Needed for cc/pbs/deploy/pbs_server/build_defs
 container_pull(
     name = "debian_11",
@@ -316,23 +294,6 @@ container_pull(
     repository = CC_BUILD_CONTAINER_REPOSITORY,
     tag = CC_BUILD_CONTAINER_TAG,
 )
-
-##########################
-## Closure dependencies ##
-##########################
-load("//build_defs/shared:bazel_rules_closure.bzl", "bazel_rules_closure")
-
-bazel_rules_closure()
-
-load(
-    "@io_bazel_rules_closure//closure:repositories.bzl",
-    "rules_closure_dependencies",
-    "rules_closure_toolchains",
-)
-
-rules_closure_dependencies()
-
-rules_closure_toolchains()
 
 ################################################################################
 # Download Containers: End

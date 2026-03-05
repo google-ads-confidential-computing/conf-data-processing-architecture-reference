@@ -50,7 +50,6 @@ void GcpRoleCredentialsProvider::GetRoleCredentials(
 shared_ptr<RoleCredentialsProviderInterface>
 RoleCredentialsProviderFactory::Create(
     const shared_ptr<RoleCredentialsProviderOptions>& options,
-    const shared_ptr<InstanceClientProviderInterface>& instance_client_provider,
     const shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
     const shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
     const std::shared_ptr<AuthTokenProviderInterface>&

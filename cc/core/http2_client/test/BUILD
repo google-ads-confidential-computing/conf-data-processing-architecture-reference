@@ -82,21 +82,3 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
-
-cc_test(
-    name = "aws_v4_signer_test",
-    size = "small",
-    srcs = ["aws_v4_signer_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
-    deps = [
-        "//cc:cc_base_include_dir",
-        "//cc/core/http2_client/src:http2_client_lib",
-        "//cc/core/interface:interface_lib",
-        "//cc/core/test/utils:utils_lib",
-        "//cc/public/core/test/interface:execution_result_matchers",
-        "@com_github_nghttp2_nghttp2//:nghttp2",
-        "@com_google_googletest//:gtest_main",
-    ],
-)

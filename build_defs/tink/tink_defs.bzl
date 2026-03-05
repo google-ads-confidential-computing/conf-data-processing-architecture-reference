@@ -12,69 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+"""Defines Tink dependencies."""
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
 # List of Maven dependencies necessary for Tink to compile -- to be included in
 # the list of Maven dependenceis passed to maven_install by the workspace.
 
-TINK_CC_VERSION = "v2.4.0"  # Nov 11, 2025
-TINK_GCP_KMS_VERSION = "1.7.0"  # Aug 10, 2022
-TINK_JAVA_VERSION = "1.15.0"  # Aug 30, 2024
+TINK_CC_VERSION = "2.4.0"  # Nov 11, 2025
+TINK_GCP_KMS_VERSION = "1.10.0"  # Mar 27, 2024
+TINK_JAVA_VERSION = "1.18.0"  # Jun 18, 2025
 TINK_MAVEN_ARTIFACTS = [
     "com.google.crypto.tink:tink:" + TINK_JAVA_VERSION,
     "com.google.crypto.tink:tink-gcpkms:" + TINK_GCP_KMS_VERSION,
 ]
 
-def import_tink_git(repo_name = ""):
-    """
-    Imports two of the Tink Bazel workspaces, @tink_base and @tink_java, from
-    GitHub in order to get the latest version and apply any local patches for
-    testing.
+def import_tink_git():
+    """Imports two of the Tink Bazel workspaces.
 
-    Args:
-      repo_name: name of the repo to import locally referenced files from
-        (e.g. "@adm_cloud_scp"), needed when importing from another repo.
-        TODO: find an alternative to specifying repo_name
-        (e.g. by defining a top level repo name and using repo_mapping)
+    @tink_cc for C++ dependencies.
+    @tink_proto is pulled from tink-java but is only used for proto deps. Tink-java
+    was chosen arbitrarily as all tink repos have the protos.
     """
 
-    # Must be present to use Tink BUILD files which contain Android build rules.
     maybe(
         http_archive,
-        name = "build_bazel_rules_android",
-        urls = ["https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip"],
-        sha256 = "cd06d15dd8bb59926e4d65f9003bfc20f9da4b2519985c27e190cddc8b7a7806",
-        strip_prefix = "rules_android-0.1.1",
-    )
-
-    # Note: loading and invoking `tink_java_deps` causes a cyclical dependency issue
-    # so Tink's dependencies are just included directly in this workspace above.
-
-    # Needed by Tink for JsonKeysetRead.
-    maybe(
-        http_archive,
-        name = "rapidjson",
-        build_file = Label("//build_defs/cc/shared/build_targets:rapidjson.BUILD"),
-        sha256 = "30bd2c428216e50400d493b38ca33a25efb1dd65f79dfc614ab0c957a3ac2c28",
-        strip_prefix = "rapidjson-418331e99f859f00bdc8306f69eba67e8693c55e",
-        urls = [
-            "https://github.com/miloyip/rapidjson/archive/418331e99f859f00bdc8306f69eba67e8693c55e.tar.gz",
-        ],
-    )
-
-    maybe(
-        git_repository,
         name = "tink_cc",
-        tag = TINK_CC_VERSION,
-        remote = "https://github.com/tink-crypto/tink-cc.git",
+        strip_prefix = "tink-cc-{}".format(TINK_CC_VERSION),
+        sha256 = "3323658909e3e3a3de5a251b9385ba2cea444ccec80cfefe1747a3f3dc6b96ec",
+        url = "https://github.com/tink-crypto/tink-cc/archive/refs/tags/v{}.tar.gz".format(TINK_CC_VERSION),
     )
 
     maybe(
         http_archive,
         name = "tink_proto",
         strip_prefix = "tink-java-{}".format(TINK_JAVA_VERSION),
-        sha256 = "e246f848f7749e37f558955ecb50345b04d79ddb9d8d1e8ae19f61e8de530582",
-        url = "https://github.com/tink-crypto/tink-java/releases/download/v{}/tink-java-{}.zip".format(TINK_JAVA_VERSION, TINK_JAVA_VERSION),
+        sha256 = "3c0a9d0217fd3dc68a618abe9ef718b7fc5751faf420e7bb388eb373d6f51da1",
+        url = "https://github.com/tink-crypto/tink-java/archive/refs/tags/v{}.tar.gz".format(TINK_JAVA_VERSION),
     )

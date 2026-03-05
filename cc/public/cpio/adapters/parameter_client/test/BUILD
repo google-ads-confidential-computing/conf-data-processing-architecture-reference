@@ -16,15 +16,6 @@ load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 package(default_visibility = ["//cc:scp_cc_internal_pkg"])
 
-exports_files(["test_aws_parameter_client.h"])
-
-filegroup(
-    name = "test_aws_parameter_client_srcs",
-    srcs = [
-        ":test_aws_parameter_client.h",
-    ],
-)
-
 cc_test(
     name = "parameter_client_test",
     size = "small",

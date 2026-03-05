@@ -44,14 +44,11 @@ class TestAwsRoleCredentialsProvider : public AwsRoleCredentialsProvider {
  public:
   explicit TestAwsRoleCredentialsProvider(
       const std::shared_ptr<TestAwsRoleCredentialsProviderOptions>& options,
-      const std::shared_ptr<InstanceClientProviderInterface>&
-          instance_client_provider,
       const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
       const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
       const std::shared_ptr<AuthTokenProviderInterface>& auth_token_provider)
-      : AwsRoleCredentialsProvider(options, instance_client_provider,
-                                   cpu_async_executor, io_async_executor,
-                                   auth_token_provider),
+      : AwsRoleCredentialsProvider(options, cpu_async_executor,
+                                   io_async_executor, auth_token_provider),
         test_options_(options) {}
 
  protected:

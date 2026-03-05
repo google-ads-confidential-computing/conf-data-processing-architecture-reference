@@ -76,7 +76,7 @@ public final class KeySetManager {
     configFetcher = createFetcher(configProvider);
     defaultConfig =
         ImmutableList.of(
-            KeySetConfig.create(
+            new KeySetConfig(
                 DEFAULT_SET_NAME,
                 defaultTemplate,
                 defaultCount,
@@ -96,7 +96,7 @@ public final class KeySetManager {
     return config.get().keySets().stream()
         .map(
             keySet ->
-                KeySetConfig.create(
+                new KeySetConfig(
                     keySet.name(),
                     keySet.tinkTemplate().orElse(defaultTemplate),
                     keySet.count().orElse(defaultCount),

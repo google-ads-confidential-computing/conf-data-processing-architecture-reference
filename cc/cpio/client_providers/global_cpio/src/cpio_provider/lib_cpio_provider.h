@@ -21,7 +21,6 @@
 #include "core/async_executor/src/async_executor.h"
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/http_client_interface.h"
-#include "core/interface/message_router_interface.h"
 #include "cpio/client_providers/interface/auth_token_provider_interface.h"
 #include "cpio/client_providers/interface/cloud_initializer_interface.h"
 #include "cpio/client_providers/interface/cpio_provider_interface.h"
@@ -112,8 +111,6 @@ class LibCpioProvider : public CpioProviderInterface {
  private:
   virtual std::shared_ptr<RoleCredentialsProviderInterface>
   CreateRoleCredentialsProvider(
-      const std::shared_ptr<InstanceClientProviderInterface>&
-          instance_client_provider,
       const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
       const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
       const std::shared_ptr<AuthTokenProviderInterface>&

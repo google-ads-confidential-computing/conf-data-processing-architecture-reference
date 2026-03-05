@@ -20,14 +20,10 @@ cc_library(
     name = "metric_client_provider_select_lib",
     deps = select(
         {
-            "//cc/public/cpio/interface:aws_cpio_lib": [
-                "//cc/cpio/client_providers/metric_client_provider/src/aws:aws_metric_client_provider_lib",
-            ],
             "//cc/public/cpio/interface:gcp_cpio_lib": [
                 "//cc/cpio/client_providers/metric_client_provider/src/gcp:gcp_metric_client_provider_lib",
             ],
         },
-        no_match_error = "Please build for AWS or GCP",
     ),
 )
 

@@ -34,9 +34,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EncryptionKey'
-  /v1beta/sets/{name}/encryptionKeys:recent:
+  /v1beta/sets/{name}/activeKeys:
     get:
-      description: Get most recent encryption keys.
+      description: Get all encryption keys between start and end epoch millis.
       parameters:
       - name: name
         in: path
@@ -44,12 +44,18 @@ paths:
         schema:
           type: string
         description: Key set name.
-      - name: maxAgeSeconds
+      - name: startEpochMillis
         in: query
         required: true
         schema:
           type: integer
-        description: Maximum age of keys to return in seconds.
+        description: Defines start of time range
+      - name: endEpochMillis
+        in: query
+        required: true
+        schema:
+          type: integer
+        description: Defines end:of time range
       responses:
         '200':
           description: Encryption keys.
@@ -59,23 +65,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/EncryptionKeyList'
-  /v1alpha/encryptionKeys/{id}:
-    get:
-      description: Get encryption key by ID.
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-        description: Key ID.
-      responses:
-        '200':
-          description: Encryption key.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EncryptionKey'
 components:
   schemas:
     EncryptionKeyList:

@@ -27,22 +27,13 @@ cc_library(
     copts =
         select(
             {
-                "//cc/public/cpio/interface:aws_cpio_lib": [
-                    "-DAWS_CLIENT=1",
-                ],
                 "//cc/public/cpio/interface:gcp_cpio_lib": [
                     "-DGCP_CLIENT=1",
                 ],
             },
-            no_match_error = "Please build for AWS or GCP",
         ),
     deps = select(
         {
-            "//cc/public/cpio/interface:aws_cpio_lib": [
-                "//cc/cpio/client_providers/auth_token_provider/src/aws:aws_auth_token_provider_lib",
-                "//cc/cpio/client_providers/instance_client_provider/src/aws:aws_instance_client_provider_lib",
-                "//cc/public/cpio/utils/configuration_fetcher/src/aws",
-            ],
             "//cc/public/cpio/interface:gcp_cpio_lib": [
                 "//cc/core/http2_client/src:http2_client_lib",
                 "//cc/cpio/client_providers/auth_token_provider/src/gcp:gcp_auth_token_provider_lib",
@@ -51,7 +42,6 @@ cc_library(
                 "//cc/public/cpio/utils/configuration_fetcher/src/gcp",
             ],
         },
-        no_match_error = "Please build for AWS or GCP",
     ) + [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/src:core_async_executor_lib",

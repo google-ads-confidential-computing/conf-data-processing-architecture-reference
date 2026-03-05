@@ -46,8 +46,8 @@ public final class ActuateKeySetTaskTest {
     // Given
     doReturn(
             ImmutableList.of(
-                KeySetConfig.create("set-name-1", "test-template-1", 1, 2, 3, 20, 5, 3),
-                KeySetConfig.create("set-name-2", "test-template-2", 4, 5, 6, 30, 1, 3)))
+                new KeySetConfig("set-name-1", "test-template-1", 1, 2, 3, 20, 5, 3),
+                new KeySetConfig("set-name-2", "test-template-2", 4, 5, 6, 30, 1, 3)))
         .when(keySetManager)
         .getConfigs();
 
@@ -64,9 +64,9 @@ public final class ActuateKeySetTaskTest {
     // Given
     doReturn(
             ImmutableList.of(
-                KeySetConfig.create("set-name-1", "test-template-1", 1, 2, 3, 10, 2, 0),
-                KeySetConfig.create("set-name-2", "test-template-2", 4, 5, 6, 20, 1, 0),
-                KeySetConfig.create("set-name-3", "test-template-3", 7, 8, 9, 30, 9, 0)))
+                new KeySetConfig("set-name-1", "test-template-1", 1, 2, 3, 10, 2, 0),
+                new KeySetConfig("set-name-2", "test-template-2", 4, 5, 6, 20, 1, 0),
+                new KeySetConfig("set-name-3", "test-template-3", 7, 8, 9, 30, 9, 0)))
         .when(keySetManager)
         .getConfigs();
 

@@ -16,15 +16,6 @@ load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 package(default_visibility = ["//cc:scp_cc_internal_pkg"])
 
-exports_files(["test_aws_blob_storage_client.h"])
-
-filegroup(
-    name = "test_aws_blob_storage_client_srcs",
-    srcs = [
-        ":test_aws_blob_storage_client.h",
-    ],
-)
-
 exports_files(["test_gcp_blob_storage_client.h"])
 
 filegroup(

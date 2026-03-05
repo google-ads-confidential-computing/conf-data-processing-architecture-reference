@@ -24,17 +24,13 @@
 #include "cpio/client_providers/interface/cpio_provider_interface.h"
 #include "public/cpio/interface/type_def.h"
 
-#if defined(AWS_TEST)
-#include "cpio/client_providers/instance_client_provider/test/aws/test_aws_instance_client_provider.h"
-#include "cpio/client_providers/metric_client_provider/src/aws/aws_metric_client_provider.h"
-#include "cpio/client_providers/role_credentials_provider/test/aws/test_aws_role_credentials_provider.h"
-#elif defined(GCP_TEST)
+#if defined(GCP_TEST)
 #include "cpio/client_providers/instance_client_provider/test/gcp/test_gcp_instance_client_provider.h"
 #include "cpio/client_providers/metric_client_provider/src/gcp/gcp_metric_client_provider.h"
 #include "cpio/client_providers/otel_metric_client_provider/src/gcp/gcp_otel_metric_client_provider.h"
 #include "cpio/client_providers/role_credentials_provider/src/gcp/gcp_role_credentials_provider.h"
 #else
-#error "Must provide AWS_TEST or GCP_TEST"
+#error "Must provide GCP_TEST"
 #endif
 
 using google::scp::core::AsyncExecutorInterface;
@@ -51,10 +47,7 @@ namespace google::scp::cpio::client_providers {
 TestLibCpioProvider::TestLibCpioProvider(
     const shared_ptr<TestCpioOptions>& test_options)
     : LibCpioProvider(test_options), test_options_(test_options) {
-#if defined(AWS_TEST)
-  instance_client_provider_ = make_shared<TestAwsInstanceClientProvider>(
-      make_shared<TestInstanceClientOptions>(*test_options_));
-#elif defined(GCP_TEST)
+#if defined(GCP_TEST)
   instance_client_provider_ = make_shared<TestGcpInstanceClientProvider>(
       make_shared<TestInstanceClientOptions>(*test_options_));
 #endif
@@ -62,17 +55,11 @@ TestLibCpioProvider::TestLibCpioProvider(
 
 shared_ptr<RoleCredentialsProviderInterface>
 TestLibCpioProvider::CreateRoleCredentialsProvider(
-    const shared_ptr<InstanceClientProviderInterface>& instance_client_provider,
     const shared_ptr<AsyncExecutorInterface>& cpu_async_executor,
     const shared_ptr<AsyncExecutorInterface>& io_async_executor,
     const shared_ptr<AuthTokenProviderInterface>&
         auth_token_provider) noexcept {
-#if defined(AWS_TEST)
-  return make_shared<TestAwsRoleCredentialsProvider>(
-      make_shared<TestAwsRoleCredentialsProviderOptions>(*test_options_),
-      instance_client_provider, cpu_async_executor, io_async_executor,
-      auth_token_provider);
-#elif defined(GCP_TEST)
+#if defined(GCP_TEST)
   return make_shared<GcpRoleCredentialsProvider>();
 #endif
 }
@@ -82,11 +69,7 @@ shared_ptr<MetricClientInterface> TestLibCpioProvider::CreateMetricClient(
     const shared_ptr<InstanceClientProviderInterface>& instance_client_provider,
     const shared_ptr<AsyncExecutorInterface>& cpu_async_executor,
     const shared_ptr<AsyncExecutorInterface>& io_async_executor) noexcept {
-#if defined(AWS_TEST)
-  return make_shared<AwsMetricClientProvider>(
-      metric_options, instance_client_provider, cpu_async_executor,
-      io_async_executor);
-#elif defined(GCP_TEST)
+#if defined(GCP_TEST)
   return make_shared<GcpMetricClientProvider>(
       metric_options, instance_client_provider, cpu_async_executor);
 #endif

@@ -78,11 +78,10 @@ public class GetKeysetMetadataTaskTest extends ApiTaskTestBase {
     task.execute(matcher, request, response);
 
     var metadata = verifyResponse(response);
-    assertThat(metadata.getActiveKeyCount()).isEqualTo(keyConfigMap.get("noOverlap").getCount());
+    assertThat(metadata.getActiveKeyCount()).isEqualTo(keyConfigMap.get("noOverlap").count());
     assertThat(metadata.getActiveKeyCadenceDays())
-        .isEqualTo(keyConfigMap.get("noOverlap").getValidityInDays());
-    assertThat(metadata.getBackfillDays())
-        .isEqualTo(keyConfigMap.get("noOverlap").getBackfillDays());
+        .isEqualTo(keyConfigMap.get("noOverlap").validityInDays());
+    assertThat(metadata.getBackfillDays()).isEqualTo(keyConfigMap.get("noOverlap").backfillDays());
   }
 
   @Test
@@ -91,10 +90,9 @@ public class GetKeysetMetadataTaskTest extends ApiTaskTestBase {
     task.execute(matcher, request, response);
 
     var metadata = verifyResponse(response);
-    assertThat(metadata.getActiveKeyCount()).isEqualTo(keyConfigMap.get("overlap").getCount() * 4);
+    assertThat(metadata.getActiveKeyCount()).isEqualTo(keyConfigMap.get("overlap").count() * 4);
     assertThat(metadata.getActiveKeyCadenceDays()).isEqualTo(2);
-    assertThat(metadata.getBackfillDays())
-        .isEqualTo(keyConfigMap.get("overlap").getBackfillDays());
+    assertThat(metadata.getBackfillDays()).isEqualTo(keyConfigMap.get("overlap").backfillDays());
   }
 
   @Test
@@ -103,9 +101,8 @@ public class GetKeysetMetadataTaskTest extends ApiTaskTestBase {
     task.execute(matcher, request, response);
 
     var metadata = verifyResponse(response);
-    assertThat(metadata.getActiveKeyCount()).isEqualTo(keyConfigMap.get("backfill").getCount());
-    assertThat(metadata.getBackfillDays())
-        .isEqualTo(keyConfigMap.get("backfill").getBackfillDays());
+    assertThat(metadata.getActiveKeyCount()).isEqualTo(keyConfigMap.get("backfill").count());
+    assertThat(metadata.getBackfillDays()).isEqualTo(keyConfigMap.get("backfill").backfillDays());
   }
 
   private static GetKeysetMetadataResponse verifyResponse(ResponseContext response)

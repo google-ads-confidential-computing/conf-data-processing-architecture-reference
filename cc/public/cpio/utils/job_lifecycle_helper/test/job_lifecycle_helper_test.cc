@@ -1168,7 +1168,8 @@ TEST_F(JobLifecycleHelperTest, JobExtendWithGetJobByIdFailed) {
       job_lifecycle_helper_->PrepareNextJobSync(prepare_next_job_request_));
 
   EXPECT_CALL(*mock_job_client_, GetJobByIdSync)
-      .WillOnce([](GetJobByIdRequest request) {
+      .Times(testing::Between(1, 2))
+      .WillRepeatedly([](GetJobByIdRequest request) {
         return FailureExecutionResult(SC_UNKNOWN);
       });
   EXPECT_CALL(*mock_job_client_, UpdateJobVisibilityTimeoutSync).Times(0);

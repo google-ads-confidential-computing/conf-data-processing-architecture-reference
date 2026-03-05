@@ -30,7 +30,6 @@ import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotati
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
-import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -153,17 +152,6 @@ public final class GcpCreateKeyTask implements CreateKeyTask {
     logger.info(logMessage, newEncryptionKey.getKeyId(), encryptionKey.getSetName());
     // TODO(b/206030473): Figure out where exactly signing should happen.
     return newEncryptionKey;
-  }
-
-  @Override
-  public EncryptionKey createKey(
-      EncryptionKey encryptionKey,
-      DataKey dataKey,
-      String decryptedKeySplit,
-      String migrationDecryptedKeySplit)
-      throws ServiceException {
-    throw new ServiceException(
-        Code.NOT_FOUND, SERVICE_ERROR.name(), "DataKey decryption not implemented");
   }
 
   /**

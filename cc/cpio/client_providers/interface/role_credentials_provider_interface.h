@@ -81,8 +81,6 @@ class RoleCredentialsProviderFactory {
    */
   static std::shared_ptr<RoleCredentialsProviderInterface> Create(
       const std::shared_ptr<RoleCredentialsProviderOptions>& options,
-      const std::shared_ptr<InstanceClientProviderInterface>&
-          instance_client_provider,
       const std::shared_ptr<core::AsyncExecutorInterface>& cpu_async_executor,
       const std::shared_ptr<core::AsyncExecutorInterface>& io_async_executor,
       const std::shared_ptr<AuthTokenProviderInterface>&

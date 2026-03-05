@@ -37,17 +37,11 @@ provider "google" {
 locals {
   private_key_service_addtional_environment = "pre-${var.environment}"
 
+  # Service Domains
   service_subdomain_suffix      = var.service_subdomain_suffix != null ? var.service_subdomain_suffix : "-${var.environment}"
   public_key_domain             = var.environment != "prod" ? "${var.public_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}" : "${var.public_key_service_subdomain}.${var.parent_domain_name}"
   private_key_domain            = "${var.private_key_service_subdomain}${local.service_subdomain_suffix}.${var.parent_domain_name}"
   private_key_domain_additional = "${var.private_key_service_subdomain}-${local.private_key_service_addtional_environment}.${var.parent_domain_name}"
-
-  region_map = { for reg in [var.primary_region, var.secondary_region] : reg => reg }
-
-  key_sets = flatten([
-    for key_set in var.key_sets_config.key_sets : key_set.name
-  ])
-
   service_domain_to_address_map = (
     var.private_key_service_addon_container_image_url == ""
     ? {
@@ -61,13 +55,28 @@ locals {
     }
   )
 
+  # Service Regions
+  region_map = { for reg in [var.primary_region, var.secondary_region] : reg => reg }
+  private_key_service_regions = concat(
+    [var.primary_region, var.secondary_region],
+    var.private_key_service_additional_regions
+  )
+  public_key_service_regions = concat(
+    [var.primary_region, var.secondary_region],
+    var.public_key_service_cr_regions
+  )
+
+  key_sets = flatten([
+    for key_set in var.key_sets_config.key_sets : key_set.name
+  ])
+
   all_service_accounts = flatten([
     for _, operator in var.allowed_operators : operator.service_accounts
   ])
 
+  # KMS Base URIs
   kms_key_base_uri           = "gcp-kms://${module.key_management_service.kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
   migration_kms_key_base_uri = "gcp-kms://${module.key_management_service.kms_key_ring_id}/cryptoKeys/${var.environment}_$setName$_kms_key"
-
   migration_peer_coordinator_kms_key_base_uri = (var.migration_peer_coordinator_kms_key_base_uri == null
     ? var.peer_coordinator_kms_key_base_uri
     : var.migration_peer_coordinator_kms_key_base_uri
@@ -137,12 +146,17 @@ EOF
   }
 }
 
-module "vpc" {
-  source = "../../modules/vpc"
+module "alerts_on_quota" {
+  source = "../../modules/alert_on_quota"
 
+  project     = var.project_id
   environment = var.environment
-  project_id  = var.project_id
-  regions     = toset([var.primary_region, var.secondary_region])
+
+  alert_duration_sec        = var.quota_alert_duration_sec
+  alert_eval_period_sec     = var.quota_alert_eval_period_sec
+  alert_max_over_minutes    = var.quota_alert_max_over_minutes
+  alert_threshold_important = var.quota_alert_threshold_important
+  alert_threshold_urgent    = var.quota_alert_threshold_urgent
 }
 
 module "vpc_new" {
@@ -179,10 +193,10 @@ module "keygenerationservice" {
 
   project_id                = var.project_id
   environment               = var.environment
-  network                   = var.use_vpc_new_module ? module.vpc_new.network : module.vpc.network
+  network                   = module.vpc_new.network
   region                    = var.key_generation_region
   allow_stopping_for_update = var.key_generation_allow_stopping_for_update
-  egress_internet_tag       = var.use_vpc_new_module ? module.vpc_new.egress_internet_tag : module.vpc.egress_internet_tag
+  egress_internet_tag       = module.vpc_new.egress_internet_tag
 
   # Data args
   container_image_url               = var.key_generation_service_container_image_url
@@ -249,7 +263,7 @@ module "public_key_service" {
 
   environment            = var.environment
   project_id             = var.project_id
-  regions                = concat([var.primary_region, var.secondary_region], var.public_key_service_cr_regions)
+  regions                = local.public_key_service_regions
   service_domain         = local.public_key_domain
   load_balancer_protocol = var.public_key_service_load_balancer_protocol
 
@@ -310,12 +324,9 @@ module "public_key_service" {
 module "private_key_service" {
   source = "../private_key_service"
 
-  environment = var.environment
-  project_id  = var.project_id
-  regions = concat(
-    [var.primary_region, var.secondary_region],
-    var.private_key_service_additional_regions
-  )
+  environment            = var.environment
+  project_id             = var.project_id
+  regions                = local.private_key_service_regions
   service_domain         = local.private_key_domain
   load_balancer_protocol = var.private_key_service_load_balancer_protocol
 
@@ -342,13 +353,18 @@ module "private_key_service" {
   source_container_image_url             = var.private_key_service_container_image_url
 
   # Cloud Run settings
-  cpu_count             = var.private_key_service_cloud_run_cpu_count
-  memory_mb             = var.private_key_service_cloud_run_memory_mb
-  concurrency           = var.private_key_service_cloud_run_concurrency
-  min_instance_count    = var.private_key_service_cloud_run_min_instances
-  max_instance_count    = var.private_key_service_cloud_run_max_instances
-  execution_environment = var.private_key_service_execution_environment
-  ingress               = var.private_key_service_cloud_run_ingress
+  cpu_count                 = var.private_key_service_cloud_run_cpu_count
+  memory_mb                 = var.private_key_service_cloud_run_memory_mb
+  concurrency               = var.private_key_service_cloud_run_concurrency
+  min_instance_count        = var.private_key_service_cloud_run_min_instances
+  max_instance_count        = var.private_key_service_cloud_run_max_instances
+  execution_environment     = var.private_key_service_execution_environment
+  ingress                   = var.private_key_service_cloud_run_ingress
+  enable_revision_pinning   = var.private_key_service_enable_revision_pinning
+  canary_region             = var.primary_region
+  stable_revisions          = var.private_key_service_stable_revisions
+  canary_revision           = var.private_key_service_canary_revision
+  canary_traffic_percentage = var.private_key_service_canary_traffic_percentage
 
   # Spanner configs
   spanner_database_name      = module.keydb.keydb_name
@@ -385,20 +401,19 @@ module "private_key_service_addon" {
 
   environment = local.private_key_service_addtional_environment
   project_id  = var.project_id
-  regions = concat(
-    [var.primary_region, var.secondary_region],
-    var.private_key_service_additional_regions
-  )
+  regions     = local.private_key_service_regions
 
-  service_domain                                               = local.private_key_domain_additional
-  display_identifier                                           = "Pre${var.environment}"
-  load_balancing_scheme                                        = "EXTERNAL_MANAGED"
-  load_balancer_protocol                                       = var.private_key_service_load_balancer_protocol
+  service_domain         = local.private_key_domain_additional
+  display_identifier     = "Pre${var.environment}"
+  load_balancing_scheme  = "EXTERNAL_MANAGED"
+  load_balancer_protocol = var.private_key_service_load_balancer_protocol
+
+  # LB Migration
   external_managed_migration_state                             = null
   external_managed_migration_testing_percentage                = null
-  forwarding_rule_load_balancing_scheme                        = var.private_key_service_forwarding_rule_load_balancing_scheme
-  external_managed_backend_bucket_migration_state              = var.private_key_service_external_managed_backend_bucket_migration_state
-  external_managed_backend_bucket_migration_testing_percentage = var.private_key_service_external_managed_backend_bucket_migration_testing_percentage
+  forwarding_rule_load_balancing_scheme                        = "EXTERNAL_MANAGED"
+  external_managed_backend_bucket_migration_state              = null
+  external_managed_backend_bucket_migration_testing_percentage = null
 
   # Load Balancer Outlier Detection
   lb_outlier_detection_enabled                               = var.private_key_service_lb_outlier_detection_enabled
@@ -421,6 +436,13 @@ module "private_key_service_addon" {
   min_instance_count    = var.private_key_service_cloud_run_min_instances
   max_instance_count    = var.private_key_service_cloud_run_max_instances
   execution_environment = var.private_key_service_execution_environment
+
+  # private_key_service_addon does not use canary deployments
+  enable_revision_pinning   = false
+  canary_region             = var.primary_region
+  stable_revisions          = {}
+  canary_revision           = null
+  canary_traffic_percentage = 0
 
   # Spanner configs
   spanner_database_name      = module.keydb.keydb_name
@@ -498,78 +520,77 @@ module "domain_a_records" {
 # parameters
 
 module "keydb_instance_id" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "SPANNER_INSTANCE"
   parameter_value = module.keydb.keydb_instance_name
 }
 
 module "keydb_name" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "KEY_DB_NAME"
   parameter_value = module.keydb.keydb_name
 }
 
 module "pubsub_id" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "SUBSCRIPTION_ID"
   parameter_value = module.keygenerationservice.subscription_id
 }
 
 module "key_generation_count" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "NUMBER_OF_KEYS_TO_CREATE"
   parameter_value = var.key_generation_count
 }
 
 module "key_generation_validity_in_days" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "KEYS_VALIDITY_IN_DAYS"
   parameter_value = var.key_generation_validity_in_days
 }
 
 module "key_generation_ttl_in_days" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "KEY_TTL_IN_DAYS"
   parameter_value = var.key_generation_ttl_in_days
 }
 
 module "key_generation_max_days_ahead" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "CREATE_MAX_DAYS_AHEAD"
   parameter_value = var.key_generation_max_days_ahead
 }
 
 module "key_storage_service_base_url" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "KEY_STORAGE_SERVICE_BASE_URL"
   parameter_value = var.key_storage_service_base_url
 }
 
-# TODO: b/275758643 NOLINT - needs investigation on this completeness of this task
 module "key_storage_service_cloudfunction_url" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL"
-  parameter_value = var.key_storage_service_cloudfunction_url
+  parameter_value = var.use_only_key_storage_service_base_url ? var.key_storage_service_base_url : var.key_storage_service_cloudfunction_url
 }
 
 module "peer_coordinator_wip_provider" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "PEER_COORDINATOR_WIP_PROVIDER"
   parameter_value = var.peer_coordinator_wip_provider
 }
 
 module "peer_coordinator_service_account" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "PEER_COORDINATOR_SERVICE_ACCOUNT"
   parameter_value = var.peer_coordinator_service_account
@@ -577,49 +598,49 @@ module "peer_coordinator_service_account" {
 
 module "key_id_type" {
   count           = var.key_id_type == "" ? 0 : 1
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "KEY_ID_TYPE"
   parameter_value = var.key_id_type
 }
 
 module "key_sets_config" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "KEY_SETS_CONFIG"
   parameter_value = jsonencode(var.key_sets_config)
 }
 
 module "kms_key_ring_uri" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "KMS_KEY_BASE_URI"
   parameter_value = local.kms_key_base_uri
 }
 
 module "peer_coordinator_kms_key_ring_uri" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "PEER_COORDINATOR_KMS_KEY_BASE_URI"
   parameter_value = var.peer_coordinator_kms_key_base_uri
 }
 
 module "migration_kms_key_ring_uri" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "MIGRATION_KMS_KEY_BASE_URI"
   parameter_value = local.migration_kms_key_base_uri
 }
 
 module "migration_peer_coordinator_kms_key_ring_uri" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "MIGRATION_PEER_COORDINATOR_KMS_KEY_BASE_URI"
   parameter_value = local.migration_peer_coordinator_kms_key_base_uri
 }
 
 module "populate_migration_key_data" {
-  source          = "../../modules/parameters"
+  source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "POPULATE_MIGRATION_KEY_DATA"
   parameter_value = var.populate_migration_key_data

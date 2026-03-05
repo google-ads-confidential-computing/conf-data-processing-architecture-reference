@@ -50,12 +50,7 @@
 #include "configuration_fetcher_utils.h"
 #include "error_codes.h"
 
-#if defined(AWS_CLIENT)
-#include "cpio/client_providers/auth_token_provider/src/aws/aws_auth_token_provider.h"
-#include "cpio/client_providers/instance_client_provider/src/aws/aws_instance_client_provider.h"
-#include "public/cpio/utils/configuration_fetcher/src/aws/aws_instance_client.h"
-#include "public/cpio/utils/configuration_fetcher/src/aws/aws_parameter_client.h"
-#elif defined(GCP_CLIENT)
+#if defined(GCP_CLIENT)
 #include "core/http2_client/src/http2_client.h"
 #include "cpio/client_providers/auth_token_provider/src/gcp/gcp_auth_token_provider.h"
 #include "cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_provider.h"
@@ -128,20 +123,7 @@ void ConfigurationFetcher::CreateInstanceAndParameterClient() noexcept {
   http1_client_ =
       make_shared<Http1CurlClient>(cpu_async_executor_, io_async_executor_);
 
-#if defined(AWS_CLIENT)
-  SCP_INFO(kConfigurationFetcher, kZeroUuid, "Start AWS Configuration Fetcher");
-  auth_token_provider_ =
-      make_shared<client_providers::AwsAuthTokenProvider>(http1_client_);
-  instance_client_provider_ =
-      make_shared<client_providers::AwsInstanceClientProvider>(
-          auth_token_provider_, http1_client_, cpu_async_executor_,
-          io_async_executor_);
-  instance_client_ = make_shared<AwsInstanceClient>(
-      make_shared<InstanceClientOptions>(), instance_client_provider_);
-  parameter_client_ = make_shared<AwsParameterClient>(
-      make_shared<ParameterClientOptions>(), instance_client_provider_,
-      io_async_executor_);
-#elif defined(GCP_CLIENT)
+#if defined(GCP_CLIENT)
   SCP_INFO(kConfigurationFetcher, kZeroUuid, "Start GCP Configuration Fetcher");
   http2_client_ = make_shared<core::HttpClient>(cpu_async_executor_);
 

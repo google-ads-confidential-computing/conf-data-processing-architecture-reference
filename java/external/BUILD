@@ -209,7 +209,7 @@ alias(
 
 alias(
     name = "jcommander",
-    actual = "@maven//:com_beust_jcommander",
+    actual = "@maven//:org_jcommander_jcommander",
 )
 
 alias(

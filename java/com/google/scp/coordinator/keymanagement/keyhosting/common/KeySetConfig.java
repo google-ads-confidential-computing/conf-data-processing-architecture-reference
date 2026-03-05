@@ -16,38 +16,13 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.common;
 
-import com.google.auto.value.AutoValue;
-
-/* Key set configuration. */
-@AutoValue
-public abstract class KeySetConfig {
-
-  /**
-   * Create an instance.
-   *
-   * @param name the name of the key set.
-   * @param count the number of keys created for each rotation.
-   * @param validityInDays the validity of the keys in number of days.
-   * @param overlapPeriodDays used to create overlapping keys
-   */
-  public static KeySetConfig create(
-      String name, int count, int validityInDays, int overlapPeriodDays, int backfillDays) {
-    return new AutoValue_KeySetConfig(name, count, validityInDays, overlapPeriodDays, backfillDays);
-  }
-
-  /* Returns the name of the key set. */
-  public abstract String getName();
-
-  /* Returns the number of keys created for each rotation. */
-  public abstract int getCount();
-
-  /* Returns the validity of the keys in number of days. */
-  public abstract int getValidityInDays();
-
-  /* Returns number of days active keys can overlap. */
-  public abstract int getOverlapPeriodDays();
-
-  /* Returns number of days keys can remain usable beyond expiration. Individual keys must be
-  checked for their expiry time. */
-  public abstract int getBackfillDays();
-}
+/**
+ * Create an instance.
+ *
+ * @param name the name of the key set.
+ * @param count the number of keys created for each rotation.
+ * @param validityInDays the validity of the keys in number of days.
+ * @param overlapPeriodDays used to create overlapping keys
+ */
+public record KeySetConfig(
+    String name, int count, int validityInDays, int overlapPeriodDays, int backfillDays) {}

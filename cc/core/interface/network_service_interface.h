@@ -21,7 +21,6 @@
 #include <string>
 
 #include "async_context.h"
-#include "message_router_interface.h"
 #include "rpc_service_context_interface.h"
 #include "service_interface.h"
 #include "type_def.h"

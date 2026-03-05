@@ -38,7 +38,7 @@ public final class KeySetConfigTest {
 
     // When
     KeySetConfig config =
-        KeySetConfig.create(
+        new KeySetConfig(
             setName,
             tinkTemplate,
             count,
@@ -49,13 +49,13 @@ public final class KeySetConfigTest {
             backfillDays);
 
     // Then
-    assertThat(config.getName()).isEqualTo(setName);
-    assertThat(config.getCount()).isEqualTo(count);
-    assertThat(config.getValidityInDays()).isEqualTo(validityInDays);
-    assertThat(config.getTtlInDays()).isEqualTo(ttlInDays);
-    assertThat(config.getTinkTemplate()).isEqualTo(tinkTemplate);
-    assertThat(config.getCreateMaxDaysAhead()).isEqualTo(maxDaysAhead);
-    assertThat(config.getOverlapPeriodDays()).isEqualTo(overlapPeriodDays);
-    assertThat(config.getBackfillDays()).isEqualTo(backfillDays);
+    assertThat(config.name()).isEqualTo(setName);
+    assertThat(config.count()).isEqualTo(count);
+    assertThat(config.validityInDays()).isEqualTo(validityInDays);
+    assertThat(config.ttlInDays()).isEqualTo(ttlInDays);
+    assertThat(config.tinkTemplate()).isEqualTo(tinkTemplate);
+    assertThat(config.createMaxDaysAhead()).isEqualTo(maxDaysAhead);
+    assertThat(config.overlapPeriodDays()).isEqualTo(overlapPeriodDays);
+    assertThat(config.backfillDays()).isEqualTo(backfillDays);
   }
 }

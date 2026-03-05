@@ -24,7 +24,6 @@
 #include "cc/cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "cc/cpio/client_providers/role_credentials_provider/src/aws/aws_role_credentials_provider.h"
 #include "cpio/client_providers/auth_token_provider/mock/mock_auth_token_provider.h"
-#include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
 
 #include "mock_aws_sts_client.h"
 
@@ -36,7 +35,7 @@ class MockAwsRoleCredentialsProviderWithOverrides
   MockAwsRoleCredentialsProviderWithOverrides(
       const std::shared_ptr<RoleCredentialsProviderOptions> options)
       : AwsRoleCredentialsProvider(
-            options, std::make_shared<MockInstanceClientProvider>(),
+            options,
             std::make_shared<core::async_executor::mock::MockAsyncExecutor>(),
             std::make_shared<core::async_executor::mock::MockAsyncExecutor>(),
             std::make_shared<mock::MockAuthTokenProvider>()) {}
@@ -50,11 +49,6 @@ class MockAwsRoleCredentialsProviderWithOverrides
     sts_client_ = std::make_shared<MockSTSClient>();
     session_name_ = std::make_shared<std::string>("session_name");
     return core::SuccessExecutionResult();
-  }
-
-  std::shared_ptr<MockInstanceClientProvider> GetInstanceClientProvider() {
-    return std::dynamic_pointer_cast<MockInstanceClientProvider>(
-        instance_client_provider_);
   }
 
   std::shared_ptr<MockSTSClient> GetSTSClient() {

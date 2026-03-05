@@ -23,6 +23,7 @@
 #include "cpio/client_providers/auth_token_provider/mock/mock_auth_token_provider.h"
 #include "cpio/client_providers/kms_client_provider/mock/mock_kms_client_provider.h"
 #include "cpio/client_providers/role_credentials_provider/mock/mock_role_credentials_provider.h"
+#include "cpio/common/src/aws/error_codes.h"
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/adapters/kms_client/src/kms_client.h"
@@ -31,10 +32,12 @@
 #include "public/cpio/test/global_cpio/test_lib_cpio.h"
 
 using google::scp::core::AsyncExecutorInterface;
+using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
+using google::scp::core::errors::SC_AWS_INVALID_REQUEST;
+using google::scp::core::test::ResultIs;
 using google::scp::core::test::ScpTestBase;
 using google::scp::cpio::client_providers::AuthTokenProviderInterface;
-using google::scp::cpio::client_providers::InstanceClientProviderInterface;
 using google::scp::cpio::client_providers::KmsClientProviderInterface;
 using google::scp::cpio::client_providers::RoleCredentialsProviderInterface;
 using google::scp::cpio::client_providers::RoleCredentialsProviderOptions;
@@ -55,9 +58,7 @@ class MockAwsRoleCredentialsProviderFactory
     : public AwsRoleCredentialsProviderFactory {
  public:
   MOCK_METHOD(shared_ptr<RoleCredentialsProviderInterface>, Create,
-              (const string&,
-               const shared_ptr<InstanceClientProviderInterface>&,
-               const shared_ptr<AsyncExecutorInterface>&,
+              (const string&, const shared_ptr<AsyncExecutorInterface>&,
                const shared_ptr<AsyncExecutorInterface>&,
                const shared_ptr<AuthTokenProviderInterface>&),
               (noexcept, override));
@@ -105,46 +106,17 @@ class AwsKmsClientTest : public ScpTestBase {
   shared_ptr<MockAuthTokenProvider> mock_auth_token_provider_;
 };
 
-MATCHER_P(InstanceClientProviderIsNull, instance_client_provider_is_null, "") {
-  if (instance_client_provider_is_null) {
-    return arg == nullptr;
-  } else {
-    return arg != nullptr;
-  }
-}
-
 MATCHER_P(RegionMatch, region, "") {
   return arg == region;
 }
 
-TEST_F(AwsKmsClientTest, CreateSuccessfullyWithoutRegion) {
+TEST_F(AwsKmsClientTest, CreateFailsWithoutRegion) {
   client_ = make_unique<AwsKmsClient>(make_shared<AwsKmsClientOptions>(),
                                       mock_role_credentials_provider_factory_,
                                       mock_kms_client_provider_factory_);
 
-  EXPECT_CALL(
-      *mock_role_credentials_provider_factory_,
-      Create(RegionMatch(""), InstanceClientProviderIsNull(false), _, _, _))
-      .WillOnce(Return(mock_role_credentials_provider_));
-  EXPECT_CALL(*mock_kms_client_provider_factory_, Create)
-      .WillOnce(Return(mock_kms_client_provider_));
-
-  EXPECT_CALL(*mock_role_credentials_provider_, Init)
-      .WillOnce(Return(SuccessExecutionResult()));
-  EXPECT_CALL(*mock_kms_client_provider_, Init)
-      .WillOnce(Return(SuccessExecutionResult()));
-  EXPECT_CALL(*mock_role_credentials_provider_, Run)
-      .WillOnce(Return(SuccessExecutionResult()));
-  EXPECT_CALL(*mock_kms_client_provider_, Run)
-      .WillOnce(Return(SuccessExecutionResult()));
-  EXPECT_CALL(*mock_role_credentials_provider_, Stop)
-      .WillOnce(Return(SuccessExecutionResult()));
-  EXPECT_CALL(*mock_kms_client_provider_, Stop)
-      .WillOnce(Return(SuccessExecutionResult()));
-
-  EXPECT_SUCCESS(client_->Init());
-  EXPECT_SUCCESS(client_->Run());
-  EXPECT_SUCCESS(client_->Stop());
+  EXPECT_THAT(client_->Init(),
+              ResultIs(FailureExecutionResult(SC_AWS_INVALID_REQUEST)));
 }
 
 TEST_F(AwsKmsClientTest, CreateSuccessfullyWithRegion) {
@@ -155,8 +127,7 @@ TEST_F(AwsKmsClientTest, CreateSuccessfullyWithRegion) {
                                       mock_kms_client_provider_factory_);
 
   EXPECT_CALL(*mock_role_credentials_provider_factory_,
-              Create(RegionMatch(options->region),
-                     InstanceClientProviderIsNull(true), _, _, _))
+              Create(RegionMatch(options->region), _, _, _))
       .WillOnce(Return(mock_role_credentials_provider_));
   EXPECT_CALL(*mock_kms_client_provider_factory_, Create)
       .WillOnce(Return(mock_kms_client_provider_));

@@ -25,11 +25,9 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDbUtil;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Stream;
 
 /** In memory implementation of KeyDb for testing */
 public final class InMemoryKeyDb implements KeyDb {
@@ -173,14 +171,5 @@ public final class InMemoryKeyDb implements KeyDb {
     return getAllKeys().stream()
         .filter(k -> k.getSetName().equals(setName))
         .collect(toImmutableList());
-  }
-
-  @Override
-  public Stream<EncryptionKey> listRecentKeys(String setName, Duration maxAge)
-      throws ServiceException {
-    long maxCreationMilli = Instant.now().minus(maxAge).toEpochMilli();
-    return getAllKeys().stream()
-        .filter(k -> k.getSetName().equals(setName))
-        .filter(k -> k.getCreationTime() >= maxCreationMilli);
   }
 }

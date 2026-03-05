@@ -20,14 +20,10 @@ cc_library(
     name = "otel_metric_client_provider_select_lib",
     deps = select(
         {
-            "//cc/public/cpio/interface:aws_cpio_lib": [
-                "//cc/cpio/client_providers/otel_metric_client_provider/src/aws:aws_otel_metric_client_provider_lib",
-            ],
             "//cc/public/cpio/interface:gcp_cpio_lib": [
                 "//cc/cpio/client_providers/otel_metric_client_provider/src/gcp:gcp_otel_metric_client_provider_lib",
             ],
         },
-        no_match_error = "Please build for AWS or GCP",
     ),
 )
 
@@ -50,12 +46,10 @@ cc_library(
 
 cc_library(
     name = "otel_metric_client_provider_lib",
-    srcs = glob(
-        [
-            "otel_metric_client_provider.cc",
-            "otel_metric_client_provider.h",
-        ],
-    ),
+    srcs = [
+        "otel_metric_client_provider.cc",
+        "otel_metric_client_provider.h",
+    ],
     deps = [
         ":opentelemetry_utils_lib",
         "//cc:cc_base_include_dir",

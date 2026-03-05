@@ -91,7 +91,7 @@ oci_image(
     name = "FrontendCloudFunctionRuntimeImage",
     base = "@java_base_21_oci",
     cmd = [
-        "./processed_java-function-invoker-1.3.1.jar",
+        "./processed_java-function-invoker-1.4.3.jar",
         "--classpath",
         "./FrontendServiceHttpCloudFunction_deploy.jar",
         "--target",

@@ -28,6 +28,7 @@ cc_test(
         "//cc/cpio/client_providers/kms_client_provider/mock:kms_client_provider_mock",
         "//cc/cpio/client_providers/kms_client_provider/src:kms_client_provider_select_lib",
         "//cc/cpio/client_providers/role_credentials_provider/mock:role_credentials_provider_mock",
+        "//cc/cpio/common/src/aws:aws_utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/interface:cpio_errors",
         "//cc/public/cpio/interface:type_def",

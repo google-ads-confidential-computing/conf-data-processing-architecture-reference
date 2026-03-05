@@ -17,11 +17,9 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.app.gcp;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.CoordinatorBHttpClient;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.GetDataKeyBaseUrlOverride;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceBaseUrl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceCloudfunctionUrl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.HttpKeyStorageClient;
@@ -52,8 +50,6 @@ public final class GcpKeyStorageConfigModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(new Key<Optional<String>>(GetDataKeyBaseUrlOverride.class) {})
-        .toInstance(Optional.empty());
     bind(KeyStorageClient.class).to(HttpKeyStorageClient.class);
   }
 }

@@ -103,7 +103,7 @@ public final class GcpPrivateKeyServiceModule extends AbstractModule {
           // Only care about name, count, validityInDays, overlapPeriodDays, backfillDays
           configBuilder.put(
               keySet.name(),
-              KeySetConfig.create(
+              new KeySetConfig(
                   keySet.name(),
                   keySet.count().orElseThrow(),
                   keySet.validityInDays().orElseThrow(),

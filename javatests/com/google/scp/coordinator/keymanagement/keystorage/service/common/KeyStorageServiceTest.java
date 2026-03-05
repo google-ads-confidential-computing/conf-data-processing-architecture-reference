@@ -28,7 +28,6 @@ import com.google.acai.Acai;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.GetDataKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;
 import com.google.scp.coordinator.protos.keymanagement.keystorage.api.v1.CreateKeyRequestProto.CreateKeyRequest;
@@ -52,7 +51,6 @@ public class KeyStorageServiceTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Inject private InMemoryKeyDb keyDb;
   @Mock CreateKeyTask mockCreateKeyTask;
-  @Mock GetDataKeyTask mockGetDataKeyTask;
   private KeyStorageService keyStorageService;
 
   @Before
@@ -73,7 +71,7 @@ public class KeyStorageServiceTest {
             };
     doAnswer(taskAnswer).when(mockCreateKeyTask).createKey(any(), any(), any());
 
-    keyStorageService = new KeyStorageService(mockCreateKeyTask, mockGetDataKeyTask);
+    keyStorageService = new KeyStorageService(mockCreateKeyTask);
   }
 
   @Test

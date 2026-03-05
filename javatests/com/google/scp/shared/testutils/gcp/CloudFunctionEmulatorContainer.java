@@ -28,14 +28,14 @@ import org.testcontainers.utility.MountableFile;
 public final class CloudFunctionEmulatorContainer
     extends GenericContainer<CloudFunctionEmulatorContainer> {
 
-  private static final String invokerJarFilename = "processed_java-function-invoker-1.3.1.jar";
+  private static final String invokerJarFilename = "processed_java-function-invoker-1.4.3.jar";
   // Location of function jar file with bzlmod disabled.
   private static final String invokerJarPath =
-      "external/maven/v1/https/repo1.maven.org/maven2/com/google/cloud/functions/invoker/java-function-invoker/1.3.1/"
+      "external/maven/v1/https/repo1.maven.org/maven2/com/google/cloud/functions/invoker/java-function-invoker/1.4.3/"
           + invokerJarFilename;
   // With bzlmod enabled, runfiles from rules_jvm_external are put in this subdirectory.
   private static final String invokerJarPathBzlmod =
-      "external/rules_jvm_external~~maven~maven/com/google/cloud/functions/invoker/java-function-invoker/1.3.1/"
+      "external/rules_jvm_external~~maven~maven/com/google/cloud/functions/invoker/java-function-invoker/1.4.3/"
           + invokerJarFilename;
   private static final int invokerPort = 8080; // default internal port for the invoker jar process
 

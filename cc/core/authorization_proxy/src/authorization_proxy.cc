@@ -85,8 +85,8 @@ ExecutionResult AuthorizationProxy::AuthorizeInternal(
 
   AsyncContext<HttpRequest, HttpResponse> http_context(
       std::move(http_request),
-      bind(&AuthorizationProxy::HandleAuthorizeResponse, this,
-           authorization_context, _1),
+      std::bind(&AuthorizationProxy::HandleAuthorizeResponse, this,
+                authorization_context, _1),
       authorization_context);
   auto result = http_client_->PerformRequest(http_context);
   if (!result.Successful()) {

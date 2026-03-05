@@ -19,15 +19,15 @@ load("@rules_jvm_external//:specs.bzl", "maven")
 load("//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS")
 
 # LINT.IfChange
-JACKSON_VERSION = "2.15.2"
+JACKSON_VERSION = "2.21.0"
 
-AUTO_VALUE_VERSION = "1.7.4"
+AUTO_VALUE_VERSION = "1.10.4"
 
 AWS_SDK_VERSION = "2.17.239"
 
 GOOGLE_GAX_VERSION = "2.47.0"
 
-AUTO_SERVICE_VERSION = "1.0"
+AUTO_SERVICE_VERSION = "1.1.1"
 
 def maven_dependencies():
     maven_install(
@@ -39,18 +39,18 @@ def maven_dependencies():
             "org.apache.tomcat:annotations-api:6.0.53",
             # Specify the protobuf-java explicitly to make sure
             # the version will be upgraded with protobuf cc.
-            "com.google.protobuf:protobuf-java:4.28.0",
-            "com.google.protobuf:protobuf-java-util:4.28.0",
-            "com.google.protobuf:protobuf-javalite:4.28.0",
-            "com.beust:jcommander:1.81",
-            "com.fasterxml.jackson.core:jackson-annotations:" + JACKSON_VERSION,
+            "com.google.protobuf:protobuf-java:4.29.5",
+            "com.google.protobuf:protobuf-java-util:4.29.5",
+            "com.google.protobuf:protobuf-javalite:4.29.5",
+            "org.jcommander:jcommander:1.85",
+            "com.fasterxml.jackson.core:jackson-annotations:2.21",
             "com.fasterxml.jackson.core:jackson-core:" + JACKSON_VERSION,
             "com.fasterxml.jackson.core:jackson-databind:" + JACKSON_VERSION,
             "com.fasterxml.jackson.datatype:jackson-datatype-guava:" + JACKSON_VERSION,
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:" + JACKSON_VERSION,
             "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:" + JACKSON_VERSION,
             "com.google.acai:acai:1.1",
-            "com.google.auto.factory:auto-factory:1.0",
+            "com.google.auto.factory:auto-factory:1.1.0",
             "com.google.auto.service:auto-service-annotations:" + AUTO_SERVICE_VERSION,
             "com.google.auto.service:auto-service:" + AUTO_SERVICE_VERSION,
             "com.google.auto.value:auto-value-annotations:" + AUTO_VALUE_VERSION,
@@ -69,9 +69,9 @@ def maven_dependencies():
             "com.google.cloud:google-cloud-compute:1.57.0",
             "com.google.cloud:google-cloudevent-types:0.14.0",
             "com.google.api.grpc:proto-google-cloud-compute-v1:1.58.0",
-            "com.google.cloud.functions.invoker:java-function-invoker:1.3.1",
+            "com.google.cloud.functions.invoker:java-function-invoker:1.4.3",
             "com.google.auth:google-auth-library-oauth2-http:1.24.1",
-            "com.google.cloud.functions:functions-framework-api:1.1.0",
+            "com.google.cloud.functions:functions-framework-api:1.1.4",
             "commons-logging:commons-logging:1.1.1",
             "com.google.api:gax:" + GOOGLE_GAX_VERSION,
             "com.google.http-client:google-http-client-jackson2:1.40.0",
@@ -79,8 +79,8 @@ def maven_dependencies():
             "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.31.0",
             "com.google.api.grpc:proto-google-cloud-storage-transfer-v1:1.17.0",
             "com.google.api.grpc:proto-google-common-protos:2.27.0",
-            "com.google.guava:guava:33.2.1-jre",
-            "com.google.guava:guava-testlib:33.2.1-jre",
+            "com.google.guava:guava:33.5.0-jre",
+            "com.google.guava:guava-testlib:33.5.0-jre",
             "com.google.inject:guice:5.1.0",
             "com.google.inject.extensions:guice-assistedinject:5.1.0",
             "com.google.inject.extensions:guice-testlib:5.1.0",

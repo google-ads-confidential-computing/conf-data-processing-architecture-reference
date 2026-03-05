@@ -32,6 +32,10 @@ output "private_key_base_url_additional" {
   value = "https://${local.private_key_domain_additional}"
 }
 
+output "private_key_service_latest_revisions" {
+  value = module.private_key_service.latest_revisions
+}
+
 output "key_storage_cloud_run_url" {
   value = module.keystorageservice.key_storage_cloud_run_url
 }

@@ -20,7 +20,6 @@ import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEn
 import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_DB_NAME;
 import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_ENDPOINT;
 import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_INSTANCE_ID;
-import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.createBuilderWithDefaults;
 
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
@@ -40,20 +39,12 @@ public class SpannerKeyDbTestUtil {
 
   private SpannerKeyDbTestUtil() {}
 
-  /**
-   * Inserts a single fake key with random key values and a timestamp set to expire in the future.
-   * See {@link FakeEncryptionKey#create}.
-   */
-  public static void putItemRandomValues(SpannerKeyDb keyDb) throws ServiceException {
-    putItem(keyDb, FakeEncryptionKey.create());
-  }
-
   /** Puts itemCount-number of Key items with random values to spannerDb */
-  public static void putNItemsRandomValues(SpannerKeyDb spannerKeyDb, int itemCount)
+  public static void putNItemsRandomValues(SpannerKeyDb spannerKeyDb, String setName, int itemCount)
       throws ServiceException {
     spannerKeyDb.createKeys(
         IntStream.range(0, itemCount)
-            .mapToObj(unused -> FakeEncryptionKey.create())
+            .mapToObj(unused -> FakeEncryptionKey.createEncryptionKey(setName))
             .collect(ImmutableList.toImmutableList()));
   }
 
@@ -64,25 +55,34 @@ public class SpannerKeyDbTestUtil {
 
   /**
    * Inserts a single fake key with random key values at the specified expiration time. See {@link
-   * FakeEncryptionKey#withExpirationTime(Instant)}
+   * FakeEncryptionKey#withExpirationTime(String, Instant)}
    */
-  public static void putKeyWithExpiration(SpannerKeyDb keyDb, Instant expirationTime)
-      throws ServiceException {
-    putItem(keyDb, FakeEncryptionKey.withExpirationTime(expirationTime));
+  public static void putKeyWithExpiration(
+      SpannerKeyDb keyDb, String setName, Instant expirationTime) throws ServiceException {
+    putItem(keyDb, FakeEncryptionKey.withExpirationTime(setName, expirationTime));
   }
 
-  public static void putKeyWithNoRotation(SpannerKeyDb keyDb) throws ServiceException {
-    putItem(keyDb, createBuilderWithDefaults().clearExpirationTime().clearTtlTime().build());
+  public static void putKeyWithNoRotation(SpannerKeyDb keyDb, String setName)
+      throws ServiceException {
+    putItem(
+        keyDb,
+        FakeEncryptionKey.createEncryptionKeyBuilder(setName)
+            .clearExpirationTime()
+            .clearTtlTime()
+            .build());
   }
 
   /**
    * Inserts a single fake key with random key values at the specified activation time. See {@link
-   * FakeEncryptionKey#withActivationAndExpirationTimes(Instant, Instant)}
+   * FakeEncryptionKey#withActivationAndExpirationTimes(String, Instant, Instant)}
    */
   public static void putKeyWithActivationAndExpirationTimes(
-      SpannerKeyDb keyDb, Instant activationTime, Instant expirationTime) throws ServiceException {
+      SpannerKeyDb keyDb, String setName, Instant activationTime, Instant expirationTime)
+      throws ServiceException {
     putItem(
-        keyDb, FakeEncryptionKey.withActivationAndExpirationTimes(activationTime, expirationTime));
+        keyDb,
+        FakeEncryptionKey.withActivationAndExpirationTimes(
+            setName, activationTime, expirationTime));
   }
 
   /**
@@ -91,7 +91,7 @@ public class SpannerKeyDbTestUtil {
    */
   public static SpannerKeyDbConfig getSpannerKeyDbConfig() {
     // Allow configuration of Cloud Functions via parameters passed as environment variables so
-    // they can handle different situations (eg. pointing to different Spanner databases).
+    // they can handle different situations (e.g. pointing to different Spanner databases).
     String gcpProjectId =
         System.getenv().getOrDefault(ENV_VAR_GCP_PROJECT_ID, DEFAULT_DB_CONFIG.gcpProjectId());
     String spannerInstanceId =

@@ -31,9 +31,9 @@ namespace http = beast::http;
 
 using boost::asio::ip::tcp;
 using boost::asio::local::stream_protocol;
-using std::make_shared;
 using std::atomic_bool;
 using std::make_pair;
+using std::make_shared;
 using std::move;
 using std::multimap;
 using std::string;
@@ -80,11 +80,9 @@ TestHttp1Server::TestHttp1Server(TestHttp1ServerType server_type)
     : server_type_(server_type) {
   auto ready = make_shared<atomic_bool>(false);
   if (server_type_ == TestHttp1ServerType::TCP) {
-    thread_ = thread(
-        std::bind(&TestHttp1Server::RunOnTcpSocket, this, ready));
+    thread_ = thread(std::bind(&TestHttp1Server::RunOnTcpSocket, this, ready));
   } else if (server_type == TestHttp1ServerType::UNIX) {
-    thread_ = thread(
-        std::bind(&TestHttp1Server::RunOnUnixSocket, this, ready));
+    thread_ = thread(std::bind(&TestHttp1Server::RunOnUnixSocket, this, ready));
   } else {
     std::cerr << "Invalid TestHttp1ServerType "
               << static_cast<int>(server_type_) << std::endl;

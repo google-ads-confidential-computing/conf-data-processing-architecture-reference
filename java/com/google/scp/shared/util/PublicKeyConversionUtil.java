@@ -140,7 +140,7 @@ public final class PublicKeyConversionUtil {
     private ByteString serializedKey;
 
     @Override
-    public void write(Keyset keyset) throws IOException {
+    public void write(Keyset keyset) {
       if (keyset.getKeyCount() != 1) {
         throw new IllegalArgumentException(
             String.format("Unexpected number of keys, got %d, expected 1", keyset.getKeyCount()));

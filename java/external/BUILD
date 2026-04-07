@@ -145,11 +145,6 @@ alias(
 )
 
 alias(
-    name = "google_truth8",
-    actual = "@maven//:com_google_truth_extensions_truth_java8_extension",
-)
-
-alias(
     name = "autovalue_processor",
     actual = "@maven//:com_google_auto_value_auto_value",
 )
@@ -354,11 +349,6 @@ alias(
 )
 
 alias(
-    name = "google_gax",
-    actual = "@maven//:com_google_api_gax",
-)
-
-alias(
     name = "google_api_client",
     actual = "@maven//:com_google_api_client_google_api_client",
 )
@@ -387,6 +377,16 @@ alias(
 alias(
     name = "gcp_spanner",
     actual = "@maven//:com_google_cloud_google_cloud_spanner",
+)
+
+alias(
+    name = "gcp_parametermanager",
+    actual = "@maven//:com_google_cloud_google_cloud_parametermanager",
+)
+
+alias(
+    name = "gcp_parametermanager_proto",
+    actual = "@maven//:com_google_api_grpc_proto_google_cloud_parametermanager_v1",
 )
 
 alias(
@@ -435,18 +435,18 @@ alias(
 )
 
 alias(
-    name = "gcp_api_gax",
+    name = "gcp_gax",
     actual = "@maven//:com_google_api_gax",
-)
-
-alias(
-    name = "grpc_api",
-    actual = "@maven//:io_grpc_grpc_api",
 )
 
 alias(
     name = "gcp_gax_grpc",
     actual = "@maven//:com_google_api_gax_grpc",
+)
+
+alias(
+    name = "grpc_api",
+    actual = "@maven//:io_grpc_grpc_api",
 )
 
 alias(

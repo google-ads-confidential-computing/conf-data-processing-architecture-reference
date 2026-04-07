@@ -29,7 +29,7 @@ java_library(
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
         "//java/external:gcp_api_common",
-        "//java/external:gcp_api_gax",
+        "//java/external:gcp_gax",
         "//java/external:gcp_gax_grpc",
         "//java/external:gcp_pubsub",
         "//java/external:gcp_pubsub_v1",

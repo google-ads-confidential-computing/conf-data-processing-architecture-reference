@@ -22,6 +22,7 @@ exports_files(["LICENSE"])
 
 cc_library(
     name = "core",
+    # buildifier: disable=external-path
     srcs = glob([
         "aws-cpp-sdk-core/source/*.cpp",
         "aws-cpp-sdk-core/source/external/tinyxml2/*.cpp",
@@ -51,6 +52,7 @@ cc_library(
         "aws-cpp-sdk-core/source/net/linux-shared/*.cpp",  # NET_SOURCE
         "aws-cpp-sdk-core/source/platform/linux-shared/*.cpp",  # PLATFORM_LINUX_SHARED_SOURCE
     ]),
+    # buildifier: disable=external-path
     hdrs = [
         "aws-cpp-sdk-core/include/aws/core/SDKConfig.h",
     ] + glob([
@@ -81,6 +83,10 @@ cc_library(
         "aws-cpp-sdk-core/include/aws/core/http/curl/*.h",
         "aws-cpp-sdk-core/include/aws/core/utils/crypto/openssl/*.h",
     ]),
+    copts = [
+        "-include",
+        "cstdint",
+    ],
     defines = [
         'AWS_SDK_VERSION_STRING=\\"1.8.186\\"',
         "AWS_SDK_VERSION_MAJOR=1",

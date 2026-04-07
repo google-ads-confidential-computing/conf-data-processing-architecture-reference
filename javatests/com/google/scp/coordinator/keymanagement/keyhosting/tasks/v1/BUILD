@@ -21,9 +21,6 @@ java_test(
     srcs = [
         "GetActivePublicKeysTaskTest.java",
     ],
-    # TODO(b/358102551) Works around non-hermetic sandbox issue until upgrade
-    # to Bazel 7+ or incompatible_sandbox_hermetic_tmp can be reliably applied.
-    tags = ["no-sandbox"],
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
@@ -49,7 +46,6 @@ java_test(
     srcs = [
         "GetKeysetMetadataTaskTest.java",
     ],
-    tags = ["no-sandbox"],
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
@@ -76,9 +72,6 @@ java_test(
     srcs = [
         "GetEncryptedPrivateKeyTaskTest.java",
     ],
-    # TODO(b/358102551) Works around non-hermetic sandbox issue until upgrade
-    # to Bazel 7+ or incompatible_sandbox_hermetic_tmp can be reliably applied.
-    tags = ["no-sandbox"],
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/api/v1:java_proto",
@@ -110,9 +103,6 @@ java_test(
     srcs = [
         "GetActiveEncryptionKeysTaskTest.java",
     ],
-    # TODO(b/358102551) Works around non-hermetic sandbox issue until upgrade
-    # to Bazel 7+ or incompatible_sandbox_hermetic_tmp can be reliably applied.
-    tags = ["no-sandbox"],
     deps = [
         "//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
         "//coordinator/protos/keymanagement/shared/backend:java_proto",

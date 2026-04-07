@@ -20,6 +20,8 @@
 #include <string>
 #include <utility>
 
+#include <grpcpp/support/status.h>
+
 #include <google/pubsub/v1/pubsub.grpc.pb.h>
 
 #include "core/common/operation_dispatcher/src/operation_dispatcher.h"
@@ -27,7 +29,6 @@
 #include "core/interface/async_executor_interface.h"
 #include "cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cpio/client_providers/interface/queue_client_provider_interface.h"
-#include <grpcpp/support/status.h>
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/queue_service/v1/queue_service.pb.h"
 

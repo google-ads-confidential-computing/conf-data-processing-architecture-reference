@@ -18,6 +18,7 @@ package com.google.scp.coordinator.keymanagement.keyhosting.common.cache;
 
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.MISSING_KEY;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
+import static com.google.scp.shared.api.model.Code.UNKNOWN;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -28,9 +29,12 @@ import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Singleton
 public final class GetEncryptedKeyCache extends KeyDbCache<String, EncryptionKey> {
+  private static final Logger logger = LoggerFactory.getLogger(GetEncryptedKeyCache.class);
 
   private final KeyDb keyDb;
   private final LoadingCache<String, Boolean> missingKeyCache;
@@ -62,7 +66,10 @@ public final class GetEncryptedKeyCache extends KeyDbCache<String, EncryptionKey
     try {
       return keyDb.getKey(key);
     } catch (ServiceException e) {
-      missingKeyCache.put(key, true);
+      logger.warn("Unable to find item with keyId {} with reason {}", key, e.getErrorCode());
+      if (e.getErrorCode() != UNKNOWN) {
+        missingKeyCache.put(key, true);
+      }
       throw e;
     }
   }

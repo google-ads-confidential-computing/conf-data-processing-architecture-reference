@@ -64,17 +64,17 @@ import org.testcontainers.containers.output.Slf4jLogConsumer;
 @RunWith(JUnit4.class)
 public final class PrivateKeyServiceTest {
 
+  private static final String SET_NAME = "test-set-name";
+  private static final String SET_NAME_2 = "test-set-name-2";
   private static final Logger logger = LoggerFactory.getLogger(PrivateKeyServiceTest.class);
   private static final ImmutableList<EncryptionKey> TEST_KEYS =
       ImmutableList.of(
-          createKey(null, -7),
-          createKey(null, -14),
-          createKey("test-set", -7),
-          createKey("test-set", -14),
-          createKey("test-set", -21),
-          createKey("test-set-2", -7),
-          createKey("test-set-2", 0),
-          createKey("test-set-2", 7));
+          createKey(SET_NAME, -7),
+          createKey(SET_NAME, -14),
+          createKey(SET_NAME, -21),
+          createKey(SET_NAME_2, -7),
+          createKey(SET_NAME_2, 0),
+          createKey(SET_NAME_2, 7));
 
   @Rule public final Acai acai = new Acai(TestModule.class);
 
@@ -108,23 +108,15 @@ public final class PrivateKeyServiceTest {
     var now = now();
     var start = now.minus(1, DAYS).minusMillis(10000).toEpochMilli();
     var end = now.plusMillis(10000).toEpochMilli();
-    getActiveKeysValidation("test-set-2", start, end, 1);
+    getActiveKeysValidation(SET_NAME_2, start, end, 1);
   }
 
   @Test
   public void v1betaGetActiveEncryptionKeys_largeTimeRange_returnsAllKeys() throws Exception {
     var now = now();
-    var start = now.minus(15, DAYS).toEpochMilli();
-    var end = now.plus(10, DAYS).toEpochMilli();
-    getActiveKeysValidation("test-set-2", start, end, 3);
-  }
-
-  @Test
-  public void v1betaGetActiveEncryptionKeys_largeTimeRange_returnsAllEmptySet() throws Exception {
-    var now = now();
     var start = now.minus(25, DAYS).toEpochMilli();
-    var end = now.plusMillis(10000).toEpochMilli();
-    getActiveKeysValidation("", start, end, 2);
+    var end = now.plus(1, DAYS).toEpochMilli();
+    getActiveKeysValidation(SET_NAME, start, end, 3);
   }
 
   private void getActiveKeysValidation(String setName, long start, long end, int expected)
@@ -147,7 +139,7 @@ public final class PrivateKeyServiceTest {
     var now = now();
     var start = now.minusMillis(10000).toEpochMilli();
     String endpoint =
-        String.format("/v1beta/sets/test-set-2/activeKeys?startEpochMillis=%d", start);
+        String.format("/v1beta/sets/%s/activeKeys?startEpochMillis=%d", SET_NAME_2, start);
     invalidArgumentTest(endpoint);
   }
 
@@ -156,7 +148,8 @@ public final class PrivateKeyServiceTest {
       throws Exception {
     var now = now();
     var end = now.plusMillis(10000).toEpochMilli();
-    String endpoint = String.format("/v1beta/sets/test-set-2/activeKeys?endEpochMillis=%d", end);
+    String endpoint =
+        String.format("/v1beta/sets/%s/activeKeys?endEpochMillis=%d", SET_NAME_2, end);
     invalidArgumentTest(endpoint);
   }
 
@@ -167,7 +160,8 @@ public final class PrivateKeyServiceTest {
     var end = now.minus(1, DAYS).toEpochMilli();
     var endpoint =
         String.format(
-            "/v1beta/sets/test-set-2/activeKeys?startEpochMillis=%d&endEpochMillis=%d", start, end);
+            "/v1beta/sets/%s/activeKeys?startEpochMillis=%d&endEpochMillis=%d",
+            SET_NAME_2, start, end);
     invalidArgumentTest(endpoint);
   }
 
@@ -252,10 +246,7 @@ public final class PrivateKeyServiceTest {
   }
 
   private static EncryptionKey createKey(String setName, int expiryPlusDays) {
-    var builder = FakeEncryptionKey.create().toBuilder();
-    if (setName != null) {
-      builder.setSetName(setName);
-    }
+    var builder = FakeEncryptionKey.createEncryptionKeyBuilder(setName);
     var activationEpochMilli = now().plus(ofDays(expiryPlusDays - 1)).toEpochMilli();
     var expirationEpochMilli = now().plus(ofDays(expiryPlusDays)).toEpochMilli();
     return builder

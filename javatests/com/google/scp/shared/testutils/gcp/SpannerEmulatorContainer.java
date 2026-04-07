@@ -16,6 +16,8 @@
 
 package com.google.scp.shared.testutils.gcp;
 
+import static com.google.scp.shared.testutils.common.TestConstants.GCP_SPANNER_IMAGE_NAME;
+
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
@@ -33,7 +35,7 @@ public final class SpannerEmulatorContainer extends GenericContainer<SpannerEmul
   public static final int HTTP_PORT = 9050;
 
   private static final DockerImageName DEFAULT_IMAGE_NAME =
-      DockerImageName.parse("gcr.io/cloud-spanner-emulator/emulator");
+      DockerImageName.parse(GCP_SPANNER_IMAGE_NAME);
   private String networkAlias;
 
   /** Constructor for the {@code SpannerEmulatorContainer} class. */

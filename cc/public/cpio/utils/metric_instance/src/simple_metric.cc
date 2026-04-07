@@ -82,7 +82,6 @@ void SimpleMetric::RunMetricPush(
         }
       },
       activity_id, activity_id);
-  auto metrics_count = record_metric_context.request->metrics().size();
   metric_client_->PutMetrics(record_metric_context);
 }
 

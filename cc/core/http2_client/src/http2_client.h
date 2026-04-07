@@ -60,10 +60,8 @@ class HttpClient : public HttpClientInterface {
    * @brief Construct a new Http Client object
    *
    * @param async_executor an instance of the async executor.
-   * @param retry_strategy_type retry strategy type.
-   * @param time_duraton_ms delay time duration in ms for http client retry
-   * strategy.
-   * @param total_retries total retry counts.
+   * @param options options object containing retry strategy type, max
+   * connections per host and http2 read timeout in seconds.
    */
   explicit HttpClient(std::shared_ptr<AsyncExecutorInterface>& async_executor,
                       HttpClientOptions options = HttpClientOptions());

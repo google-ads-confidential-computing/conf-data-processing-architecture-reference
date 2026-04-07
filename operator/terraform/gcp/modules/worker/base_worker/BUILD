@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_pkg//:mappings.bzl", "pkg_files")
+load("//tools/tftesting:tf_test.bzl", "tf_module", "tf_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -26,4 +27,18 @@ pkg_files(
         ],
     ),
     prefix = "worker/base_worker",
+)
+
+tf_module(
+    name = "base_worker_module",
+)
+
+tf_test(
+    name = "base_worker_test",
+    srcs = glob([
+        "*.tftest.hcl",
+    ]),
+    deps = [
+        ":base_worker_module",
+    ],
 )

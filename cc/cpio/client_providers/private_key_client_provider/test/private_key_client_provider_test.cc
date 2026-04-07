@@ -627,6 +627,26 @@ TEST_F(PrivateKeyClientProviderTest,
   WaitUntil([&]() { return response_count.load() == 1; });
 }
 
+TEST_F(PrivateKeyClientProviderTest,
+       ListActiveEncryptionKeysFailedWithEmptyKeySetName) {
+  list_active_encryption_keys_request_->clear_key_set_name();
+  atomic<size_t> response_count = 0;
+  AsyncContext<ListActiveEncryptionKeysRequest,
+               ListActiveEncryptionKeysResponse>
+      context(list_active_encryption_keys_request_,
+              [&](AsyncContext<ListActiveEncryptionKeysRequest,
+                               ListActiveEncryptionKeysResponse>& context) {
+                EXPECT_THAT(
+                    context.result,
+                    ResultIs(FailureExecutionResult(
+                        SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST)));
+                response_count.fetch_add(1);
+              });
+
+  private_key_client_provider->ListActiveEncryptionKeys(context);
+  WaitUntil([&]() { return response_count.load() == 1; });
+}
+
 TEST_F(PrivateKeyClientProviderTest, ListPrivateKeysFailedWithInvalidRequest) {
   list_request_->set_max_age_seconds(0);
 

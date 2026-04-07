@@ -21,7 +21,6 @@ import static com.google.scp.coordinator.keymanagement.shared.model.KeyGeneratio
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_DB_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_ID_TYPE;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_STORAGE_SERVICE_BASE_URL;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_TTL_IN_DAYS;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_BASE_URI;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.NUMBER_OF_KEYS_TO_CREATE;
@@ -41,12 +40,12 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotat
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationValidityInDays;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyIdTypeName;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceBaseUrl;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceCloudfunctionUrl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KmsKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorKmsKeyBaseUriArg;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorServiceAccount;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorWipProvider;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PopulateMigrationKeyData;
+import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyGenerationParameterTestModule;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.Annotations.SubscriptionId;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.CreateSplitKeysPubSubListener;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubListener;
@@ -65,7 +64,6 @@ import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpInstanceNam
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectId;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectIdOverride;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpZoneOverride;
-import com.google.scp.shared.clients.configclient.gcp.DefaultParameterModule;
 import com.google.scp.shared.clients.configclient.gcp.GcpParameterModule;
 import com.google.scp.shared.clients.configclient.model.ErrorReason;
 import java.util.Optional;
@@ -158,15 +156,6 @@ public final class KeyGenerationModule extends AbstractModule {
   }
 
   @Provides
-  @Singleton
-  @KeyStorageServiceCloudfunctionUrl
-  Optional<String> providesKeyStorageServiceCloudfunctionUrl(ParameterClient parameterClient)
-      throws ParameterClientException {
-    return Optional.ofNullable(parameterClient.getParameter(KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL))
-        .orElse(args.getKeyStorageServiceCloudfunctionUrl());
-  }
-
-  @Provides
   @PopulateMigrationKeyData
   Boolean providesPopulateMigrationKeyData(ParameterClient parameterClient)
       throws ParameterClientException {
@@ -251,23 +240,20 @@ public final class KeyGenerationModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    // TODO(b/282204533)
-    if (args.isMultiparty()) {
-      bind(PubSubListener.class).to(CreateSplitKeysPubSubListener.class);
+    bind(PubSubListener.class).to(CreateSplitKeysPubSubListener.class);
 
-      // Key Storage Bindings
-      install(new GcpKeyStorageConfigModule());
+    // Key Storage Bindings
+    install(new GcpKeyStorageConfigModule());
 
-      install(new GcpSplitKeyGenerationTasksModule());
-    }
+    install(new GcpSplitKeyGenerationTasksModule());
 
     // Data layer bindings
     install(new SpannerKeyDbModule());
 
     // Client Bindings
     install(new GcpCoordinatorClientConfigModule());
-    if (args.getTestUseDefaultParametersOnGcp()) {
-      install(new DefaultParameterModule());
+    if (args.useTestParametersOnGcp()) {
+      install(new KeyGenerationParameterTestModule());
     } else {
       install(new GcpParameterModule());
     }

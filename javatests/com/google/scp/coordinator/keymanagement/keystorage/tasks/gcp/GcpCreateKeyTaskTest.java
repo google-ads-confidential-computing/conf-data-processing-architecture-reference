@@ -17,8 +17,8 @@
 package com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.createEncryptionKey;
 import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.KEY_LIMIT;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
 import static org.junit.Assert.assertThrows;
@@ -52,10 +52,14 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public class GcpCreateKeyTaskTest {
+  // TODO: b/483708292 - Cleanup/refactor tests
+  private static final String SET_NAME = "test-set-name";
   private static final String MIGRATION_KEK_BASE_URI = "gcp-kms://$setName$-migration-kek-uri";
   private static final String KEK_BASE_URI = "gcp-kms://$setName$-kek-uri";
   private static final String TEST_PUBLIC_KEY = "test private key split";
   private static final String TEST_PRIVATE_KEY = "test public key";
+  private static final String KEY_ID = "keyId";
+
   private static Aead TEST_AEAD;
   private static KmsClient kmsClient;
   private static KmsClient migrationKmsClient;
@@ -78,7 +82,7 @@ public class GcpCreateKeyTaskTest {
 
   @Test
   public void createKey_success() throws Exception {
-    String keyEncryptionKeyUri = KEK_BASE_URI.replace("$setName$", "");
+    String keyEncryptionKeyUri = KEK_BASE_URI.replace("$setName$", SET_NAME);
     String publicKey = "123456";
     String privateKeySplit = "privateKeySplit";
     var encryptedPrivateKeySplit =
@@ -92,12 +96,11 @@ public class GcpCreateKeyTaskTest {
             migrationKmsClient,
             migrationKeyEncryptionKeyUri,
             false);
-    String keyId = "asdf";
     var creationTime = Instant.now().toEpochMilli();
     var expirationTime = Instant.now().plus(1, ChronoUnit.DAYS).toEpochMilli();
     EncryptionKey key =
-        FakeEncryptionKey.create().toBuilder()
-            .setKeyId(keyId)
+        FakeEncryptionKey.createEncryptionKeyBuilder(SET_NAME)
+            .setKeyId(KEY_ID)
             .setExpirationTime(expirationTime)
             .setCreationTime(creationTime)
             .setKeyEncryptionKeyUri(keyEncryptionKeyUri)
@@ -105,25 +108,21 @@ public class GcpCreateKeyTaskTest {
             .build();
     taskWithMock.createKey(key, encryptedPrivateKeySplit, "");
 
-    com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
-        resultPublic = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT).getFirst();
-    com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
-        resultPrivate = keyDb.getKey(keyId);
-    assertThat(resultPublic.getKeyId()).isEqualTo(keyId);
-    assertThat(resultPublic.getPublicKey()).isEqualTo(key.getPublicKey());
-    assertThat(resultPublic.getCreationTime()).isEqualTo(creationTime);
-    assertThat(resultPublic.getExpirationTime()).isEqualTo(expirationTime);
-    assertThat(resultPrivate.getKeyId()).isEqualTo(keyId);
+    var createdKey = keyDb.getActiveKeys(SET_NAME, KEY_LIMIT).getFirst();
+    assertThat(createdKey.getPublicKey()).isEqualTo(key.getPublicKey());
+    assertThat(createdKey.getCreationTime()).isEqualTo(creationTime);
+    assertThat(createdKey.getExpirationTime()).isEqualTo(expirationTime);
+
     byte[] decodedKeys =
-        decodeAndDecryptWithAead(resultPrivate.getJsonEncodedKeyset(), keyEncryptionKeyUri);
+        decodeAndDecryptWithAead(createdKey.getJsonEncodedKeyset(), keyEncryptionKeyUri);
     assertThat(decodedKeys).isEqualTo(privateKeySplit.getBytes());
-    assertThat(resultPrivate.getExpirationTime()).isEqualTo(expirationTime);
-    assertThat(resultPrivate.getCreationTime()).isEqualTo(creationTime);
-    assertThat(resultPrivate.getKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
-    assertThat(resultPrivate.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
+    assertThat(createdKey.getExpirationTime()).isEqualTo(expirationTime);
+    assertThat(createdKey.getCreationTime()).isEqualTo(creationTime);
+    assertThat(createdKey.getKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
+    assertThat(createdKey.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(key.getKeySplitDataList().getFirst().getKeySplitKeyEncryptionKeyUri());
     // Test data has 2 keysplitdata items, so the new one would be after
-    assertThat(resultPrivate.getKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
+    assertThat(createdKey.getKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(keyEncryptionKeyUri);
   }
 
@@ -139,38 +138,34 @@ public class GcpCreateKeyTaskTest {
             migrationKmsClient,
             migrationKeyEncryptionKeyUri,
             false);
-    String keyId = "asdf";
-    var creationTime = 500L;
     var split1 = toBase64AndEncodeWithAead("12345", kmsClient.getAead(keyEncryptionKeyUri), "123");
     var split2 = toBase64AndEncodeWithAead("67890", kmsClient.getAead(keyEncryptionKeyUri), "123");
     EncryptionKey key1 =
         EncryptionKey.newBuilder()
-            .setKeyId(keyId)
+            .setKeyId(KEY_ID)
             .setPublicKey("")
-            .setExpirationTime(0L)
-            .setCreationTime(creationTime)
+            .setExpirationTime(10L)
+            .setCreationTime(0L)
             .setPublicKeyMaterial(toBase64("123"))
             .build();
     EncryptionKey key2 =
         EncryptionKey.newBuilder()
-            .setKeyId(keyId)
+            .setKeyId(KEY_ID)
             .setPublicKey("")
-            .setExpirationTime(0L)
-            .setCreationTime(creationTime)
+            .setExpirationTime(5L)
+            .setCreationTime(1L)
             .setPublicKeyMaterial(toBase64("123"))
             .build();
 
     taskWithMock.createKey(key1, split1, "");
     taskWithMock.createKey(key2, split2, "");
 
-    com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
-        result = keyDb.getKey(keyId);
-    assertThat(result.getKeyId()).isEqualTo(keyId);
-    assertThat(result.getPublicKey()).isEqualTo(key2.getPublicKey());
-    assertThat(decodeAndDecryptWithAead(result.getJsonEncodedKeyset(), keyEncryptionKeyUri))
+    var keyById = keyDb.getKey(KEY_ID);
+    assertThat(keyById.getPublicKey()).isEqualTo(key2.getPublicKey());
+    assertThat(decodeAndDecryptWithAead(keyById.getJsonEncodedKeyset(), keyEncryptionKeyUri))
         .isEqualTo("67890".getBytes());
-    assertThat(result.getCreationTime()).isEqualTo(creationTime);
-    assertThat(result.getExpirationTime()).isEqualTo(key2.getExpirationTime());
+    assertThat(keyById.getCreationTime()).isEqualTo(key2.getCreationTime());
+    assertThat(keyById.getExpirationTime()).isEqualTo(key2.getExpirationTime());
   }
 
   @Test
@@ -207,13 +202,11 @@ public class GcpCreateKeyTaskTest {
             migrationKmsClient,
             migrationKmsKeyEncryptionKeyBaseUri,
             true);
-    String keyId = "asdf";
     var creationTime = Instant.now().toEpochMilli();
     var expirationTime = Instant.now().plus(1, ChronoUnit.DAYS).toEpochMilli();
     EncryptionKey key =
-        FakeEncryptionKey.createWithMigration().toBuilder()
-            .setKeyId(keyId)
-            .setSetName(setName)
+        FakeEncryptionKey.createEncryptionKeyWithMigration(setName).toBuilder()
+            .setKeyId(KEY_ID)
             .setExpirationTime(expirationTime)
             .setCreationTime(creationTime)
             .setKeyEncryptionKeyUri(keyEncryptionKeyUri)
@@ -222,40 +215,31 @@ public class GcpCreateKeyTaskTest {
             .build();
     taskWithMock.createKey(key, encryptedPrivateKeySplit, migrationEncryptedPrivateKeySplit);
 
-    // keyDb.getActiveKeys always uses the empty string as the default key set.
-    if (setName.isEmpty()) {
-      com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto
-              .EncryptionKey
-          resultPublic = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT).getFirst();
-      assertThat(resultPublic.getKeyId()).isEqualTo(keyId);
-      assertThat(resultPublic.getPublicKey()).isEqualTo(key.getPublicKey());
-      assertThat(resultPublic.getCreationTime()).isEqualTo(creationTime);
-      assertThat(resultPublic.getExpirationTime()).isEqualTo(expirationTime);
-    }
+    var createdKey = keyDb.getKey(KEY_ID);
+    assertThat(createdKey.getPublicKey()).isEqualTo(key.getPublicKey());
+    assertThat(createdKey.getCreationTime()).isEqualTo(creationTime);
+    assertThat(createdKey.getExpirationTime()).isEqualTo(expirationTime);
 
-    com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
-        resultPrivate = keyDb.getKey(keyId);
-    assertThat(resultPrivate.getKeyId()).isEqualTo(keyId);
     byte[] decodedKeys =
-        decodeAndDecryptWithAead(resultPrivate.getJsonEncodedKeyset(), keyEncryptionKeyUri);
+        decodeAndDecryptWithAead(createdKey.getJsonEncodedKeyset(), keyEncryptionKeyUri);
     assertThat(decodedKeys).isEqualTo(privateKeySplit.getBytes());
     byte[] migrationDecodedKeys =
         decodeAndDecryptWithAead(
-            resultPrivate.getMigrationJsonEncodedKeyset(), migrationKeyEncryptionKeyUri);
+            createdKey.getMigrationJsonEncodedKeyset(), migrationKeyEncryptionKeyUri);
     assertThat(migrationDecodedKeys).isEqualTo(privateKeySplit.getBytes());
-    assertThat(resultPrivate.getExpirationTime()).isEqualTo(expirationTime);
-    assertThat(resultPrivate.getCreationTime()).isEqualTo(creationTime);
-    assertThat(resultPrivate.getKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
-    assertThat(resultPrivate.getMigrationKeyEncryptionKeyUri())
+    assertThat(createdKey.getExpirationTime()).isEqualTo(expirationTime);
+    assertThat(createdKey.getCreationTime()).isEqualTo(creationTime);
+    assertThat(createdKey.getKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
+    assertThat(createdKey.getMigrationKeyEncryptionKeyUri())
         .isEqualTo(migrationKeyEncryptionKeyUri);
-    assertThat(resultPrivate.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
+    assertThat(createdKey.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(key.getKeySplitDataList().getFirst().getKeySplitKeyEncryptionKeyUri());
-    assertThat(resultPrivate.getMigrationKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
+    assertThat(createdKey.getMigrationKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(key.getMigrationKeySplitDataList().getFirst().getKeySplitKeyEncryptionKeyUri());
     // Test data has 2 keysplitdata items, so the new one would be after
-    assertThat(resultPrivate.getKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
+    assertThat(createdKey.getKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(keyEncryptionKeyUri);
-    assertThat(resultPrivate.getMigrationKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
+    assertThat(createdKey.getMigrationKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(migrationKeyEncryptionKeyUri);
   }
 
@@ -291,14 +275,12 @@ public class GcpCreateKeyTaskTest {
             migrationKmsClient,
             migrationKmsKeyEncryptionKeyBaseUri,
             true);
-    String keyId = "asdf";
     var creationTime = Instant.now().toEpochMilli();
     var expirationTime = Instant.now().plus(1, ChronoUnit.DAYS).toEpochMilli();
 
     EncryptionKey key =
-        FakeEncryptionKey.createWithMigration().toBuilder()
-            .setKeyId(keyId)
-            .setSetName(setName)
+        FakeEncryptionKey.createEncryptionKeyWithMigration(setName).toBuilder()
+            .setKeyId(KEY_ID)
             .setExpirationTime(expirationTime)
             .setCreationTime(creationTime)
             .setKeyEncryptionKeyUri(keyEncryptionKeyUri)
@@ -307,36 +289,27 @@ public class GcpCreateKeyTaskTest {
             .build();
     taskWithMock.createKey(key, encryptedPrivateKeySplit, migrationEncryptedPrivateKeySplit);
 
-    // keyDb.getActiveKeys always uses the empty string as the default key set.
-    if (setName.isEmpty()) {
-      com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto
-              .EncryptionKey
-          resultPublic = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT).getFirst();
-      assertThat(resultPublic.getKeyId()).isEqualTo(keyId);
-      assertThat(resultPublic.getPublicKey()).isEqualTo(key.getPublicKey());
-      assertThat(resultPublic.getCreationTime()).isEqualTo(creationTime);
-      assertThat(resultPublic.getExpirationTime()).isEqualTo(expirationTime);
-    }
+    var createdKey = keyDb.getKey(KEY_ID);
+    assertThat(createdKey.getPublicKey()).isEqualTo(key.getPublicKey());
+    assertThat(createdKey.getCreationTime()).isEqualTo(creationTime);
+    assertThat(createdKey.getExpirationTime()).isEqualTo(expirationTime);
 
-    com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
-        resultPrivate = keyDb.getKey(keyId);
-    assertThat(resultPrivate.getKeyId()).isEqualTo(keyId);
     byte[] decodedKeys =
-        decodeAndDecryptWithAead(resultPrivate.getJsonEncodedKeyset(), keyEncryptionKeyUri);
+        decodeAndDecryptWithAead(createdKey.getJsonEncodedKeyset(), keyEncryptionKeyUri);
     assertThat(decodedKeys).isEqualTo(privateKeySplit.getBytes());
-    assertThat(resultPrivate.getExpirationTime()).isEqualTo(expirationTime);
-    assertThat(resultPrivate.getCreationTime()).isEqualTo(creationTime);
-    assertThat(resultPrivate.getKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
-    assertThat(resultPrivate.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
+    assertThat(createdKey.getExpirationTime()).isEqualTo(expirationTime);
+    assertThat(createdKey.getCreationTime()).isEqualTo(creationTime);
+    assertThat(createdKey.getKeyEncryptionKeyUri()).isEqualTo(keyEncryptionKeyUri);
+    assertThat(createdKey.getKeySplitDataList().get(0).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(key.getKeySplitDataList().getFirst().getKeySplitKeyEncryptionKeyUri());
     // Test data has 2 keysplitdata items, so the new one would be after
-    assertThat(resultPrivate.getKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
+    assertThat(createdKey.getKeySplitDataList().get(2).getKeySplitKeyEncryptionKeyUri())
         .isEqualTo(keyEncryptionKeyUri);
 
     // Migration data should be empty since it was missing from the input migration EncryptionKey
-    assertThat(resultPrivate.getMigrationJsonEncodedKeyset()).isEqualTo("");
-    assertThat(resultPrivate.getMigrationKeyEncryptionKeyUri()).isEqualTo("");
-    assertThat(resultPrivate.getMigrationKeySplitDataList().size()).isEqualTo(0);
+    assertThat(createdKey.getMigrationJsonEncodedKeyset()).isEqualTo("");
+    assertThat(createdKey.getMigrationKeyEncryptionKeyUri()).isEqualTo("");
+    assertThat(createdKey.getMigrationKeySplitDataList().size()).isEqualTo(0);
   }
 
   @Test
@@ -351,7 +324,7 @@ public class GcpCreateKeyTaskTest {
             false);
     EncryptionKey key =
         EncryptionKey.newBuilder()
-            .setKeyId("asdf")
+            .setKeyId(KEY_ID)
             .setPublicKey(toBase64(""))
             .setExpirationTime(0L)
             .build();
@@ -380,7 +353,7 @@ public class GcpCreateKeyTaskTest {
             false);
     EncryptionKey key =
         EncryptionKey.newBuilder()
-            .setKeyId("myName")
+            .setKeyId(KEY_ID)
             .setPublicKey("123")
             .setExpirationTime(0L)
             .build();
@@ -406,7 +379,7 @@ public class GcpCreateKeyTaskTest {
             false);
     EncryptionKey key =
         EncryptionKey.newBuilder()
-            .setKeyId("myName")
+            .setKeyId(KEY_ID)
             .setPublicKey("123")
             .setExpirationTime(0L)
             .build();
@@ -420,13 +393,13 @@ public class GcpCreateKeyTaskTest {
 
   @Test
   public void createKey_happyInput_createsExpected() throws Exception {
-    String keyEncryptionKeyUri = KEK_BASE_URI.replace("$setName$", "");
+    String keyEncryptionKeyUri = KEK_BASE_URI.replace("$setName$", SET_NAME);
     // Given
     var encryptedPrivateKeyWithAssociatedPublicKey =
         toBase64AndEncodeWithAead(
             TEST_PRIVATE_KEY, kmsClient.getAead(keyEncryptionKeyUri), TEST_PUBLIC_KEY);
     var key =
-        FakeEncryptionKey.create().toBuilder()
+        createEncryptionKey(SET_NAME).toBuilder()
             .setPublicKeyMaterial(toBase64(TEST_PUBLIC_KEY))
             .build();
 
@@ -455,7 +428,7 @@ public class GcpCreateKeyTaskTest {
         Base64.getEncoder()
             .encodeToString(TEST_AEAD.encrypt(TEST_PUBLIC_KEY.getBytes(), "mismatch".getBytes()));
     var key =
-        FakeEncryptionKey.create().toBuilder()
+        createEncryptionKey(SET_NAME).toBuilder()
             .setPublicKeyMaterial(Base64.getEncoder().encodeToString(TEST_PRIVATE_KEY.getBytes()))
             .build();
 

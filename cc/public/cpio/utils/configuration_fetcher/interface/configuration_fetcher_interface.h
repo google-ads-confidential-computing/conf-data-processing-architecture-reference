@@ -32,7 +32,8 @@ struct GetConfigurationRequest {
 };
 
 /**
- * @brief Helper to fetch configurations.
+ * @brief Helper to fetch configurations. It is self-contained and can be used
+ * before InitCpio.
  */
 class ConfigurationFetcherInterface : public core::ServiceInterface {
  public:

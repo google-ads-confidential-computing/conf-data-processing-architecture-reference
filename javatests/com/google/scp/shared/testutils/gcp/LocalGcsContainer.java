@@ -16,6 +16,8 @@
 
 package com.google.scp.shared.testutils.gcp;
 
+import static com.google.scp.shared.testutils.common.TestConstants.GCS_IMAGE_NAME;
+
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -25,8 +27,7 @@ import org.testcontainers.utility.DockerImageName;
 public final class LocalGcsContainer extends GenericContainer<LocalGcsContainer> {
 
   private static final int HTTP_PORT = 9000;
-  private static final DockerImageName LOCAL_GCS_IMAGE =
-      DockerImageName.parse("gcr.io/cloud-devrel-public-resources/storage-testbench:v0.36.0");
+  private static final DockerImageName LOCAL_GCS_IMAGE = DockerImageName.parse(GCS_IMAGE_NAME);
   private String networkAlias;
 
   public LocalGcsContainer() {

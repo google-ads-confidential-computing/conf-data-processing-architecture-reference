@@ -16,7 +16,7 @@
 
 package com.google.scp.operator.frontend.tasks.validation;
 
-import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
 import com.google.scp.operator.shared.dao.metadatadb.testing.JobGenerator;

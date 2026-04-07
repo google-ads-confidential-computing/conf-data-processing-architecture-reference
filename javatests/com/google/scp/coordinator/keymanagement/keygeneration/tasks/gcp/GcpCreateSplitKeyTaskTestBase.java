@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.keygeneration.app.common.testing.FakeKeyStorageClient.KEK_URI;
-import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
 import static java.time.Instant.now;
 import static java.time.temporal.ChronoUnit.DAYS;
@@ -45,7 +44,6 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotati
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerCoordinatorKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerKmsAeadClient;
-import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyStatusProto.EncryptionKeyStatus;
@@ -87,7 +85,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
   // TODO: Refactor common test code to shared class
   @Test
   public void createSplitKey_success() throws Exception {
-    createSplitKey(DEFAULT_SET_NAME);
+    createSplitKey(SET_NAME);
   }
 
   @Test
@@ -117,7 +115,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
 
   @Test
   public void createSplitKey_createKeysWithoutExpirationAndTtl_success() throws Exception {
-    createKeysWithoutExpirationAndTtl(DEFAULT_SET_NAME);
+    createKeysWithoutExpirationAndTtl(SET_NAME);
   }
 
   @Test
@@ -274,8 +272,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
   @Test
   public void createSplitKey_keyGenerationError() throws Exception {
     int keysToCreate = 5;
-    String keyEncryptionKeyUri =
-        keyEncryptionKeyBaseUri.replace("$setName$", KeyDb.DEFAULT_SET_NAME);
+    String keyEncryptionKeyUri = keyEncryptionKeyBaseUri.replace("$setName$", SET_NAME);
     Mockito.doThrow(new GeneralSecurityException()).when(kmsClient).getAead(keyEncryptionKeyUri);
 
     ServiceException ex =
@@ -283,7 +280,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
             ServiceException.class,
             () ->
                 task.createSplitKey(
-                    DEFAULT_SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, 0, now()));
+                    SET_NAME, DEFAULT_TINK_TEMPLATE, keysToCreate, 10, 20, 0, now()));
 
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
     assertThat(ex.getErrorCode()).isEqualTo(Code.INTERNAL);

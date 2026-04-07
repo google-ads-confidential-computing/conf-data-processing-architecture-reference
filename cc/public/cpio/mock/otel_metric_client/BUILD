@@ -22,9 +22,6 @@ cc_library(
         [
             "metric_otel_client_mock.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/public/cpio/interface/metric_client",

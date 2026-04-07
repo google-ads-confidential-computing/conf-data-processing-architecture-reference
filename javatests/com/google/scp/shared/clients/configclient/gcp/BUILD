@@ -26,7 +26,6 @@ java_test(
         "//java/external:apache_httpclient",
         "//java/external:apache_httpcore",
         "//java/external:google_truth",
-        "//java/external:google_truth8",
         "//java/external:guice",
         "//java/external:mockito",
     ],
@@ -39,12 +38,11 @@ java_test(
     ],
     deps = [
         "//java/com/google/scp/shared/clients/configclient:gcp",
-        "//java/external:gcp_api_gax",
+        "//java/external:gcp_gax",
         "//java/external:gcp_gax_grpc",
         "//java/external:gcp_secretmanager",
         "//java/external:gcp_secretmanager_proto",
         "//java/external:google_truth",
-        "//java/external:google_truth8",
         "//java/external:grpc_api",
         "//java/external:guice",
         "//java/external:mockito",
@@ -62,7 +60,6 @@ java_test(
         "//java/external:google_api_client",
         "//java/external:google_auth_library_oauth2_http",
         "//java/external:google_truth",
-        "//java/external:google_truth8",
     ],
 )
 
@@ -77,7 +74,6 @@ java_test(
         "//java/external:gcp_secretmanager",
         "//java/external:gcp_secretmanager_proto",
         "//java/external:google_truth",
-        "//java/external:google_truth8",
         "//java/external:guice",
         "//java/external:mockito",
         "//java/external:protobuf_java",

@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "public/core/async_executor/async_executor_factory.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "core/async_executor/src/async_executor.h"
-#include "public/core/async_executor/async_executor_factory.h"
 
 using ::testing::NotNull;
 using ::testing::Pointer;

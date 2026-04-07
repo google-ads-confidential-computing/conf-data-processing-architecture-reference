@@ -16,6 +16,8 @@
 
 package com.google.scp.shared.testutils.gcp;
 
+import static com.google.scp.shared.testutils.common.TestConstants.GCP_CLOUDSDK_IMAGE_NAME;
+
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
 import org.testcontainers.utility.DockerImageName;
@@ -26,7 +28,7 @@ import org.testcontainers.utility.DockerImageName;
 public final class PubSubEmulatorContainer extends GenericContainer<PubSubEmulatorContainer> {
 
   private static final DockerImageName DEFAULT_IMAGE_NAME =
-      DockerImageName.parse("gcr.io/google.com/cloudsdktool/cloud-sdk");
+      DockerImageName.parse(GCP_CLOUDSDK_IMAGE_NAME);
 
   private static final String CMD = "gcloud beta emulators pubsub start --host-port 0.0.0.0:8085";
   private static final int PORT = 8085;

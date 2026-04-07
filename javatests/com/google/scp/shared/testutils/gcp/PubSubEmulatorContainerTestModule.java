@@ -16,6 +16,8 @@
 
 package com.google.scp.shared.testutils.gcp;
 
+import static com.google.scp.shared.testutils.common.TestConstants.GCP_CLOUDSDK_IMAGE_NAME;
+
 import com.google.api.gax.core.NoCredentialsProvider;
 import com.google.api.gax.grpc.GrpcTransportChannel;
 import com.google.api.gax.rpc.FixedTransportChannelProvider;
@@ -55,8 +57,7 @@ public class PubSubEmulatorContainerTestModule extends AbstractModule {
   @Singleton
   public PubSubEmulatorContainer providePubSubEmulator() {
     return new PubSubEmulatorContainer(
-        DockerImageName.parse("gcr.io/google.com/cloudsdktool/cloud-sdk:316.0.0-emulators"),
-        startImmediately);
+        DockerImageName.parse(GCP_CLOUDSDK_IMAGE_NAME), startImmediately);
   }
 
   @Provides

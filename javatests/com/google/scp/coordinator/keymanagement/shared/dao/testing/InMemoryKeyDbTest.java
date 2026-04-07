@@ -17,7 +17,6 @@
 package com.google.scp.coordinator.keymanagement.shared.dao.testing;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.SERVICE_ERROR;
 import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.KEY_LIMIT;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
@@ -40,6 +39,7 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class InMemoryKeyDbTest extends KeyDbBaseTest {
+  private static final String SET_NAME = "test-set-name";
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
 
@@ -56,7 +56,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
     InMemoryKeyDb keyDb = new InMemoryKeyDb();
     IntStream.range(0, 5).forEach(unused -> createRandomKey(keyDb));
 
-    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
+    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(SET_NAME, KEY_LIMIT);
 
     assertThat(keys).hasSize(5);
   }
@@ -66,7 +66,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
     InMemoryKeyDb keyDb = new InMemoryKeyDb();
     keyDb.setServiceException(new ServiceException(INTERNAL, SERVICE_ERROR.name(), "error"));
 
-    assertThrows(ServiceException.class, () -> keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT));
+    assertThrows(ServiceException.class, () -> keyDb.getActiveKeys(SET_NAME, KEY_LIMIT));
   }
 
   @Test
@@ -76,7 +76,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
     keyDb.setServiceException(new ServiceException(INTERNAL, SERVICE_ERROR.name(), "error"));
     keyDb.reset();
 
-    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_LIMIT);
+    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(SET_NAME, KEY_LIMIT);
 
     assertThat(keys).isEmpty();
   }
@@ -86,6 +86,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
     InMemoryKeyDb keyDb = new InMemoryKeyDb();
     EncryptionKey key =
         EncryptionKey.newBuilder()
+            .setSetName(SET_NAME)
             .setKeyId("abcd")
             .setJsonEncodedKeyset("{key}")
             .setCreationTime(0L)
@@ -121,6 +122,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
     String keyId = "asdf";
     EncryptionKey expectedKey =
         EncryptionKey.newBuilder()
+            .setSetName(SET_NAME)
             .setKeyId(keyId)
             .setJsonEncodedKeyset("12345")
             .setCreationTime(0L)
@@ -139,6 +141,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
     keyDb.setServiceException(new ServiceException(INTERNAL, SERVICE_ERROR.name(), "error"));
     EncryptionKey key =
         EncryptionKey.newBuilder()
+            .setSetName(SET_NAME)
             .setKeyId("asdf")
             .setJsonEncodedKeyset("qwerty")
             .setCreationTime(0L)
@@ -154,13 +157,13 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
 
     IntStream.range(0, 10).forEach(unused -> createRandomKey(keyDb));
 
-    assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, 5).size()).isEqualTo(5);
+    assertThat(keyDb.getActiveKeys(SET_NAME, 5).size()).isEqualTo(5);
     assertThat(keyDb.getAllKeys().size()).isEqualTo(10);
   }
 
   private void createRandomKey(InMemoryKeyDb keyDb) {
     try {
-      keyDb.createKey(FakeEncryptionKey.create());
+      keyDb.createKey(FakeEncryptionKey.createEncryptionKey(SET_NAME));
     } catch (ServiceException e) {
       fail("Could not create key: " + e);
     }

@@ -19,6 +19,7 @@ package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.GetActiveEncryptionKeysTask.END_EPOCH_MILLI_PARAM;
 import static com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1.GetActiveEncryptionKeysTask.START_EPOCH_MILLI_PARAM;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.createEncryptionKey;
 import static java.time.Instant.now;
 import static java.time.temporal.ChronoUnit.DAYS;
 import static org.junit.Assert.assertThrows;
@@ -69,13 +70,10 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
   private static final String TEST_SET_NO_ROTATION = "test-set-no-rotation";
   private static final ImmutableList<EncryptionKey> TEST_KEYS =
       ImmutableList.of(
-          FakeEncryptionKey.create(),
-          FakeEncryptionKey.create(),
-          FakeEncryptionKey.create().toBuilder().setSetName(TEST_SET).build(),
-          FakeEncryptionKey.create().toBuilder().setSetName(TEST_SET).build(),
-          FakeEncryptionKey.create().toBuilder().setSetName(TEST_SET).build(),
-          FakeEncryptionKey.create().toBuilder()
-              .setSetName(TEST_SET_NO_ROTATION)
+          createEncryptionKey(TEST_SET),
+          createEncryptionKey(TEST_SET),
+          createEncryptionKey(TEST_SET),
+          FakeEncryptionKey.createEncryptionKeyBuilder(TEST_SET_NO_ROTATION)
               .clearExpirationTime()
               .build());
 
@@ -129,14 +127,6 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
     doReturn(Optional.of("5000")).when(request).getFirstQueryParameter(START_EPOCH_MILLI_PARAM);
     doReturn(Optional.of("500")).when(request).getFirstQueryParameter(END_EPOCH_MILLI_PARAM);
     assertThrows(ServiceException.class, () -> task.execute(matcher, request, response));
-  }
-
-  @Test
-  public void validStartEndMillis_emptySetName_returnAllExpected() throws Exception {
-    var now = now();
-    var start = now.plusMillis(1000).toEpochMilli();
-    var end = now.plusMillis(10000).toEpochMilli();
-    returnAllExpectedValidation("", start, end, 2);
   }
 
   @Test
@@ -201,7 +191,7 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
 
   @Test
   public void cacheGlobalDisabled_approvedCallerTest() throws Exception {
-    String fakeJwt = createFakeJwt(APPROVED_CALLER);
+    String fakeJwt = createFakeJwt();
     doReturn(Optional.of("Bearer: " + fakeJwt)).when(request).getFirstHeader("Authorization");
     keysReturned(false, ImmutableSet.of(APPROVED_CALLER));
     verify(spyKeyDb, never()).getActiveKeys(anyString(), anyInt(), any(), any());
@@ -209,7 +199,7 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
 
   @Test
   public void cacheGlobalDisabled_approvedSetNameTest() throws Exception {
-    keysReturned(false, ImmutableSet.of("test-set"));
+    keysReturned(false, ImmutableSet.of(TEST_SET));
     verify(spyKeyDb, never()).getActiveKeys(anyString(), anyInt(), any(), any());
   }
 
@@ -218,7 +208,7 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
     var start = now.plus(100, DAYS).toEpochMilli();
     var end = now.plus(200, DAYS).toEpochMilli();
 
-    doReturn("test-set").when(matcher).group("name");
+    doReturn(TEST_SET).when(matcher).group("name");
     doReturn(Optional.of(String.valueOf(start)))
         .when(request)
         .getFirstQueryParameter(START_EPOCH_MILLI_PARAM);
@@ -258,8 +248,8 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
     return keysBuilder.build();
   }
 
-  private String createFakeJwt(String email) {
-    String payload = String.format("{\"email\":\"%s\"}", email);
+  private String createFakeJwt() {
+    String payload = String.format("{\"email\":\"%s\"}", APPROVED_CALLER);
     String encodedPayload =
         Base64.getUrlEncoder().withoutPadding().encodeToString(payload.getBytes());
     // A dummy header and signature are needed to pass the split check in the task.

@@ -157,7 +157,16 @@ variable "migration_kms_key_base_uri" {
 }
 
 ################################################################################
-# Load Balancer Outlier Detection Variables.
+# Key Storage Service Load Balancer Variables.
+################################################################################
+
+variable "load_balancer_allowed_paths" {
+  description = "List of allowed paths for the load balancer. Requests to other paths will be denied."
+  type        = list(string)
+}
+
+################################################################################
+# Key Storage Service Load Balancer Outlier Detection Variables.
 ################################################################################
 
 variable "lb_outlier_detection_enabled" {

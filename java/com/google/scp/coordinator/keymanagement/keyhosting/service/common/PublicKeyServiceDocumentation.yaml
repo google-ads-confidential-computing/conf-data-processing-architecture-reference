@@ -48,33 +48,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PublicKeyList'
-  /v1alpha/publicKeys{format}:
-    get:
-      description: Get active public keys.
-      parameters:
-      - name: format
-        in: path
-        required: true
-        schema:
-          type: string
-          enum:
-          - ""
-          - ":tink"
-          - ":raw"
-          default: ""
-        description: |
-          Format keys are returned in.
-          
-          * `""` - (Deprecated) Raw key material only.
-          * `":tink"` - Base64 Tink binary keyset format.
-          * `":raw"` - Object containing HPKE details.
-      responses:
-        '200':
-          description: Active public keys.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PublicKeyList'
 components:
   schemas:
     PublicKeyList:

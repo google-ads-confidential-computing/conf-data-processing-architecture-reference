@@ -61,8 +61,6 @@ public class KeyGenerationArgsLocalEmulatorProvider extends AbstractModule {
       // The KeyGeneration app needs to coordinate with Coordinator B to create keys.
       "--key_storage_service_base_url",
       keyStorageEndpoint,
-      "--key_storage_service_cloudfunction_url",
-      keyStorageEndpoint,
       "--spanner-endpoint",
       spannerEndpoint,
       "--pubsub-endpoint",
@@ -72,7 +70,7 @@ public class KeyGenerationArgsLocalEmulatorProvider extends AbstractModule {
       "--test-peer-coordinator-encoded-keyset-handle",
       encodedKeysetHandle,
       "--multiparty",
-      "--test-use-default-parameters-on-gcp"
+      "--use-test-parameters-on-gcp"
     };
 
     KeyGenerationArgs keyGenerationArgs = new KeyGenerationArgs();

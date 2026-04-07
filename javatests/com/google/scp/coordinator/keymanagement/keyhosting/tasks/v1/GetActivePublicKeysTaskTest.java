@@ -17,7 +17,6 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.addRandomKeysToKeyDb;
 import static org.mockito.Answers.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.atLeast;
@@ -58,6 +57,8 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public class GetActivePublicKeysTaskTest extends ApiTaskTestBase {
 
+  private static final String SET_NAME = "test-set";
+
   @Rule public final Acai acai = new Acai(InMemoryTestEnv.class);
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
@@ -73,14 +74,14 @@ public class GetActivePublicKeysTaskTest extends ApiTaskTestBase {
 
   @Before
   public void setUp() {
-    addRandomKeysToKeyDb(keyLimit * 2, keyDb);
+    addRandomKeysToKeyDb(keyLimit * 2, SET_NAME, keyDb);
     super.task = spy(this.task);
   }
 
   @Test
-  public void testExecute_defaultSet_returnsUpToKeyLimit() throws Exception {
+  public void testExecute_returnsUpToKeyLimit() throws Exception {
     // Given
-    doReturn(DEFAULT_SET_NAME).when(matcher).group("name");
+    doReturn(SET_NAME).when(matcher).group("name");
 
     // When
     task.execute(matcher, request, response);
@@ -104,9 +105,9 @@ public class GetActivePublicKeysTaskTest extends ApiTaskTestBase {
   }
 
   @Test
-  public void testExecute_defaultSet_returnsExpectedFormat() throws Exception {
+  public void testExecute_returnsExpectedFormat() throws Exception {
     // Given
-    doReturn(DEFAULT_SET_NAME).when(matcher).group("name");
+    doReturn(SET_NAME).when(matcher).group("name");
 
     // When
     task.execute(matcher, request, response);
@@ -117,9 +118,9 @@ public class GetActivePublicKeysTaskTest extends ApiTaskTestBase {
   }
 
   @Test
-  public void testExecute_defaultSetInRaw_returnsExpectedFormat() throws Exception {
+  public void testExecute_raw_returnsExpectedFormat() throws Exception {
     // Given
-    doReturn(DEFAULT_SET_NAME).when(matcher).group("name");
+    doReturn(SET_NAME).when(matcher).group("name");
     doReturn(":raw").when(matcher).group("raw");
 
     // When
@@ -131,9 +132,9 @@ public class GetActivePublicKeysTaskTest extends ApiTaskTestBase {
   }
 
   @Test
-  public void testExecute_defaultRequest_returnsExpectedCacheControl() throws Exception {
+  public void testExecute_returnsExpectedCacheControl() throws Exception {
     // Given
-    doReturn(DEFAULT_SET_NAME).when(matcher).group("name");
+    doReturn(SET_NAME).when(matcher).group("name");
 
     // When
     task.execute(matcher, request, response);
@@ -167,7 +168,7 @@ public class GetActivePublicKeysTaskTest extends ApiTaskTestBase {
   @Test
   public void testExecute_noKeys_returnsNoCacheControl() throws Exception {
     // Given
-    doReturn(DEFAULT_SET_NAME).when(matcher).group("name");
+    doReturn(SET_NAME).when(matcher).group("name");
     keyDb.reset();
 
     // When

@@ -12,25 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is a test runtime image based on the full debian_11 image where several
-# useful tools are already installed.
+"""
+This is a test runtime image based on the full debian_11 image where several
+useful tools are already installed.
+"""
+
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
 load("@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("//cc/process_launcher:helpers.bzl", "executable_struct_to_json_str")
 
-_PROXY_BINARY_FILES = [
-    Label("//cc/proxy/src:proxify"),
-    Label("//cc/proxy/src:proxy_preload"),
-    Label("//cc/proxy/src:socket_vendor"),
-]
-
 def sdk_test_runtime_image(
         *,
         name,
-        platform,
-        inside_tee,
         sdk_binaries = {},
         recover_client_binaries = True,
         recover_sdk_binaries = True,
@@ -40,7 +35,9 @@ def sdk_test_runtime_image(
         additional_tars = [],
         pkgs_to_install = [],
         sdk_cmd_override = []):
-    """Creates a target for a Docker container with the necessary files for
+    """Creates a test sdk runtime image.
+
+    Creates a target for a Docker container with the necessary files for
     doing cpio services for cc code.
     Exposes ${name}.tar
 
@@ -54,8 +51,6 @@ def sdk_test_runtime_image(
                 "env2_name":"env2_value",
             }
         }
-      platform: platform to run this container on (aws/gcp)
-      inside_tee: whether this container is running inside tee.
       recover_client_binaries: if True, auto-restart the client binaries in the container if they failed.
       recover_sdk_binaries: if True, auto-restart the SDK binaries in the container if they failed.
       client_binaries: Dict of bazel targets of client binaries with executing command.
@@ -73,6 +68,7 @@ def sdk_test_runtime_image(
       additional_files: Additional files to include in the container root.
       additional_tars: Additional files include in the container based on their
         paths within the tar.
+      pkgs_to_install: Packages to install.
       sdk_cmd_override: "cmd" parameter to use with the container_image.
         Only used for testing purposes.
     """
@@ -104,14 +100,6 @@ def sdk_test_runtime_image(
         ":%s" % binary_tar,
     ] + additional_tars
 
-    if platform == "aws" and inside_tee:
-        for b in _PROXY_BINARY_FILES:
-            container_files.append(b)
-
-        # This is to support using enclave KMS cli
-        container_files.append("@kmstool_enclave_cli//file")
-        container_tars.append(Label("//operator/worker/aws:libnsm-tar"))
-
     # Recreate the binary targets list to generate executing cmd.
     client_targets_with_label = [Label(target) for target in client_binaries.keys()] if len(client_binaries) > 0 else []
     client_targets_dict_with_label = {Label(k): v for k, v in client_binaries.items()} if len(client_binaries) > 0 else {}
@@ -129,22 +117,12 @@ def sdk_test_runtime_image(
             execute_command = client_targets_dict_with_label.get(target, [])
             if (not execute_command):
                 execute_command = ["/" + target.name]
-            if platform == "aws" and inside_tee:
-                executable = {
-                    "args": execute_command,
-                    "file_name": "/proxify",
-                    "restart": restart,
-                }
-            else:
-                executable = {
-                    "args": execute_command[1:],
-                    "file_name": execute_command[0],
-                    "restart": restart,
-                }
+            executable = {
+                "args": execute_command[1:],
+                "file_name": execute_command[0],
+                "restart": restart,
+            }
             sdk_cmd.append(executable_struct_to_json_str(executable))
-
-    # Log the binaries we are trying to bring up
-    print(sdk_cmd)
 
     total_pkgs_to_install = [
         "autoconf",

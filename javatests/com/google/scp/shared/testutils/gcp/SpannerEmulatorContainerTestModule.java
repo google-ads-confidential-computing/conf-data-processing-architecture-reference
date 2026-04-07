@@ -16,6 +16,8 @@
 
 package com.google.scp.shared.testutils.gcp;
 
+import static com.google.scp.shared.testutils.common.TestConstants.GCP_SPANNER_IMAGE_NAME;
+
 import com.google.cloud.NoCredentials;
 import com.google.cloud.spanner.DatabaseAdminClient;
 import com.google.cloud.spanner.DatabaseClient;
@@ -55,8 +57,7 @@ public class SpannerEmulatorContainerTestModule extends AbstractModule {
   @Provides
   @Singleton
   public SpannerEmulatorContainer getSpannerContainer() {
-    return new SpannerEmulatorContainer(
-        DockerImageName.parse("gcr.io/cloud-spanner-emulator/emulator:1.5.14"));
+    return new SpannerEmulatorContainer(DockerImageName.parse(GCP_SPANNER_IMAGE_NAME));
   }
 
   @Provides

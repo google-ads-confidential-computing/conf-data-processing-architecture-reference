@@ -29,7 +29,6 @@ variables {
   environment                               = "environment"
   region                                    = ""
   key_storage_domain                        = ""
-  load_balancing_scheme                     = ""
   source_container_image_url                = ""
   key_storage_memory                        = 0
   min_instances                             = 0
@@ -51,12 +50,7 @@ variables {
   kms_key_base_uri                          = ""
   migration_kms_key_base_uri                = ""
 
-  external_managed_migration_state              = "PREPARE"
-  external_managed_migration_testing_percentage = 0
-
-  forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
-  external_managed_backend_bucket_migration_state              = null
-  external_managed_backend_bucket_migration_testing_percentage = null
+  load_balancer_allowed_paths = ["/*"]
 
   lb_outlier_detection_enabled                               = false
   lb_outlier_detection_consecutive_errors                    = 0

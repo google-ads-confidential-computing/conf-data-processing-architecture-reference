@@ -60,6 +60,7 @@ using google::scp::core::errors::
     SC_PUBLIC_KEY_CLIENT_PROVIDER_HTTP_CLIENT_REQUIRED;
 using google::scp::core::errors::
     SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_CONFIG_OPTIONS;
+using google::scp::core::errors::SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_REQUEST;
 using std::atomic;
 using std::bind;
 using std::make_shared;
@@ -70,7 +71,8 @@ using std::vector;
 using std::placeholders::_1;
 
 static constexpr char kPublicKeyClientProvider[] = "PublicKeyClientProvider";
-static constexpr char kVersionNumberAlphaSuffix[] = "/v1alpha";
+static constexpr char kVersionNumberBetaSuffix[] = "/v1beta";
+static constexpr char kKeySetPrefix[] = "/sets";
 static constexpr char kVersionNumberSuffix[] = "/v1";
 static constexpr char kPublicKeysUrlSuffix[] = "/publicKeys";
 
@@ -108,6 +110,16 @@ ExecutionResult PublicKeyClientProvider::Stop() noexcept {
 void PublicKeyClientProvider::ListPublicKeys(
     AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse>&
         public_key_fetching_context) noexcept {
+  if (public_key_fetching_context.request->key_set_name().empty()) {
+    public_key_fetching_context.result =
+        FailureExecutionResult(SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_REQUEST);
+    SCP_ERROR_CONTEXT(kPublicKeyClientProvider, public_key_fetching_context,
+                      public_key_fetching_context.result,
+                      "key_set_name cannot be empty.");
+    public_key_fetching_context.Finish();
+    return;
+  }
+
   // Use got_success_result and unfinished_counter to track whether get success
   // response and how many failed responses. Only return one response whether
   // success or failed.
@@ -122,12 +134,14 @@ void PublicKeyClientProvider::ListPublicKeys(
     if (version_position != string::npos) {
       uri = uri.substr(0, version_position);
     }
-    auto shared_uri = make_shared<Uri>(
-        absl::StrCat(uri, kVersionNumberAlphaSuffix, kPublicKeysUrlSuffix));
+    auto full_uri = make_shared<Uri>(
+        absl::StrCat(uri, kVersionNumberBetaSuffix, kKeySetPrefix, "/",
+                     public_key_fetching_context.request->key_set_name(),
+                     kPublicKeysUrlSuffix));
 
     auto http_request = make_shared<HttpRequest>();
     http_request->method = HttpMethod::GET;
-    http_request->path = std::move(shared_uri);
+    http_request->path = std::move(full_uri);
 
     AsyncContext<HttpRequest, HttpResponse> http_client_context(
         std::move(http_request),

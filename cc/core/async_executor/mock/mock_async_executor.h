@@ -80,9 +80,7 @@ class MockAsyncExecutor : public core::AsyncExecutorInterface {
     return ScheduleFor(work, timestamp, cancellation_callback);
   }
 
-  AsyncExecutorStats GetStatistics() noexcept override {
-    return {};
-  }
+  AsyncExecutorStats GetStatistics() noexcept override { return {}; }
 
   std::function<ExecutionResult(const AsyncOperation& work)> schedule_mock;
   std::function<ExecutionResult(const AsyncOperation& work, Timestamp,

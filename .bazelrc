@@ -7,12 +7,14 @@ build --copt=-O3
 
 build:cpp --client_env=BAZEL_CXXOPTS=-std=c++17
 build:cpp --cxxopt=-std=c++17
+build:cpp --host_cxxopt=-std=c++17
 # Force opentelemetry cpp to use ABI version 2 to allow
 # newer features that wouldn't break with older ABI version
 build:cpp --@io_opentelemetry_cpp//api:abi_version_no=2
 
 build:clang --config=cpp
 build:clang --cxxopt=-fbracket-depth=512
+build:clang --extra_toolchains=@llvm_toolchain//:all
 
 # Force bazel to use specific JDK, otherwise JDK may not be predictable
 build:java --java_language_version=21

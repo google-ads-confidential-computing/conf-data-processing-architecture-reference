@@ -29,5 +29,6 @@ java_library(
         "//java/external:findbugs",
         "//java/external:localstack_containers",
         "//java/external:testcontainers",
+        "//javatests/com/google/scp/shared/testutils/common",
     ],
 )

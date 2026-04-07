@@ -35,7 +35,6 @@ java_library(
         "//java/com/google/scp/shared/util",
         "//java/external:acai",
         "//java/external:google_truth",
-        "//java/external:google_truth8",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:junit",

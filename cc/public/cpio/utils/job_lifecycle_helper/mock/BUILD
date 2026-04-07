@@ -23,9 +23,6 @@ cc_library(
         [
             "mock_job_lifecycle_helper.h",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/public/cpio/utils/job_lifecycle_helper/interface:job_lifecycle_helper_interface",

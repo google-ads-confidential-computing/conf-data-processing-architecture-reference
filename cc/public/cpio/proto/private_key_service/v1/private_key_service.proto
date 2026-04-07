@@ -133,9 +133,7 @@ message ListPrivateKeysResponse {
 message ListActiveEncryptionKeysRequest {
   // The list of endpoints hosting the key splits.
   repeated PrivateKeyEndpoint key_endpoints = 1;
-  // The name of the key set.
-  // If not set, the request will use "" as default key set.
-  // Only for GCP. AWS Key Service does not support key set.
+  // Required. The name of the key set.
   optional string key_set_name = 2;
 
   // The time range for which the keys are active. This is set to the current

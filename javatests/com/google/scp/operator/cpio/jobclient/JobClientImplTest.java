@@ -17,7 +17,6 @@
 package com.google.scp.operator.cpio.jobclient;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.scp.shared.clients.configclient.model.ErrorReason.INVALID_PARAMETER_NAME;
 import static com.google.scp.shared.clients.configclient.model.WorkerParameter.JOB_COMPLETION_NOTIFICATIONS_TOPIC_ID;
 import static com.google.scp.shared.clients.configclient.model.WorkerParameter.NOTIFICATIONS_TOPIC_ID;

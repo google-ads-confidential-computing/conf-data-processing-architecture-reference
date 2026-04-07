@@ -17,7 +17,7 @@ package com.google.scp.coordinator.keymanagement.shared.dao.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.withActivationAndExpirationTimes;
 import static com.google.scp.shared.api.model.Code.ALREADY_EXISTS;
 import static org.junit.Assert.assertThrows;
 
@@ -31,6 +31,7 @@ import javax.inject.Inject;
 import org.junit.Test;
 
 public abstract class KeyDbBaseTest {
+  private static final String SET_NAME = "test-set-name";
 
   @Inject protected KeyDb db;
 
@@ -57,64 +58,49 @@ public abstract class KeyDbBaseTest {
     db.createKey(fakeEncryptionKey(setName, t3, t4));
 
     // When/Then
-    assertThat(db.getActiveKeys(setName, Integer.MAX_VALUE, t0)).hasSize(0);
-    assertThat(db.getActiveKeys(setName, Integer.MAX_VALUE, t1)).hasSize(2);
-    assertThat(db.getActiveKeys(setName, Integer.MAX_VALUE, t2)).hasSize(6);
-    assertThat(db.getActiveKeys(setName, Integer.MAX_VALUE, t3)).hasSize(4);
-    assertThat(db.getActiveKeys(setName, Integer.MAX_VALUE, t4)).hasSize(0);
+    assertThat(db.getActiveKeys(setName, 20, t0)).hasSize(0);
+    assertThat(db.getActiveKeys(setName, 20, t1)).hasSize(2);
+    assertThat(db.getActiveKeys(setName, 20, t2)).hasSize(6);
+    assertThat(db.getActiveKeys(setName, 20, t3)).hasSize(4);
+    assertThat(db.getActiveKeys(setName, 20, t4)).hasSize(0);
   }
 
   @Test
   public void getActiveKeys_specificSetName_returnsExpected() throws Exception {
     // Given
-    String setName1 = "test-set-name-1";
     String setName2 = "test-set-name-2";
 
-    db.createKey(fakeEncryptionKey());
-    db.createKey(fakeEncryptionKey());
-    db.createKey(fakeEncryptionKey(setName1));
-    db.createKey(fakeEncryptionKey(setName1));
+    db.createKey(fakeEncryptionKey(SET_NAME));
+    db.createKey(fakeEncryptionKey(SET_NAME));
     db.createKey(fakeEncryptionKey(setName2));
-    db.createKey(fakeEncryptionKey(setName1));
+    db.createKey(fakeEncryptionKey(SET_NAME));
     db.createKey(fakeEncryptionKey(setName2));
 
     // When/Then
-    assertThat(db.getActiveKeys(setName1, Integer.MAX_VALUE)).hasSize(3);
-    assertThat(db.getActiveKeys(setName2, Integer.MAX_VALUE)).hasSize(2);
-  }
-
-  @Test
-  public void getActiveKeys_defaultSetName_equivalentToUnsetSetName() throws Exception {
-    // Given
-    String nonDefaultName = "non-default";
-
-    db.createKey(fakeEncryptionKey());
-    db.createKey(fakeEncryptionKey(nonDefaultName));
-    db.createKey(fakeEncryptionKey(DEFAULT_SET_NAME));
-    db.createKey(fakeEncryptionKey());
-    db.createKey(fakeEncryptionKey(nonDefaultName));
-    db.createKey(fakeEncryptionKey(DEFAULT_SET_NAME));
-    db.createKey(fakeEncryptionKey(DEFAULT_SET_NAME));
-
-    // When/Then
-    assertThat(db.getActiveKeys(DEFAULT_SET_NAME, Integer.MAX_VALUE)).hasSize(5);
-    assertThat(db.getActiveKeys(nonDefaultName, Integer.MAX_VALUE)).hasSize(2);
+    assertThat(db.getActiveKeys(SET_NAME, 20)).hasSize(3);
+    assertThat(db.getActiveKeys(setName2, 20)).hasSize(2);
   }
 
   @Test
   public void getActiveKeysWithPublicKey_doesNotReturnNonAsymmetricKeys() throws Exception {
     // Given
-    EncryptionKey asymmetricKey = FakeEncryptionKey.create();
-    EncryptionKey asymmetricKey2 = FakeEncryptionKey.create();
+    EncryptionKey asymmetricKey = FakeEncryptionKey.createEncryptionKey(SET_NAME);
+    EncryptionKey asymmetricKey2 = FakeEncryptionKey.createEncryptionKey(SET_NAME);
     EncryptionKey nonAsymmetricKey1 =
-        FakeEncryptionKey.create().toBuilder().clearPublicKey().clearPublicKeyMaterial().build();
+        FakeEncryptionKey.createEncryptionKey(SET_NAME).toBuilder()
+            .clearPublicKey()
+            .clearPublicKeyMaterial()
+            .build();
     EncryptionKey nonAsymmetricKey2 =
-        FakeEncryptionKey.create().toBuilder().clearPublicKey().clearPublicKeyMaterial().build();
+        FakeEncryptionKey.createEncryptionKey(SET_NAME).toBuilder()
+            .clearPublicKey()
+            .clearPublicKeyMaterial()
+            .build();
     db.createKeys(
         ImmutableList.of(asymmetricKey, asymmetricKey2, nonAsymmetricKey1, nonAsymmetricKey2));
 
     // When
-    ImmutableList<EncryptionKey> keys = db.getActiveKeysWithPublicKey(DEFAULT_SET_NAME, 100);
+    ImmutableList<EncryptionKey> keys = db.getActiveKeysWithPublicKey(SET_NAME, 100);
 
     // Then
     ImmutableList<String> ids =
@@ -178,19 +164,12 @@ public abstract class KeyDbBaseTest {
     return key.toBuilder().setCreationTime(0L).build();
   }
 
-  private static EncryptionKey fakeEncryptionKey() {
-    return FakeEncryptionKey.createBuilderWithDefaults().build();
-  }
-
   private static EncryptionKey fakeEncryptionKey(String setName) {
-    return FakeEncryptionKey.createBuilderWithDefaults().setSetName(setName).build();
+    return FakeEncryptionKey.createEncryptionKey(setName);
   }
 
   private static EncryptionKey fakeEncryptionKey(
       String setName, Instant activationTime, Instant expirationTime) {
-    return FakeEncryptionKey.withActivationAndExpirationTimes(activationTime, expirationTime)
-        .toBuilder()
-        .setSetName(setName)
-        .build();
+    return withActivationAndExpirationTimes(setName, activationTime, expirationTime);
   }
 }

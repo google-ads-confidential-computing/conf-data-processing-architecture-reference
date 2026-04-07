@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_pkg//:mappings.bzl", "pkg_files")
+load("//tools/tftesting:tf_test.bzl", "tf_module", "tf_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -26,4 +27,24 @@ pkg_files(
         ],
     ),
     prefix = "java_workgroup",
+)
+
+tf_module(
+    name = "java_workgroup_module",
+    deps = [
+        "//operator/terraform/gcp/modules/autoscaling:autoscaling_module",
+        "//operator/terraform/gcp/modules/jobqueue:jobqueue_module",
+        "//operator/terraform/gcp/modules/parameters:parameters_module",
+        "//operator/terraform/gcp/modules/worker/java_worker:java_worker_module",
+    ],
+)
+
+tf_test(
+    name = "java_workgroup_test",
+    srcs = glob([
+        "*.tftest.hcl",
+    ]),
+    deps = [
+        ":java_workgroup_module",
+    ],
 )

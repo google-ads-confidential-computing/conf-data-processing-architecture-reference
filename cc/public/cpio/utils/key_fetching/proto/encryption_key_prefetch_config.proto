@@ -1,0 +1,37 @@
+// Copyright 2026 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.cmrt.sdk.v1;
+
+import "google/protobuf/duration.proto";
+
+option java_multiple_files = true;
+
+// Next ID: 2
+message EncryptionKeyPrefetchConfig {
+  // Next ID: 4
+  message KeysetPrefetchConfig {
+    string key_namespace = 1;
+    // The prefetch config accepts the union of
+    // key_ids and prefetch_duration.
+    repeated string key_ids = 2;
+    // prefetch_duration represents the past duration,
+    // it prefetches one week in the future.
+    google.protobuf.Duration prefetch_duration = 3;
+  }
+
+  repeated KeysetPrefetchConfig keyset_prefetch_configs = 1;
+}

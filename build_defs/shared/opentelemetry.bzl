@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2022-2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Configures OpenTelemetry dependencies and repositories."""
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
@@ -24,6 +25,11 @@ def opentelemetry_cpp():
         http_archive,
         name = "io_opentelemetry_cpp",
         strip_prefix = "opentelemetry-cpp-1.18.0",
+        patch_cmds = [
+            """sed -i.bak '1s|^|#include <cstdint>\\n|' api/include/opentelemetry/logs/severity.h""",
+            """sed -i.bak '/enum class Severity : uint8_t;/d' api/include/opentelemetry/logs/log_record.h""",
+            """sed -i.bak '1s|^|#include "opentelemetry/logs/severity.h"\\n|' api/include/opentelemetry/logs/log_record.h""",
+        ],
         repo_mapping = {"@curl": "@com_github_curl_curl"},
         urls = [
             "https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.18.0.tar.gz",

@@ -21,9 +21,6 @@ cc_test(
     srcs = [
         "http2_client_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -44,9 +41,6 @@ cc_test(
     srcs = [
         "http2_connection_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/async_executor/mock:core_async_executor_mock",
@@ -66,9 +60,6 @@ cc_test(
     timeout = "moderate",
     srcs = [
         "http2_connection_pool_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",

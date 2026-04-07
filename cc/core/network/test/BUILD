@@ -24,9 +24,6 @@ cc_test(
     name = "grpc_server_test",
     size = "small",
     srcs = ["grpc_server_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         ":helloworld_grpc",
         "//cc:cc_base_include_dir",
@@ -40,9 +37,6 @@ cc_test(
     name = "grpc_tag_manager_test",
     size = "small",
     srcs = ["grpc_tag_manager_test.cc"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/network/src:core_network_lib",

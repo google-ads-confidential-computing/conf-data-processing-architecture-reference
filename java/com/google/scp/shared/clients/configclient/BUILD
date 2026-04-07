@@ -60,7 +60,7 @@ java_library(
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
         "//java/external:findbugs",
-        "//java/external:gcp_api_gax",
+        "//java/external:gcp_gax",
         "//java/external:gcp_secretmanager",
         "//java/external:gcp_secretmanager_proto",
         "//java/external:google_api_client",

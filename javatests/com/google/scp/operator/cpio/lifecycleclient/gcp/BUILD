@@ -27,7 +27,6 @@ java_test(
         "//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_asg_instances_dao",
         "//java/com/google/scp/shared/proto",
         "//java/external:google_truth",
-        "//java/external:google_truth8",
         "//java/external:guice",
         "//java/external:mockito",
         "//java/external:protobuf_java",

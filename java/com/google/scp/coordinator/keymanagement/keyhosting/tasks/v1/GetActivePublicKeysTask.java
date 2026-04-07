@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 /** Service the <code>GetActivePublicKeys</code> endpoint. */
 public class GetActivePublicKeysTask extends ApiTask {
 
+  private static final String CORS_HEADER_NAME = "Access-Control-Allow-Origin";
   private static final String CACHE_CONTROL_HEADER_NAME = "Cache-Control";
   private static final String MAX_AGE_DIRECTIVE = "max-age=%s";
   private static final Logger logger = LoggerFactory.getLogger(GetActivePublicKeysTask.class);

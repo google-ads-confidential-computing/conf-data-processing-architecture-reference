@@ -164,8 +164,19 @@ void PrivateKeyClientProvider::ListActiveEncryptionKeys(
                  ListActiveEncryptionKeysResponse>&
         list_active_encryption_keys_context) noexcept {
   auto list_private_keys_request = make_shared<ListPrivateKeysRequest>();
-  list_private_keys_request->set_key_set_name(
-      list_active_encryption_keys_context.request->key_set_name());
+  if (list_active_encryption_keys_context.request->key_set_name().empty()) {
+    list_active_encryption_keys_context.result =
+        FailureExecutionResult(SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_REQUEST);
+    SCP_ERROR_CONTEXT(kPrivateKeyClientProvider,
+                      list_active_encryption_keys_context,
+                      list_active_encryption_keys_context.result,
+                      "The key_set_name is required.");
+    list_active_encryption_keys_context.Finish();
+    return;
+  } else {
+    list_private_keys_request->set_key_set_name(
+        list_active_encryption_keys_context.request->key_set_name());
+  }
   *list_private_keys_request->mutable_key_endpoints() =
       list_active_encryption_keys_context.request->key_endpoints();
   list_private_keys_request->set_max_age_seconds(0);

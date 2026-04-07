@@ -17,7 +17,6 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyset;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
@@ -57,7 +56,6 @@ public final class KeySetManager {
   private final int defaultCreateMaxDaysAhead;
   private final String defaultTemplate;
   private final Duration configCacheDuration;
-  private final ImmutableList<KeySetConfig> defaultConfig;
 
   @Inject
   KeySetManager(
@@ -67,6 +65,7 @@ public final class KeySetManager {
       @KeyGenerationTtlInDays Integer ttlInDays,
       @KeyGenerationCreateMaxDaysAhead Integer createMaxDaysAhead,
       ConfigCacheDuration configCacheDuration) {
+    // TODO: b/437179750 - remove use of default values for required parameters
     defaultCount = count;
     defaultValidityInDays = validityInDays;
     defaultTtlInDays = ttlInDays;
@@ -74,24 +73,13 @@ public final class KeySetManager {
     defaultTemplate = KeyParams.DEFAULT_TINK_TEMPLATE;
     this.configCacheDuration = configCacheDuration.value;
     configFetcher = createFetcher(configProvider);
-    defaultConfig =
-        ImmutableList.of(
-            new KeySetConfig(
-                DEFAULT_SET_NAME,
-                defaultTemplate,
-                defaultCount,
-                defaultValidityInDays,
-                defaultTtlInDays,
-                defaultCreateMaxDaysAhead,
-                DEFAULT_OVERLAP_PERIOD_DAYS,
-                DEFAULT_BACKFILL_DAYS));
   }
 
   /** Returns all key set configurations. */
   public ImmutableList<KeySetConfig> getConfigs() {
     Optional<KeySetsConfig> config = configFetcher.get();
     if (config.isEmpty()) {
-      return defaultConfig;
+      throw new IllegalStateException("No key set configs found.");
     }
     return config.get().keySets().stream()
         .map(

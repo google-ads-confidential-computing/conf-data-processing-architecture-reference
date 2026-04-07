@@ -261,21 +261,16 @@ module "key_management_service" {
 module "public_key_service" {
   source = "../public_key_service"
 
-  environment            = var.environment
-  project_id             = var.project_id
-  regions                = local.public_key_service_regions
-  service_domain         = local.public_key_domain
-  load_balancer_protocol = var.public_key_service_load_balancer_protocol
+  environment    = var.environment
+  project_id     = var.project_id
+  regions        = local.public_key_service_regions
+  service_domain = local.public_key_domain
 
   source_container_image_url = var.public_key_service_container_image_url
 
-  # Migration to external managed LB
-  load_balancing_scheme                                        = var.public_key_service_load_balancing_scheme
-  external_managed_migration_state                             = var.public_key_service_external_managed_migration_state
-  external_managed_migration_testing_percentage                = var.public_key_service_external_managed_migration_testing_percentage
-  forwarding_rule_load_balancing_scheme                        = var.public_key_service_forwarding_rule_load_balancing_scheme
-  external_managed_backend_bucket_migration_state              = var.public_key_service_external_managed_backend_bucket_migration_state
-  external_managed_backend_bucket_migration_testing_percentage = var.public_key_service_external_managed_backend_bucket_migration_testing_percentage
+  # Load Balancer
+  load_balancer_protocol      = var.public_key_service_load_balancer_protocol
+  load_balancer_allowed_paths = var.public_key_service_load_balancer_allowed_paths
 
   # Load Balancer Outlier Detection
   lb_outlier_detection_enabled                               = var.public_key_service_lb_outlier_detection_enabled
@@ -286,6 +281,15 @@ module "public_key_service" {
   lb_outlier_detection_enforcing_consecutive_errors          = var.public_key_service_lb_outlier_detection_enforcing_consecutive_errors
   lb_outlier_detection_consecutive_gateway_failure           = var.public_key_service_lb_outlier_detection_consecutive_gateway_failure
   lb_outlier_detection_enforcing_consecutive_gateway_failure = var.public_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure
+
+  # Cloud Armor
+  cloud_armor_enabled                            = var.public_key_service_cloud_armor_enabled
+  cloud_armor_preview_mode                       = var.public_key_service_cloud_armor_preview_mode
+  cloud_armor_rate_limit_count                   = var.public_key_service_cloud_armor_rate_limit_count
+  cloud_armor_rate_limit_interval_sec            = var.public_key_service_cloud_armor_rate_limit_interval_sec
+  cloud_armor_log_level                          = var.public_key_service_cloud_armor_log_level
+  cloud_armor_high_block_ratio_threshold         = var.public_key_service_cloud_armor_high_block_ratio_threshold
+  cloud_armor_rate_limit_denials_alert_threshold = var.public_key_service_cloud_armor_rate_limit_denials_alert_threshold
 
   # Cloud Run settings
   cpu_count             = var.public_key_service_cloud_run_cpu_count
@@ -324,21 +328,16 @@ module "public_key_service" {
 module "private_key_service" {
   source = "../private_key_service"
 
-  environment            = var.environment
-  project_id             = var.project_id
-  regions                = local.private_key_service_regions
-  service_domain         = local.private_key_domain
-  load_balancer_protocol = var.private_key_service_load_balancer_protocol
+  environment    = var.environment
+  project_id     = var.project_id
+  regions        = local.private_key_service_regions
+  service_domain = local.private_key_domain
 
-  # Migration to external managed LB
-  load_balancing_scheme                                        = var.private_key_service_load_balancing_scheme
-  external_managed_migration_state                             = var.private_key_service_external_managed_migration_state
-  external_managed_migration_testing_percentage                = var.private_key_service_external_managed_migration_testing_percentage
-  forwarding_rule_load_balancing_scheme                        = var.private_key_service_forwarding_rule_load_balancing_scheme
-  external_managed_backend_bucket_migration_state              = var.private_key_service_external_managed_backend_bucket_migration_state
-  external_managed_backend_bucket_migration_testing_percentage = var.private_key_service_external_managed_backend_bucket_migration_testing_percentage
+  # Load Balancer
+  load_balancer_protocol      = var.private_key_service_load_balancer_protocol
+  load_balancer_allowed_paths = var.private_key_service_load_balancer_allowed_paths
 
-  # Outlier Detection
+  # Load Balancer Outlier Detection
   lb_outlier_detection_enabled                               = var.private_key_service_lb_outlier_detection_enabled
   lb_outlier_detection_consecutive_errors                    = var.private_key_service_lb_outlier_detection_consecutive_errors
   lb_outlier_detection_interval_seconds                      = var.private_key_service_lb_outlier_detection_interval_seconds
@@ -403,17 +402,12 @@ module "private_key_service_addon" {
   project_id  = var.project_id
   regions     = local.private_key_service_regions
 
-  service_domain         = local.private_key_domain_additional
-  display_identifier     = "Pre${var.environment}"
-  load_balancing_scheme  = "EXTERNAL_MANAGED"
-  load_balancer_protocol = var.private_key_service_load_balancer_protocol
+  service_domain     = local.private_key_domain_additional
+  display_identifier = "Pre${var.environment}"
 
-  # LB Migration
-  external_managed_migration_state                             = null
-  external_managed_migration_testing_percentage                = null
-  forwarding_rule_load_balancing_scheme                        = "EXTERNAL_MANAGED"
-  external_managed_backend_bucket_migration_state              = null
-  external_managed_backend_bucket_migration_testing_percentage = null
+  # Load Balancer
+  load_balancer_protocol      = var.private_key_service_load_balancer_protocol
+  load_balancer_allowed_paths = var.private_key_service_load_balancer_allowed_paths
 
   # Load Balancer Outlier Detection
   lb_outlier_detection_enabled                               = var.private_key_service_lb_outlier_detection_enabled
@@ -579,7 +573,7 @@ module "key_storage_service_cloudfunction_url" {
   source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL"
-  parameter_value = var.use_only_key_storage_service_base_url ? var.key_storage_service_base_url : var.key_storage_service_cloudfunction_url
+  parameter_value = var.key_storage_service_base_url
 }
 
 module "peer_coordinator_wip_provider" {
@@ -609,6 +603,15 @@ module "key_sets_config" {
   environment     = var.environment
   parameter_name  = "KEY_SETS_CONFIG"
   parameter_value = jsonencode(var.key_sets_config)
+}
+
+module "key_sets_parameter_config" {
+  count          = var.enable_parameter_manager ? 1 : 0
+  source         = "../../modules/parameter_manager"
+  project        = var.project_id
+  environment    = var.environment
+  parameter_name = "KEY_SETS_CONFIG"
+  parameter_data = jsonencode(var.key_sets_config)
 }
 
 module "kms_key_ring_uri" {

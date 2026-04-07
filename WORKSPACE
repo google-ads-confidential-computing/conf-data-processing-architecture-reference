@@ -3,19 +3,58 @@
 # Download all http_archives and git_repositories: Begin
 ################################################################################
 
-# Declare explicit protobuf version and hash, to override any implicit dependencies.
-# Please update both while upgrading to new versions.
-PROTOBUF_CORE_VERSION_FOR_CC = "29.5"
-
-PROTOBUF_SHA_256_FOR_CC = "955ef3235be41120db4d367be81efe6891c9544b3a71194d80c3055865b26e09"
-
 #############################
 # CC SDK Dependencies Rules #
 #############################
 
 load("//build_defs/cc:sdk.bzl", "sdk_dependencies")
 
-sdk_dependencies(PROTOBUF_CORE_VERSION_FOR_CC, PROTOBUF_SHA_256_FOR_CC)
+# Declare explicit protobuf version and hash, to override any implicit dependencies.
+# Please update both while upgrading to new versions.
+load("//build_defs/shared:protobuf.bzl", "DEFAULT_PROTOBUF_CORE_VERSION", "DEFAULT_PROTOBUF_SHA_256")
+
+sdk_dependencies(DEFAULT_PROTOBUF_CORE_VERSION, DEFAULT_PROTOBUF_SHA_256)
+
+#############################
+# CC hermetic toolchain setup
+#############################
+
+# A fixed python toolchain is required for the hermetic build
+load("@rules_python//python:repositories.bzl", "py_repositories", "python_register_toolchains")
+
+py_repositories()
+
+python_register_toolchains(
+    name = "python3_9",
+    ignore_root_user_error = True,
+    python_version = "3.9",
+)
+
+load("//build_defs/cc:toolchains_llvm.bzl", "toolchains_llvm")
+
+toolchains_llvm()
+
+load("@toolchains_llvm//toolchain:deps.bzl", "bazel_toolchain_dependencies")
+
+bazel_toolchain_dependencies()
+
+load("//build_defs/cc:sysroot_ext.bzl", "chromium_sysroot")
+
+chromium_sysroot()
+
+load("@toolchains_llvm//toolchain:rules.bzl", "llvm_toolchain")
+
+llvm_toolchain(
+    name = "llvm_toolchain",
+    llvm_version = "19.1.0",
+    sysroot = {
+        "linux-x86_64": "@chromium_sysroot//:sysroot",
+    },
+)
+
+load("@llvm_toolchain//:toolchains.bzl", "llvm_register_toolchains")
+
+llvm_register_toolchains()
 
 ################################################################################
 # Rules JVM External: Begin
@@ -99,11 +138,6 @@ load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
 
 boost_deps()
 
-# Foreign CC
-load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
-
-rules_foreign_cc_dependencies()
-
 load("@io_opentelemetry_cpp//bazel:repository.bzl", "opentelemetry_cpp_deps")
 
 opentelemetry_cpp_deps()
@@ -116,13 +150,6 @@ opentelemetry_extra_deps()
 #################################
 # SCP Shared Dependencies Rules #
 #################################
-
-# This bazel file contains all the dependencies in SCP, except the dependencies
-# only used in SDK. Eventually, each project will have its own bazel file for
-# its dependencies, and this file will be removed.
-load("//build_defs:scp_dependencies.bzl", "scp_dependencies")
-
-scp_dependencies(PROTOBUF_CORE_VERSION_FOR_CC, PROTOBUF_SHA_256_FOR_CC)
 
 load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
 
@@ -199,18 +226,11 @@ load("@rules_oci//oci:repositories.bzl", "oci_register_toolchains")
 
 oci_register_toolchains(name = "oci")
 
-###########################
-# Binary Dev Dependencies #
-###########################
-load("@com_github_google_rpmpack//:deps.bzl", "rpmpack_dependencies")
-load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
-load("@rules_oci//oci:pull.bzl", "oci_pull")
-
-rpmpack_dependencies()
-
 ################################################################################
 # Download Containers: Begin
 ################################################################################
+load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
+load("@rules_oci//oci:pull.bzl", "oci_pull")
 
 # Distroless image for running Java.
 container_pull(

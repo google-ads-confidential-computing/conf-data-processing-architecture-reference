@@ -45,6 +45,7 @@ using google::scp::core::errors::
     SC_PUBLIC_KEY_CLIENT_PROVIDER_HTTP_CLIENT_REQUIRED;
 using google::scp::core::errors::
     SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_CONFIG_OPTIONS;
+using google::scp::core::errors::SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_REQUEST;
 using google::scp::core::http2_client::mock::MockHttpClient;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::ScpTestBase;
@@ -66,7 +67,7 @@ static constexpr char kPublicKeyBaseUriWithVersionSuffix[] =
     "http://public_key/publicKeys1/v1alpha";
 static constexpr char kHeaderDateExample[] = "Wed, 16 Nov 2022 00:02:48 GMT";
 static constexpr char kCacheControlExample[] = "max-age=254838";
-static constexpr char kVersionNumberAlphaSuffix[] = "/v1alpha";
+static constexpr char kVersionNumberBetaSuffix[] = "/v1beta";
 static constexpr char kPublicKeysUrlSuffix[] = "/publicKeys";
 static constexpr uint64_t kExpectedExpiredTimeInSeconds = 1668811806;
 
@@ -121,8 +122,8 @@ class PublicKeyClientProviderTestII : public ScpTestBase {
     response.headers = make_shared<HttpHeaders>(headers);
 
     string bytes_str =
-        "{\"keys\": [{\"id\": \"1234\", \"key\": \"abcdefg\"}, "
-        "{\"id\": \"5678\", \"key\": \"hijklmn\"}]}";
+        "{\"keys\": [{\"id\": \"1234\", \"tinkBinary\": \"abcdefg\"}, "
+        "{\"id\": \"5678\", \"tinkBinary\": \"hijklmn\"}]}";
     BytesBuffer bytes(bytes_str.length());
 
     response.body.bytes->assign(bytes_str.begin(), bytes_str.end());
@@ -140,14 +141,14 @@ class PublicKeyClientProviderTestII : public ScpTestBase {
   unique_ptr<PublicKeyClientProvider> public_key_client_;
 };
 
-TEST_F(PublicKeyClientProviderTestII, ListPublicKeysSuccessWithDefaultKeySet) {
+TEST_F(PublicKeyClientProviderTestII, ListPublicKeysSuccessWithNonemptyKeySet) {
   atomic<int> perform_calls(0);
   auto success_response = GetValidHttpResponse();
   http_client_->perform_request_mock =
       [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
         perform_calls++;
-        Uri expected_uri =
-            absl::StrCat(kVersionNumberAlphaSuffix, kPublicKeysUrlSuffix);
+        Uri expected_uri = absl::StrCat(kVersionNumberBetaSuffix, "/sets",
+                                        "/a-key-set", kPublicKeysUrlSuffix);
         EXPECT_THAT(http_context.request->path.get()->c_str(),
                     HasSubstr(expected_uri));
         http_context.response = make_shared<HttpResponse>(success_response);
@@ -157,6 +158,7 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysSuccessWithDefaultKeySet) {
       };
 
   auto request = make_shared<ListPublicKeysRequest>();
+  request->set_key_set_name("a-key-set");
 
   atomic<int> success_callback(0);
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
@@ -195,8 +197,8 @@ TEST_F(PublicKeyClientProviderTestII,
   http_client_->perform_request_mock =
       [&](AsyncContext<HttpRequest, HttpResponse>& http_context) {
         perform_calls++;
-        Uri expected_uri =
-            absl::StrCat(kVersionNumberAlphaSuffix, kPublicKeysUrlSuffix);
+        Uri expected_uri = absl::StrCat(kVersionNumberBetaSuffix, "/sets",
+                                        "/a-key-set", kPublicKeysUrlSuffix);
         EXPECT_THAT(http_context.request->path.get()->c_str(),
                     HasSubstr(expected_uri));
         http_context.response = make_shared<HttpResponse>(success_response);
@@ -206,6 +208,7 @@ TEST_F(PublicKeyClientProviderTestII,
       };
 
   auto request = make_shared<ListPublicKeysRequest>();
+  request->set_key_set_name("a-key-set");
 
   atomic<int> success_callback(0);
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
@@ -226,6 +229,26 @@ TEST_F(PublicKeyClientProviderTestII,
   WaitUntil([&]() { return perform_calls.load() == 1; });
 }
 
+TEST_F(PublicKeyClientProviderTestII, NoKeysetProvidedRequestFailed) {
+  // Leave `key_set_name` empty
+  auto request = make_shared<ListPublicKeysRequest>();
+
+  auto cpio_failure =
+      FailureExecutionResult(SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_REQUEST);
+
+  atomic<int> failure_callback(0);
+  AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
+      std::move(request), [&](AsyncContext<ListPublicKeysRequest,
+                                           ListPublicKeysResponse>& context) {
+        EXPECT_THAT(context.result, ResultIs(cpio_failure));
+        failure_callback++;
+      });
+
+  public_key_client_->ListPublicKeys(context);
+
+  WaitUntil([&]() { return failure_callback.load() == 1; });
+}
+
 TEST_F(PublicKeyClientProviderTestII, ListPublicKeysFailure) {
   ExecutionResult failed_result = FailureExecutionResult(SC_UNKNOWN);
 
@@ -241,6 +264,7 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysFailure) {
       };
 
   auto request = make_shared<ListPublicKeysRequest>();
+  request->set_key_set_name("a-key-set");
 
   atomic<int> failure_callback(0);
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
@@ -269,6 +293,7 @@ TEST_F(PublicKeyClientProviderTestII, AllUrisPerformRequestFailed) {
       };
 
   auto request = make_shared<ListPublicKeysRequest>();
+  request->set_key_set_name("a-key-set");
 
   auto cpio_failure = FailureExecutionResult(
       SC_PUBLIC_KEY_CLIENT_PROVIDER_ALL_URIS_REQUEST_PERFORM_FAILED);
@@ -311,6 +336,7 @@ TEST_F(PublicKeyClientProviderTestII, ListPublicKeysPartialUriSuccess) {
       };
 
   auto request = make_shared<ListPublicKeysRequest>();
+  request->set_key_set_name("a-key-set");
   atomic<int> success_callback(0);
   AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse> context(
       std::move(request), [&](AsyncContext<ListPublicKeysRequest,

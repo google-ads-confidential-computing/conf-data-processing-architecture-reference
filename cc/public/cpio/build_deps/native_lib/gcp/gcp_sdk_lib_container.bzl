@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+""" Rule to build and push an image that uses the CMRT SDK to a docker registry. """
 
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
-load("//cc/public/cpio/build_deps/shared:build_sdk_runtime_image.bzl", "build_sdk_runtime_image")
+load("//cc/public/cpio/build_deps/shared:sdk_runtime_image.bzl", "sdk_runtime_image")
 
 def gcp_sdk_lib_container(
         name,
@@ -29,6 +30,8 @@ def gcp_sdk_lib_container(
         ports = [],
         sdk_cmd_override = []):
     """
+    Build the CMRT SDK image and push it to a docker registry.
+
     Creates a runnable target for pubshing a GCP SDK image to gcloud.
     The image name is the given name, and the image will be pushed to the given
     image_repository in the given image_registry with the given image_tag.
@@ -37,7 +40,7 @@ def gcp_sdk_lib_container(
     """
 
     sdk_container_name = "%s_cmrt_sdk_lib" % name
-    build_sdk_runtime_image(
+    sdk_runtime_image(
         name = sdk_container_name,
         client_binaries = client_binaries,
         inside_tee = inside_tee,
@@ -51,17 +54,10 @@ def gcp_sdk_lib_container(
     )
 
     # Push image to GCP
-    reproducible_container_name = "%s_reproducible_container" % sdk_container_name
     container_push(
         name = name,
         format = "Docker",
-        image = select(
-            {
-                Label("//cc/public/cpio/build_deps/shared:reproducible_build_config"): ":%s.tar" % reproducible_container_name,
-                Label("//cc/public/cpio/build_deps/shared:non_reproducible_build_config"): ":%s_container.tar" % sdk_container_name,
-            },
-            no_match_error = "Please provide reproducible_build flag",
-        ),
+        image = ":%s" % sdk_container_name,
         registry = image_registry,
         repository = image_repository,
         tag = image_tag,

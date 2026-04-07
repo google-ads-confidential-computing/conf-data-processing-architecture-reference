@@ -1,0 +1,17 @@
+keyset_prefetch_configs {
+  key_namespace: "namespace1"
+  key_ids: "id1"
+  prefetch_duration {
+    seconds: 604800  # 7 days
+  }
+}
+keyset_prefetch_configs {
+  key_namespace: "namespace2"
+  key_ids: "id2"
+}
+keyset_prefetch_configs {
+  key_namespace: "namespace3"
+  prefetch_duration {
+    seconds: 86400  # 1 day
+  }
+}

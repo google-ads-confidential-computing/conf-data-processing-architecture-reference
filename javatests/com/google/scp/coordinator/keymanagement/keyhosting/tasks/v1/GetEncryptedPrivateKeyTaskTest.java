@@ -63,7 +63,7 @@ public class GetEncryptedPrivateKeyTaskTest extends ApiTaskTestBase {
   private static final String UNAPPROVED_CALLER = "unapproved-caller@google.com";
   private static final String SET_NAME = "TestSet";
   private static final EncryptionKey TEST_KEY =
-      FakeEncryptionKey.createWithMigration().toBuilder().setSetName(SET_NAME).build();
+      FakeEncryptionKey.createEncryptionKeyWithMigration(SET_NAME);
   private static final String STANDARD_KEYSET = TEST_KEY.getJsonEncodedKeyset();
   private static final String MIGRATION_KEYSET = TEST_KEY.getMigrationJsonEncodedKeyset();
 

@@ -25,7 +25,6 @@ import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.hybrid.HybridConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.EncodedPublicKeyProto.EncodedPublicKey;
-import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetEncryptedPrivateKeyResponseProto.GetEncryptedPrivateKeyResponse;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyStatusProto.EncryptionKeyStatus;
 import com.google.scp.shared.api.exception.ServiceException;
@@ -51,100 +50,46 @@ public final class InMemoryKeyDbTestUtil {
   private InMemoryKeyDbTestUtil() {}
 
   /** Adds keyCount-number of keys to InMemoryDB */
-  public static void addRandomKeysToKeyDb(int keyCount, InMemoryKeyDb keyDb) {
-    IntStream.range(0, keyCount).forEach(unused -> createRandomKey(keyDb));
+  public static void addRandomKeysToKeyDb(int keyCount, String setName, InMemoryKeyDb keyDb) {
+    IntStream.range(0, keyCount).forEach(unused -> createRandomKey(setName, keyDb));
   }
 
   /**
    * Puts one Key item with random values to InMemoryKeyDb instance. Returns randomly-generated
    * EncryptionKey
    */
-  public static EncryptionKey createRandomKey(InMemoryKeyDb keyDb) {
-    String publicKey;
-    String publicKeyMaterial;
+  private static void createRandomKey(String setName, InMemoryKeyDb keyDb) {
     try {
       KeysetHandle key = KeysetHandle.generateNew(KeyParams.getDefaultKeyTemplate());
-      publicKey = toJsonCleartext(key.getPublicKeysetHandle());
-      publicKeyMaterial = PublicKeyConversionUtil.getPublicKey(key.getPublicKeysetHandle());
+      var publicKey = toJsonCleartext(key.getPublicKeysetHandle());
+      var publicKeyMaterial = PublicKeyConversionUtil.getPublicKey(key.getPublicKeysetHandle());
+      createKey(keyDb, setName, publicKey, publicKeyMaterial);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    return createKey(
-        keyDb,
-        /* keyId= */ randomUUID().toString(),
-        /* publicKey= */ publicKey,
-        /* publicKeyMaterial= */ publicKeyMaterial,
-        /* privateKey= */ randomUUID().toString(),
-        /* keyEncryptionKeyUri= */ randomUUID().toString(),
-        /* creationTime= */ now().toEpochMilli(),
-        /* expirationTime= */ now().plus(7, DAYS).toEpochMilli());
-  }
-
-  /**
-   * Puts one Key item with random values to InMemoryKeyDb instance. Returns randomly-generated
-   * EncryptionKey
-   */
-  public static EncryptionKey createKey(
-      InMemoryKeyDb keyDb,
-      String keyId,
-      String publicKey,
-      String publicKeyMaterial,
-      String privateKey,
-      String keyEncryptionKeyUri,
-      Long creationTime,
-      Long expirationTime) {
-    return createKey(
-        keyDb,
-        keyId,
-        publicKey,
-        publicKeyMaterial,
-        privateKey,
-        /* status= */ EncryptionKeyStatus.ACTIVE,
-        keyEncryptionKeyUri,
-        creationTime,
-        expirationTime);
   }
 
   /**
    * Puts one Key item with parameter values to InMemoryKeyDb instance. Returns EncryptionKey if
    * successful
    */
-  public static EncryptionKey createKey(
-      InMemoryKeyDb keyDb,
-      String keyId,
-      String publicKey,
-      String publicKeyMaterial,
-      String privateKey,
-      EncryptionKeyStatus status,
-      String keyEncryptionKeyUri,
-      Long creationTime,
-      Long expirationTime) {
-
+  private static void createKey(
+      InMemoryKeyDb keyDb, String setName, String publicKey, String publicKeyMaterial) {
     try {
+      var keyId = randomUUID().toString();
       EncryptionKey.Builder encryptionKey =
-          EncryptionKey.newBuilder().setKeyId(keyId).setStatus(status);
-
-      if (publicKey != null) {
-        encryptionKey.setPublicKey(publicKey);
-      }
-      if (publicKeyMaterial != null) {
-        encryptionKey.setPublicKeyMaterial(publicKeyMaterial);
-      }
-      if (privateKey != null) {
-        encryptionKey.setJsonEncodedKeyset(privateKey);
-      }
-      if (keyEncryptionKeyUri != null) {
-        encryptionKey.setKeyEncryptionKeyUri(keyEncryptionKeyUri);
-      }
-      if (creationTime != null) {
-        encryptionKey.setCreationTime(creationTime);
-      }
-      if (expirationTime != null) {
-        encryptionKey.setExpirationTime(expirationTime);
-      }
-
+          EncryptionKey.newBuilder()
+              .setSetName(setName)
+              .setKeyId(keyId)
+              .setStatus(EncryptionKeyStatus.ACTIVE)
+              .setJsonEncodedKeyset(randomUUID().toString())
+              .setPublicKey(publicKey)
+              .setPublicKeyMaterial(publicKeyMaterial)
+              .setKeyEncryptionKeyUri(randomUUID().toString())
+              .setCreationTime(now().toEpochMilli())
+              .setExpirationTime(now().plus(7, DAYS).toEpochMilli());
       keyDb.createKey(encryptionKey.build());
-      return keyDb.getKey(keyId);
+      keyDb.getKey(keyId);
     } catch (ServiceException e) {
       throw new IllegalArgumentException("Could not create key", e);
     }
@@ -163,27 +108,20 @@ public final class InMemoryKeyDbTestUtil {
         .build();
   }
 
-  /** Builds string representation of {@link GetEncryptedPrivateKeyResponse} */
-  public static String expectedPrivateKeyResponseBody(String privateKeyId, String privateKey) {
-    return "{\n  \"name\": \"privateKeys/"
-        + privateKeyId
-        + "\",\n  \"jsonEncodedKeyset\": \""
-        + privateKey
-        + "\"\n}";
-  }
-
   public static String expectedErrorResponseBody(int code, String message, String reason) {
     return String.format(
-        "{\n"
-            + "  \"code\": %d,\n"
-            + "  \"message\": \"%s\",\n"
-            + "  \"details\": [{\n"
-            + "    \"reason\": \"%s\",\n"
-            + "    \"domain\": \"\",\n"
-            + "    \"metadata\": {\n"
-            + "    }\n"
-            + "  }]\n"
-            + "}",
+        """
+        {
+          "code": %d,
+          "message": "%s",
+          "details": [{
+            "reason": "%s",
+            "domain": "",
+            "metadata": {
+            }
+          }]
+        }\
+        """,
         code, message, reason);
   }
 }

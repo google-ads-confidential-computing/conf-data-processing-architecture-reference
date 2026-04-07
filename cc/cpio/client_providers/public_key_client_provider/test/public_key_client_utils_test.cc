@@ -191,8 +191,8 @@ TEST(PublicKeyClientUtilsTest, HeadersWithBadCacheControlStr) {
 
 TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodySuccess) {
   string bytes_str =
-      "{\"keys\": [{\"id\": \"1234\", \"key\": \"abcdefg\"}, "
-      "{\"id\": \"5678\", \"key\": \"hijklmn\"}]}";
+      "{\"keys\": [{\"id\": \"1234\", \"tinkBinary\": \"abcdefg\"}, "
+      "{\"id\": \"5678\", \"tinkBinary\": \"hijklmn\"}]}";
   BytesBuffer bytes(bytes_str.length());
   bytes.bytes->assign(bytes_str.begin(), bytes_str.end());
   vector<PublicKey> public_keys;
@@ -209,8 +209,8 @@ TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodySuccess) {
 
 TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodyNoKeys) {
   string bytes_str =
-      "{\"key\": [{\"id\": \"1234\", \"key\": \"abcdefg\"}, "
-      "{\"id\": \"5678\", \"key\": \"hijklmn\"}]}";
+      "{\"key\": [{\"id\": \"1234\", \"tinkBinary\": \"abcdefg\"}, "
+      "{\"id\": \"5678\", \"tinkBinary\": \"hijklmn\"}]}";
   BytesBuffer bytes(bytes_str.length());
   bytes.bytes->assign(bytes_str.begin(), bytes_str.end());
   vector<PublicKey> public_keys;
@@ -224,8 +224,8 @@ TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodyNoKeys) {
 
 TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodyNoId) {
   string bytes_str =
-      "{\"keys\": [{\"id_error\": \"1234\", \"key\": \"abcdefg\"}, "
-      "{\"id\": \"5678\", \"key\": \"hijklmn\"}]}";
+      "{\"keys\": [{\"id_error\": \"1234\", \"tinkBinary\": \"abcdefg\"}, "
+      "{\"id\": \"5678\", \"tinkBinary\": \"hijklmn\"}]}";
   BytesBuffer bytes(bytes_str.length());
   bytes.bytes->assign(bytes_str.begin(), bytes_str.end());
   vector<PublicKey> public_keys;
@@ -239,8 +239,8 @@ TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodyNoId) {
 
 TEST(PublicKeyClientUtilsTest, ParsePublicKeysFromBodyNoKey) {
   string bytes_str =
-      "{\"keys\": [{\"id\": \"1234\", \"key_error\": \"abcdefg\"}, "
-      "{\"id\": \"5678\", \"key\": \"hijklmn\"}]}";
+      "{\"keys\": [{\"id\": \"1234\", \"tinkBinary_error\": \"abcdefg\"}, "
+      "{\"id\": \"5678\", \"tinkBinary\": \"hijklmn\"}]}";
   BytesBuffer bytes(bytes_str.length());
   bytes.bytes->assign(bytes_str.begin(), bytes_str.end());
   vector<PublicKey> public_keys;

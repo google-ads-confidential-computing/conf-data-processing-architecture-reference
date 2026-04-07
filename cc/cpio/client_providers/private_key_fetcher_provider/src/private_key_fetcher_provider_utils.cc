@@ -199,7 +199,7 @@ ExecutionResult PrivateKeyFetchingClientUtils::ParseEncryptionKey(
               SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_PUBLIC_KEYSET_HANDLE_JSON);
       SCP_ERROR(kPrivateKeyFetcherProviderUtils, kZeroUuid, execution_result,
                 "Failed to create JsonKeysetReader: %s.",
-                keyset_reader_or.status().ToString().c_str());
+                keyset_reader_or.status().message());
       return execution_result;
     }
 
@@ -211,7 +211,7 @@ ExecutionResult PrivateKeyFetchingClientUtils::ParseEncryptionKey(
               SC_PRIVATE_KEY_CLIENT_PROVIDER_INVALID_PUBLIC_KEYSET_HANDLE_JSON);
       SCP_ERROR(kPrivateKeyFetcherProviderUtils, kZeroUuid, execution_result,
                 "Creating Keyset handle failed with error %s.",
-                keyset_handle_or.status().ToString().c_str());
+                keyset_handle_or.status().message());
       return execution_result;
     }
 

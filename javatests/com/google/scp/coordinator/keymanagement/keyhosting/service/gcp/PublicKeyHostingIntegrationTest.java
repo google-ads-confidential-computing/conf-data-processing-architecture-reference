@@ -21,25 +21,24 @@ import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyD
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import static com.google.scp.shared.api.model.Code.OK;
 import static com.google.scp.shared.testutils.common.HttpRequestUtil.executeRequestWithRetry;
-import static java.time.Instant.now;
-import static java.time.temporal.ChronoUnit.DAYS;
-import static java.util.UUID.randomUUID;
 
 import com.google.acai.Acai;
 import com.google.cloud.spanner.DatabaseClient;
 import com.google.cloud.spanner.KeySet;
 import com.google.cloud.spanner.Mutation;
 import com.google.common.collect.ImmutableList;
+import com.google.crypto.tink.BinaryKeysetReader;
+import com.google.crypto.tink.CleartextKeysetHandle;
+import com.google.crypto.tink.subtle.Base64;
 import com.google.inject.Inject;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
+import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PublicKeyCloudFunctionContainer;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.GetActivePublicKeysResponseProto.GetActivePublicKeysResponse;
-import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.testutils.gcp.GcpMultiCoordinatorTestEnvModule;
 import com.google.scp.protos.shared.api.v1.ErrorResponseProto.ErrorResponse;
-import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer;
 import java.io.IOException;
 import java.net.URI;
@@ -58,9 +57,11 @@ import org.junit.runners.JUnit4;
 public final class PublicKeyHostingIntegrationTest {
   @Rule public Acai acai = new Acai(GcpMultiCoordinatorTestEnvModule.class);
 
+  private static final String SET_NAME = "ec";
+  private static final String correctBetaPath = "/v1beta/sets/ec/publicKeys";
+  private static final String incorrectPath = "/v1beta/sets/ec/wrongPath";
+
   private static final HttpClient client = HttpClient.newHttpClient();
-  private static final String correctPath = "/v1alpha/publicKeys";
-  private static final String incorrectPath = "/v1alpha/wrongPath";
   @Inject @KeyDbClient private DatabaseClient dbClient;
   @Inject private SpannerKeyDb keyDb;
   @Inject @PublicKeyCloudFunctionContainer private CloudFunctionEmulatorContainer functionContainer;
@@ -71,24 +72,11 @@ public final class PublicKeyHostingIntegrationTest {
   }
 
   @Test(timeout = 25_000)
-  public void getPublicKeys_success() throws IOException, ServiceException {
-    EncryptionKey encryptionKey =
-        EncryptionKey.newBuilder()
-            .setKeyId(randomUUID().toString())
-            .setPublicKey(randomUUID().toString())
-            .setPublicKeyMaterial(randomUUID().toString())
-            .setJsonEncodedKeyset(randomUUID().toString())
-            .setKeyEncryptionKeyUri(randomUUID().toString())
-            .setCreationTime(now().toEpochMilli())
-            .setExpirationTime(now().plus(2, DAYS).toEpochMilli())
-            .build();
+  public void getPublicKeys_success() throws Exception {
+    var encryptionKey = FakeEncryptionKey.createEncryptionKey(SET_NAME);
     keyDb.createKey(encryptionKey);
-    HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(correctPath)).GET().build();
 
-    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-
-    assertThat(httpResponse.statusCode()).isEqualTo(OK.getHttpStatusCode());
+    var httpResponse = makeOkRequest();
     assertThat(httpResponse.headers().allValues("cache-control").size()).isEqualTo(1);
     assertThat(httpResponse.headers().firstValue("cache-control").get()).contains("max-age=");
 
@@ -97,17 +85,14 @@ public final class PublicKeyHostingIntegrationTest {
     GetActivePublicKeysResponse response = builder.build();
     assertThat(response.getKeysList()).hasSize(1);
     assertThat(response.getKeys(0).getId()).isEqualTo(encryptionKey.getKeyId());
-    assertThat(response.getKeys(0).getKey()).isEqualTo(encryptionKey.getPublicKeyMaterial());
+    CleartextKeysetHandle.read(
+        BinaryKeysetReader.withBytes(Base64.decode((response.getKeys(0).getTinkBinary()))));
   }
 
   @Test(timeout = 25_000)
   public void getPublicKeys_emptyList() throws IOException {
-    HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(correctPath)).GET().build();
+    var httpResponse = makeOkRequest();
 
-    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-
-    assertThat(httpResponse.statusCode()).isEqualTo(OK.getHttpStatusCode());
     assertThat(httpResponse.headers().map().containsKey("cache-control")).isFalse();
     GetActivePublicKeysResponse.Builder builder = GetActivePublicKeysResponse.newBuilder();
     JsonFormat.parser().merge(httpResponse.body(), builder);
@@ -117,30 +102,28 @@ public final class PublicKeyHostingIntegrationTest {
 
   @Test(timeout = 25_000)
   public void getPublicKeys_wrongPath() throws IOException {
-    HttpRequest getRequest =
-        HttpRequest.newBuilder().uri(getFunctionUri(incorrectPath)).GET().build();
-
-    HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
-    assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
-    assertThat(httpResponse.headers().map().containsKey("cache-control")).isFalse();
-
-    ErrorResponse.Builder builder = ErrorResponse.newBuilder();
-    JsonFormat.parser().merge(httpResponse.body(), builder);
-    ErrorResponse response = builder.build();
-    assertThat(response.getCode()).isEqualTo(NOT_FOUND.getRpcStatusCode());
-    assertThat(response.getMessage()).contains("Resource not found");
-    assertThat(response.getDetailsList().toString()).contains("INVALID_URL_PATH_OR_VARIABLE");
+    checkBadRequest(HttpRequest.newBuilder().uri(getFunctionUri(incorrectPath)).GET().build());
   }
 
   @Test(timeout = 25_000)
   public void getPublicKeys_wrongMethod() throws IOException {
-    HttpRequest getRequest =
+    checkBadRequest(
         HttpRequest.newBuilder()
-            .uri(getFunctionUri(correctPath))
+            .uri(getFunctionUri(correctBetaPath))
             .POST(BodyPublishers.noBody())
-            .build();
+            .build());
+  }
 
+  private HttpResponse<String> makeOkRequest() {
+    HttpRequest getRequest =
+        HttpRequest.newBuilder().uri(getFunctionUri(correctBetaPath)).GET().build();
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
+    assertThat(httpResponse.statusCode()).isEqualTo(OK.getHttpStatusCode());
+    return httpResponse;
+  }
+
+  private void checkBadRequest(HttpRequest badRequest) throws IOException {
+    HttpResponse<String> httpResponse = executeRequestWithRetry(client, badRequest);
     assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
     assertThat(httpResponse.headers().map().containsKey("cache-control")).isFalse();
 

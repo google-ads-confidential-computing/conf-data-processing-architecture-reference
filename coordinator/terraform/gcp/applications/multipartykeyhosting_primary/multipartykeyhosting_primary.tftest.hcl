@@ -68,7 +68,6 @@ variables {
   key_generation_single_keyset_alignment_periods                = 0
   key_generation_create_alert_alignment_periods                 = 0
   key_storage_service_base_url                                  = ""
-  key_storage_service_cloudfunction_url                         = ""
   peer_coordinator_wip_provider                                 = ""
   peer_coordinator_service_account                              = ""
   key_id_type                                                   = ""
@@ -78,7 +77,6 @@ variables {
   service_subdomain_suffix                                      = ""
   public_key_service_subdomain                                  = ""
   public_key_service_container_image_url                        = ""
-  public_key_service_load_balancing_scheme                      = ""
   public_key_service_cr_regions                                 = []
   public_key_service_cloud_run_cpu_count                        = 1
   public_key_service_max_cloud_run_concurrency                  = 0
@@ -115,7 +113,6 @@ variables {
   enable_private_key_service_cache                              = false
   private_key_service_load_balancer_protocol                    = "HTTP"
   private_key_service_cache_refresh_in_minutes                  = 0
-  private_key_service_load_balancing_scheme                     = ""
   private_key_service_cloud_run_memory_mb                       = 0
   private_key_service_cloud_run_min_instances                   = 0
   private_key_service_cloud_run_max_instances                   = 0
@@ -132,6 +129,7 @@ variables {
   private_key_service_stable_revision                           = null
   private_key_service_canary_revision                           = null
   private_key_service_canary_traffic_percentage                 = 0
+  enable_parameter_manager                                      = false
 
   quota_alert_duration_sec        = 60
   quota_alert_eval_period_sec     = 180
@@ -139,21 +137,7 @@ variables {
   quota_alert_threshold_important = 0.6
   quota_alert_threshold_urgent    = 0.8
 
-  use_only_key_storage_service_base_url = false
-
-  private_key_service_external_managed_migration_state              = "PREPARE"
-  private_key_service_external_managed_migration_testing_percentage = 0
-
-  private_key_service_forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
-  private_key_service_external_managed_backend_bucket_migration_state              = null
-  private_key_service_external_managed_backend_bucket_migration_testing_percentage = null
-
-  public_key_service_external_managed_migration_state              = "PREPARE"
-  public_key_service_external_managed_migration_testing_percentage = 0
-
-  public_key_service_forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
-  public_key_service_external_managed_backend_bucket_migration_state              = null
-  public_key_service_external_managed_backend_bucket_migration_testing_percentage = null
+  public_key_service_load_balancer_allowed_paths = ["/*"]
 
   public_key_service_lb_outlier_detection_enabled                               = false
   public_key_service_lb_outlier_detection_consecutive_errors                    = 0
@@ -163,6 +147,16 @@ variables {
   public_key_service_lb_outlier_detection_enforcing_consecutive_errors          = 0
   public_key_service_lb_outlier_detection_consecutive_gateway_failure           = 0
   public_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure = 0
+
+  public_key_service_cloud_armor_enabled                            = false
+  public_key_service_cloud_armor_preview_mode                       = true
+  public_key_service_cloud_armor_rate_limit_count                   = 0
+  public_key_service_cloud_armor_rate_limit_interval_sec            = 60
+  public_key_service_cloud_armor_log_level                          = "VERBOSE"
+  public_key_service_cloud_armor_high_block_ratio_threshold         = 0.95
+  public_key_service_cloud_armor_rate_limit_denials_alert_threshold = 1000
+
+  private_key_service_load_balancer_allowed_paths = ["/*"]
 
   private_key_service_lb_outlier_detection_enabled                               = false
   private_key_service_lb_outlier_detection_consecutive_errors                    = 0
@@ -197,6 +191,8 @@ variables {
   key_migration_tool_key_sets = {
     allowed_keysets = []
   }
+  private_key_service_enable_revision_pinning = false
+  private_key_service_stable_revisions        = {}
 }
 
 # All run blocks should have "command = plan".
@@ -258,6 +254,29 @@ run "doesnt_create_key_migration_tool" {
   assert {
     condition     = length(module.key_migration_tool) == 0
     error_message = "Created tool"
+  }
+}
+
+run "doesnt_create_key_sets_parameter_config" {
+  command = plan
+
+  assert {
+    condition     = length(module.key_sets_parameter_config) == 0
+    error_message = "Created parameter config"
+  }
+}
+
+
+run "does_create_key_sets_parameter_config" {
+  command = plan
+
+  variables {
+    enable_parameter_manager = true
+  }
+
+  assert {
+    condition     = length(module.key_sets_parameter_config) == 1
+    error_message = "Didn't create parameter config"
   }
 }
 

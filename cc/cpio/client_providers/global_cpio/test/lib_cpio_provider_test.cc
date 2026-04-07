@@ -91,6 +91,22 @@ TEST(LibCpioProviderTest, Http2ClientNotCreatedInInit) {
   EXPECT_SUCCESS(lib_cpio_provider->Stop());
 }
 
+TEST(LibCpioProviderTest, Http2ClientCreationWorksWithCustomOptions) {
+  auto cpio_options = make_shared<CpioOptions>();
+  cpio_options->http2_read_timeout_in_sec = std::chrono::seconds(10);
+  auto lib_cpio_provider =
+      make_unique<MockLibCpioProviderWithOverrides>(cpio_options);
+  EXPECT_SUCCESS(lib_cpio_provider->Init());
+  EXPECT_SUCCESS(lib_cpio_provider->Run());
+
+  shared_ptr<HttpClientInterface> http2_client;
+  EXPECT_SUCCESS(lib_cpio_provider->GetHttpClient(http2_client));
+  EXPECT_THAT(http2_client, NotNull());
+  EXPECT_THAT(lib_cpio_provider->GetCpuAsyncExecutorMember(), NotNull());
+
+  EXPECT_SUCCESS(lib_cpio_provider->Stop());
+}
+
 TEST(LibCpioProviderTest, Http1ClientNotCreatedInInit) {
   auto lib_cpio_provider = make_unique<MockLibCpioProviderWithOverrides>();
   EXPECT_SUCCESS(lib_cpio_provider->Init());

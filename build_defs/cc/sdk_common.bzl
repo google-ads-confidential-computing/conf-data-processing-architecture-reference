@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Common SDK build defs."""
+
 load("//build_defs/cc/shared:bazel_rules_cpp.bzl", "bazel_rules_cpp")
 load("//build_defs/cc/shared:bazelisk.bzl", "bazelisk")
 load("//build_defs/cc/shared:boost.bzl", "boost")
@@ -27,16 +29,23 @@ load("//build_defs/shared:bazel_docker_rules.bzl", "bazel_docker_rules")
 load("//build_defs/shared:bazel_rules_java.bzl", "bazel_rules_java")
 load("//build_defs/shared:bazel_rules_oci.bzl", "bazel_rules_oci")
 load("//build_defs/shared:bazel_rules_pkg.bzl", "bazel_rules_pkg")
-load("//build_defs/shared:enclaves_kmstools.bzl", "enclaves_kmstools_libraries")
+load("//build_defs/shared:bazel_rules_python.bzl", "bazel_rules_python")
 load("//build_defs/shared:golang.bzl", "go_deps")
 load("//build_defs/shared:google_cloud_sdk.bzl", "google_cloud_sdk")
 load("//build_defs/shared:java_grpc.bzl", "java_grpc")
-load("//build_defs/shared:packer.bzl", "packer")
 load("//build_defs/shared:protobuf.bzl", "protobuf")
 load("//build_defs/shared:terraform.bzl", "terraform")
 load("//build_defs/tink:tink_defs.bzl", "import_tink_git")
 
-def sdk_common(protobuf_version, protobuf_repo_hash, import_aws, import_gcp):
+def sdk_common(protobuf_version, protobuf_repo_hash, import_gcp):
+    """Common SDK build defs.
+
+    Args:
+      protobuf_version: the version of protobuf to import
+      protobuf_repo_hash: the sha256 hash of the corresponding protobuf version
+      import_gcp: set to True if importing GCP deps
+    """
+
     absl()
     bazelisk()
     bazel_docker_rules()
@@ -44,12 +53,11 @@ def sdk_common(protobuf_version, protobuf_repo_hash, import_aws, import_gcp):
     bazel_rules_cpp()
     bazel_rules_java()
     bazel_rules_pkg()
+    bazel_rules_python()
     bazel_build_tools()
     boost()
     boringssl()
     cc_utils()
-    if import_aws:
-        enclaves_kmstools_libraries()
     go_deps()
     protobuf(protobuf_version, protobuf_repo_hash)
     java_grpc()
@@ -60,5 +68,4 @@ def sdk_common(protobuf_version, protobuf_repo_hash, import_aws, import_gcp):
         google_cloud_sdk()
     import_tink_git()
     com_google_farmhash()
-    packer()
     terraform()

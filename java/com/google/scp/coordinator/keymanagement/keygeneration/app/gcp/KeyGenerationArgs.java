@@ -74,6 +74,7 @@ public final class KeyGenerationArgs {
       description = "Number of days after creation before purging a key from the database.")
   private int ttlInDays = 365;
 
+  // TODO: b/483708292 - remove setting this parameter
   @Parameter(names = "--multiparty", description = "Set to true for multiparty key generation.")
   private boolean multiparty = false;
 
@@ -101,18 +102,9 @@ public final class KeyGenerationArgs {
               + " service)")
   private String keyStorageServiceBaseUrl = "";
 
-  @Parameter(
-      names = "--key_storage_service_cloudfunction_url",
-      description =
-          "Cloudfunction url for Coordinator B HTTP services "
-              + "(used as audience for gcp OIDC authentication only) "
-              + "This is temporary and will be replaced by key storage service url in the future. ")
-  private String keyStorageServiceCloudfunctionUrl = "";
-
   @Parameter(names = "--key_id_type", description = "Key ID Type")
   private String keyIdType = "";
 
-  /** TODO: delete once local KMS has been implemented and can replace this stopgap feature. */
   @Beta
   @Parameter(
       names = "--test-encoded-keyset-handle",
@@ -121,7 +113,6 @@ public final class KeyGenerationArgs {
               + " This is an optional parameter to use to override the default behavior.")
   private String testEncodedKeysetHandle = "";
 
-  /** TODO: delete once local KMS has been implemented and can replace this stopgap feature. */
   @Beta
   @Parameter(
       names = "--test-peer-coordinator-encoded-keyset-handle",
@@ -132,9 +123,9 @@ public final class KeyGenerationArgs {
 
   @Beta
   @Parameter(
-      names = "--test-use-default-parameters-on-gcp",
-      description = "Whether or not the default parameters should be used on GCP.")
-  private boolean testUseDefaultParametersOnGcp = false;
+      names = "--use-test-parameters-on-gcp",
+      description = "Whether or not the test parameters should be used on GCP.")
+  private boolean useTestParametersOnGcp = false;
 
   public String getKmsKeyBaseUri() {
     return kmsKeyBaseUri;
@@ -176,14 +167,6 @@ public final class KeyGenerationArgs {
     return keyStorageServiceBaseUrl;
   }
 
-  public Optional<String> getKeyStorageServiceCloudfunctionUrl() {
-    return Optional.ofNullable(keyStorageServiceCloudfunctionUrl).filter(id -> !id.isEmpty());
-  }
-
-  public boolean isMultiparty() {
-    return multiparty;
-  }
-
   public String getPeerCoordinatorWipProvider() {
     return peerCoordinatorWipProvider;
   }
@@ -204,20 +187,19 @@ public final class KeyGenerationArgs {
     return Optional.of(keyIdType).filter(type -> !type.isEmpty());
   }
 
-  /** TODO: delete once local KMS has been implemented and can replace this stopgap feature. */
   @Beta
+  // TODO: b/483708292 - Update to use FakeKmsClient
   public Optional<String> getTestEncodedKeysetHandle() {
     return Optional.ofNullable(testEncodedKeysetHandle).filter(s -> !s.isEmpty());
   }
 
-  /** TODO: delete once local KMS has been implemented and can replace this stopgap feature. */
   @Beta
+  // TODO: b/483708292 - Update to use FakeKmsClient
   public Optional<String> getTestPeerCoordinatorEncodedKeysetHandle() {
     return Optional.ofNullable(testPeerCoordinatorEncodedKeysetHandle).filter(s -> !s.isEmpty());
   }
 
-  @Beta
-  public boolean getTestUseDefaultParametersOnGcp() {
-    return testUseDefaultParametersOnGcp;
+  public boolean useTestParametersOnGcp() {
+    return useTestParametersOnGcp;
   }
 }

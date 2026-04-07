@@ -23,7 +23,6 @@ java_test(
         "//java/com/google/scp/operator/cpio/blobstorageclient",
         "//java/external:acai",
         "//java/external:google_truth",
-        "//java/external:google_truth8",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jimfs",

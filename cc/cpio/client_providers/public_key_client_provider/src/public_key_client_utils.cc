@@ -60,7 +60,7 @@ namespace {
 constexpr char kPublicKeyClientUtils[] = "PublicKeyClientUtils";
 constexpr char kPublicKeysLabel[] = "keys";
 constexpr char kPublicKeyIdLabel[] = "id";
-constexpr char kPublicKeyLabel[] = "key";
+constexpr char kPublicKeyLabel[] = "tinkBinary";
 constexpr char kPublicKeyHeaderDate[] = "date";
 constexpr char kPublicKeyHeaderCacheControl[] = "cache-control";
 constexpr char kPublicKeyDateTimeFormat[] = "%a, %d %b %Y %H:%M:%S";

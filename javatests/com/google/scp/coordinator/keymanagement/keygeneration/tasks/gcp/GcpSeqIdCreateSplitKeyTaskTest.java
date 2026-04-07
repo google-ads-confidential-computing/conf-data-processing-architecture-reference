@@ -17,7 +17,6 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
@@ -58,6 +57,7 @@ import org.junit.Test;
 
 /** Test the full CreateSplitKeyTask using a faked KeyStorageClient and spied-on dependencies. */
 public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskTestBase {
+  private static final String SET_NAME = "test-set-name";
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
 
@@ -71,7 +71,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     int expectedBackfillDays = 5;
 
     task.createSplitKey(
-        DEFAULT_SET_NAME,
+        SET_NAME,
         DEFAULT_TINK_TEMPLATE,
         keysToCreate,
         expectedExpiryInDays,
@@ -80,7 +80,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         Instant.now());
 
     task.createSplitKey(
-        DEFAULT_SET_NAME,
+        SET_NAME,
         DEFAULT_TINK_TEMPLATE,
         keysToCreate,
         expectedExpiryInDays,
@@ -114,7 +114,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     int expectedBackfillDays = 5;
 
     task.createSplitKey(
-        DEFAULT_SET_NAME,
+        SET_NAME,
         DEFAULT_TINK_TEMPLATE,
         keysToCreate,
         expectedExpiryInDays,
@@ -149,7 +149,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     int expectedBackfillDays = 5;
 
     task.createSplitKey(
-        DEFAULT_SET_NAME,
+        SET_NAME,
         DEFAULT_TINK_TEMPLATE,
         keysToCreate,
         expectedExpiryInDays,
@@ -179,7 +179,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
     int expectedBackfillDays = 5;
 
     task.createSplitKey(
-        DEFAULT_SET_NAME,
+        SET_NAME,
         DEFAULT_TINK_TEMPLATE,
         keysToCreate,
         expectedExpiryInDays,
@@ -206,7 +206,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
         .thenCallRealMethod();
     try {
       task.createSplitKey(
-          DEFAULT_SET_NAME,
+          SET_NAME,
           DEFAULT_TINK_TEMPLATE,
           keysToCreate,
           expectedExpiryInDays,
@@ -236,7 +236,7 @@ public final class GcpSeqIdCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskT
   }
 
   private void insertKeyWithKeyId(String keyId) throws ServiceException {
-    keyDb.createKey(FakeEncryptionKey.withKeyId(keyId));
+    keyDb.createKey(FakeEncryptionKey.withKeyId(SET_NAME, keyId));
   }
 
   private static class TestEnv extends AbstractModule {

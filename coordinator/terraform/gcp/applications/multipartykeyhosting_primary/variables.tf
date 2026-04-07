@@ -52,6 +52,11 @@ variable "secondary_region_zone" {
   type        = string
 }
 
+variable "enable_parameter_manager" {
+  description = "Parameter to control using parameter manager."
+  type        = bool
+}
+
 ################################################################################
 # Global Alarm Variables.
 ################################################################################
@@ -258,18 +263,8 @@ variable "key_generation_create_alert_alignment_periods" {
   type        = number
 }
 
-variable "use_only_key_storage_service_base_url" {
-  description = "Flag to indicate if only key storage service base url should be used for peer coordinator."
-  type        = bool
-}
-
 variable "key_storage_service_base_url" {
   description = "Base url for key storage service for peer coordinator."
-  type        = string
-}
-
-variable "key_storage_service_cloudfunction_url" {
-  description = "Cloud function url for peer coordinator."
   type        = string
 }
 
@@ -347,40 +342,23 @@ variable "public_key_service_container_image_url" {
   nullable    = false
 }
 
+################################################################################
+# Public Key Service Load Balancer Variables.
+################################################################################
+
+variable "public_key_service_load_balancer_allowed_paths" {
+  description = "List of allowed paths for the public key service load balancer. Requests to other paths will be denied."
+  type        = list(string)
+}
+
 variable "public_key_service_load_balancer_protocol" {
   description = "The protocol the load balancer uses to communicate with backends."
   type        = string
 }
 
-variable "public_key_service_load_balancing_scheme" {
-  description = "Whether the Public KS will be used with internal or external load balancing."
-  type        = string
-}
-
-variable "public_key_service_external_managed_migration_state" {
-  description = "Defines what stage of the Public KS LB migration in."
-  type        = string
-}
-
-variable "public_key_service_external_managed_migration_testing_percentage" {
-  description = "Defines what percentage of traffic should be routed to upgraded Public KS LB."
-  type        = number
-}
-
-variable "public_key_service_forwarding_rule_load_balancing_scheme" {
-  description = "Specifies the load balancing scheme used for the forwarding rule."
-  type        = string
-}
-
-variable "public_key_service_external_managed_backend_bucket_migration_state" {
-  description = "Specifies the canary migration state for the backend buckets attached to this forwarding rule."
-  type        = string
-}
-
-variable "public_key_service_external_managed_backend_bucket_migration_testing_percentage" {
-  description = "Determines the fraction of requests to backend buckets that should be processed by the Global external Application Load Balancer."
-  type        = number
-}
+################################################################################
+# Public Key Service Cloud Run Variables.
+################################################################################
 
 variable "public_key_service_cr_regions" {
   description = "Additional regions beyond primary and secondary that Public KS will run in."
@@ -470,40 +448,24 @@ variable "private_key_service_cache_refresh_in_minutes" {
   type        = number
 }
 
+
+################################################################################
+# Private Key Service Load Balancer Variables.
+################################################################################
+
 variable "private_key_service_load_balancer_protocol" {
   description = "The protocol the load balancer uses to communicate with backends."
   type        = string
 }
 
-variable "private_key_service_load_balancing_scheme" {
-  description = "Whether the Private KS will be used with internal or external load balancing."
-  type        = string
+variable "private_key_service_load_balancer_allowed_paths" {
+  description = "List of allowed paths for the private key service load balancer. Requests to other paths will be denied."
+  type        = list(string)
 }
 
-variable "private_key_service_external_managed_migration_state" {
-  description = "Defines what stage of the Private KS LB migration in."
-  type        = string
-}
-
-variable "private_key_service_external_managed_migration_testing_percentage" {
-  description = "Defines what percentage of traffic should be routed to upgraded Private KS LB."
-  type        = number
-}
-
-variable "private_key_service_forwarding_rule_load_balancing_scheme" {
-  description = "Specifies the load balancing scheme used for the forwarding rule."
-  type        = string
-}
-
-variable "private_key_service_external_managed_backend_bucket_migration_state" {
-  description = "Specifies the canary migration state for the backend buckets attached to this forwarding rule."
-  type        = string
-}
-
-variable "private_key_service_external_managed_backend_bucket_migration_testing_percentage" {
-  description = "Determines the fraction of requests to backend buckets that should be processed by the Global external Application Load Balancer."
-  type        = number
-}
+################################################################################
+# Private Key Service Cloud Run Variables.
+################################################################################
 
 variable "private_key_service_cloud_run_ingress" {
   description = "Ingress setting used to restrict access to Private KS."
@@ -533,7 +495,7 @@ variable "private_key_service_execution_environment" {
 }
 
 ################################################################################
-# CR Canary Variables.
+# Private Key Service CR Canary Variables.
 ################################################################################
 
 variable "private_key_service_enable_revision_pinning" {
@@ -676,7 +638,46 @@ variable "public_key_service_lb_outlier_detection_enforcing_consecutive_gateway_
 }
 
 ################################################################################
-# Encryption Key Service Alarm Variables.
+# Cloud Armor Security Policy Variables for Public Key Service.
+################################################################################
+
+variable "public_key_service_cloud_armor_enabled" {
+  description = "If true, creates and attaches the Cloud Armor security policy for the public key service."
+  type        = bool
+}
+
+variable "public_key_service_cloud_armor_preview_mode" {
+  description = "If true, the Cloud Armor security policy for the public key service is in preview mode."
+  type        = bool
+}
+
+variable "public_key_service_cloud_armor_rate_limit_count" {
+  description = "Rate limit count for the Public Key Service Cloud Armor policy."
+  type        = number
+}
+
+variable "public_key_service_cloud_armor_rate_limit_interval_sec" {
+  description = "Rate limit interval in seconds for the Public Key Service Cloud Armor policy."
+  type        = number
+}
+
+variable "public_key_service_cloud_armor_log_level" {
+  description = "Log level for the Public Key Service Cloud Armor policy."
+  type        = string
+}
+
+variable "public_key_service_cloud_armor_high_block_ratio_threshold" {
+  description = "The threshold for the Public Key Service Cloud Armor high block ratio alert."
+  type        = number
+}
+
+variable "public_key_service_cloud_armor_rate_limit_denials_alert_threshold" {
+  description = "The threshold for the Public Key Service Cloud Armor rate limit denials alert."
+  type        = number
+}
+
+################################################################################
+# Private Key Service Alarm Variables.
 ################################################################################
 
 variable "private_key_service_alarm_eval_period_sec" {
@@ -761,7 +762,7 @@ variable "private_key_service_config_read_alert_threshold" {
 }
 
 ################################################################################
-# Encryption Key Service Load Balancer Outlier Detection Variables.
+# Private Key Service Load Balancer Outlier Detection Variables.
 ################################################################################
 
 variable "private_key_service_lb_outlier_detection_enabled" {

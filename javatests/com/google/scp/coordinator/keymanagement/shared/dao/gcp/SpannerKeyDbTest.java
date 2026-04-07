@@ -17,7 +17,6 @@
 package com.google.scp.coordinator.keymanagement.shared.dao.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDbUtil.getActiveKeysComparator;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.UNSUPPORTED_OPERATION;
 import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.withAllTimesSet;
@@ -56,11 +55,13 @@ import java.util.List;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class SpannerKeyDbTest extends KeyDbBaseTest {
+  private static final String SET_NAME = "test-set-name";
 
   private static final int KEY_ITEM_COUNT = 5;
   private static final String SHOULD_NOT_UPDATE = "should not update";
@@ -239,16 +240,26 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
 
   @Test
   public void updateKeyMaterial_missingKeyId() throws ServiceException {
-    String keyId = "test-key-id";
     String wrongKeyId = "test-wrong-key-id";
-    EncryptionKey key1 = EncryptionKey.newBuilder().setKeyId(keyId).build();
     EncryptionKey key2 = EncryptionKey.newBuilder().setKeyId(wrongKeyId).build();
+    missingKeyIdCheck(() -> keyDb.updateKeyMaterial(ImmutableList.of(key2)));
+  }
+
+  @Test
+  public void updateMigrationKeyMaterial_missingKeyId() throws ServiceException {
+    String wrongKeyId = "test-wrong-key-id";
+    EncryptionKey key2 = EncryptionKey.newBuilder().setKeyId(wrongKeyId).build();
+    missingKeyIdCheck(() -> keyDb.updateMigrationKeyMaterial(ImmutableList.of(key2)));
+  }
+
+  private void missingKeyIdCheck(ThrowingRunnable throwing) throws ServiceException {
+    String keyId = "test-key-id";
+    EncryptionKey key1 = EncryptionKey.newBuilder().setKeyId(keyId).build();
 
     keyDb.createKey(key1);
     EncryptionKey beforeUpdate = keyDb.getKey(keyId);
 
-    ServiceException ex =
-        assertThrows(ServiceException.class, () -> keyDb.updateKeyMaterial(ImmutableList.of(key2)));
+    ServiceException ex = assertThrows(ServiceException.class, throwing);
     assertThat(ex.getErrorCode()).isEqualTo(NOT_FOUND);
 
     EncryptionKey afterUpdate = keyDb.getKey(keyId);
@@ -308,28 +319,9 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
   }
 
   @Test
-  public void updateMigrationKeyMaterial_missingKeyId() throws ServiceException {
-    String keyId = "test-key-id";
-    String wrongKeyId = "test-wrong-key-id";
-    EncryptionKey key1 = EncryptionKey.newBuilder().setKeyId(keyId).build();
-    EncryptionKey key2 = EncryptionKey.newBuilder().setKeyId(wrongKeyId).build();
-
-    keyDb.createKey(key1);
-    EncryptionKey beforeUpdate = keyDb.getKey(keyId);
-
-    ServiceException ex =
-        assertThrows(
-            ServiceException.class, () -> keyDb.updateMigrationKeyMaterial(ImmutableList.of(key2)));
-    assertThat(ex.getErrorCode()).isEqualTo(NOT_FOUND);
-
-    EncryptionKey afterUpdate = keyDb.getKey(keyId);
-    assertThat(afterUpdate).isEqualTo(beforeUpdate);
-  }
-
-  @Test
   public void getKey_success() throws ServiceException {
     EncryptionKey expectedKey =
-        FakeEncryptionKey.createBuilderWithDefaults()
+        FakeEncryptionKey.createEncryptionKeyBuilder(SET_NAME)
             // SpannerKeyDb returns times based off seconds
             .setExpirationTime(Instant.now().plus(7, DAYS).toEpochMilli())
             .setActivationTime(Instant.now().toEpochMilli())
@@ -353,21 +345,21 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
 
   @Test
   public void getActiveKeys_atLimitCount() throws ServiceException {
-    putNItemsRandomValues(keyDb, 10);
+    putNItemsRandomValues(keyDb, SET_NAME, 10);
 
     awaitAndAssertActiveKeyCount(keyDb, KEY_ITEM_COUNT);
   }
 
   @Test
   public void getActiveKeys_whenGreaterThanLimitCount() throws ServiceException {
-    putNItemsRandomValues(keyDb, 13);
+    putNItemsRandomValues(keyDb, SET_NAME, 13);
 
     awaitAndAssertActiveKeyCount(keyDb, KEY_ITEM_COUNT);
   }
 
   @Test
   public void getActiveKeys_whenLessThanLimitCount() throws ServiceException {
-    putNItemsRandomValues(keyDb, 3);
+    putNItemsRandomValues(keyDb, SET_NAME, 3);
 
     awaitAndAssertActiveKeyCount(keyDb, 3);
   }
@@ -379,7 +371,7 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
 
   @Test
   public void getActiveKeys_expiredKeysAreFiltered() throws ServiceException {
-    putKeyWithExpiration(keyDb, Instant.now().minusSeconds(2000));
+    putKeyWithExpiration(keyDb, SET_NAME, Instant.now().minusSeconds(2000));
 
     awaitAndAssertActiveKeyCount(keyDb, 0);
     // Returns all even expired
@@ -388,11 +380,14 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
   @Test
   public void getActiveKeys_inactiveKeysAreFiltered() throws ServiceException {
     putKeyWithActivationAndExpirationTimes(
-        keyDb, Instant.now().plus(Duration.ofHours(1)), Instant.now().plus(Duration.ofHours(1)));
+        keyDb,
+        SET_NAME,
+        Instant.now().plus(Duration.ofHours(1)),
+        Instant.now().plus(Duration.ofHours(1)));
     awaitAndAssertActiveKeyCount(keyDb, 0);
 
     putKeyWithActivationAndExpirationTimes(
-        keyDb, Instant.now(), Instant.now().plus(Duration.ofHours(1)));
+        keyDb, SET_NAME, Instant.now(), Instant.now().plus(Duration.ofHours(1)));
     awaitAndAssertActiveKeyCount(keyDb, 1);
   }
 
@@ -410,7 +405,7 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
     EncryptionKey key =
         EncryptionKey.newBuilder()
             .setKeyId("test")
-            .setSetName(DEFAULT_SET_NAME)
+            .setSetName(SET_NAME)
             .setStatus(EncryptionKeyStatus.ACTIVE)
             .setCreationTime(Instant.now().toEpochMilli())
             .setActivationTime(Instant.now().toEpochMilli())
@@ -431,23 +426,23 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
   public void getActiveKeys_keysAreSorted() throws ServiceException {
     // Insert items out of expiration time order.
     for (var i : ImmutableList.of(2, 4, 3, 6, 1)) {
-      putKeyWithExpiration(keyDb, Instant.now().plus(Duration.ofHours(i)));
+      putKeyWithExpiration(keyDb, SET_NAME, Instant.now().plus(Duration.ofHours(i)));
     }
 
     awaitAndAssertActiveKeyCount(keyDb, 5);
 
     // SpannerKeyDb doesn't use getActiveKeysComparator but other implementations do, ensure the
     // sort order of SpannerKeyDb matches other implementations.
-    assertThat(keyDb.getActiveKeys(DEFAULT_SET_NAME, 5)).isInOrder(getActiveKeysComparator());
+    assertThat(keyDb.getActiveKeys(SET_NAME, 5)).isInOrder(getActiveKeysComparator());
 
-    assertThat(keyDb.listAllKeysForSetName(DEFAULT_SET_NAME)).isInOrder(getActiveKeysComparator());
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME)).isInOrder(getActiveKeysComparator());
   }
 
   @Test
   public void getActiveKeys_withZeroKeyLimit() throws ServiceException {
-    putNItemsRandomValues(keyDb, 10);
+    putNItemsRandomValues(keyDb, SET_NAME, 10);
 
-    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, 0, Instant.now());
+    ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(SET_NAME, 0, Instant.now());
     assertThat(keys.size()).isEqualTo(10);
   }
 
@@ -459,14 +454,14 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
 
     for (var i : offsets) {
       putKeyWithActivationAndExpirationTimes(
-          keyDb, start.plus(Duration.ofHours(i)), end.plus(Duration.ofHours(i)));
+          keyDb, SET_NAME, start.plus(Duration.ofHours(i)), end.plus(Duration.ofHours(i)));
     }
 
     awaitAndAssertActiveKeyByRangeCount(keyDb, start, end);
 
     // SpannerKeyDb doesn't use getActiveKeysComparator but other implementations do, ensure the
     // sort order of SpannerKeyDb matches other implementations.
-    var keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, 10, start, end);
+    var keys = keyDb.getActiveKeys(SET_NAME, 10, start, end);
     assertThat(keys).hasSize(4);
     assertThat(keys).isInOrder(getActiveKeysComparator());
     for (var key : keys) {
@@ -474,7 +469,7 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
       assertThat(key.getActivationTime()).isLessThan(end.toEpochMilli());
     }
 
-    var allKeys = keyDb.listAllKeysForSetName(DEFAULT_SET_NAME);
+    var allKeys = keyDb.listAllKeysForSetName(SET_NAME);
     assertThat(allKeys).hasSize(offsets.size());
     assertThat(allKeys).isInOrder(getActiveKeysComparator());
   }
@@ -486,13 +481,13 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
 
     for (int i = 1; i <= 5; i++) {
       putKeyWithActivationAndExpirationTimes(
-          keyDb, start.plus(Duration.ofHours(i)), end.plus(Duration.ofHours(i)));
+          keyDb, SET_NAME, start.plus(Duration.ofHours(i)), end.plus(Duration.ofHours(i)));
     }
 
     awaitAndAssertActiveKeyByRangeCount(keyDb, start, end);
 
     // Limit of 1 returns just the latest key
-    var keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, 1, start, end);
+    var keys = keyDb.getActiveKeys(SET_NAME, 1, start, end);
     assertThat(keys).hasSize(1);
     assertThat(keys.getFirst().getActivationTime())
         .isEqualTo(start.plus(Duration.ofHours(5)).toEpochMilli());
@@ -507,15 +502,15 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
     var end = now.plus(Duration.ofHours(10));
 
     // Never active
-    putKeyWithActivationAndExpirationTimes(keyDb, now, now);
-    putKeyWithActivationAndExpirationTimes(keyDb, now, now);
+    putKeyWithActivationAndExpirationTimes(keyDb, SET_NAME, now, now);
+    putKeyWithActivationAndExpirationTimes(keyDb, SET_NAME, now, now);
 
     // Valid Key
-    putKeyWithActivationAndExpirationTimes(keyDb, start, end);
+    putKeyWithActivationAndExpirationTimes(keyDb, SET_NAME, start, end);
 
     awaitAndAssertActiveKeyByRangeCount(keyDb, start, end);
 
-    var keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, 10, start, end);
+    var keys = keyDb.getActiveKeys(SET_NAME, 10, start, end);
     assertThat(keys).hasSize(1);
     assertThat(keys.getFirst().getActivationTime()).isEqualTo(start.toEpochMilli());
     assertThat(keys.getFirst().getExpirationTime()).isEqualTo(end.toEpochMilli());
@@ -527,10 +522,10 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
     var start = now.minus(Duration.ofHours(10));
     var end = now.plus(Duration.ofHours(10));
 
-    putKeyWithNoRotation(keyDb);
+    putKeyWithNoRotation(keyDb, SET_NAME);
     awaitAndAssertActiveKeyByRangeCount(keyDb, start, end);
 
-    var keys = keyDb.getActiveKeys(DEFAULT_SET_NAME, 10, start, end);
+    var keys = keyDb.getActiveKeys(SET_NAME, 10, start, end);
     assertThat(keys).hasSize(1);
   }
 
@@ -538,48 +533,32 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
   public void listAllKeysForSetName_returnsAll_test() throws ServiceException {
     var now = Instant.now();
 
-    putItem(keyDb, withAllTimesSet(now));
-    putItem(keyDb, withAllTimesSet(now.plus(10, DAYS)));
-    putItem(keyDb, withAllTimesSet(now.plus(100, DAYS)));
-    putItem(keyDb, withAllTimesSet(now.minus(10, DAYS)));
-    putItem(keyDb, withAllTimesSet(now.minus(500, DAYS)));
+    putItem(keyDb, withAllTimesSet(SET_NAME, now));
+    putItem(keyDb, withAllTimesSet(SET_NAME, now.plus(10, DAYS)));
+    putItem(keyDb, withAllTimesSet(SET_NAME, now.plus(100, DAYS)));
+    putItem(keyDb, withAllTimesSet(SET_NAME, now.minus(10, DAYS)));
+    putItem(keyDb, withAllTimesSet(SET_NAME, now.minus(500, DAYS)));
 
-    awaitAndAssertAllKeyCount(keyDb, 5);
-    assertThat(keyDb.listAllKeysForSetName(DEFAULT_SET_NAME)).isInOrder(getActiveKeysComparator());
-  }
-
-  @Test
-  public void listAllKeysForSetName_returnsAll_withNonDefaultSetName() throws ServiceException {
-    var now = Instant.now();
-    String setName = "test-set-name";
-
-    putItem(keyDb, withAllTimesSet(now).toBuilder().setSetName(setName).build());
-    putItem(keyDb, withAllTimesSet(now.plus(10, DAYS)).toBuilder().setSetName(setName).build());
-    putItem(keyDb, withAllTimesSet(now.plus(100, DAYS)).toBuilder().setSetName(setName).build());
-    putItem(keyDb, withAllTimesSet(now.minus(10, DAYS)).toBuilder().setSetName(setName).build());
-    putItem(keyDb, withAllTimesSet(now.minus(500, DAYS)).toBuilder().setSetName(setName).build());
-
-    awaitAndAssertAllKeyCount(keyDb, setName, 5);
-    assertThat(keyDb.listAllKeysForSetName(setName)).isInOrder(getActiveKeysComparator());
+    awaitAndAssertAllKeyCount(keyDb, SET_NAME, 5);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME)).isInOrder(getActiveKeysComparator());
   }
 
   @Test
   public void listAllKeysForSetName_returnsOnlyKeysForRequestedSetName() throws ServiceException {
     var now = Instant.now();
-    String setName1 = "test-set-name-1";
     String setName2 = "test-set-name-2";
 
-    putItem(keyDb, withAllTimesSet(now).toBuilder().setSetName(setName1).build());
-    putItem(keyDb, withAllTimesSet(now.plus(10, DAYS)).toBuilder().setSetName(setName1).build());
-    putItem(keyDb, withAllTimesSet(now.minus(10, DAYS)).toBuilder().setSetName(setName1).build());
+    putItem(keyDb, withAllTimesSet(SET_NAME, now));
+    putItem(keyDb, withAllTimesSet(SET_NAME, now.plus(10, DAYS)));
+    putItem(keyDb, withAllTimesSet(SET_NAME, now.minus(10, DAYS)));
 
-    putItem(keyDb, withAllTimesSet(now).toBuilder().setSetName(setName2).build());
-    putItem(keyDb, withAllTimesSet(now.minus(10, DAYS)).toBuilder().setSetName(setName2).build());
-    putItem(keyDb, withAllTimesSet(now.plus(100, DAYS)).toBuilder().setSetName(setName2).build());
+    putItem(keyDb, withAllTimesSet(setName2, now));
+    putItem(keyDb, withAllTimesSet(setName2, now.minus(10, DAYS)));
+    putItem(keyDb, withAllTimesSet(setName2, now.plus(100, DAYS)));
 
-    awaitAndAssertAllKeyCount(keyDb, setName1, 3);
+    awaitAndAssertAllKeyCount(keyDb, SET_NAME, 3);
     awaitAndAssertAllKeyCount(keyDb, setName2, 3);
-    assertThat(keyDb.listAllKeysForSetName(setName1)).isInOrder(getActiveKeysComparator());
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME)).isInOrder(getActiveKeysComparator());
     assertThat(keyDb.listAllKeysForSetName(setName2)).isInOrder(getActiveKeysComparator());
   }
 
@@ -596,7 +575,7 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
         .untilAsserted(
             () -> {
               ImmutableList<EncryptionKey> keys =
-                  keyDb.getActiveKeys(DEFAULT_SET_NAME, KEY_ITEM_COUNT, Instant.now());
+                  keyDb.getActiveKeys(SET_NAME, KEY_ITEM_COUNT, Instant.now());
               assertThat(keys).isNotNull();
               assertThat(keys).hasSize(expectedSize);
             });
@@ -613,8 +592,7 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
         .atMost(5, SECONDS)
         .untilAsserted(
             () -> {
-              ImmutableList<EncryptionKey> keys =
-                  keyDb.getActiveKeys(DEFAULT_SET_NAME, 0, start, end);
+              ImmutableList<EncryptionKey> keys = keyDb.getActiveKeys(SET_NAME, 0, start, end);
               assertThat(keys).isNotNull();
             });
   }
@@ -655,10 +633,6 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
         .isEqualTo((expectedKey.getMigrationJsonEncodedKeyset()));
     assertThat(receivedKey.getMigrationKeySplitData(0))
         .isEqualTo((expectedKey.getMigrationKeySplitData(0)));
-  }
-
-  private static void awaitAndAssertAllKeyCount(SpannerKeyDb keyDb, int expectedSize) {
-    awaitAndAssertAllKeyCount(keyDb, DEFAULT_SET_NAME, expectedSize);
   }
 
   private static void awaitAndAssertAllKeyCount(

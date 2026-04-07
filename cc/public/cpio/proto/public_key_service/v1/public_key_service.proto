@@ -33,7 +33,10 @@ service PublicKeyService {
 }
 
 // Request to list public keys.
-message ListPublicKeysRequest {}
+message ListPublicKeysRequest {
+  // Required. The name of the key set.
+  string key_set_name = 1;
+}
 
 // Response of listing public keys
 message ListPublicKeysResponse {

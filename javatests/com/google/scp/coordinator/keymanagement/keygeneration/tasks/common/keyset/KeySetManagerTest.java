@@ -17,8 +17,8 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyset;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb.DEFAULT_SET_NAME;
 import static com.google.scp.shared.util.KeyParams.DEFAULT_TINK_TEMPLATE;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Provider;
@@ -44,28 +44,9 @@ public final class KeySetManagerTest {
       ConfigCacheDuration.of(Duration.ofSeconds(1));
 
   @Test
-  public void testGetConfigs_noConfig_returnsOnlyDefaultConfig() {
-    // Given
+  public void testGetConfigs_noConfig_throwsException() {
     KeySetManager manager = createKeySetManager(null);
-
-    // When
-    ImmutableList<KeySetConfig> configs = manager.getConfigs();
-
-    // Then
-    assertThat(configs).containsExactly(createKeySetConfig(DEFAULT_SET_NAME));
-  }
-
-  @Test
-  public void testGetConfigs_nullConfigJson_returnsOnlyDefaultConfig() {
-    // Given
-    String config = "null";
-    KeySetManager manager = createKeySetManager(config);
-
-    // When
-    ImmutableList<KeySetConfig> configs = manager.getConfigs();
-
-    // Then
-    assertThat(configs).containsExactly(createKeySetConfig(DEFAULT_SET_NAME));
+    assertThrows(IllegalStateException.class, manager::getConfigs);
   }
 
   @Test

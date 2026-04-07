@@ -17,6 +17,7 @@
 #ifndef SCP_CPIO_INTERFACE_TYPE_DEFS_H_
 #define SCP_CPIO_INTERFACE_TYPE_DEFS_H_
 
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <string>
@@ -25,6 +26,7 @@
 
 #include "core/interface/async_executor_interface.h"
 #include "core/interface/logger_interface.h"
+#include "core/interface/type_def.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/metric_client/type_def.h"
 
@@ -82,6 +84,10 @@ struct CpioOptions {
 
   /// Options for Metric Client.
   MetricClientOptions metric_client_options;
+
+  /// Http2 client read timeout in seconds.
+  std::chrono::seconds http2_read_timeout_in_sec =
+      std::chrono::seconds(core::kDefaultHttp2ReadTimeoutInSeconds);
 };
 
 template <typename TResponse>

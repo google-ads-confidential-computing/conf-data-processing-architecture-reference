@@ -56,6 +56,11 @@ variable "secondary_region_zone" {
   type        = string
 }
 
+variable "enable_parameter_manager" {
+  description = "Parameter to control using parameter manager."
+  type        = bool
+}
+
 ################################################################################
 # Global Alarm Variables.
 ################################################################################
@@ -195,40 +200,23 @@ variable "private_key_service_cloud_run_concurrency" {
   type        = number
 }
 
-variable "private_key_service_load_balancing_scheme" {
-  description = "Whether the Private KS will be used with internal or external load balancing."
-  type        = string
-}
+################################################################################
+# Private Key Service Load Balancer Variables.
+################################################################################
 
 variable "private_key_service_load_balancer_protocol" {
   description = "The protocol the load balancer uses to communicate with backends."
   type        = string
 }
 
-variable "private_key_service_external_managed_migration_state" {
-  description = "Defines what stage of the Private KS LB migration in."
-  type        = string
+variable "private_key_service_load_balancer_allowed_paths" {
+  description = "List of allowed paths for the private key service load balancer. Requests to other paths will be denied."
+  type        = list(string)
 }
 
-variable "private_key_service_external_managed_migration_testing_percentage" {
-  description = "Defines what percentage of traffic should be routed to upgraded Private KS LB."
-  type        = number
-}
-
-variable "private_key_service_forwarding_rule_load_balancing_scheme" {
-  description = "Specifies the load balancing scheme used for the forwarding rule."
-  type        = string
-}
-
-variable "private_key_service_external_managed_backend_bucket_migration_state" {
-  description = "Specifies the canary migration state for the backend buckets attached to this forwarding rule."
-  type        = string
-}
-
-variable "private_key_service_external_managed_backend_bucket_migration_testing_percentage" {
-  description = "Determines the fraction of requests to backend buckets that should be processed by the Global external Application Load Balancer."
-  type        = number
-}
+################################################################################
+# Private Key Service Cloud Run Variables.
+################################################################################
 
 variable "private_key_service_cloud_run_memory_mb" {
   description = "Memory size in MB for private key service cloud run."
@@ -425,6 +413,15 @@ variable "key_storage_service_lb_5xx_threshold" {
 variable "key_storage_service_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
+}
+
+################################################################################
+# Key Storage Service Load Balancer Variables.
+################################################################################
+
+variable "key_storage_service_load_balancer_allowed_paths" {
+  description = "List of allowed paths for the key storage service load balancer. Requests to other paths will be denied."
+  type        = list(string)
 }
 
 ################################################################################

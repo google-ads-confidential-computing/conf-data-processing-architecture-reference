@@ -77,8 +77,6 @@ using std::to_string;
 using ::testing::Eq;
 
 namespace {
-constexpr char kKeyId[] = "123";
-constexpr char kPrivateKeyBaseUri[] = "http://localhost.test:8000/v1beta";
 constexpr char kPublicKeyJson[] =
     R"({\"key\":[{\"keyData\":{\"keyMaterialType\":\"ASYMMETRIC_PUBLIC\",\"typeUrl\":\"type.googleapis.com/google.crypto.tink.HpkePublicKey\",\"value\":\"EgYIARABGAMaIEMQ7pfYjMHwiKVXbHerDPXDrHl/PZUTnGyEtUKcWWYq\"},\"keyId\":123,\"outputPrefixType\":\"RAW\",\"status\":\"ENABLED\"}],\"primaryKeyId\":123})";  // NOLINT
 

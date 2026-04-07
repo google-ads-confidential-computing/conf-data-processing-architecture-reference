@@ -17,10 +17,11 @@
 package com.google.scp.coordinator.keymanagement.shared.converter;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.createEncryptionKeyBuilder;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.createKeySplitData;
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
-import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
@@ -36,9 +37,9 @@ public class EncryptionKeyConverterTest {
   public void toApiEncryptionKey_hasPrivateKeyMaterial_singleKey() {
     String encryptionKeyUri = UUID.randomUUID().toString();
     ImmutableList<KeySplitData> keySplitData =
-        ImmutableList.of(FakeEncryptionKey.createKeySplitData(encryptionKeyUri));
+        ImmutableList.of(createKeySplitData(encryptionKeyUri));
     var storageKey =
-        FakeEncryptionKey.create().toBuilder()
+        createEncryptionKeyBuilder()
             .setKeyEncryptionKeyUri(encryptionKeyUri)
             // Need to clear before adding, otherwise there will be duplicate KeySplitData elements.
             .clearKeySplitData()
@@ -57,7 +58,7 @@ public class EncryptionKeyConverterTest {
   public void toApiEncryptionKey_hasPrivateKeyMaterial_legacyKey() {
     String encryptionKeyUri = UUID.randomUUID().toString();
     var storageKey =
-        FakeEncryptionKey.create().toBuilder()
+        createEncryptionKeyBuilder()
             .setKeyEncryptionKeyUri(encryptionKeyUri)
             // Need to clear before adding, otherwise there will be duplicate KeySplitData elements.
             .clearKeySplitData()
@@ -77,10 +78,9 @@ public class EncryptionKeyConverterTest {
     String encryptionKeyUri = UUID.randomUUID().toString();
     ImmutableList<KeySplitData> keySplitData =
         ImmutableList.of(
-            FakeEncryptionKey.createKeySplitData(encryptionKeyUri),
-            FakeEncryptionKey.createKeySplitData(UUID.randomUUID().toString()));
+            createKeySplitData(encryptionKeyUri), createKeySplitData(UUID.randomUUID().toString()));
     var storageKey =
-        FakeEncryptionKey.create().toBuilder()
+        createEncryptionKeyBuilder()
             .setKeyEncryptionKeyUri(encryptionKeyUri)
             // Need to clear before adding, otherwise there will be duplicate KeySplitData elements.
             .clearKeySplitData()
@@ -106,10 +106,10 @@ public class EncryptionKeyConverterTest {
   public void toApiEncryptionKey_noMatchingEncryptionUri() {
     ImmutableList<KeySplitData> keySplitData =
         ImmutableList.of(
-            FakeEncryptionKey.createKeySplitData(UUID.randomUUID().toString()),
-            FakeEncryptionKey.createKeySplitData(UUID.randomUUID().toString()));
+            createKeySplitData(UUID.randomUUID().toString()),
+            createKeySplitData(UUID.randomUUID().toString()));
     var storageKey =
-        FakeEncryptionKey.create().toBuilder()
+        createEncryptionKeyBuilder()
             .setKeyEncryptionKeyUri("123")
             // Need to clear before adding, otherwise there will be duplicate KeySplitData elements.
             .clearKeySplitData()
@@ -133,15 +133,14 @@ public class EncryptionKeyConverterTest {
 
     EncryptionKey encryptionKey =
         EncryptionKeyConverter.toApiEncryptionKey(
-            FakeEncryptionKey.create().toBuilder().setKeyId(keyId).build());
+            createEncryptionKeyBuilder().setKeyId(keyId).build());
 
     assertThat(encryptionKey.getName()).isEqualTo(path);
   }
 
   @Test
   public void toApiEncryptionKey_badKeyType() {
-    var encryptionKey =
-        FakeEncryptionKey.create().toBuilder().setKeyType("HYPER_PARTY_KEYSPLIT").build();
+    var encryptionKey = createEncryptionKeyBuilder().setKeyType("HYPER_PARTY_KEYSPLIT").build();
 
     IllegalArgumentException ex =
         assertThrows(
@@ -153,7 +152,7 @@ public class EncryptionKeyConverterTest {
 
   @Test
   public void toApiEncryptionKey_unspecifiedKeyType() {
-    var storageKey = FakeEncryptionKey.create().toBuilder().setKeyType("").build();
+    var storageKey = createEncryptionKeyBuilder().setKeyType("").build();
 
     EncryptionKey encryptionKey = EncryptionKeyConverter.toApiEncryptionKey(storageKey);
 
@@ -176,11 +175,10 @@ public class EncryptionKeyConverterTest {
 
     ImmutableList<KeySplitData> keySplitData =
         ImmutableList.of(
-            FakeEncryptionKey.createKeySplitData(encryptionKeyUri),
-            FakeEncryptionKey.createKeySplitData(encryptionKeyUri));
+            createKeySplitData(encryptionKeyUri), createKeySplitData(encryptionKeyUri));
 
     var storageKey =
-        FakeEncryptionKey.create().toBuilder()
+        createEncryptionKeyBuilder()
             .setKeyId(keyId)
             .setPublicKey(publicKey)
             .setPublicKeyMaterial(publicKeyMaterial)

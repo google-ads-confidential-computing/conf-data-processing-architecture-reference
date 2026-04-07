@@ -17,6 +17,7 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.app.common;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.createEncryptionKeyBuilder;
 import static com.google.scp.shared.api.model.Code.OK;
 import static com.google.scp.shared.api.model.Code.PERMISSION_DENIED;
 import static com.google.scp.shared.api.model.Code.UNKNOWN;
@@ -28,7 +29,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient.KeyStorageServiceException;
 import com.google.scp.coordinator.keymanagement.keystorage.converters.EncryptionKeyConverter;
-import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import java.io.IOException;
@@ -90,7 +90,7 @@ public final class HttpKeyStorageClientTest {
 
     EncryptionKey result = keyStorageClient.createKey(payload, "abc", Optional.empty());
     // The top-level URI doesn't exist on the API model, so ignore it.
-    var payloadNoUri = payload.toBuilder().clearKeyEncryptionKeyUri().clearSetName().build();
+    var payloadNoUri = payload.toBuilder().clearKeyEncryptionKeyUri().build();
     assertThat(result).isEqualTo(payloadNoUri);
   }
 
@@ -141,6 +141,6 @@ public final class HttpKeyStorageClientTest {
   }
 
   private EncryptionKey getRequest() {
-    return FakeEncryptionKey.create().toBuilder().setJsonEncodedKeyset("").build();
+    return createEncryptionKeyBuilder().setJsonEncodedKeyset("").build();
   }
 }

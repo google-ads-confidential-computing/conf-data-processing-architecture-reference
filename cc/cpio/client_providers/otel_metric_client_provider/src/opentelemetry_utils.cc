@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Google LLC
+ * Copyright 2025-2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@
 #include "opentelemetry/sdk/metrics/meter_provider.h"
 #include "opentelemetry/sdk/metrics/meter_provider_factory.h"
 #include "opentelemetry/sdk/metrics/view/view_registry_factory.h"
-#include "opentelemetry/sdk/resource/semantic_conventions.h"
 #include "public/cpio/interface/metric_client/type_def.h"
 
 using google::scp::cpio::MetricClientOptions;

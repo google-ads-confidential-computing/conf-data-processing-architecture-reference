@@ -42,6 +42,7 @@ using std::map;
 using std::stoi;
 using std::string;
 using testing::_;
+
 namespace {
 constexpr char kMetricName[] = "FrontEndRequestCount";
 constexpr char kMetricValue[] = "1234";

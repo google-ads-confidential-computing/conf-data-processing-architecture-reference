@@ -26,10 +26,15 @@ locals {
   service_name_suffix = "key-ss-cr"
 }
 
-resource "google_service_account" "key_storage_service_account" {
-  # Service account id has a 30 character limit
-  account_id   = "${var.environment}-keystorageuser"
-  display_name = "KeyStorage Service Account"
+module "service_account" {
+  source                = "../service_account"
+  project_id            = var.project_id
+  environment           = var.environment
+  sa_display_name       = "KeyStorage"
+  sa_account_id         = "keystorageuser"
+  spanner_database_name = var.spanner_database_name
+  spanner_instance_name = var.spanner_instance_name
+  spanner_role          = "roles/spanner.databaseUser"
 }
 
 module "cloud_run" {
@@ -43,7 +48,7 @@ module "cloud_run" {
   service_domain      = var.key_storage_domain
 
   # Access variables
-  runtime_service_account_email          = google_service_account.key_storage_service_account.email
+  runtime_service_account_email          = module.service_account.service_account_email
   allowed_all_users                      = false
   allowed_invoker_service_account_emails = var.allowed_wip_service_accounts
   allowed_user_group                     = var.allowed_wip_user_group
@@ -53,6 +58,7 @@ module "cloud_run" {
   source_container_image_url = var.source_container_image_url
   concurrency                = 2
   cpu_count                  = 2
+  cpu_idle                   = true
   min_instance_count         = var.min_instances
   max_instance_count         = var.max_instances
   execution_environment      = var.execution_environment
@@ -104,13 +110,7 @@ module "load_balancer" {
   ssl_cert_id     = "key-ss"
   monitoring_name = "Key Storage Service"
 
-  # Migration to external managed LB
-  load_balancing_scheme                                        = "EXTERNAL_MANAGED"
-  external_managed_migration_state                             = null
-  external_managed_migration_testing_percentage                = 0
-  forwarding_rule_load_balancing_scheme                        = "EXTERNAL_MANAGED"
-  external_managed_backend_bucket_migration_state              = null
-  external_managed_backend_bucket_migration_testing_percentage = 0
+  load_balancer_allowed_paths = var.load_balancer_allowed_paths
 
   # Outlier Detection
   lb_outlier_detection_enabled                               = var.lb_outlier_detection_enabled
@@ -121,6 +121,12 @@ module "load_balancer" {
   lb_outlier_detection_enforcing_consecutive_errors          = var.lb_outlier_detection_enforcing_consecutive_errors
   lb_outlier_detection_consecutive_gateway_failure           = var.lb_outlier_detection_consecutive_gateway_failure
   lb_outlier_detection_enforcing_consecutive_gateway_failure = var.lb_outlier_detection_enforcing_consecutive_gateway_failure
+
+  # Key Storage Service is not publicly accessible, so we are not configuring a Cloud Armor Security Policy for it.
+  lb_security_policy = null
+  # The Cloud Armor alerts are disabled for key storage service, but we still need to define the thresholds.
+  cloud_armor_high_block_ratio_threshold         = 1
+  cloud_armor_rate_limit_denials_alert_threshold = 1000
 
   enable_cdn                    = false
   cdn_default_ttl_seconds       = 30
@@ -140,19 +146,11 @@ module "load_balancer" {
   lb_max_latency_ms        = var.lb_max_latency_ms
 }
 
-# IAM entry for key storage service account to use the database
-resource "google_spanner_database_iam_member" "keydb_iam_policy" {
-  instance = var.spanner_instance_name
-  database = var.spanner_database_name
-  role     = "roles/spanner.databaseUser"
-  member   = "serviceAccount:${google_service_account.key_storage_service_account.email}"
-}
-
 module "service_monitoring_dashboard" {
-  source                           = "../service_dashboards"
-  environment                      = var.environment
-  service_name                     = "Key Storage Service"
-  load_balancer_url_map_name_regex = ".*${local.service_id}-loadbalancer"
-  service_name_regex               = ".*${local.service_name_suffix}"
-  log_based_metric_service_name    = "key_storage_service"
+  source                        = "../service_dashboards"
+  environment                   = var.environment
+  service_name                  = "Key Storage Service"
+  load_balancer_url_map_name    = "${var.environment}-${local.service_id}-loadbalancer"
+  service_name_regex            = ".*${local.service_name_suffix}"
+  log_based_metric_service_name = "key_storage_service"
 }

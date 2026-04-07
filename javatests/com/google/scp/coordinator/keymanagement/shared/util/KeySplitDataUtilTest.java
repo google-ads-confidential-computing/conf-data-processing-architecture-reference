@@ -45,6 +45,7 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class KeySplitDataUtilTest {
+  private static final String SET_NAME = "test-set-name";
 
   @Before
   public void setUp() throws GeneralSecurityException {
@@ -54,7 +55,8 @@ public final class KeySplitDataUtilTest {
   /** Tests format of added keysplit data */
   @Test
   public void buildKeySplitData_correctKeySplitData() throws GeneralSecurityException {
-    EncryptionKey baseKey = FakeEncryptionKey.create().toBuilder().clearKeySplitData().build();
+    EncryptionKey baseKey =
+        FakeEncryptionKey.createEncryptionKeyBuilder(SET_NAME).clearKeySplitData().build();
     KeysetHandle keysetHandle = KeysetHandle.generateNew(EcdsaSignKeyManager.ecdsaP256Template());
     PublicKeySign publicKeySign = keysetHandle.getPrimitive(PublicKeySign.class);
     PublicKeyVerify publicKeyVerify =
@@ -78,7 +80,8 @@ public final class KeySplitDataUtilTest {
   /** Tests format of added keysplit data if there is no signature */
   @Test
   public void buildKeySplitData_correctNoSignature() throws GeneralSecurityException {
-    EncryptionKey baseKey = FakeEncryptionKey.create().toBuilder().clearKeySplitData().build();
+    EncryptionKey baseKey =
+        FakeEncryptionKey.createEncryptionKeyBuilder(SET_NAME).clearKeySplitData().build();
 
     KeySplitData keySplitData =
         KeySplitDataUtil.buildKeySplitData(baseKey, "kek-uri", Optional.empty());
@@ -90,7 +93,8 @@ public final class KeySplitDataUtilTest {
   /** Tests that the signatures added can be verified */
   @Test
   public void buildKeySplitData_roundtrip() throws GeneralSecurityException {
-    EncryptionKey baseKey = FakeEncryptionKey.create().toBuilder().clearKeySplitData().build();
+    EncryptionKey baseKey =
+        FakeEncryptionKey.createEncryptionKeyBuilder(SET_NAME).clearKeySplitData().build();
     ImmutableMap<String, KeysetHandle> keysetHandles =
         Stream.generate(KeySplitDataUtilTest::unsafeCreateKeysetHandle)
             .limit(10)
@@ -100,9 +104,7 @@ public final class KeySplitDataUtilTest {
     ImmutableMap<String, PublicKeyVerify> publicKeyVerifiers =
         keysetHandles.entrySet().stream()
             .collect(
-                toImmutableMap(
-                    Map.Entry::<String, KeysetHandle>getKey,
-                    entry -> getPublicKeyVerify(entry.getValue())));
+                toImmutableMap(Map.Entry::getKey, entry -> getPublicKeyVerify(entry.getValue())));
 
     EncryptionKey.Builder finalKey = baseKey.toBuilder();
     for (Map.Entry<String, KeysetHandle> keysetHandle : keysetHandles.entrySet()) {
@@ -119,7 +121,7 @@ public final class KeySplitDataUtilTest {
   /** Should throw if a signature is invalid */
   @Test
   public void verifyEncryptionKeySignatures_throwIfInvalid() throws GeneralSecurityException {
-    EncryptionKey baseKey = FakeEncryptionKey.create();
+    EncryptionKey baseKey = FakeEncryptionKey.createEncryptionKey();
     KeysetHandle keysetHandle = KeysetHandle.generateNew(EcdsaSignKeyManager.ecdsaP256Template());
     PublicKeyVerify publicKeyVerify =
         keysetHandle.getPublicKeysetHandle().getPrimitive(PublicKeyVerify.class);
@@ -142,7 +144,7 @@ public final class KeySplitDataUtilTest {
   /** Should throw if a signature is not found */
   @Test
   public void verifyEncryptionKeySignatures_throwIfNotFound() throws GeneralSecurityException {
-    EncryptionKey baseKey = FakeEncryptionKey.create();
+    EncryptionKey baseKey = FakeEncryptionKey.createEncryptionKey();
     KeysetHandle keysetHandle = KeysetHandle.generateNew(EcdsaSignKeyManager.ecdsaP256Template());
     PublicKeyVerify publicKeyVerify =
         keysetHandle.getPublicKeysetHandle().getPrimitive(PublicKeyVerify.class);

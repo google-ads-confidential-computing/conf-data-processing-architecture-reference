@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_pkg//:mappings.bzl", "pkg_files")
+load("//tools/tftesting:tf_test.bzl", "tf_module", "tf_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -26,4 +27,26 @@ pkg_files(
         ],
     ),
     prefix = "frontend",
+)
+
+tf_module(
+    name = "frontend_module",
+    deps = [
+        "//operator/terraform/gcp/modules/cloud_run_load_balancer:cloud_run_load_balancer_module",
+        "//operator/terraform/gcp/modules/cloud_run_service:cloud_run_service_module",
+        "//operator/terraform/gcp/modules/domain_a_records:domain_a_records_module",
+        "//operator/terraform/gcp/modules/shared/cloud_run_alarms:cloud_run_alarms_module",
+        "//operator/terraform/gcp/modules/shared/cloud_run_lb_alarms:cloud_run_lb_alarms_module",
+        "//operator/terraform/gcp/modules/shared/cloudfunction_alarms:cloudfunction_alarms_module",
+    ],
+)
+
+tf_test(
+    name = "frontend_test",
+    srcs = glob([
+        "*.tftest.hcl",
+    ]),
+    deps = [
+        ":frontend_module",
+    ],
 )

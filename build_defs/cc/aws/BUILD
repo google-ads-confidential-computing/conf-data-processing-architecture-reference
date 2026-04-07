@@ -15,7 +15,3 @@
 package(
     default_visibility = ["//visibility:public"],
 )
-
-exports_files(["aws_c_io.patch"])
-
-exports_files(["aws_nitro_enclaves_sdk.patch"])

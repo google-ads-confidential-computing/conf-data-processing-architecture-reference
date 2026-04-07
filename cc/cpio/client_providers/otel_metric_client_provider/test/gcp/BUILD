@@ -23,9 +23,6 @@ cc_test(
     srcs = [
         "gcp_otel_metric_client_provider_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/interface:interface_lib",
         "//cc/core/test/utils:utils_lib",

@@ -351,7 +351,7 @@ ExecutionResultOr<unique_ptr<KeysetReader>> CreateBinaryKeysetReader(
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_READ_BINARY_KEY_SET);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Create Keyset reader failed with error. %s.",
-              keyset_reader_or.status().ToString().c_str());
+              keyset_reader_or.status().message());
     return execution_result;
   }
   return std::move(*keyset_reader_or);
@@ -367,7 +367,7 @@ ExecutionResultOr<unique_ptr<Keyset>> CreateKeyset(const string& key) {
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_READ_KEYSET_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Read keyset failed with error %s.",
-              keyset_or.status().ToString().c_str());
+              keyset_or.status().message());
     return execution_result;
   }
   auto keyset = std::move(*keyset_or);
@@ -406,7 +406,7 @@ ExecutionResultOr<unique_ptr<KeysetHandle>> CreateKeysetHandle(
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_KEYSET_HANDLE);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Creating Keyset failed with error %s.",
-              keyset_handle.status().ToString().c_str());
+              keyset_handle.status().message());
     return execution_result;
   }
   return std::move(*keyset_handle);
@@ -583,7 +583,7 @@ CryptoClientProvider::GetHybridEncryptPrimitive(const string& key) noexcept {
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_TINK_PRIMITIVE);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Creating Hpke Encrypt Primitive failed with error %s.",
-              primitive_or.status().ToString().c_str());
+              primitive_or.status().message());
     return execution_result;
   }
 
@@ -615,7 +615,7 @@ CryptoClientProvider::HpkeEncryptUsingExternalInterface(
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_HPKE_ENCRYPT_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Hpke encryption failed with error %s.",
-              encrypt_result_or.status().ToString().c_str());
+              encrypt_result_or.status().message());
     return execution_result;
   }
 
@@ -689,7 +689,7 @@ ExecutionResultOr<HpkeEncryptResponse> CryptoClientProvider::HpkeEncryptSync(
         SC_CRYPTO_CLIENT_PROVIDER_CREATE_HPKE_CONTEXT_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Hpke encryption failed with error %s.",
-              cipher.status().ToString().c_str());
+              cipher.status().message());
     return execution_result;
   }
 
@@ -700,7 +700,7 @@ ExecutionResultOr<HpkeEncryptResponse> CryptoClientProvider::HpkeEncryptSync(
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_HPKE_ENCRYPT_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Hpke encryption failed with error %s.",
-              ciphertext.status().ToString().c_str());
+              ciphertext.status().message());
     return execution_result;
   }
 
@@ -716,7 +716,7 @@ ExecutionResultOr<HpkeEncryptResponse> CryptoClientProvider::HpkeEncryptSync(
           SC_CRYPTO_CLIENT_PROVIDER_SECRET_EXPORT_FAILED);
       SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
                 "Hpke encryption failed with error %s.",
-                secret.status().ToString().c_str());
+                secret.status().message());
       return execution_result;
     }
     response.set_secret(string(SecretDataAsStringView((*secret))));
@@ -751,7 +751,7 @@ CryptoClientProvider::GetHybridDecryptPrimitive(const string& key) noexcept {
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_TINK_PRIMITIVE);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Creating Hpke Decrypt Primitive failed with error %s.",
-              primitive_or.status().ToString().c_str());
+              primitive_or.status().message());
     return execution_result;
   }
 
@@ -785,7 +785,7 @@ CryptoClientProvider::HpkeDecryptUsingExternalInterface(
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_HPKE_DECRYPT_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Hpke decryption failed with error %s.",
-              decrypt_result_or.status().ToString().c_str());
+              decrypt_result_or.status().message());
     return execution_result;
   }
 
@@ -860,7 +860,7 @@ ExecutionResultOr<HpkeDecryptResponse> CryptoClientProvider::HpkeDecryptSync(
         SC_CRYPTO_CLIENT_PROVIDER_SPLIT_CIPHERTEXT_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Hpke decryption failed with error %s.",
-              splitted_ciphertext.status().ToString().c_str());
+              splitted_ciphertext.status().message());
     return execution_result;
   }
 
@@ -873,7 +873,7 @@ ExecutionResultOr<HpkeDecryptResponse> CryptoClientProvider::HpkeDecryptSync(
         SC_CRYPTO_CLIENT_PROVIDER_CREATE_HPKE_CONTEXT_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Hpke decryption failed with error %s.",
-              cipher.status().ToString().c_str());
+              cipher.status().message());
     return execution_result;
   }
 
@@ -884,7 +884,7 @@ ExecutionResultOr<HpkeDecryptResponse> CryptoClientProvider::HpkeDecryptSync(
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_HPKE_DECRYPT_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Hpke decryption failed with error %s.",
-              payload.status().ToString().c_str());
+              payload.status().message());
     return execution_result;
   }
 
@@ -900,7 +900,7 @@ ExecutionResultOr<HpkeDecryptResponse> CryptoClientProvider::HpkeDecryptSync(
           SC_CRYPTO_CLIENT_PROVIDER_SECRET_EXPORT_FAILED);
       SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
                 "Hpke decryption failed with error %s.",
-                secret.status().ToString().c_str());
+                secret.status().message());
       return execution_result;
     }
     response.set_secret(string(SecretDataAsStringView(*secret)));
@@ -930,7 +930,7 @@ ExecutionResultOr<shared_ptr<Aead>> CryptoClientProvider::GetAeadPrimitive(
         SC_CRYPTO_CLIENT_PROVIDER_ERROR_CREATING_AEAD_PRIMITIVE);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Failed to get AEAD primitive from keyset handle %s.",
-              aead_or.status().ToString().c_str());
+              aead_or.status().message());
     return execution_result;
   }
 
@@ -950,8 +950,7 @@ static ExecutionResultOr<string> AeadStatusOrToExecutionResultOr(
   if (!text_or.ok()) {
     auto execution_result = FailureExecutionResult(return_failure_code);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
-              "Aead failed with error %s.",
-              text_or.status().ToString().c_str());
+              "Aead failed with error %s.", text_or.status().message());
     return execution_result;
   }
 
@@ -978,7 +977,7 @@ ExecutionResultOr<string> CryptoClientProvider::AeadEncryptSyncWithRawSecret(
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_CREATE_AEAD_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Aead encryption failed with error %s.",
-              cipher_or.status().ToString().c_str());
+              cipher_or.status().message());
     return execution_result;
   }
   auto ciphertext_or =
@@ -1078,7 +1077,7 @@ ExecutionResultOr<string> CryptoClientProvider::AeadDecryptSyncWithRawSecret(
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_CREATE_AEAD_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Aead decryption failed with error %s.",
-              cipher.status().ToString().c_str());
+              cipher.status().message());
     return execution_result;
   }
   auto payload_or = (*cipher)->Decrypt(request.encrypted_data().ciphertext(),
@@ -1088,7 +1087,7 @@ ExecutionResultOr<string> CryptoClientProvider::AeadDecryptSyncWithRawSecret(
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_AEAD_DECRYPT_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Aead decryption failed with error %s.",
-              payload_or.status().ToString().c_str());
+              payload_or.status().message());
     return execution_result;
   }
 
@@ -1220,7 +1219,7 @@ ExecutionResultOr<unique_ptr<StreamingAead>> CreateSaead(
           FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_CREATE_AEAD_FAILED);
       SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
                 "AesCtrHmac streaming aead creation failed with error %s.",
-                streaming_result.status().ToString().c_str());
+                streaming_result.status().message());
       return execution_result;
     }
     return std::move(streaming_result.value());
@@ -1272,7 +1271,7 @@ ExecutionResultOr<unique_ptr<StreamingAead>> CreateSaead(
           FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_CREATE_AEAD_FAILED);
       SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
                 "AesGcmHkdf streaming aead creation failed with error %s.",
-                streaming_result.status().ToString().c_str());
+                streaming_result.status().message());
       return execution_result;
     }
     return std::move(streaming_result.value());
@@ -1304,7 +1303,7 @@ CryptoClientProvider::AeadEncryptStreamSync(
             SC_CRYPTO_CLIENT_PROVIDER_SAEAD_CREATE_ENCRYPT_STREAM_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Create saead encryption stream failed with error %s.",
-              enc_stream_result.status().ToString().c_str());
+              enc_stream_result.status().message());
     return execution_result;
   }
   return std::move(enc_stream_result.value());
@@ -1329,7 +1328,7 @@ CryptoClientProvider::AeadDecryptStreamSync(
             SC_CRYPTO_CLIENT_PROVIDER_SAEAD_CREATE_DECRYPT_STREAM_FAILED);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Create saead decryption stream failed with error %s.",
-              dec_stream_result.status().ToString().c_str());
+              dec_stream_result.status().message());
     return execution_result;
   }
   return std::move(dec_stream_result.value());
@@ -1357,7 +1356,7 @@ ExecutionResultOr<shared_ptr<Mac>> CryptoClientProvider::GetMacPrimitive(
         SC_CRYPTO_CLIENT_PROVIDER_CANNOT_CREATE_TINK_PRIMITIVE);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Creating Mac Primitive failed with error %s.",
-              primitive_or.status().ToString().c_str());
+              primitive_or.status().message());
     return execution_result;
   }
 
@@ -1400,7 +1399,7 @@ ExecutionResultOr<ComputeMacResponse> CryptoClientProvider::ComputeMacSync(
         FailureExecutionResult(SC_CRYPTO_CLIENT_PROVIDER_CANNOT_COMPUTE_MAC);
     SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
               "Computing mac failed with error %s.",
-              compute_result_or.status().ToString().c_str());
+              compute_result_or.status().message());
     return execution_result;
   }
 

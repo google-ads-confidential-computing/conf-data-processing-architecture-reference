@@ -25,7 +25,6 @@ import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.KeysetWriter;
 import com.google.crypto.tink.proto.HpkePublicKey;
 import com.google.crypto.tink.subtle.Base64;
-import com.google.inject.Inject;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.EncodedPublicKeyProto.EncodedPublicKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import java.io.ByteArrayOutputStream;
@@ -40,18 +39,10 @@ public final class EncodedPublicKeyListConverter
 
   /** The public key output mode. */
   public enum Mode {
-    // Outputs the raw key material only.
-    LEGACY,
     // Outputs the serialized binary Tink keyset.
     TINK,
     // Outputs the key as an explicit object.
     RAW
-  }
-
-  @Inject
-  @Deprecated
-  public EncodedPublicKeyListConverter() {
-    this.mode = Mode.LEGACY;
   }
 
   /**
@@ -69,9 +60,6 @@ public final class EncodedPublicKeyListConverter
               EncodedPublicKey.Builder key =
                   EncodedPublicKey.newBuilder().setId(publicKey.getKeyId());
               switch (mode) {
-                case LEGACY:
-                  key.setKey(publicKey.getPublicKeyMaterial());
-                  break;
                 case RAW:
                   key.setHpkePublicKey(toHpkePublicKey(publicKey));
                   break;

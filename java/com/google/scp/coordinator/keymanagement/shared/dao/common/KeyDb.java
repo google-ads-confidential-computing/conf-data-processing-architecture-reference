@@ -25,9 +25,6 @@ import java.time.Instant;
 /** Interface for Key database properties */
 public interface KeyDb {
 
-  // TODO(b/484326902): Cleanup/remove uses of this variable
-  String DEFAULT_SET_NAME = "";
-
   /**
    * Returns active keys in descending expiration time order.
    *
@@ -106,15 +103,4 @@ public interface KeyDb {
   // used elsewhere.
   /** Used to update migration data for an existing key */
   void updateMigrationKeyMaterial(ImmutableList<EncryptionKey> keys) throws ServiceException;
-
-  /**
-   * Thrown when the KeyDB record contains a Status field that does not match a value of
-   * EncryptionKeyStatus enum.
-   */
-  class InvalidEncryptionKeyStatusException extends RuntimeException {
-
-    public InvalidEncryptionKeyStatusException(String message) {
-      super(message);
-    }
-  }
 }

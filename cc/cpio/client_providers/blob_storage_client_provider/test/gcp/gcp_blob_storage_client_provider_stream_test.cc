@@ -84,9 +84,9 @@ using google::scp::core::errors::
     SC_BLOB_STORAGE_PROVIDER_STREAM_SESSION_EXPIRED;
 using google::scp::core::errors::SC_BLOB_STORAGE_PROVIDER_UNRETRIABLE_ERROR;
 using google::scp::core::errors::SC_GCP_DATA_LOSS;
-using google::scp::core::errors::SC_GCP_UNKNOWN;
-using google::scp::core::errors::SC_GCP_UNAUTHENTICATED;
 using google::scp::core::errors::SC_GCP_INVALID_ARGUMENT;
+using google::scp::core::errors::SC_GCP_UNAUTHENTICATED;
+using google::scp::core::errors::SC_GCP_UNKNOWN;
 using google::scp::core::errors::SC_STREAMING_CONTEXT_DONE;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;

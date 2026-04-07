@@ -60,6 +60,7 @@ import org.testcontainers.containers.output.Slf4jLogConsumer;
 @RunWith(JUnit4.class)
 public final class PublicKeyServiceTest {
 
+  private static final String SET_NAME = "test-set";
   private static final Logger logger = LoggerFactory.getLogger(PublicKeyServiceTest.class);
 
   @Rule public final Acai acai = new Acai(TestModule.class);
@@ -70,27 +71,13 @@ public final class PublicKeyServiceTest {
 
   @Before
   public void setUp() throws Exception {
-    keyDb.createKey(FakeEncryptionKey.create());
-    keyDb.createKey(FakeEncryptionKey.create().toBuilder().setSetName("test-set").build());
-  }
-
-  @Test
-  public void defaultEndpoint_returnsExpectedFormat() throws Exception {
-    // Given
-    String endpoint = "/v1alpha/publicKeys";
-
-    // When
-    GetActivePublicKeysResponse keys = getActivePublicKeys(endpoint);
-
-    // Then
-    assertThat(keys.getKeysList()).isNotEmpty();
-    assertThat(keys.getKeys(0).getKeyOneofCase()).isEqualTo(KeyOneofCase.KEY);
+    keyDb.createKey(FakeEncryptionKey.createEncryptionKey(SET_NAME));
   }
 
   @Test
   public void defaultEndpoint_returnsExpectedCacheControlHeader() throws Exception {
     // Given
-    String endpoint = "/v1alpha/publicKeys";
+    String endpoint = "/v1beta/sets/test-set/publicKeys";
 
     // When
     HttpResponse response;
@@ -108,7 +95,7 @@ public final class PublicKeyServiceTest {
   @Test
   public void noKeys_returnsNoCacheControlHeader() throws Exception {
     // Given
-    String endpoint = "/v1alpha/publicKeys";
+    String endpoint = "/v1beta/sets/test-set/publicKeys";
     truncateKeyDatabase();
 
     // When
@@ -131,45 +118,6 @@ public final class PublicKeyServiceTest {
   }
 
   @Test
-  public void tinkEndpoint_returnsExpectedFormat() throws Exception {
-    // Given
-    String endpoint = "/v1alpha/publicKeys:tink";
-
-    // When
-    GetActivePublicKeysResponse keys = getActivePublicKeys(endpoint);
-
-    // Then
-    assertThat(keys.getKeysList()).isNotEmpty();
-    assertThat(keys.getKeys(0).getKeyOneofCase()).isEqualTo(KeyOneofCase.TINK_BINARY);
-  }
-
-  @Test
-  public void rawEndpoint_returnsExpectedFormat() throws Exception {
-    // Given
-    String endpoint = "/v1alpha/publicKeys:raw";
-
-    // When
-    GetActivePublicKeysResponse keys = getActivePublicKeys(endpoint);
-
-    // Then
-    assertThat(keys.getKeysList()).isNotEmpty();
-    assertThat(keys.getKeys(0).getKeyOneofCase()).isEqualTo(KeyOneofCase.HPKE_PUBLIC_KEY);
-  }
-
-  @Test
-  public void v1BetaDefaultEndpoint_returnsExpectedFormat() throws Exception {
-    // Given
-    String endpoint = "/v1beta/sets//publicKeys";
-
-    // When
-    GetActivePublicKeysResponse keys = getActivePublicKeys(endpoint);
-
-    // Then
-    assertThat(keys.getKeysList()).isNotEmpty();
-    assertThat(keys.getKeys(0).getKeyOneofCase()).isEqualTo(KeyOneofCase.TINK_BINARY);
-  }
-
-  @Test
   public void v1BetaSpecificSet_returnsExpectedFormat() throws Exception {
     // Given
     String endpoint = "/v1beta/sets/test-set/publicKeys";
@@ -185,7 +133,7 @@ public final class PublicKeyServiceTest {
   @Test
   public void v1BetaRawEndpoint_returnsExpectedFormat() throws Exception {
     // Given
-    String endpoint = "/v1beta/sets//publicKeys:raw";
+    String endpoint = "/v1beta/sets/test-set/publicKeys:raw";
 
     // When
     GetActivePublicKeysResponse keys = getActivePublicKeys(endpoint);

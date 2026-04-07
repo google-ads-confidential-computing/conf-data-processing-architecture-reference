@@ -23,7 +23,6 @@ java_test(
         "//java/com/google/scp/operator/cpio/jobclient",
         "//java/com/google/scp/operator/cpio/jobclient:model",
         "//java/external:google_truth",
-        "//java/external:google_truth8",
     ],
 )
 

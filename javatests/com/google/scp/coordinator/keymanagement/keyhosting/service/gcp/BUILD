@@ -41,6 +41,7 @@ java_test(
         "//java/external:protobuf_java_util",
         "//java/external:resilience4j_core",
         "//java/external:resilience4j_retry",
+        "//java/external:tink",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:annotations",
         "//javatests/com/google/scp/coordinator/keymanagement/testutils/gcp:spanner_key_db_test_util",

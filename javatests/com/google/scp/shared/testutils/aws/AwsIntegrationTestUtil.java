@@ -16,6 +16,8 @@
 
 package com.google.scp.shared.testutils.aws;
 
+import static com.google.scp.shared.testutils.common.TestConstants.LOCALSTACK_IMAGE_NAME;
+
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.services.kms.KmsClient;
@@ -25,7 +27,7 @@ import software.amazon.awssdk.services.kms.model.DataKeySpec;
 public final class AwsIntegrationTestUtil {
 
   // localstack version is pinned so that tests are repeatable
-  private static final DockerImageName IMAGE = DockerImageName.parse("localstack/localstack:1.0.4");
+  private static final DockerImageName IMAGE = DockerImageName.parse(LOCALSTACK_IMAGE_NAME);
 
   private AwsIntegrationTestUtil() {}
 

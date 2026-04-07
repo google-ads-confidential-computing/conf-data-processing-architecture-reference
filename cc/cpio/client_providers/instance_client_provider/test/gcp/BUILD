@@ -43,9 +43,6 @@ cc_test(
         [
             "gcp_instance_client_utils_test.cc",
         ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
@@ -62,9 +59,6 @@ cc_library(
     srcs = [
         "test_gcp_instance_client_provider.cc",
         "test_gcp_instance_client_provider.h",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc:cc_base_include_dir",

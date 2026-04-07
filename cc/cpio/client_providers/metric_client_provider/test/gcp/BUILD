@@ -23,9 +23,6 @@ cc_test(
     srcs = [
         "gcp_metric_client_provider_test.cc",
     ],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc/core/async_executor/mock:core_async_executor_mock",
         "//cc/core/interface:interface_lib",
@@ -48,9 +45,6 @@ cc_test(
     size = "small",
     srcs = [
         "gcp_metric_client_utils_test.cc",
-    ],
-    copts = [
-        "-std=c++17",
     ],
     deps = [
         "//cc/core/interface:interface_lib",

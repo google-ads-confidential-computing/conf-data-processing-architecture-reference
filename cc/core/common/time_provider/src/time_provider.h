@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2022-2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,13 @@ class TimeProvider {
     std::chrono::nanoseconds current_timestamp;
     do {
       last_timestamp_read = last_timestamp.load();
-      current_timestamp = GetWallTimestampInNanoseconds();
+      // Spin until the system clock actually changes, avoiding the
+      // issue where CPU is faster than clock precision and returns
+      // non-unique timestamps.
+      do {
+        current_timestamp = GetWallTimestampInNanoseconds();
+      } while (current_timestamp == last_timestamp_read);
+
       // If the current wall clock goes backwards in time, give out
       // logical timestamps until the future arrives.
       if (current_timestamp < last_timestamp_read) {

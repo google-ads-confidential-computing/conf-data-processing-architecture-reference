@@ -34,7 +34,7 @@ namespace google::scp::cpio::client_providers {
 class GcpInstanceDatabaseClientUtils {
  public:
   static core::ExecutionResultOr<
-      scp::operators::protos::shared::backend::asginstance ::AsgInstance>
+      scp::operators::protos::shared::backend::asginstance::AsgInstance>
   ConvertJsonToInstance(const cloud::spanner::Row& row) noexcept;
 };
 }  // namespace google::scp::cpio::client_providers

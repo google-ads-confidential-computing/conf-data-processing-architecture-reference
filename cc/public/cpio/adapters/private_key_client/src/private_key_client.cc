@@ -113,8 +113,8 @@ ExecutionResult PrivateKeyClient::CreatePrivateKeyClientProvider() noexcept {
     return ConvertToPublicExecutionResult(execution_result);
   }
   shared_ptr<MetricClientInterface> metric_client;
-  execution_result = GlobalCpio::GetGlobalCpio()->GetMetricClient(
-      metric_client);
+  execution_result =
+      GlobalCpio::GetGlobalCpio()->GetMetricClient(metric_client);
   if (!execution_result.Successful()) {
     SCP_ERROR(kPrivateKeyClient, kZeroUuid, execution_result,
               "Failed to get MetricClient.");

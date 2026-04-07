@@ -167,6 +167,9 @@ module "keystorageservice" {
   allowed_wip_user_group       = var.allowed_wip_user_group
   allowed_wip_service_accounts = var.allowed_wip_service_accounts
 
+  # Load Balancer
+  load_balancer_allowed_paths = var.key_storage_service_load_balancer_allowed_paths
+
   # Load Balancer Outlier Detection
   lb_outlier_detection_enabled                               = var.key_storage_service_lb_outlier_detection_enabled
   lb_outlier_detection_consecutive_errors                    = var.key_storage_service_lb_outlier_detection_consecutive_errors
@@ -209,19 +212,14 @@ module "keystorageservice" {
 module "private_key_service" {
   source = "../private_key_service"
 
-  environment            = var.environment
-  project_id             = var.project_id
-  regions                = local.private_key_service_regions
-  service_domain         = local.private_key_domain
-  load_balancer_protocol = var.private_key_service_load_balancer_protocol
+  environment    = var.environment
+  project_id     = var.project_id
+  regions        = local.private_key_service_regions
+  service_domain = local.private_key_domain
 
-  # Migration to external managed LB
-  load_balancing_scheme                                        = var.private_key_service_load_balancing_scheme
-  external_managed_migration_state                             = var.private_key_service_external_managed_migration_state
-  external_managed_migration_testing_percentage                = var.private_key_service_external_managed_migration_testing_percentage
-  forwarding_rule_load_balancing_scheme                        = var.private_key_service_forwarding_rule_load_balancing_scheme
-  external_managed_backend_bucket_migration_state              = var.private_key_service_external_managed_backend_bucket_migration_state
-  external_managed_backend_bucket_migration_testing_percentage = var.private_key_service_external_managed_backend_bucket_migration_testing_percentage
+  # Load Balancer
+  load_balancer_protocol      = var.private_key_service_load_balancer_protocol
+  load_balancer_allowed_paths = var.private_key_service_load_balancer_allowed_paths
 
   # Load Balancer Outlier Detection
   lb_outlier_detection_enabled                               = var.private_key_service_lb_outlier_detection_enabled
@@ -287,17 +285,12 @@ module "private_key_service_addon" {
   project_id  = var.project_id
   regions     = local.private_key_service_regions
 
-  service_domain         = local.private_key_domain_additional
-  display_identifier     = "Pre${var.environment}"
-  load_balancing_scheme  = "EXTERNAL_MANAGED"
-  load_balancer_protocol = var.private_key_service_load_balancer_protocol
+  service_domain     = local.private_key_domain_additional
+  display_identifier = "Pre${var.environment}"
 
-  # LB Migration
-  external_managed_migration_state                             = null
-  external_managed_migration_testing_percentage                = null
-  forwarding_rule_load_balancing_scheme                        = "EXTERNAL_MANAGED"
-  external_managed_backend_bucket_migration_state              = null
-  external_managed_backend_bucket_migration_testing_percentage = null
+  # Load Balancer
+  load_balancer_protocol      = var.private_key_service_load_balancer_protocol
+  load_balancer_allowed_paths = var.private_key_service_load_balancer_allowed_paths
 
   # Load Balancer Outlier Detection
   lb_outlier_detection_enabled                               = var.private_key_service_lb_outlier_detection_enabled
@@ -464,4 +457,13 @@ resource "google_kms_crypto_key_iam_member" "key_set_wip_sa" {
   member        = "serviceAccount:${module.workload_identity_pool.wip_verified_service_account}"
   role          = "roles/cloudkms.cryptoKeyEncrypter"
   depends_on    = [module.workload_identity_pool, module.key_management_service]
+}
+
+module "key_sets_parameter_config" {
+  count          = var.enable_parameter_manager ? 1 : 0
+  source         = "../../modules/parameter_manager"
+  project        = var.project_id
+  environment    = var.environment
+  parameter_name = "KEY_SETS_CONFIG"
+  parameter_data = jsonencode(var.key_sets_config)
 }

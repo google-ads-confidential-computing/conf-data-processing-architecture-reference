@@ -41,7 +41,7 @@ using google::cmrt::sdk::metric_service::v1::PutMetricsRequest;
 using google::cmrt::sdk::metric_service::v1::PutMetricsResponse;
 using google::protobuf::Any;
 using google::scp::core::AsyncContext;
-using google::scp::core ::AsyncExecutorInterface;
+using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::AsyncOperation;
 using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;

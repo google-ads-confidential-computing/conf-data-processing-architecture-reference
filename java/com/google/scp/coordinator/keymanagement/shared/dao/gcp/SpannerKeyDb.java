@@ -114,10 +114,8 @@ public final class SpannerKeyDb implements KeyDb {
                     + ACTIVATION_TIME_COLUMN
                     + " <= @endParam "
                     + ")"
-                    // 3) Filter keys with matching set name, if it's the default set, includes keys
-                    // with null set name.
-                    + " AND (SetName = @setName"
-                    + " OR (@setName = @defaultSetName AND SetName IS NULL))"
+                    // 3) Filter keys with matching set name
+                    + " AND SetName = @setName"
                     // Ordering implementation should follow {@link
                     // KeyDbUtil.getActiveKeysComparator}
                     + " ORDER BY "
@@ -129,8 +127,6 @@ public final class SpannerKeyDb implements KeyDb {
             .to(ofTimeSecondsAndNanos(end.getEpochSecond(), end.getNano()))
             .bind("keyLimitParam")
             .to(keyLimit)
-            .bind("defaultSetName")
-            .to(KeyDb.DEFAULT_SET_NAME)
             .bind("setName")
             .to(setName)
             .build();
@@ -153,10 +149,8 @@ public final class SpannerKeyDb implements KeyDb {
                     + " is NULL OR "
                     + ACTIVATION_TIME_COLUMN
                     + " <= @nowParam)"
-                    // Filter keys with matching set name, if it's the default set, includes keys
-                    // with null set name.
-                    + " AND (SetName = @setName"
-                    + " OR (@setName = @defaultSetName AND SetName IS NULL))"
+                    // Filter keys with matching set name
+                    + " AND SetName = @setName"
                     // Ordering implementation should follow {@link
                     // KeyDbUtil.getActiveKeysComparator}
                     + " ORDER BY "
@@ -166,8 +160,6 @@ public final class SpannerKeyDb implements KeyDb {
             .to(ofTimeSecondsAndNanos(instant.getEpochSecond(), instant.getNano()))
             .bind("keyLimitParam")
             .to(keyLimit)
-            .bind("defaultSetName")
-            .to(KeyDb.DEFAULT_SET_NAME)
             .bind("setName")
             .to(setName)
             .build();
@@ -199,13 +191,10 @@ public final class SpannerKeyDb implements KeyDb {
                 "SELECT * FROM "
                     + TABLE_NAME
                     + " WHERE "
-                    // Filter keys with matching set name, if it's the default set, includes keys
-                    // with null set name.
-                    + " SetName = @setName OR (@setName = @defaultSetName AND SetName IS NULL)"
+                    // Filter keys with matching set name
+                    + " SetName = @setName"
                     + " ORDER BY "
                     + NATURAL_ORDERING)
-            .bind("defaultSetName")
-            .to(DEFAULT_SET_NAME)
             .bind("setName")
             .to(setName)
             .build();
@@ -453,9 +442,7 @@ public final class SpannerKeyDb implements KeyDb {
         !resultSet.isNull(MIGRATION_KEY_SPLIT_DATA_COLUMN)
             ? getKeySplitData(MIGRATION_KEY_SPLIT_DATA_COLUMN, resultSet)
             : ImmutableList.of();
-    // For backward compatibility with existing keys without set names.
-    String setName =
-        resultSet.isNull(SET_NAME_COLUMN) ? DEFAULT_SET_NAME : resultSet.getString(SET_NAME_COLUMN);
+    String setName = resultSet.getString(SET_NAME_COLUMN);
     EncryptionKey.Builder keyBuilder =
         EncryptionKey.newBuilder()
             .setKeyId(resultSet.getString(KEY_ID_COLUMN))

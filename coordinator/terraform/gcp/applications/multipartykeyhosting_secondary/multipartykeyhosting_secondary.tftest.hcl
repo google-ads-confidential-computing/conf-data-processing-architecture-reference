@@ -68,7 +68,6 @@ variables {
   private_key_service_addon_alert_severity_overrides            = {}
   private_key_service_cloud_run_cpu_count                       = 1
   private_key_service_cloud_run_concurrency                     = 0
-  private_key_service_load_balancing_scheme                     = ""
   private_key_service_cloud_run_memory_mb                       = 0
   private_key_service_cloud_run_min_instances                   = 0
   private_key_service_cloud_run_max_instances                   = 0
@@ -110,6 +109,7 @@ variables {
   private_key_service_exception_alert_threshold                 = 0
   private_key_service_config_read_alert_threshold               = 0
   alert_severity_overrides                                      = {}
+  enable_parameter_manager                                      = false
 
   quota_alert_duration_sec        = 60
   quota_alert_eval_period_sec     = 180
@@ -117,19 +117,7 @@ variables {
   quota_alert_threshold_important = 0.6
   quota_alert_threshold_urgent    = 0.8
 
-  private_key_service_external_managed_migration_state              = "PREPARE"
-  private_key_service_external_managed_migration_testing_percentage = 0
-
-  private_key_service_forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
-  private_key_service_external_managed_backend_bucket_migration_state              = null
-  private_key_service_external_managed_backend_bucket_migration_testing_percentage = null
-
-  private_key_service_addon_forwarding_rule_load_balancing_scheme                        = "EXTERNAL"
-  private_key_service_addon_external_managed_backend_bucket_migration_state              = null
-  private_key_service_addon_external_managed_backend_bucket_migration_testing_percentage = null
-
-  key_storage_service_external_managed_migration_state              = "PREPARE"
-  key_storage_service_external_managed_migration_testing_percentage = 0
+  private_key_service_load_balancer_allowed_paths = ["/*"]
 
   private_key_service_load_balancer_protocol                                     = "HTTP"
   private_key_service_lb_outlier_detection_enabled                               = false
@@ -140,6 +128,8 @@ variables {
   private_key_service_lb_outlier_detection_enforcing_consecutive_errors          = 0
   private_key_service_lb_outlier_detection_consecutive_gateway_failure           = 0
   private_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure = 0
+
+  key_storage_service_load_balancer_allowed_paths = ["/*"]
 
   key_storage_service_lb_outlier_detection_enabled                               = false
   key_storage_service_lb_outlier_detection_consecutive_errors                    = 0
@@ -169,6 +159,8 @@ variables {
   key_migration_tool_key_sets = {
     allowed_keysets = []
   }
+  private_key_service_enable_revision_pinning = false
+  private_key_service_stable_revisions        = {}
 }
 
 # All run blocks should have "command = plan".
@@ -221,6 +213,29 @@ run "creates_private_key_service_addon" {
   assert {
     condition     = length(module.private_key_service_addon) == 1
     error_message = "Didn't create addon"
+  }
+}
+
+run "doesnt_create_key_sets_parameter_config" {
+  command = plan
+
+  assert {
+    condition     = length(module.key_sets_parameter_config) == 0
+    error_message = "Created parameter config"
+  }
+}
+
+
+run "does_create_key_sets_parameter_config" {
+  command = plan
+
+  variables {
+    enable_parameter_manager = true
+  }
+
+  assert {
+    condition     = length(module.key_sets_parameter_config) == 1
+    error_message = "Didn't create parameter config"
   }
 }
 

@@ -43,6 +43,7 @@ import java.util.UUID;
 public final class FakeEncryptionKey {
   private FakeEncryptionKey() {}
 
+  private static final String SET_NAME = "test-set-name";
   private static final PublicKeySign PUBLIC_KEY_SIGN;
   public static final PublicKeyVerify PUBLIC_KEY_VERIFY;
 
@@ -62,7 +63,11 @@ public final class FakeEncryptionKey {
     }
   }
 
-  public static EncryptionKey.Builder createBuilderWithDefaults() {
+  public static EncryptionKey.Builder createEncryptionKeyBuilder() {
+    return createEncryptionKeyBuilder(SET_NAME);
+  }
+
+  public static EncryptionKey.Builder createEncryptionKeyBuilder(String setName) {
     Random random = new Random();
     Instant now = Instant.now();
     EncryptionKeyType keyType =
@@ -73,6 +78,7 @@ public final class FakeEncryptionKey {
     String encryptionKeyUri = UUID.randomUUID().toString();
     EncryptionKey baseKey =
         setPublicKeys(EncryptionKey.newBuilder())
+            .setSetName(setName)
             .setKeyId(UUID.randomUUID().toString())
             .setJsonEncodedKeyset(UUID.randomUUID().toString())
             .setKeyEncryptionKeyUri(encryptionKeyUri)
@@ -97,18 +103,22 @@ public final class FakeEncryptionKey {
    * Creates a key with realistic timestamps but fake key materials. The generated key will be
    * active and expire in the future.
    */
-  public static EncryptionKey create() {
-    return createBuilderWithDefaults().build();
+  public static EncryptionKey createEncryptionKey() {
+    return createEncryptionKey(SET_NAME);
+  }
+
+  public static EncryptionKey createEncryptionKey(String setName) {
+    return createEncryptionKeyBuilder(setName).build();
   }
 
   /**
    * Creates a key with realistic timestamps but fake key materials. The generated key will be
    * active and expire in the future. The migration key fields are populated.
    */
-  public static EncryptionKey createWithMigration() {
+  public static EncryptionKey createEncryptionKeyWithMigration(String setName) {
     String migrationEncryptionKeyUri = UUID.randomUUID().toString();
     EncryptionKey baseKey =
-        createBuilderWithDefaults()
+        createEncryptionKeyBuilder(setName)
             .setMigrationJsonEncodedKeyset(UUID.randomUUID().toString())
             .setMigrationKeyEncryptionKeyUri(migrationEncryptionKeyUri)
             .build();
@@ -125,28 +135,18 @@ public final class FakeEncryptionKey {
     }
   }
 
-  /** Creates a key which actives and expires at the specified time. */
-  public static EncryptionKey withActivationAndExpirationTimes(
-      Instant activationTime, Instant expirationTime) {
-    return create().toBuilder()
-        .setActivationTime(activationTime.toEpochMilli())
-        .setExpirationTime(expirationTime.toEpochMilli())
-        .build();
-  }
-
   /** Creates a key which actives and expires at the specified time plus setName. */
   public static EncryptionKey withActivationAndExpirationTimes(
       String setName, Instant activationTime, Instant expirationTime) {
-    return create().toBuilder()
-        .setSetName(setName)
+    return createEncryptionKey(setName).toBuilder()
         .setActivationTime(activationTime.toEpochMilli())
         .setExpirationTime(expirationTime.toEpochMilli())
         .build();
   }
 
   /** Creates a key which actives and expires at the specified time. */
-  public static EncryptionKey withAllTimesSet(Instant creationTime) {
-    return create().toBuilder()
+  public static EncryptionKey withAllTimesSet(String setName, Instant creationTime) {
+    return createEncryptionKey(setName).toBuilder()
         .setCreationTime(creationTime.toEpochMilli())
         .setActivationTime(creationTime.plus(5, DAYS).toEpochMilli())
         .setExpirationTime(creationTime.plus(50, DAYS).toEpochMilli())
@@ -154,13 +154,10 @@ public final class FakeEncryptionKey {
   }
 
   /** Creates a key which expires at the specified time. */
-  public static EncryptionKey withExpirationTime(Instant expirationTime) {
-    return create().toBuilder().setExpirationTime(expirationTime.toEpochMilli()).build();
-  }
-
-  /** Creates a key with a specified creationTime. */
-  public static EncryptionKey withCreationTime(Instant creationTime) {
-    return create().toBuilder().setCreationTime(creationTime.toEpochMilli()).build();
+  public static EncryptionKey withExpirationTime(String setName, Instant expirationTime) {
+    return createEncryptionKey(setName).toBuilder()
+        .setExpirationTime(expirationTime.toEpochMilli())
+        .build();
   }
 
   public static KeySplitData createKeySplitData(String encryptionKeyUri) {
@@ -170,8 +167,8 @@ public final class FakeEncryptionKey {
         .build();
   }
 
-  public static EncryptionKey withKeyId(String keyId) {
-    return createBuilderWithDefaults().setKeyId(keyId).build();
+  public static EncryptionKey withKeyId(String setName, String keyId) {
+    return createEncryptionKeyBuilder(setName).setKeyId(keyId).build();
   }
 
   private static EncryptionKey.Builder setPublicKeys(EncryptionKey.Builder encryptionKey) {

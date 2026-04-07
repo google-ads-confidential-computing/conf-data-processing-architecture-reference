@@ -23,57 +23,21 @@ import static org.junit.Assert.assertThrows;
 import com.google.common.collect.ImmutableList;
 import com.google.crypto.tink.BinaryKeysetReader;
 import com.google.crypto.tink.CleartextKeysetHandle;
-import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.subtle.Base64;
 import com.google.scp.coordinator.keymanagement.shared.converter.EncodedPublicKeyListConverter.Mode;
 import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.EncodedPublicKeyProto.EncodedPublicKey;
 import com.google.scp.coordinator.protos.keymanagement.keyhosting.api.v1.EncodedPublicKeyProto.EncodedPublicKey.KeyOneofCase;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
-import java.security.SecureRandom;
-import org.junit.Before;
 import org.junit.Test;
 
 public class EncodedPublicKeyListConverterTest {
 
-  private static final SecureRandom RANDOM = new SecureRandom();
-  private EncodedPublicKeyListConverter converter;
-
-  @Before
-  public void setup() {
-    converter = new EncodedPublicKeyListConverter();
-  }
-
-  @Test
-  public void convert_success() {
-    EncryptionKey encryptionKey =
-        EncryptionKey.newBuilder()
-            .setKeyId(randomUUID().toString())
-            .setPublicKey(randomUUID().toString())
-            .setPublicKeyMaterial(randomUUID().toString())
-            .setJsonEncodedKeyset(randomUUID().toString())
-            .setCreationTime(RANDOM.nextLong())
-            .setExpirationTime(RANDOM.nextLong())
-            .build();
-
-    ImmutableList<EncodedPublicKey> publicKeys = converter.convert(ImmutableList.of(encryptionKey));
-
-    assertThat(publicKeys).isNotNull();
-    assertThat(publicKeys).hasSize(1);
-
-    EncodedPublicKey publicKey = publicKeys.get(0);
-    assertThat(publicKey).isNotNull();
-    assertThat(publicKey.getId()).isEqualTo(encryptionKey.getKeyId());
-    assertThat(publicKey.getKey()).isEqualTo(encryptionKey.getPublicKeyMaterial());
-  }
-
   @Test
   public void reverse_failure() {
     EncodedPublicKey publicKey =
-        EncodedPublicKey.newBuilder()
-            .setId(randomUUID().toString())
-            .setKey(randomUUID().toString())
-            .build();
+        EncodedPublicKey.newBuilder().setId(randomUUID().toString()).build();
+    var converter = new EncodedPublicKeyListConverter(Mode.TINK);
 
     assertThrows(
         UnsupportedOperationException.class,
@@ -83,26 +47,25 @@ public class EncodedPublicKeyListConverterTest {
   @Test
   public void testConvert_tinkMode_returnsExpectedFormat() throws Exception {
     // Given
-    EncryptionKey key = FakeEncryptionKey.create();
+    EncryptionKey key = FakeEncryptionKey.createEncryptionKey();
 
     // When
-    converter = new EncodedPublicKeyListConverter(Mode.TINK);
+    var converter = new EncodedPublicKeyListConverter(Mode.TINK);
     EncodedPublicKey encodedKey = converter.convert(ImmutableList.of(key)).get(0);
 
     // Then
     assertThat(encodedKey.getId()).isEqualTo(key.getKeyId());
-    KeysetHandle keysetHandle =
-        CleartextKeysetHandle.read(
-            BinaryKeysetReader.withBytes(Base64.decode(encodedKey.getTinkBinary())));
+    CleartextKeysetHandle.read(
+        BinaryKeysetReader.withBytes(Base64.decode(encodedKey.getTinkBinary())));
   }
 
   @Test
   public void testConvert_rawMode_returnsExpectedFormat() {
     // Given
-    EncryptionKey key = FakeEncryptionKey.create();
+    EncryptionKey key = FakeEncryptionKey.createEncryptionKey();
 
     // When
-    converter = new EncodedPublicKeyListConverter(Mode.RAW);
+    var converter = new EncodedPublicKeyListConverter(Mode.RAW);
     EncodedPublicKey encodedKey = converter.convert(ImmutableList.of(key)).get(0);
 
     // Then

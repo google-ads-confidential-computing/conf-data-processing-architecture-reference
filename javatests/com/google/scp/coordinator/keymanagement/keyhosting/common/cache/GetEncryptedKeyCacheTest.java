@@ -19,11 +19,11 @@ package com.google.scp.coordinator.keymanagement.keyhosting.common.cache;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
-import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
@@ -39,11 +39,12 @@ import org.mockito.junit.MockitoRule;
 public class GetEncryptedKeyCacheTest {
 
   private static final String KEY = "key";
-  private static final LogMetricHelper LOG_METRIC_HELPER = new LogMetricHelper("test");
   private static final EncryptionKey ENCRYPTION_KEY =
       EncryptionKey.newBuilder().setKeyId("keyId").setKeyType("keyType").build();
   private static final ServiceException SERVICE_EXCEPTION =
       new ServiceException(Code.NOT_FOUND, "errorReason", "msg");
+  private static final ServiceException UNKNOWN_SERVICE_EXCEPTION =
+      new ServiceException(Code.UNKNOWN, "errorReason", "msg");
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
@@ -51,12 +52,21 @@ public class GetEncryptedKeyCacheTest {
 
   @Test
   public void readDbThrows_dbCalledOnceTest() throws Exception {
-    when(mockKeyDb.getKey(anyString())).thenThrow(SERVICE_EXCEPTION);
+    readDbThrowsCheck(SERVICE_EXCEPTION, 1);
+  }
+
+  @Test
+  public void readDbThrowsUnknown_dbCalledTwiceTest() throws Exception {
+    readDbThrowsCheck(UNKNOWN_SERVICE_EXCEPTION, 3);
+  }
+
+  private void readDbThrowsCheck(ServiceException exception, int times) throws Exception {
+    when(mockKeyDb.getKey(anyString())).thenThrow(exception);
     var cache = new GetEncryptedKeyCache(mockKeyDb);
     assertThrows(ServiceException.class, () -> cache.get(KEY));
     assertThrows(ServiceException.class, () -> cache.get(KEY));
     assertThrows(ServiceException.class, () -> cache.get(KEY));
-    verify(mockKeyDb).getKey(anyString());
+    verify(mockKeyDb, times(times)).getKey(anyString());
   }
 
   @Test

@@ -37,10 +37,8 @@ ExecutionResultOr<std::string> Base64Decode(const std::string& encoded);
  */
 ExecutionResultOr<std::string> Base64Encode(const std::string& decoded);
 
-
 // DEPRECATED, please use the above options.
 ExecutionResult Base64Decode(const std::string& encoded, std::string& decoded);
-
 
 // DEPRECATED, please use the above options.
 ExecutionResult Base64Encode(const std::string& decoded, std::string& encoded);

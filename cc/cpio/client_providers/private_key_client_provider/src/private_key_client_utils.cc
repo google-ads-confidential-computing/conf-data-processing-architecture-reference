@@ -101,7 +101,7 @@ ExecutionResult PrivateKeyClientUtils::GetKmsDecryptRequest(
           SC_PRIVATE_KEY_CLIENT_PROVIDER_CANNOT_CREATE_JSON_KEY_SET);
       SCP_ERROR(kPrivateKeyClientUtils, kZeroUuid, execution_result,
                 "Failed to create JsonKeysetReader: %s.",
-                keyset_reader_or.status().ToString().c_str());
+                keyset_reader_or.status().message());
       return execution_result;
     }
     auto keyset_or = (*keyset_reader_or)->ReadEncrypted();
@@ -110,7 +110,7 @@ ExecutionResult PrivateKeyClientUtils::GetKmsDecryptRequest(
           SC_PRIVATE_KEY_CLIENT_PROVIDER_CANNOT_READ_ENCRYPTED_KEY_SET);
       SCP_ERROR(kPrivateKeyClientUtils, kZeroUuid, execution_result,
                 "Failed to parse encryption key set: %s.",
-                keyset_or.status().ToString().c_str());
+                keyset_or.status().message());
       return execution_result;
     }
     // JsonKeysetReader unescapes the key material, so we escape it back.

@@ -167,7 +167,13 @@ ExecutionResult LibCpioProvider::GetHttpClient(
     return execution_result;
   }
 
-  http2_client_ = make_shared<HttpClient>(cpu_async_executor);
+  google::scp::core::HttpClientOptions default_options;
+  auto http_client_options = google::scp::core::HttpClientOptions(
+      default_options.retry_strategy_options,
+      default_options.max_connections_per_host,
+      cpio_options_->http2_read_timeout_in_sec.count());
+  http2_client_ =
+      make_shared<HttpClient>(cpu_async_executor, http_client_options);
   execution_result = http2_client_->Init();
   if (!execution_result.Successful()) {
     SCP_ERROR(kLibCpioProvider, kZeroUuid, execution_result,

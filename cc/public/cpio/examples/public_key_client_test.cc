@@ -54,6 +54,7 @@ using std::unique_ptr;
 using std::chrono::milliseconds;
 
 constexpr char kPublicKeyEndpoint[] = "https://test.publickey.com";
+constexpr char kKeySetName[] = "ec";
 
 int main(int argc, char* argv[]) {
   CpioOptions cpio_options;
@@ -85,6 +86,7 @@ int main(int argc, char* argv[]) {
   std::cout << "Run public key client successfully!" << std::endl;
 
   auto request = make_shared<ListPublicKeysRequest>();
+  request->set_key_set_name(kKeySetName);
   atomic<bool> finished = false;
   auto list_public_keys_context =
       AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse>(

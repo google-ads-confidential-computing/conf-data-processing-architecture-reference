@@ -18,7 +18,6 @@ package com.google.scp.operator.shared.dao.metadatadb.gcp;
 
 import static com.google.cmrt.sdk.job_service.v1.JobStatus.JOB_STATUS_CREATED;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.scp.shared.gcp.Constants.SPANNER_TEST_JOB_DB_NAME;
 import static org.junit.Assert.assertThrows;
 

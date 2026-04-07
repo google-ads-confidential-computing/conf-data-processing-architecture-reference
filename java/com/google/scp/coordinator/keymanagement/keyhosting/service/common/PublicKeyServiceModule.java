@@ -28,14 +28,6 @@ import java.util.List;
 public class PublicKeyServiceModule extends AbstractModule {
 
   @ProvidesIntoMap
-  @StringMapKey("/v1alpha")
-  List<ApiTask> provideV1AlphaTasks(
-      com.google.scp.coordinator.keymanagement.keyhosting.tasks.GetActivePublicKeysTask
-          getActivePublicKeysTask) {
-    return ImmutableList.of(getActivePublicKeysTask);
-  }
-
-  @ProvidesIntoMap
   @StringMapKey("/v1beta")
   List<ApiTask> provideV1BetaTasks(GetActivePublicKeysTask getActivePublicKeysTask) {
     return ImmutableList.of(getActivePublicKeysTask);

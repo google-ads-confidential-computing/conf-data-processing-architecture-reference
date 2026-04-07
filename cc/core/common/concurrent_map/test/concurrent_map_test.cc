@@ -134,7 +134,6 @@ TEST_F(ConcurrentMapTests, GetKeysWithAccessor) {
   auto kNumThreads = 1000;
   std::vector<std::thread> work_threads;
   work_threads.reserve(kNumThreads);
-  size_t key_size_sum = 0;
   atomic<uint64_t> all_threads_duration{0};
   for (int i = 0; i < kNumThreads; i++) {
     work_threads.emplace_back([&] {
@@ -199,7 +198,6 @@ TEST_F(ConcurrentMapTests, GetKeysWithConstAccessor) {
   auto kNumThreads = 1000;
   std::vector<std::thread> work_threads;
   work_threads.reserve(kNumThreads);
-  size_t key_size_sum = 0;
   atomic<uint64_t> all_threads_duration{0};
   for (int i = 0; i < kNumThreads; i++) {
     work_threads.emplace_back([&] {

@@ -26,8 +26,8 @@
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/type_def.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
+#include "public/cpio/interface/type_def.h"
 
 namespace google::scp::cpio::client_providers {
 /**

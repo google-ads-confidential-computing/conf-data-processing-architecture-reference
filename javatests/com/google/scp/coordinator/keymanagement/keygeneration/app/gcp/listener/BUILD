@@ -54,7 +54,7 @@ java_library(
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
         "//java/external:acai",
-        "//java/external:gcp_api_gax",
+        "//java/external:gcp_gax",
         "//java/external:gcp_gax_grpc",
         "//java/external:gcp_pubsub",
         "//java/external:gcp_pubsub_v1",

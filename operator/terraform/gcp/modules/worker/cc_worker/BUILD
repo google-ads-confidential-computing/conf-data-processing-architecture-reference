@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@rules_pkg//:mappings.bzl", "pkg_files")
+load("//tools/tftesting:tf_test.bzl", "tf_module", "tf_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -26,4 +27,22 @@ pkg_files(
         ],
     ),
     prefix = "worker/cc_worker",
+)
+
+tf_module(
+    name = "cc_worker_module",
+    deps = [
+        "//operator/terraform/gcp/modules/cc_custom_monitoring:cc_custom_monitoring_module",
+        "//operator/terraform/gcp/modules/worker/base_worker:base_worker_module",
+    ],
+)
+
+tf_test(
+    name = "cc_worker_test",
+    srcs = glob([
+        "*.tftest.hcl",
+    ]),
+    deps = [
+        ":cc_worker_module",
+    ],
 )

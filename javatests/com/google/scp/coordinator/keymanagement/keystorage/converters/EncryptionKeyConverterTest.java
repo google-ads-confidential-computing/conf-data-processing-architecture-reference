@@ -17,10 +17,13 @@
 package com.google.scp.coordinator.keymanagement.keystorage.converters;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.keystorage.converters.EncryptionKeyConverter.toApiEncryptionKey;
+import static com.google.scp.coordinator.keymanagement.keystorage.converters.EncryptionKeyConverter.toStorageEncryptionKey;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.createEncryptionKeyBuilder;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.createEncryptionKeyWithMigration;
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
-import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto;
@@ -30,6 +33,7 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class EncryptionKeyConverterTest {
+  private static final String SET_NAME = "test-set-name";
 
   @Test
   public void toStorageEncryptionKey_success() {
@@ -38,7 +42,7 @@ public class EncryptionKeyConverterTest {
     EncryptionKey keyStorageKey =
         EncryptionKey.newBuilder()
             .setName(path + keyId)
-            .setSetName("test-set-name")
+            .setSetName(SET_NAME)
             .setEncryptionKeyType(EncryptionKeyType.SINGLE_PARTY_HYBRID_KEY)
             .setPublicKeysetHandle("12345")
             .setPublicKeyMaterial("qwert")
@@ -50,8 +54,7 @@ public class EncryptionKeyConverterTest {
             .addAllKeyData(ImmutableList.of())
             .build();
 
-    com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
-        result = EncryptionKeyConverter.toStorageEncryptionKey(keyId, keyStorageKey);
+    var result = toStorageEncryptionKey(keyId, keyStorageKey);
 
     assertThat(path + result.getKeyId()).isEqualTo(keyStorageKey.getName());
     assertThat(result.getSetName()).isEqualTo(keyStorageKey.getSetName());
@@ -69,7 +72,7 @@ public class EncryptionKeyConverterTest {
     EncryptionKey keyStorageKey =
         EncryptionKey.newBuilder()
             .setName(path + keyId)
-            .setSetName("test-set-name")
+            .setSetName(SET_NAME)
             .setEncryptionKeyType(EncryptionKeyType.SINGLE_PARTY_HYBRID_KEY)
             .setPublicKeysetHandle("12345")
             .setPublicKeyMaterial("qwert")
@@ -79,8 +82,7 @@ public class EncryptionKeyConverterTest {
             .addAllMigrationKeyData(ImmutableList.of())
             .build();
 
-    com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey
-        result = EncryptionKeyConverter.toStorageEncryptionKey(keyId, keyStorageKey);
+    var result = toStorageEncryptionKey(keyId, keyStorageKey);
 
     assertThat(path + result.getKeyId()).isEqualTo(keyStorageKey.getName());
     assertThat(result.getSetName()).isEqualTo(keyStorageKey.getSetName());
@@ -110,16 +112,14 @@ public class EncryptionKeyConverterTest {
 
     IllegalArgumentException ex =
         assertThrows(
-            IllegalArgumentException.class,
-            () -> EncryptionKeyConverter.toStorageEncryptionKey(null, keyStorageKey));
+            IllegalArgumentException.class, () -> toStorageEncryptionKey(null, keyStorageKey));
 
     assertThat(ex.getMessage()).isEqualTo("KeyId cannot be null or empty.");
   }
 
   @Test
   public void toApiEncryptionKey_noPrivateKeyMaterial() {
-    EncryptionKey encryptionKey =
-        EncryptionKeyConverter.toApiEncryptionKey(FakeEncryptionKey.createWithMigration());
+    EncryptionKey encryptionKey = toApiEncryptionKey(createEncryptionKeyWithMigration(SET_NAME));
     // {@link FakeEncryptionKey} should always give a non-empty list of {@code keyData} so that this
     // test is meaningful.  If this assertion fails, it means we should fix {@code
     // FakeEncryptionKey.create} to provide more representative test data.
@@ -140,40 +140,34 @@ public class EncryptionKeyConverterTest {
     String keyId = "abc";
     String path = "encryptionKeys/abc";
     EncryptionKey encryptionKey =
-        EncryptionKeyConverter.toApiEncryptionKey(
-            FakeEncryptionKey.create().toBuilder().setKeyId(keyId).build());
+        toApiEncryptionKey(createEncryptionKeyBuilder().setKeyId(keyId).build());
     assertThat(encryptionKey.getName()).isEqualTo(path);
   }
 
   @Test
   public void toApiEncryptionKey_roundTrip() {
-    var original = FakeEncryptionKey.create().toBuilder().setJsonEncodedKeyset("").build();
-    var converted =
-        EncryptionKeyConverter.toStorageEncryptionKey(
-            original.getKeyId(), EncryptionKeyConverter.toApiEncryptionKey(original));
+    var original = createEncryptionKeyBuilder().setJsonEncodedKeyset("").build();
+    var converted = toStorageEncryptionKey(original.getKeyId(), toApiEncryptionKey(original));
     // The top-level URI doesn't exist on the API model, so ignore it.
-    var originalNoUri = original.toBuilder().clearKeyEncryptionKeyUri().clearSetName().build();
+    var originalNoUri = original.toBuilder().clearKeyEncryptionKeyUri().build();
     assertThat(converted).isEqualTo(originalNoUri);
   }
 
   @Test
   public void toApiEncryptionKey_badKeyType() {
-    var encryptionKey =
-        FakeEncryptionKey.create().toBuilder().setKeyType("HYPER_PARTY_KEYSPLIT").build();
+    var encryptionKey = createEncryptionKeyBuilder().setKeyType("HYPER_PARTY_KEYSPLIT").build();
 
     IllegalArgumentException ex =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> EncryptionKeyConverter.toApiEncryptionKey(encryptionKey));
+        assertThrows(IllegalArgumentException.class, () -> toApiEncryptionKey(encryptionKey));
 
     assertThat(ex.getMessage()).isEqualTo("Unrecognized KeyType: HYPER_PARTY_KEYSPLIT");
   }
 
   @Test
   public void toApiEncryptionKey_unspecifiedKeyType() {
-    var storageKey = FakeEncryptionKey.create().toBuilder().setKeyType("").build();
+    var storageKey = createEncryptionKeyBuilder().setKeyType("").build();
 
-    EncryptionKey encryptionKey = EncryptionKeyConverter.toApiEncryptionKey(storageKey);
+    EncryptionKey encryptionKey = toApiEncryptionKey(storageKey);
 
     assertThat(encryptionKey.getEncryptionKeyType())
         .isEqualTo(EncryptionKeyType.SINGLE_PARTY_HYBRID_KEY);
@@ -183,7 +177,7 @@ public class EncryptionKeyConverterTest {
   public void toApiEncryptionKey_withNulls() {
     var encryptionKey = EncryptionKeyProto.EncryptionKey.newBuilder().build();
 
-    EncryptionKey storageKey = EncryptionKeyConverter.toApiEncryptionKey(encryptionKey);
+    EncryptionKey storageKey = toApiEncryptionKey(encryptionKey);
 
     assertThat(storageKey.hasExpirationTime()).isFalse();
     assertThat(storageKey.hasTtlTime()).isFalse();

@@ -86,7 +86,6 @@ constexpr char kPrivateKeyCloudfunctionUri[] = "http://cloudfunction.test:8000";
 constexpr char kSessionTokenMock[] = "session-token-test";
 constexpr char kAuthorizationHeaderKey[] = "Authorization";
 constexpr char kBearerTokenPrefix[] = "Bearer ";
-constexpr char kVersionNumberAlphaSuffix[] = "/v1alpha";
 constexpr char kVersionNumberBetaSuffix[] = "/v1beta";
 constexpr char kEncryptionKeyUrlSuffix[] = "/encryptionKeys";
 constexpr char kKeySetNameSuffix[] = "/sets";

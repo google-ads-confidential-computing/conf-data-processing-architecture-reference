@@ -15,9 +15,9 @@
  */
 #include "cc/core/curl_client/src/http1_curl_handlers.h"
 
-#include <string>
-
 #include <gtest/gtest.h>
+
+#include <string>
 
 #include "core/interface/http_types.h"
 #include "core/test/utils/scp_test_base.h"

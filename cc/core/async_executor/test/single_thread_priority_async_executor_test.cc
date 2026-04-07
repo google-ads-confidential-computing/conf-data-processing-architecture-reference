@@ -45,19 +45,18 @@ using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
-using testing::Values;
 using testing::AllOf;
+using testing::ExplainMatchResult;
 using testing::Ge;
 using testing::Le;
-using testing::ExplainMatchResult;
+using testing::Values;
 
 namespace google::scp::core::test {
 
 MATCHER_P2(IsBetween, lower, higher, "") {
-  if (!ExplainMatchResult(AllOf(Ge(lower), Le(higher)),
-                          arg, result_listener)) {
+  if (!ExplainMatchResult(AllOf(Ge(lower), Le(higher)), arg, result_listener)) {
     *result_listener << "Off by " << lower - arg << " from lower limit and "
-        << arg - higher << " from higher limit";
+                     << arg - higher << " from higher limit";
     return false;
   }
   return true;
@@ -154,8 +153,8 @@ TEST(SingleThreadPriorityAsyncExecutorTests, CountWorkSingleThread) {
       TimeProvider::GetSteadyTimestampInNanoseconds() + milliseconds(500);
   atomic<int> count(0);
   for (int i = 0; i < queue_cap; i++) {
-    EXPECT_SUCCESS(executor.ScheduleFor(
-        [&]() { count++; }, execute_time.count()));
+    EXPECT_SUCCESS(
+        executor.ScheduleFor([&]() { count++; }, execute_time.count()));
   }
   // Waits some time to finish the work.
   WaitUntil([&]() { return count == queue_cap; }, seconds(2));

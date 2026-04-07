@@ -42,9 +42,9 @@ public class KeyMigrationVendingUtilTest {
   private static final String APPROVED_CALLER = "approved-caller@google.com";
   private static final String SET_NAME = "TestSet";
   private static final EncryptionKey TEST_KEY_WITH_MIGRATION_DATA =
-      FakeEncryptionKey.createWithMigration().toBuilder().setSetName(SET_NAME).build();
+      FakeEncryptionKey.createEncryptionKeyWithMigration(SET_NAME);
   private static final EncryptionKey TEST_KEY_WITHOUT_MIGRATION_DATA =
-      FakeEncryptionKey.create().toBuilder().setSetName(SET_NAME).build();
+      FakeEncryptionKey.createEncryptionKey(SET_NAME);
 
   @Mock private RequestContext request;
   private LogMetricHelper logMetricHelper;

@@ -24,10 +24,10 @@
 #include "core/interface/service_interface.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/private_key_client/type_def.h"
-#include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
 #include "public/cpio/interface/metric_client/type_def.h"
+#include "public/cpio/interface/private_key_client/type_def.h"
+#include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 
 namespace google::scp::cpio::client_providers {
 /**

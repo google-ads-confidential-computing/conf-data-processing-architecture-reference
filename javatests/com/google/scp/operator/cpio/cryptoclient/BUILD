@@ -82,7 +82,7 @@ java_test(
         "//java/com/google/scp/shared/crypto/tink",
         "//java/com/google/scp/shared/util",
         "//java/external:acai",
-        "//java/external:gcp_api_gax",
+        "//java/external:gcp_gax",
         "//java/external:gcp_gax_grpc",
         "//java/external:google_api_client",
         "//java/external:google_http_client",

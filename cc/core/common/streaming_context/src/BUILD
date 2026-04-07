@@ -19,9 +19,6 @@ package(default_visibility = ["//cc:scp_cc_internal_pkg"])
 cc_library(
     name = "streaming_context_errors_lib",
     hdrs = ["error_codes.h"],
-    copts = [
-        "-std=c++17",
-    ],
     deps = [
         "//cc:cc_base_include_dir",
     ],

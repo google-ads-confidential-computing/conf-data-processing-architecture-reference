@@ -234,7 +234,6 @@ void TimeAggregateMetric::MetricPushHandler(
       },
       object_activity_id_, object_activity_id_);
 
-  auto metrics_count = record_metric_context.request->metrics().size();
   metric_client_->PutMetrics(record_metric_context);
 }
 

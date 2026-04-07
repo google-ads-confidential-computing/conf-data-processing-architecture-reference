@@ -25,7 +25,7 @@ AUTO_VALUE_VERSION = "1.10.4"
 
 AWS_SDK_VERSION = "2.17.239"
 
-GOOGLE_GAX_VERSION = "2.47.0"
+GOOGLE_GAX_VERSION = "2.73.1"
 
 AUTO_SERVICE_VERSION = "1.1.1"
 
@@ -61,6 +61,7 @@ def maven_dependencies():
             # complain about google-api-client and cloudkms mismatch.
             "com.google.api-client:google-api-client:2.7.0",
             "com.google.cloud:google-cloud-kms:2.48.0",
+            "com.google.cloud:google-cloud-parametermanager:0.26.0",
             "com.google.cloud:google-cloud-pubsub:1.132.0",
             "com.google.cloud:google-cloud-storage:2.41.0",
             "com.google.cloud:google-cloud-storage-transfer:1.46.0",
@@ -74,6 +75,7 @@ def maven_dependencies():
             "com.google.cloud.functions:functions-framework-api:1.1.4",
             "commons-logging:commons-logging:1.1.1",
             "com.google.api:gax:" + GOOGLE_GAX_VERSION,
+            "com.google.api:gax-grpc:" + GOOGLE_GAX_VERSION,
             "com.google.http-client:google-http-client-jackson2:1.40.0",
             "com.google.cloud:google-cloud-monitoring:3.31.0",
             "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.31.0",
@@ -86,9 +88,8 @@ def maven_dependencies():
             "com.google.inject.extensions:guice-testlib:5.1.0",
             "com.google.jimfs:jimfs:1.2",
             "com.google.testparameterinjector:test-parameter-injector:1.19",
-            "com.google.truth.extensions:truth-java8-extension:1.3.0",
-            "com.google.truth.extensions:truth-proto-extension:1.3.0",
-            "com.google.truth:truth:1.3.0",
+            "com.google.truth.extensions:truth-proto-extension:1.4.5",
+            "com.google.truth:truth:1.4.5",
             "io.cloudevents:cloudevents-api:2.5.0",
             "io.github.resilience4j:resilience4j-core:1.7.1",
             "io.github.resilience4j:resilience4j-retry:1.7.1",

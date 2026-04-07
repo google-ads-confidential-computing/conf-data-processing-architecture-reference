@@ -17,9 +17,9 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.withKeyId;
 
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
-import com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,6 +28,7 @@ import org.junit.runners.JUnit4;
 /** Test SequenceKeyIdFactory. */
 @RunWith(JUnit4.class)
 public class SequenceKeyIdFactoryTest {
+  private static final String SET_NAME = "test-set-name";
 
   private final SequenceKeyIdFactory keyIdFactory = new SequenceKeyIdFactory();
   private final InMemoryKeyDb keyDb = new InMemoryKeyDb();
@@ -46,15 +47,15 @@ public class SequenceKeyIdFactoryTest {
 
   @Test
   public void testGetNextKeyId_withOverflow() throws ServiceException {
-    keyDb.createKey(FakeEncryptionKey.withKeyId(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE)));
+    keyDb.createKey(withKeyId(SET_NAME, keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE)));
     String nextKeyId = keyIdFactory.getNextKeyId(keyDb);
     assertThat(nextKeyId).isEqualTo(keyIdFactory.encodeKeyIdToString(Long.MIN_VALUE));
   }
 
   @Test
   public void testGetNextKeyId_afterOverflow() throws ServiceException {
-    keyDb.createKey(FakeEncryptionKey.withKeyId(keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE)));
-    keyDb.createKey(FakeEncryptionKey.withKeyId(keyIdFactory.encodeKeyIdToString(Long.MIN_VALUE)));
+    keyDb.createKey(withKeyId(SET_NAME, keyIdFactory.encodeKeyIdToString(Long.MAX_VALUE)));
+    keyDb.createKey(withKeyId(SET_NAME, keyIdFactory.encodeKeyIdToString(Long.MIN_VALUE)));
     String nextKeyId = keyIdFactory.getNextKeyId(keyDb);
     assertThat(nextKeyId).isEqualTo(keyIdFactory.encodeKeyIdToString(Long.MIN_VALUE + 1));
   }
@@ -71,7 +72,7 @@ public class SequenceKeyIdFactoryTest {
     for (int i = 0; i < keysToCreate; i++) {
       String nextKeyId = keyIdFactory.getNextKeyId(keyDb);
       assertThat(nextKeyId).isEqualTo(keyIdFactory.encodeKeyIdToString((long) i));
-      keyDb.createKey(FakeEncryptionKey.withKeyId(nextKeyId));
+      keyDb.createKey(withKeyId(SET_NAME, nextKeyId));
     }
   }
 }

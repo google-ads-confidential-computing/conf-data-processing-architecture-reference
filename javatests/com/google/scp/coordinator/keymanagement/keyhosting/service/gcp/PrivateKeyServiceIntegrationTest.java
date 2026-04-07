@@ -90,7 +90,7 @@ public final class PrivateKeyServiceIntegrationTest {
   // GetEncryptionKeys v1beta
   @Test(timeout = 25_000)
   public void getEncryptionKeys_betaSuccess() throws ServiceException {
-    EncryptionKey encryptionKey = FakeEncryptionKey.create();
+    EncryptionKey encryptionKey = FakeEncryptionKey.createEncryptionKey();
 
     keyDb.createKey(encryptionKey);
     HttpRequest getRequest =

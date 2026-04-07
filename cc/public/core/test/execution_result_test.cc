@@ -1,4 +1,4 @@
-// Copyright 2022 Google LLC
+// Copyright 2022-2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -172,6 +172,13 @@ TEST(ExecutionResultOrTest, ValueMethods) {
   EXPECT_TRUE(subject_3->empty());
 }
 
+// A helper to prevent the optimizer from optimizing away the nullptr
+// dereference.
+template <typename T>
+__attribute__((noinline)) bool CallEmpty(const ExecutionResultOr<T>& subject) {
+  return subject->empty();
+}
+
 TEST(ExecutionResultOrTest, DeathTests) {
   EXPECT_ANY_THROW({
     ExecutionResultOr<string> subject(
@@ -187,7 +194,7 @@ TEST(ExecutionResultOrTest, DeathTests) {
       {
         ExecutionResultOr<string> subject(
             ExecutionResult(ExecutionStatus::Failure, 2));
-        bool e = subject->empty();
+        bool e = CallEmpty(subject);
         subject = string(e ? "t" : "f");
       },
       _);

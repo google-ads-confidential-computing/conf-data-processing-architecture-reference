@@ -17,7 +17,7 @@ output "load_balancer_ip" {
 }
 
 output "key_storage_service_account_email" {
-  value = google_service_account.key_storage_service_account.email
+  value = module.service_account.service_account_email
 }
 
 output "key_storage_cloud_run_url" {

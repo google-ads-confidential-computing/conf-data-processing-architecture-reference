@@ -1251,7 +1251,7 @@ TEST_F(JobLifecycleHelperTest, PrepareNextJobSuccessWithRemoteMetricIncrement) {
 
   std::vector<Metric> metrics;
   EXPECT_CALL(*mock_metric_client, PutMetricsSync)
-      .WillRepeatedly([this, &metrics](auto request) {
+      .WillRepeatedly([&metrics](auto request) {
         metrics.push_back(request.metrics(0));
         return PutMetricsResponse();
       });

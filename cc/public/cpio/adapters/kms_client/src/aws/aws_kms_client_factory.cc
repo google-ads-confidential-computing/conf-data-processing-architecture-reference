@@ -24,7 +24,6 @@
 
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::unique_ptr;
 
@@ -32,6 +31,6 @@ namespace google::scp::cpio {
 unique_ptr<KmsClientInterface> AwsKmsClientFactory::Create(
     AwsKmsClientOptions options) {
   return make_unique<AwsKmsClient>(
-      make_shared<AwsKmsClientOptions>(move(options)));
+      make_shared<AwsKmsClientOptions>(std::move(options)));
 }
 }  // namespace google::scp::cpio

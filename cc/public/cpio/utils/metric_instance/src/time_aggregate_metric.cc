@@ -57,7 +57,6 @@ using google::scp::cpio::MetricClientInterface;
 using std::make_pair;
 using std::make_shared;
 using std::map;
-using std::move;
 using std::mutex;
 using std::pair;
 using std::shared_ptr;
@@ -87,7 +86,7 @@ TimeAggregateMetric::TimeAggregateMetric(
     TimeDuration push_interval_duration_in_ms)
     : async_executor_(async_executor),
       metric_client_(metric_client),
-      metric_info_(move(metric_info)),
+      metric_info_(std::move(metric_info)),
       push_interval_duration_in_ms_(push_interval_duration_in_ms),
       average_duration_counter_(make_pair(0, 0)),
       is_running_(false),
@@ -102,7 +101,7 @@ TimeAggregateMetric::TimeAggregateMetric(
     const std::string& event_code_label_key)
     : async_executor_(async_executor),
       metric_client_(metric_client),
-      metric_info_(move(metric_info)),
+      metric_info_(std::move(metric_info)),
       push_interval_duration_in_ms_(push_interval_duration_in_ms),
       average_duration_counter_(make_pair(0, 0)),
       is_running_(false),
@@ -114,11 +113,11 @@ TimeAggregateMetric::TimeAggregateMetric(
 
     // a copy of metric_info_
     auto event_metric = MetricDefinition(metric_info_);
-    event_metric.AddMetricLabels(move(labels));
+    event_metric.AddMetricLabels(std::move(labels));
 
     event_counters_[event_code] = make_pair(0, 0);
     event_metric_infos_.insert(
-        pair<string, MetricDefinition>(event_code, move(event_metric)));
+        pair<string, MetricDefinition>(event_code, std::move(event_metric)));
   }
 }
 
@@ -216,7 +215,7 @@ void TimeAggregateMetric::MetricPushHandler(
                                     metric_value);
 
   AsyncContext<PutMetricsRequest, PutMetricsResponse> record_metric_context(
-      move(record_metric_request),
+      std::move(record_metric_request),
       [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {
         if (!context.result.Successful()) {
           std::vector<string> metric_names;

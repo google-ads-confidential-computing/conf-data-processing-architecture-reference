@@ -21,11 +21,8 @@ import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.KeysetWriter;
 import com.google.crypto.tink.proto.EncryptedKeyset;
 import com.google.crypto.tink.proto.HpkePublicKey;
-import com.google.crypto.tink.proto.KeyData;
 import com.google.crypto.tink.proto.KeyData.KeyMaterialType;
-import com.google.crypto.tink.proto.KeyStatusType;
 import com.google.crypto.tink.proto.Keyset;
-import com.google.crypto.tink.proto.OutputPrefixType;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.IOException;
@@ -61,37 +58,10 @@ public final class PublicKeyConversionUtil {
   }
 
   /**
-   * Returns a KeysetHandle constructed from a base64-encoded string of the raw public key material
-   * of an Enabled, Asymmetric, Hpke key with the parameters defined in {@link KeyParams}.
-   *
-   * @deprecated Direct handling of raw key materials is discouraged, consider Tink alternatives.
-   *     <p>Useful for reconstructing PublicKeys returned from the public key API (i.e. inverting
-   *     the operation done in {@link #getPublicKey(KeysetHandle)})
-   */
-  @Deprecated
-  public static KeysetHandle getKeysetHandle(String rawPublicKey) throws GeneralSecurityException {
-    return CleartextKeysetHandle.fromKeyset(
-        Keyset.newBuilder()
-            .addKey(
-                Keyset.Key.newBuilder()
-                    .setStatus(KeyStatusType.ENABLED)
-                    .setOutputPrefixType(OutputPrefixType.RAW)
-                    .setKeyData(
-                        KeyData.newBuilder()
-                            .setTypeUrl("type.googleapis.com/google.crypto.tink.HpkePublicKey")
-                            .setKeyMaterialType(KeyMaterialType.ASYMMETRIC_PUBLIC)
-                            .setValue(createSerializedKeyFromRawKey(rawPublicKey))
-                            .build())
-                    .build())
-            .build());
-  }
-
-  /**
    * Returns the base64-encoded raw public key from the provided serialized {@link HpkePublicKey}
    *
    * <p>This removes the Hpke parameters that are part of the HpkePublicKey which are necessary for
-   * encryption using this key. {@link #createSerializedKeyFromRawKey(String)} performs the inverse
-   * operation.
+   * encryption using this key.
    *
    * @throws GeneralSecurityException if the HpkeParams of the provided key do not match the
    *     expected params.
@@ -102,22 +72,6 @@ public final class PublicKeyConversionUtil {
     var publicKey = deserializedKey.getPublicKey().toByteArray();
 
     return new String(Base64.getEncoder().encode(publicKey));
-  }
-
-  /**
-   * Returns a serialized {@link HpkePublicKey} containing the provided public key.
-   *
-   * <p>The Hpke parameters associated with this key are assumed to be the same as specified in
-   * {@link KeyParams} but if the parameters differ, this key will not be compatible with the
-   * original key. {@link #getRawKeyFromSerializedKey(ByteString)} performs the inverse operation.
-   */
-  private static ByteString createSerializedKeyFromRawKey(String rawPublicKey) {
-    var keyProto =
-        HpkePublicKey.newBuilder()
-            .setPublicKey(ByteString.copyFrom(Base64.getDecoder().decode(rawPublicKey)))
-            .setParams(KeyParams.getHpkeParams())
-            .build();
-    return keyProto.toByteString();
   }
 
   /**

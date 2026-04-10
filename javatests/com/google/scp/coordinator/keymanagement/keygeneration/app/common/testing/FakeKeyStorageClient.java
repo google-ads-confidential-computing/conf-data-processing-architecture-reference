@@ -24,7 +24,6 @@ import com.google.crypto.tink.PublicKeyVerify;
 import com.google.crypto.tink.signature.EcdsaSignKeyManager;
 import com.google.crypto.tink.signature.SignatureConfig;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
-import com.google.scp.coordinator.keymanagement.testutils.FakeDataKeyUtil;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import java.security.GeneralSecurityException;
 import java.util.Optional;

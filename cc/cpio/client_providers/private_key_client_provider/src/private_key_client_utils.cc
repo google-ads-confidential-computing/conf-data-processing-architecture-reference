@@ -67,7 +67,6 @@ using google::scp::core::utils::Base64Encode;
 using google::scp::cpio::client_providers::KeyData;
 using google::scp::cpio::client_providers::PrivateKeyFetchingResponse;
 using std::byte;
-using std::move;
 using std::optional;
 using std::shared_ptr;
 using std::string;
@@ -116,7 +115,7 @@ ExecutionResult PrivateKeyClientUtils::GetKmsDecryptRequest(
     // JsonKeysetReader unescapes the key material, so we escape it back.
     string escaped_ciphertext;
     absl::Base64Escape((*keyset_or)->encrypted_keyset(), &escaped_ciphertext);
-    kms_decrypt_request.set_ciphertext(move(escaped_ciphertext));
+    kms_decrypt_request.set_ciphertext(std::move(escaped_ciphertext));
     kms_decrypt_request.set_key_resource_name(
         key_data->key_encryption_key_uri->substr(kKeyArnPrefixSize));
     return SuccessExecutionResult();

@@ -83,7 +83,6 @@ using std::bind;
 using std::make_pair;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::optional;
 using std::pair;
 using std::ref;
@@ -142,7 +141,7 @@ ExecutionResult GcpInstanceDatabaseClientProvider::Run() noexcept {
               "Failed creating Spanner client");
     return client_or.result();
   }
-  spanner_client_shared_ = move(*client_or);
+  spanner_client_shared_ = std::move(*client_or);
 
   return SuccessExecutionResult();
 }
@@ -156,7 +155,7 @@ void GcpInstanceDatabaseClientProvider::GetInstanceByNameInternal(
         get_instance_context,
     string query) noexcept {
   Client spanner_client(*spanner_client_shared_);
-  auto row_stream = spanner_client.ExecuteQuery(SqlStatement(move(query)));
+  auto row_stream = spanner_client.ExecuteQuery(SqlStatement(std::move(query)));
 
   auto row_it = row_stream.begin();
   if (row_it == row_stream.end() || !row_it->ok()) {
@@ -187,7 +186,7 @@ void GcpInstanceDatabaseClientProvider::GetInstanceByNameInternal(
     return;
   }
   get_instance_context.response = make_shared<GetInstanceByNameResponse>();
-  *get_instance_context.response->mutable_instance() = move(*instance_or);
+  *get_instance_context.response->mutable_instance() = std::move(*instance_or);
 
   FinishContext(SuccessExecutionResult(), get_instance_context,
                 cpu_async_executor_);
@@ -204,7 +203,7 @@ void GcpInstanceDatabaseClientProvider::GetInstanceByName(
 
   if (auto schedule_result = io_async_executor_->Schedule(
           bind(&GcpInstanceDatabaseClientProvider::GetInstanceByNameInternal,
-               this, get_instance_context, move(query)),
+               this, get_instance_context, std::move(query)),
           AsyncPriority::Normal);
       !schedule_result.Successful()) {
     SCP_ERROR_CONTEXT(kGcpInstanceDatabaseClientProvider, get_instance_context,
@@ -219,7 +218,7 @@ void GcpInstanceDatabaseClientProvider::ListInstancesByStatusInternal(
         list_instances_context,
     string query) noexcept {
   Client spanner_client(*spanner_client_shared_);
-  auto row_stream = spanner_client.ExecuteQuery(SqlStatement(move(query)));
+  auto row_stream = spanner_client.ExecuteQuery(SqlStatement(std::move(query)));
 
   list_instances_context.response =
       make_shared<ListInstancesByStatusResponse>();
@@ -247,7 +246,7 @@ void GcpInstanceDatabaseClientProvider::ListInstancesByStatusInternal(
                     cpu_async_executor_);
       return;
     }
-    *list_instances_context.response->add_instances() = move(*instance_or);
+    *list_instances_context.response->add_instances() = std::move(*instance_or);
   }
   FinishContext(SuccessExecutionResult(), list_instances_context,
                 cpu_async_executor_);
@@ -266,7 +265,7 @@ void GcpInstanceDatabaseClientProvider::ListInstancesByStatus(
   if (auto schedule_result = io_async_executor_->Schedule(
           bind(
               &GcpInstanceDatabaseClientProvider::ListInstancesByStatusInternal,
-              this, list_instances_context, move(query)),
+              this, list_instances_context, std::move(query)),
           AsyncPriority::Normal);
       !schedule_result.Successful()) {
     SCP_ERROR_CONTEXT(kGcpInstanceDatabaseClientProvider,

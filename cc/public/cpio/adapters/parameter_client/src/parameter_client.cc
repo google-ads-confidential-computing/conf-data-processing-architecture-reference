@@ -50,7 +50,6 @@ using google::scp::cpio::client_providers::ParameterClientProviderInterface;
 using std::bind;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::placeholders::_1;
@@ -128,7 +127,7 @@ ExecutionResultOr<GetParameterResponse> ParameterClient::GetParameterSync(
   GetParameterResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<GetParameterRequest, GetParameterResponse>(
-          bind(&ParameterClient::GetParameter, this, _1), move(request),
+          bind(&ParameterClient::GetParameter, this, _1), std::move(request),
           response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kParameterClient, kZeroUuid,
                             "Failed to GetParameter.");

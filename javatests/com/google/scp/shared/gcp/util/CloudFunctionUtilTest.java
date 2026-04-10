@@ -83,7 +83,7 @@ public final class CloudFunctionUtilTest {
             /* k1= */ "header1",
             /* v1= */ randomUUID().toString());
 
-    GetActivePublicKeysResponse response = getRandomActiveKeysResponse(keyId, publicKey);
+    GetActivePublicKeysResponse response = getRandomActiveKeysResponse(keyId);
 
     createCloudFunctionResponseFromProto(
         httpResponse, response, OK.getHttpStatusCode(), testHeaders);
@@ -91,7 +91,7 @@ public final class CloudFunctionUtilTest {
 
     GetActivePublicKeysResponse.Builder builder = GetActivePublicKeysResponse.newBuilder();
     JsonFormat.parser().merge(httpResponseOut.toString(), builder);
-    assertThat(builder.build().getKeys(0)).isEqualTo(expectedEncodedPublicKey(keyId, publicKey));
+    assertThat(builder.build().getKeys(0)).isEqualTo(expectedEncodedPublicKey(keyId));
     verify(httpResponse).appendHeader(eq("header0"), eq(testHeaders.get("header0")));
     verify(httpResponse).appendHeader(eq("header1"), eq(testHeaders.get("header1")));
   }
@@ -101,7 +101,7 @@ public final class CloudFunctionUtilTest {
       throws IOException {
     String keyId = randomUUID().toString();
     String publicKey = randomUUID().toString();
-    GetActivePublicKeysResponse response = getRandomActiveKeysResponse(keyId, publicKey);
+    GetActivePublicKeysResponse response = getRandomActiveKeysResponse(keyId);
 
     createCloudFunctionResponseFromProto(
         httpResponse, response, OK.getHttpStatusCode(), ImmutableMap.of());
@@ -109,7 +109,7 @@ public final class CloudFunctionUtilTest {
 
     GetActivePublicKeysResponse.Builder builder = GetActivePublicKeysResponse.newBuilder();
     JsonFormat.parser().merge(httpResponseOut.toString(), builder);
-    assertThat(builder.build().getKeys(0)).isEqualTo(expectedEncodedPublicKey(keyId, publicKey));
+    assertThat(builder.build().getKeys(0)).isEqualTo(expectedEncodedPublicKey(keyId));
     verify(httpResponse, times(0)).appendHeader(anyString(), anyString());
   }
 
@@ -143,15 +143,12 @@ public final class CloudFunctionUtilTest {
     verify(httpResponse).setStatusCode(eq(INTERNAL.getHttpStatusCode()));
   }
 
-  private static GetActivePublicKeysResponse getRandomActiveKeysResponse(
-      String keyId, String publicKey) {
+  private static GetActivePublicKeysResponse getRandomActiveKeysResponse(String keyId) {
     return GetActivePublicKeysResponse.newBuilder()
         .addAllKeys(
             ImmutableList.<EncodedPublicKey>builder()
-                .add(EncodedPublicKey.newBuilder().setId(keyId).setKey(publicKey).build())
+                .add(EncodedPublicKey.newBuilder().setId(keyId).build())
                 .build())
         .build();
   }
-
-  private static class UnserializableTestClass {}
 }

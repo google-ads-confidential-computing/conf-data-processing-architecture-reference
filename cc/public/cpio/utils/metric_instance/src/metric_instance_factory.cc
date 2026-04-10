@@ -29,7 +29,6 @@
 
 using google::scp::core::AsyncExecutorInterface;
 using std::make_unique;
-using std::move;
 using std::optional;
 using std::reference_wrapper;
 using std::shared_ptr;
@@ -50,14 +49,14 @@ unique_ptr<SimpleMetricInterface>
 MetricInstanceFactory::ConstructSimpleMetricInstance(
     MetricDefinition metric_info) noexcept {
   return make_unique<SimpleMetric>(async_executor_, metric_client_,
-                                   move(metric_info));
+                                   std::move(metric_info));
 }
 
 unique_ptr<AggregateMetricInterface>
 MetricInstanceFactory::ConstructAggregateMetricInstance(
     MetricDefinition metric_info) noexcept {
   return make_unique<AggregateMetric>(async_executor_, metric_client_,
-                                      move(metric_info),
+                                      std::move(metric_info),
                                       aggregated_metric_interval_ms_);
 }
 
@@ -75,11 +74,11 @@ MetricInstanceFactory::ConstructAggregateMetricInstance(
     const std::string& event_code_name) noexcept {
   if (event_code_name.empty()) {
     return make_unique<AggregateMetric>(
-        async_executor_, metric_client_, move(metric_info),
+        async_executor_, metric_client_, std::move(metric_info),
         aggregated_metric_interval_ms_, event_code_labels_list);
   } else {
     return make_unique<AggregateMetric>(
-        async_executor_, metric_client_, move(metric_info),
+        async_executor_, metric_client_, std::move(metric_info),
         aggregated_metric_interval_ms_, event_code_labels_list,
         event_code_name);
   }
@@ -89,7 +88,7 @@ unique_ptr<TimeAggregateMetricInterface>
 MetricInstanceFactory::ConstructTimeAggregateMetricInstance(
     MetricDefinition metric_info) noexcept {
   return make_unique<TimeAggregateMetric>(async_executor_, metric_client_,
-                                          move(metric_info),
+                                          std::move(metric_info),
                                           aggregated_metric_interval_ms_);
 }
 
@@ -107,11 +106,11 @@ MetricInstanceFactory::ConstructTimeAggregateMetricInstance(
     const std::string& event_code_name) noexcept {
   if (event_code_name.empty()) {
     return make_unique<TimeAggregateMetric>(
-        async_executor_, metric_client_, move(metric_info),
+        async_executor_, metric_client_, std::move(metric_info),
         aggregated_metric_interval_ms_, event_code_labels_list);
   } else {
     return make_unique<TimeAggregateMetric>(
-        async_executor_, metric_client_, move(metric_info),
+        async_executor_, metric_client_, std::move(metric_info),
         aggregated_metric_interval_ms_, event_code_labels_list,
         event_code_name);
   }

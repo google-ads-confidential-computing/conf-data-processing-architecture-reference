@@ -64,7 +64,6 @@ using google::scp::core::errors::SC_PUBLIC_KEY_CLIENT_PROVIDER_INVALID_REQUEST;
 using std::atomic;
 using std::bind;
 using std::make_shared;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::vector;

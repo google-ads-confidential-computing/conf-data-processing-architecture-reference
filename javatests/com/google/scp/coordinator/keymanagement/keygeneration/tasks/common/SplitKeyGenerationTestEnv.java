@@ -31,9 +31,7 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.testing
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KmsKeyAead;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
-import com.google.scp.coordinator.keymanagement.testutils.FakeDataKeyUtil;
 import com.google.scp.coordinator.keymanagement.testutils.InMemoryTestEnv;
-import com.google.scp.shared.crypto.tink.CloudAeadSelector;
 import java.security.GeneralSecurityException;
 
 public class SplitKeyGenerationTestEnv extends AbstractModule {
@@ -60,11 +58,6 @@ public class SplitKeyGenerationTestEnv extends AbstractModule {
   @TestScoped
   public FakeKeyStorageClient provideFakeKeyStorageClient() {
     return spy(new FakeKeyStorageClient());
-  }
-
-  @Provides
-  public CloudAeadSelector provideAeadSelector() {
-    return FakeDataKeyUtil.getAeadSelector();
   }
 
   @Provides

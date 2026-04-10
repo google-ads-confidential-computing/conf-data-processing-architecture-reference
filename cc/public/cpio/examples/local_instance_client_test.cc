@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/errors.h"
@@ -45,7 +46,6 @@ using std::atomic;
 using std::make_shared;
 using std::make_unique;
 using std::map;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
 
   InstanceClientOptions instance_client_options;
   instance_client =
-      InstanceClientFactory::Create(move(instance_client_options));
+      InstanceClientFactory::Create(std::move(instance_client_options));
   result = instance_client->Init();
   if (!result.Successful()) {
     std::cout << "Cannot init instance client!"

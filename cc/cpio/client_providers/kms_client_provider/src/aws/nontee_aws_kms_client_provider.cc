@@ -66,7 +66,6 @@ using google::scp::core::utils::Base64Decode;
 using google::scp::cpio::common::CreateClientConfiguration;
 using std::bind;
 using std::make_shared;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::vector;
@@ -193,7 +192,7 @@ void NonteeAwsKmsClientProvider::Decrypt(
   }
   if (!target_audience_for_web_identity.empty()) {
     request->target_audience_for_web_identity =
-        move(target_audience_for_web_identity);
+        std::move(target_audience_for_web_identity);
   }
   if (!key_ids.empty()) {
     request->key_ids =
@@ -201,7 +200,7 @@ void NonteeAwsKmsClientProvider::Decrypt(
   }
   AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
       get_role_credentials_context(
-          move(request),
+          std::move(request),
           bind(&NonteeAwsKmsClientProvider::
                    GetSessionCredentialsCallbackToCreateKms,
                this, decrypt_context, _1),
@@ -304,7 +303,7 @@ void NonteeAwsKmsClientProvider::DecryptInternal(
       buffer.GetLength());
 
   decrypt_context.response = make_shared<DecryptResponse>();
-  decrypt_context.response->set_plaintext(move(plaintext));
+  decrypt_context.response->set_plaintext(std::move(plaintext));
 
   FinishContext(SuccessExecutionResult(), decrypt_context, cpu_async_executor_,
                 AsyncPriority::High);

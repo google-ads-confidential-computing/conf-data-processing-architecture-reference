@@ -21,6 +21,7 @@
 #include <memory>
 #include <regex>
 #include <string>
+#include <utility>
 
 #include "absl/strings/str_cat.h"
 #include "core/http2_client/mock/mock_http_client.h"
@@ -58,7 +59,6 @@ using google::scp::cpio::client_providers::mock::MockAuthTokenProvider;
 using std::atomic;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::stoll;
 using std::string;
@@ -116,7 +116,7 @@ class GcpPrivateKeyFetcherProviderTest : public ScpTestBase {
     endpoint->set_key_service_region(kRegion);
     endpoint->set_account_identity(kAccountIdentity);
     endpoint->set_gcp_cloud_function_url(kPrivateKeyCloudfunctionUri);
-    request_->key_endpoint = move(endpoint);
+    request_->key_endpoint = std::move(endpoint);
 
     keyset_metadata_request_ = make_shared<KeysetMetadataFetchingRequest>();
     keyset_metadata_request_->private_key_endpoint =
@@ -355,7 +355,7 @@ TEST_F(GcpPrivateKeyFetcherProviderTest,
   endpoint->set_key_service_region(kRegion);
   endpoint->set_account_identity(kAccountIdentity);
   endpoint->set_gcp_cloud_function_url(kPrivateKeyCloudfunctionUri);
-  request_->key_endpoint = move(endpoint);
+  request_->key_endpoint = std::move(endpoint);
   request_->key_id = nullptr;
   request_->key_set_name = make_shared<string>(kKeySetName);
   request_->max_age_seconds = 1000000;
@@ -406,7 +406,7 @@ TEST_F(GcpPrivateKeyFetcherProviderTest,
   endpoint->set_key_service_region(kRegion);
   endpoint->set_account_identity(kAccountIdentity);
   endpoint->set_gcp_cloud_function_url(kPrivateKeyCloudfunctionUri);
-  request_->key_endpoint = move(endpoint);
+  request_->key_endpoint = std::move(endpoint);
   request_->key_id = nullptr;
   request_->key_set_name = make_shared<string>(kKeySetName);
   request_->max_age_seconds = 0;
@@ -459,7 +459,7 @@ TEST_F(GcpPrivateKeyFetcherProviderTest,
   endpoint->set_key_service_region(kRegion);
   endpoint->set_account_identity(kAccountIdentity);
   endpoint->set_gcp_cloud_function_url(kPrivateKeyCloudfunctionUri);
-  request_->key_endpoint = move(endpoint);
+  request_->key_endpoint = std::move(endpoint);
   request_->key_id = nullptr;
   request_->key_set_name = make_shared<string>(kKeySetName);
   request_->max_age_seconds = 0;

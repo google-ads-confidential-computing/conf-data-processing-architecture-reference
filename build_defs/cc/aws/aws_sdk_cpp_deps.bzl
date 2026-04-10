@@ -1,1 +1,0 @@
-aws_sdk_cpp_static_lib_deps.bzl

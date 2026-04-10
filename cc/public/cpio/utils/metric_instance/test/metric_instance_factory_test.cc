@@ -22,6 +22,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "core/async_executor/src/async_executor.h"
@@ -52,7 +53,6 @@ using google::scp::core::test::WaitUntil;
 using google::scp::cpio::MockMetricClient;
 using std::atomic;
 using std::make_shared;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::to_string;
@@ -101,7 +101,7 @@ TEST_F(MetricInstanceFactoryTest, ConstructSimpleMetricInstance) {
       kMetricName, MetricUnit::METRIC_UNIT_COUNT, kNamespace, {});
 
   auto simple_metric =
-      metric_factory_->ConstructSimpleMetricInstance(move(metric_info));
+      metric_factory_->ConstructSimpleMetricInstance(std::move(metric_info));
 
   AutoInitRunStop to_handle_simple_metric(*simple_metric);
   {
@@ -154,7 +154,7 @@ TEST_F(MetricInstanceFactoryTest, ConstructAggregateMetricInstance) {
       kMetricName, MetricUnit::METRIC_UNIT_COUNT, kNamespace, {});
 
   auto aggregate_metric =
-      metric_factory_->ConstructAggregateMetricInstance(move(metric_info));
+      metric_factory_->ConstructAggregateMetricInstance(std::move(metric_info));
 
   AutoInitRunStop to_handle_aggregate_metric(*aggregate_metric);
 
@@ -206,7 +206,7 @@ TEST_F(MetricInstanceFactoryTest,
   std::vector<std::string> event_code_list = {"value1", "value2", "value3"};
 
   auto aggregate_metric = metric_factory_->ConstructAggregateMetricInstance(
-      move(metric_info), event_code_list, kEventCodeKey);
+      std::move(metric_info), event_code_list, kEventCodeKey);
 
   AutoInitRunStop to_handle_aggregate_metric(*aggregate_metric);
 
@@ -263,7 +263,8 @@ TEST_F(MetricInstanceFactoryTest, ConstructTimeAggregateMetricInstance) {
       kMetricName, MetricUnit::METRIC_UNIT_COUNT, kNamespace, {});
 
   auto time_aggregate_metric =
-      metric_factory_->ConstructTimeAggregateMetricInstance(move(metric_info));
+      metric_factory_->ConstructTimeAggregateMetricInstance(
+          std::move(metric_info));
 
   AutoInitRunStop to_handle_aggregate_metric(*time_aggregate_metric);
 
@@ -296,7 +297,7 @@ TEST_F(MetricInstanceFactoryTest,
 
   auto time_aggregate_metric =
       metric_factory_->ConstructTimeAggregateMetricInstance(
-          move(metric_info), event_code_list, kTimeEventCodeKey);
+          std::move(metric_info), event_code_list, kTimeEventCodeKey);
 
   AutoInitRunStop to_handle_aggregate_metric(*time_aggregate_metric);
 

@@ -69,7 +69,6 @@ using std::cbegin;
 using std::cend;
 using std::make_pair;
 using std::make_shared;
-using std::move;
 using std::pair;
 using std::shared_ptr;
 using std::string;
@@ -328,7 +327,7 @@ void GcpAuthTokenProvider::OnGetSessionTokenCallback(
   response.expire_time =
       seconds(TimeUtil::GetCurrentTime().seconds() + expiry_seconds);
   auto access_token = json_response[kJsonAccessTokenKey].get<string>();
-  response.session_token = make_shared<string>(move(access_token));
+  response.session_token = make_shared<string>(std::move(access_token));
 
   unique_lock lock(mutex_);
   cached_token_ = response;
@@ -443,7 +442,7 @@ void GcpAuthTokenProvider::OnGetSessionTokenForTargetAudienceCallback(
   }
 
   GetSessionTokenResponse token_response;
-  token_response.session_token = make_shared<string>(move(response_body));
+  token_response.session_token = make_shared<string>(std::move(response_body));
   uint64_t expiry_seconds =
       json_web_token[kJsonTokenExpiryKeyForTargetAudience].get<uint64_t>();
   token_response.expire_time = seconds(expiry_seconds);
@@ -474,7 +473,7 @@ void GcpAuthTokenProvider::OnGetSessionTokenForTargetAudienceCallback(
         get_token_context.request->token_target_audience_uri->c_str());
   }
   get_token_context.response =
-      make_shared<GetSessionTokenResponse>(move(token_response));
+      make_shared<GetSessionTokenResponse>(std::move(token_response));
   get_token_context.result = SuccessExecutionResult();
   get_token_context.Finish();
 }
@@ -550,7 +549,8 @@ void GcpAuthTokenProvider::OnGetTeeSessionTokenCallback(
     return;
   }
   get_token_context.response = make_shared<GetSessionTokenResponse>();
-  get_token_context.response->session_token = make_shared<string>(move(token));
+  get_token_context.response->session_token =
+      make_shared<string>(std::move(token));
 
   get_token_context.result = SuccessExecutionResult();
   get_token_context.Finish();

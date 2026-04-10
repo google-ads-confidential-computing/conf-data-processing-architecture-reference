@@ -24,7 +24,6 @@
 
 using std::function;
 using std::make_unique;
-using std::move;
 using std::string;
 using std::unique_ptr;
 using std::vector;
@@ -223,7 +222,7 @@ class NoCopyNoDefault {
   NoCopyNoDefault(NoCopyNoDefault&&) = default;
   NoCopyNoDefault& operator=(NoCopyNoDefault&&) = default;
 
-  explicit NoCopyNoDefault(unique_ptr<int> x) : x_(move(x)) {}
+  explicit NoCopyNoDefault(unique_ptr<int> x) : x_(std::move(x)) {}
 
   unique_ptr<int> x_;
 };
@@ -247,23 +246,24 @@ TEST(ExecutionResultOrTest, ValueOr) {
   // &&
   ExecutionResultOr<NoCopyNoDefault> non_copy_subject(
       NoCopyNoDefault(make_unique<int>(1)));
-  auto ret =
-      move(non_copy_subject).value_or(NoCopyNoDefault(make_unique<int>(5)));
+  auto ret = std::move(non_copy_subject)
+                 .value_or(NoCopyNoDefault(make_unique<int>(5)));
   EXPECT_THAT(ret.x_, Pointee(1));
 
   non_copy_subject = FailureExecutionResult(SC_UNKNOWN);
-  ret = move(non_copy_subject).value_or(NoCopyNoDefault(make_unique<int>(5)));
+  ret = std::move(non_copy_subject)
+            .value_or(NoCopyNoDefault(make_unique<int>(5)));
   EXPECT_THAT(ret.x_, Pointee(5));
 }
 
 TEST(ExecutionResultOrTest, MoveTest_operator_star) {
   NoCopyNoDefault ncnd(make_unique<int>(5));
   // ExecutionResultOr<NoCopyNoDefault> result_or(ncnd);  // Won't compile.
-  ExecutionResultOr<NoCopyNoDefault> result_or(move(ncnd));
+  ExecutionResultOr<NoCopyNoDefault> result_or(std::move(ncnd));
 
   // NoCopyNoDefault other = *result_or;  // Won't compile.
 
-  NoCopyNoDefault other = *move(result_or);
+  NoCopyNoDefault other = *std::move(result_or);
   EXPECT_EQ(ncnd.x_, nullptr);
   // result_or contains the argument of a move constructor after moving.
   ASSERT_TRUE(result_or.has_value());
@@ -273,9 +273,9 @@ TEST(ExecutionResultOrTest, MoveTest_operator_star) {
 
 TEST(ExecutionResultOrTest, MoveTest_value) {
   NoCopyNoDefault ncnd(make_unique<int>(5));
-  ExecutionResultOr<NoCopyNoDefault> result_or(move(ncnd));
+  ExecutionResultOr<NoCopyNoDefault> result_or(std::move(ncnd));
 
-  NoCopyNoDefault other = move(result_or).value();
+  NoCopyNoDefault other = std::move(result_or).value();
   EXPECT_EQ(ncnd.x_, nullptr);
   // result_or contains the argument of a move constructor after moving.
   ASSERT_TRUE(result_or.has_value());
@@ -285,7 +285,7 @@ TEST(ExecutionResultOrTest, MoveTest_value) {
 
 TEST(ExecutionResultOrTest, MoveTest_release) {
   NoCopyNoDefault ncnd(make_unique<int>(5));
-  ExecutionResultOr<NoCopyNoDefault> result_or(move(ncnd));
+  ExecutionResultOr<NoCopyNoDefault> result_or(std::move(ncnd));
 
   // No need of writing move!
   NoCopyNoDefault other = result_or.release();
@@ -298,15 +298,15 @@ TEST(ExecutionResultOrTest, MoveTest_release) {
 
 TEST(ExecutionResultOrTest, DiscardedMoveResult) {
   NoCopyNoDefault ncnd(make_unique<int>(5));
-  ExecutionResultOr<NoCopyNoDefault> result_or(move(ncnd));
+  ExecutionResultOr<NoCopyNoDefault> result_or(std::move(ncnd));
 
   // We expect that just calling operator* && does not invalidate the object.
-  *move(result_or);
+  *std::move(result_or);
   ASSERT_TRUE(result_or.has_value());
   ASSERT_THAT(result_or->x_, Pointee(Eq(5)));
 
   // We expect that just calling value() && does not invalidate the object.
-  move(result_or).value();
+  std::move(result_or).value();
   ASSERT_TRUE(result_or.has_value());
   ASSERT_THAT(result_or->x_, Pointee(Eq(5)));
 }

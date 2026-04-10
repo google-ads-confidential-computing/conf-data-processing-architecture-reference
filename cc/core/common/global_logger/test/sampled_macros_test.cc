@@ -15,6 +15,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <thread>
 #include <utility>
 
@@ -33,7 +34,6 @@ using google::scp::core::common::Uuid;
 using google::scp::core::logger::mock::MockLogger;
 using std::bind;
 using std::make_unique;
-using std::move;
 using std::string;
 using std::thread;
 using std::to_string;
@@ -52,10 +52,10 @@ class SampledMacrosTest : public testing::Test {
   SampledMacrosTest() {
     auto mock_logger = make_unique<MockLogger>();
     logger_ = mock_logger.get();
-    unique_ptr<LoggerInterface> logger = move(mock_logger);
+    unique_ptr<LoggerInterface> logger = std::move(mock_logger);
     logger->Init();
     logger->Run();
-    GlobalLogger::SetGlobalLogger(move(logger));
+    GlobalLogger::SetGlobalLogger(std::move(logger));
   }
 
   ~SampledMacrosTest() { GlobalLogger::GetGlobalLogger()->Stop(); }

@@ -129,7 +129,6 @@ variables {
   private_key_service_stable_revision                           = null
   private_key_service_canary_revision                           = null
   private_key_service_canary_traffic_percentage                 = 0
-  enable_parameter_manager                                      = false
 
   quota_alert_duration_sec        = 60
   quota_alert_eval_period_sec     = 180
@@ -266,19 +265,6 @@ run "doesnt_create_key_sets_parameter_config" {
   }
 }
 
-
-run "does_create_key_sets_parameter_config" {
-  command = plan
-
-  variables {
-    enable_parameter_manager = true
-  }
-
-  assert {
-    condition     = length(module.key_sets_parameter_config) == 1
-    error_message = "Didn't create parameter config"
-  }
-}
 
 run "creates_vpc_modules" {
   command = plan

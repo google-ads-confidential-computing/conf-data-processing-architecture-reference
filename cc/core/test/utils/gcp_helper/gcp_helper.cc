@@ -52,7 +52,6 @@ using grpc::ClientContext;
 using grpc::Status;
 using grpc::StubOptions;
 using std::make_shared;
-using std::move;
 using std::runtime_error;
 using std::shared_ptr;
 using std::string;
@@ -134,7 +133,7 @@ void ListSessions(Spanner::StubInterface& stub, const string& project_id,
   ListSessionsRequest request;
   auto database_uri = absl::StrCat("projects/", project_id, "/instances/",
                                    instance_id, "/databases/", database);
-  request.set_database(move(database_uri));
+  request.set_database(std::move(database_uri));
   ClientContext client_context;
   ListSessionsResponse response;
   auto status = stub.ListSessions(&client_context, request, &response);

@@ -50,7 +50,6 @@ using google::scp::cpio::client_providers::NoSQLDatabaseClientProviderFactory;
 using std::bind;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::placeholders::_1;
@@ -110,7 +109,7 @@ ExecutionResultOr<CreateTableResponse> NoSQLDatabaseClient::CreateTableSync(
   CreateTableResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<CreateTableRequest, CreateTableResponse>(
-          bind(&NoSQLDatabaseClient::CreateTable, this, _1), move(request),
+          bind(&NoSQLDatabaseClient::CreateTable, this, _1), std::move(request),
           response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kNoSQLDatabaseClient, kZeroUuid,
                             "Failed to create table.");
@@ -128,7 +127,7 @@ ExecutionResultOr<DeleteTableResponse> NoSQLDatabaseClient::DeleteTableSync(
   DeleteTableResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<DeleteTableRequest, DeleteTableResponse>(
-          bind(&NoSQLDatabaseClient::DeleteTable, this, _1), move(request),
+          bind(&NoSQLDatabaseClient::DeleteTable, this, _1), std::move(request),
           response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kNoSQLDatabaseClient, kZeroUuid,
                             "Failed to delete table.");
@@ -147,8 +146,8 @@ NoSQLDatabaseClient::GetDatabaseItemSync(
   GetDatabaseItemResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<GetDatabaseItemRequest, GetDatabaseItemResponse>(
-          bind(&NoSQLDatabaseClient::GetDatabaseItem, this, _1), move(request),
-          response);
+          bind(&NoSQLDatabaseClient::GetDatabaseItem, this, _1),
+          std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kNoSQLDatabaseClient, kZeroUuid,
                             "Failed to get database item.");
   return response;
@@ -167,8 +166,8 @@ NoSQLDatabaseClient::CreateDatabaseItemSync(
   CreateDatabaseItemResponse response;
   auto execution_result = SyncUtils::AsyncToSync2<CreateDatabaseItemRequest,
                                                   CreateDatabaseItemResponse>(
-      bind(&NoSQLDatabaseClient::CreateDatabaseItem, this, _1), move(request),
-      response);
+      bind(&NoSQLDatabaseClient::CreateDatabaseItem, this, _1),
+      std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kNoSQLDatabaseClient, kZeroUuid,
                             "Failed to create database item.");
   return response;
@@ -187,8 +186,8 @@ NoSQLDatabaseClient::UpsertDatabaseItemSync(
   UpsertDatabaseItemResponse response;
   auto execution_result = SyncUtils::AsyncToSync2<UpsertDatabaseItemRequest,
                                                   UpsertDatabaseItemResponse>(
-      bind(&NoSQLDatabaseClient::UpsertDatabaseItem, this, _1), move(request),
-      response);
+      bind(&NoSQLDatabaseClient::UpsertDatabaseItem, this, _1),
+      std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kNoSQLDatabaseClient, kZeroUuid,
                             "Failed to upsert database item.");
   return response;

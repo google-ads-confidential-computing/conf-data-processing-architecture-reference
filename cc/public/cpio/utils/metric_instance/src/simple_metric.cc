@@ -42,7 +42,6 @@ using google::scp::core::Timestamp;
 using google::scp::core::common::TimeProvider;
 using google::scp::cpio::MetricClientInterface;
 using std::make_shared;
-using std::move;
 using std::shared_ptr;
 using std::string;
 
@@ -68,7 +67,7 @@ void SimpleMetric::RunMetricPush(
     const shared_ptr<PutMetricsRequest> record_metric_request) noexcept {
   auto activity_id = core::common::Uuid::GenerateUuid();
   AsyncContext<PutMetricsRequest, PutMetricsResponse> record_metric_context(
-      move(record_metric_request),
+      std::move(record_metric_request),
       [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {
         if (!context.result.Successful()) {
           std::vector<string> metric_names;

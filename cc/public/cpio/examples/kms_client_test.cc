@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "absl/strings/strip.h"
 #include "core/interface/async_context.h"
@@ -45,7 +46,6 @@ using std::atomic;
 using std::make_shared;
 using std::make_unique;
 using std::map;
-using std::move;
 using std::shared_ptr;
 using std::stod;
 using std::string;
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 
   KmsClientOptions kms_client_options;
 
-  auto kms_client = KmsClientFactory::Create(move(kms_client_options));
+  auto kms_client = KmsClientFactory::Create(std::move(kms_client_options));
   result = kms_client->Init();
   if (!result.Successful()) {
     std::cout << "Cannot init kms client!"
@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
 
   atomic<bool> finished = false;
   AsyncContext<DecryptRequest, DecryptResponse> decrypt_context(
-      move(request), [&finished](auto& context) {
+      std::move(request), [&finished](auto& context) {
         if (!context.result.Successful()) {
           std::cout << "Decrypt failed: "
                     << GetErrorMessage(context.result.status_code) << std::endl;

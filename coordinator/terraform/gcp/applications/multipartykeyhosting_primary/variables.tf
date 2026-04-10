@@ -52,11 +52,6 @@ variable "secondary_region_zone" {
   type        = string
 }
 
-variable "enable_parameter_manager" {
-  description = "Parameter to control using parameter manager."
-  type        = bool
-}
-
 ################################################################################
 # Global Alarm Variables.
 ################################################################################

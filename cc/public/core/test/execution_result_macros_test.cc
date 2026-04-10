@@ -32,7 +32,6 @@ using google::scp::core::common::GlobalLogger;
 using google::scp::core::logger::mock::MockLogger;
 using std::function;
 using std::make_unique;
-using std::move;
 using std::pair;
 using std::string;
 using std::unique_ptr;
@@ -139,7 +138,7 @@ class MacroLogTest : public testing::Test {
   MacroLogTest() {
     auto mock_logger = make_unique<MockLogger>();
     logger_ = mock_logger.get();
-    unique_ptr<LoggerInterface> logger = move(mock_logger);
+    unique_ptr<LoggerInterface> logger = std::move(mock_logger);
     logger->Init();
     logger->Run();
     GlobalLogger::SetGlobalLogger(std::move(logger));
@@ -455,7 +454,7 @@ class NoCopyNoDefault {
   NoCopyNoDefault(NoCopyNoDefault&&) = default;
   NoCopyNoDefault& operator=(NoCopyNoDefault&&) = default;
 
-  explicit NoCopyNoDefault(unique_ptr<int> x) : x_(move(x)) {}
+  explicit NoCopyNoDefault(unique_ptr<int> x) : x_(std::move(x)) {}
 
   unique_ptr<int> x_;
 };
@@ -463,7 +462,7 @@ class NoCopyNoDefault {
 TEST(MacroTest, ASSIGN_OR_RETURNWorksWithTemporaryNonCopyableTypes) {
   auto helper1 = [](ExecutionResultOr<NoCopyNoDefault> result_or)
       -> ExecutionResultOr<NoCopyNoDefault> {
-    auto foo = [&result_or]() { return move(result_or); };
+    auto foo = [&result_or]() { return std::move(result_or); };
     ASSIGN_OR_RETURN(auto ret, foo());
     return ret;
   };
@@ -472,7 +471,7 @@ TEST(MacroTest, ASSIGN_OR_RETURNWorksWithTemporaryNonCopyableTypes) {
 
   auto helper2 = [](ExecutionResultOr<NoCopyNoDefault> result_or)
       -> ExecutionResultOr<NoCopyNoDefault> {
-    ASSIGN_OR_RETURN(auto ret, move(result_or));
+    ASSIGN_OR_RETURN(auto ret, std::move(result_or));
     return ret;
   };
   EXPECT_THAT(helper2(NoCopyNoDefault(make_unique<int>(5))),

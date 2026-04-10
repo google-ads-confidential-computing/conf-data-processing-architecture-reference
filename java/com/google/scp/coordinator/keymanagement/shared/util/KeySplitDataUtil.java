@@ -16,19 +16,14 @@
 
 package com.google.scp.coordinator.keymanagement.shared.util;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
 import com.google.crypto.tink.PublicKeySign;
-import com.google.crypto.tink.PublicKeyVerify;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -37,45 +32,6 @@ import java.util.Optional;
  */
 public final class KeySplitDataUtil {
   private KeySplitDataUtil() {}
-
-  /**
-   * Given a map of coordinators (named by their key encryption key uri) to a {@code
-   * PublicKeyVerify} that can verify against their signature, verifies that a proper signature for
-   * each coordinator exists in the {@link KeySplitData} of the {@link EncryptionKey}.
-   */
-  public static void verifyEncryptionKeySignatures(
-      EncryptionKey encryptionKey, ImmutableMap<String, PublicKeyVerify> publicKeyVerifiers)
-      throws GeneralSecurityException {
-    byte[] message = encryptionKeySignatureMessage(encryptionKey).getBytes();
-    ImmutableMap<String, KeySplitData> keySplitDataMap =
-        encryptionKey.getKeySplitDataList().stream()
-            .collect(
-                toImmutableMap(
-                    KeySplitData::getKeySplitKeyEncryptionKeyUri,
-                    keySplitDataItem -> keySplitDataItem));
-    for (Map.Entry<String, PublicKeyVerify> publicKeyVerify : publicKeyVerifiers.entrySet()) {
-      Optional<KeySplitData> keySplitData =
-          Optional.ofNullable(keySplitDataMap.get(publicKeyVerify.getKey()));
-      if (keySplitData.isPresent()) {
-        byte[] signature = Base64.getDecoder().decode(keySplitData.get().getPublicKeySignature());
-        try {
-          publicKeyVerify.getValue().verify(signature, message);
-        } catch (GeneralSecurityException e) {
-          String err =
-              String.format(
-                  "Signature of coordinator %s failed to verify",
-                  keySplitData.get().getKeySplitKeyEncryptionKeyUri());
-          throw new GeneralSecurityException(err, e);
-        }
-      } else {
-        String notFoundErr =
-            String.format(
-                "Signature for coordinator %s not found in KeySplitData list",
-                publicKeyVerify.getKey());
-        throw new GeneralSecurityException(notFoundErr);
-      }
-    }
-  }
 
   /**
    * Creates the {@link KeySplitData} containing the specified encryption key uri and signature if

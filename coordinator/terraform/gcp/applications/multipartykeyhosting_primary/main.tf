@@ -606,7 +606,6 @@ module "key_sets_config" {
 }
 
 module "key_sets_parameter_config" {
-  count          = var.enable_parameter_manager ? 1 : 0
   source         = "../../modules/parameter_manager"
   project        = var.project_id
   environment    = var.environment

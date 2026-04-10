@@ -29,3 +29,39 @@ cc_library(
         "@com_google_absl//absl/strings",
     ],
 )
+
+cc_library(
+    name = "key_fetching_utils",
+    srcs = ["key_fetching_utils.cc"],
+    hdrs = ["key_fetching_utils.h"],
+    deps = [
+        "//cc/public/cpio/proto/private_key_service/v1:private_key_service_cc_proto",
+        "//cc/public/cpio/utils/key_fetching/interface:key_fetcher_with_cache_interface",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
+    name = "ondemand_key_fetcher_with_cache",
+    srcs = ["ondemand_key_fetcher_with_cache.cc"],
+    hdrs = [
+        "error_codes.h",
+        "ondemand_key_fetcher_with_cache.h",
+    ],
+    deps = [
+        ":key_fetching_metric_utils",
+        ":key_fetching_utils",
+        "//cc/core/common/auto_expiry_concurrent_map/src:auto_expiry_concurrent_map_lib",
+        "//cc/core/common/global_logger/src:global_logger_lib",
+        "//cc/public/core/interface:execution_result",
+        "//cc/public/cpio/interface:cpio_errors",
+        "//cc/public/cpio/interface/private_key_client",
+        "//cc/public/cpio/utils/dual_writing_metric_client/interface:dual_writing_metric_client_interface",
+        "//cc/public/cpio/utils/key_fetching/interface:key_fetcher_with_cache_interface",
+        "//cc/public/cpio/utils/key_fetching/proto:encryption_key_prefetch_config_cc_proto",
+        "//cc/public/cpio/utils/key_fetching/proto:key_coordinator_configuration_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
+    ],
+)

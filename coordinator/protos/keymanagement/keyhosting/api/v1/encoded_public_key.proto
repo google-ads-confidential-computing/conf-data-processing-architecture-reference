@@ -22,11 +22,11 @@ import "proto/hpke.proto";
 
 /** Represents active public key to be returned with GetActivePublicKeysResponse */
 message EncodedPublicKey {
+  reserved 2;
   /** Unique identifier of public key record (eg: UUID) */
   string id = 1;
   /** Value of public key */
   oneof key_oneof {
-    string key = 2;
     string tink_binary = 3;
     google.crypto.tink.HpkePublicKey hpke_public_key = 5;
   }

@@ -38,9 +38,7 @@ import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotati
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.MigrationKmsKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.SignDataKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyTask;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpSignDataKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
 import com.google.scp.coordinator.keymanagement.testutils.FakeKmsClient;
@@ -72,7 +70,6 @@ public class KeyStorageHttpFunctionModule extends AbstractModule {
     bind(Long.class).annotatedWith(CacheControlMaximum.class).toInstance(604800L);
     bind(SpannerKeyDbConfig.class).toInstance(SpannerKeyDbTestUtil.getSpannerKeyDbConfig());
     bind(CreateKeyTask.class).to(GcpCreateKeyTask.class);
-    bind(SignDataKeyTask.class).to(GcpSignDataKeyTask.class);
     bind(String.class).annotatedWith(CoordinatorKekUri.class).toInstance("");
     bind(String.class).annotatedWith(PopulateMigrationKeyData.class).toInstance("false");
     bind(String.class)

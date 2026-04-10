@@ -24,6 +24,7 @@
 #include <future>
 #include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
@@ -189,7 +190,8 @@ TEST(HttpClientTest, FailedToConnect) {
 
   atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_THAT(
             context.result,
             ResultIs(FailureExecutionResult(
@@ -241,7 +243,8 @@ TEST_F(HttpClientTestII, Success) {
       "http://localhost:" + std::to_string(server->PortInUse()) + "/test");
   promise<void> done;
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_SUCCESS(context.result);
         const auto& bytes = *context.response->body.bytes;
         EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
@@ -263,7 +266,8 @@ TEST_F(HttpClientTestII, SingleQueryIsEscaped) {
 
   atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_SUCCESS(context.result);
         auto query_param_it = context.response->headers->find("query_param");
         EXPECT_NE(query_param_it, context.response->headers->end());
@@ -285,7 +289,8 @@ TEST_F(HttpClientTestII, MultiQueryIsEscaped) {
 
   atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_SUCCESS(context.result);
         auto query_param_it = context.response->headers->find("query_param");
         EXPECT_NE(query_param_it, context.response->headers->end());
@@ -304,7 +309,8 @@ TEST_F(HttpClientTestII, FailedToGetResponse) {
       "http://localhost:" + std::to_string(server->PortInUse()) + "/wrong");
   promise<void> done;
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(
                         errors::SC_HTTP2_CLIENT_HTTP_STATUS_NOT_FOUND)));
@@ -324,7 +330,8 @@ TEST_F(HttpClientTestII, SequentialReuse) {
   for (int i = 0; i < 10; ++i) {
     promise<void> done;
     AsyncContext<HttpRequest, HttpResponse> context(
-        move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+        std::move(request),
+        [&](AsyncContext<HttpRequest, HttpResponse>& context) {
           EXPECT_SUCCESS(context.result);
           const auto& bytes = *context.response->body.bytes;
           EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
@@ -348,7 +355,7 @@ TEST_F(HttpClientTestII, ConcurrentReuse) {
   for (int i = 0; i < 10; ++i) {
     done.emplace_back();
     AsyncContext<HttpRequest, HttpResponse> context(
-        move(request),
+        std::move(request),
         [&, i](AsyncContext<HttpRequest, HttpResponse>& context) {
           EXPECT_SUCCESS(context.result);
           const auto& bytes = *context.response->body.bytes;
@@ -371,7 +378,8 @@ TEST_F(HttpClientTestII, LargeData) {
   request->query = make_shared<string>("length=" + std::to_string(to_generate));
   atomic<bool> finished(false);
   AsyncContext<HttpRequest, HttpResponse> context(
-      move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+      std::move(request),
+      [&](AsyncContext<HttpRequest, HttpResponse>& context) {
         EXPECT_SUCCESS(context.result);
         EXPECT_EQ(context.response->body.length,
                   1048576 + SHA256_DIGEST_LENGTH);
@@ -398,7 +406,8 @@ TEST_F(HttpClientTestII, ClientFinishesContextWhenServerIsStopped) {
         "http://localhost:" + std::to_string(server->PortInUse()) + "/test");
     promise<void> done;
     AsyncContext<HttpRequest, HttpResponse> context(
-        move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+        std::move(request),
+        [&](AsyncContext<HttpRequest, HttpResponse>& context) {
           EXPECT_THAT(context.result, IsSuccessful());
           const auto& bytes = *context.response->body.bytes;
           EXPECT_EQ(string(bytes.begin(), bytes.end()), "hello, world\n");
@@ -416,7 +425,8 @@ TEST_F(HttpClientTestII, ClientFinishesContextWhenServerIsStopped) {
 
     promise<void> done;
     AsyncContext<HttpRequest, HttpResponse> context(
-        move(request), [&](AsyncContext<HttpRequest, HttpResponse>& context) {
+        std::move(request),
+        [&](AsyncContext<HttpRequest, HttpResponse>& context) {
           EXPECT_THAT(
               context.result,
               ResultIs(FailureExecutionResult(

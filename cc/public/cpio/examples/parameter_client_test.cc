@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/errors.h"
@@ -42,7 +43,6 @@ using std::atomic;
 using std::make_shared;
 using std::make_unique;
 using std::map;
-using std::move;
 using std::shared_ptr;
 using std::stod;
 using std::string;
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
 
   ParameterClientOptions parameter_client_options;
   auto parameter_client =
-      ParameterClientFactory::Create(move(parameter_client_options));
+      ParameterClientFactory::Create(std::move(parameter_client_options));
   result = parameter_client->Init();
   if (!result.Successful()) {
     std::cout << "Cannot init parameter client!"
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
   get_parameter_request->set_parameter_name(kTestParameterName);
   auto get_parameter_context =
       AsyncContext<GetParameterRequest, GetParameterResponse>(
-          move(get_parameter_request),
+          std::move(get_parameter_request),
           [&](AsyncContext<GetParameterRequest, GetParameterResponse> context) {
             if (!context.result.Successful()) {
               std::cout << "GetParameter failed: "

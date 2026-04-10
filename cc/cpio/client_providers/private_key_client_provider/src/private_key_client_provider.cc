@@ -63,7 +63,6 @@ using std::atomic;
 using std::bind;
 using std::make_pair;
 using std::make_shared;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::vector;
@@ -105,7 +104,7 @@ void PrivateKeyClientProvider::GetKeysetMetadata(
       get_keyset_metadata_context.request->private_key_endpoint());
   AsyncContext<KeysetMetadataFetchingRequest, KeysetMetadataFetchingResponse>
       fetch_keyset_metadata_context(
-          move(request),
+          std::move(request),
           bind(&PrivateKeyClientProvider::OnFetchMetadataCallback, this,
                get_keyset_metadata_context, _1),
           get_keyset_metadata_context);
@@ -195,7 +194,7 @@ void PrivateKeyClientProvider::ListActiveEncryptionKeys(
 
   AsyncContext<ListPrivateKeysRequest, ListPrivateKeysResponse>
       list_private_key_context(
-          move(list_private_keys_request),
+          std::move(list_private_keys_request),
           bind(&PrivateKeyClientProvider::OnFetchActiveEncryptionKeysCallback,
                this, list_active_encryption_keys_context, _1),
           list_active_encryption_keys_context);
@@ -270,7 +269,7 @@ void PrivateKeyClientProvider::ListPrivateKeysBase(
 
       AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>
           fetch_private_key_context(
-              move(request),
+              std::move(request),
               bind(&PrivateKeyClientProvider::OnFetchPrivateKeyCallback, this,
                    list_private_keys_context, _1, list_keys_status, uri_index),
               list_private_keys_context);
@@ -292,11 +291,11 @@ void PrivateKeyClientProvider::OnFetchActiveEncryptionKeysCallback(
       make_shared<ListActiveEncryptionKeysResponse>();
   if (execution_result.Successful()) {
     *list_active_encryption_keys_context.response->mutable_result() =
-        move(*list_private_key_context.response->mutable_result());
+        std::move(*list_private_key_context.response->mutable_result());
     list_active_encryption_keys_context.response->set_key_set_name(
-        move(list_active_encryption_keys_context.request->key_set_name()));
+        std::move(list_active_encryption_keys_context.request->key_set_name()));
     *list_active_encryption_keys_context.response->mutable_private_keys() =
-        move(*list_private_key_context.response->mutable_private_keys());
+        std::move(*list_private_key_context.response->mutable_private_keys());
   }
   list_active_encryption_keys_context.Finish();
 }
@@ -419,10 +418,10 @@ ExecutionResult InsertDecryptResult(
     ConcurrentMap<string, DecryptResult>& decrypt_result_key_id_map,
     EncryptionKey encryption_key, ExecutionResult result, string plaintext) {
   DecryptResult decrypt_result;
-  decrypt_result.decrypt_result = move(result);
-  decrypt_result.encryption_key = move(encryption_key);
+  decrypt_result.decrypt_result = std::move(result);
+  decrypt_result.encryption_key = std::move(encryption_key);
   if (!plaintext.empty()) {
-    decrypt_result.plaintext = move(plaintext);
+    decrypt_result.plaintext = std::move(plaintext);
   }
 
   DecryptResult out;
@@ -449,11 +448,12 @@ void PrivateKeyClientProvider::OnDecryptCallback(
   if (encryption_key) {
     string plaintext;
     if (decrypt_context.result.Successful()) {
-      plaintext = move(*decrypt_context.response->mutable_plaintext());
+      plaintext = std::move(*decrypt_context.response->mutable_plaintext());
     }
     if (auto insert_result = InsertDecryptResult(
             list_keys_status->result_list[uri_index].decrypt_result_key_id_map,
-            *encryption_key, move(decrypt_context.result), move(plaintext));
+            *encryption_key, std::move(decrypt_context.result),
+            std::move(plaintext));
         !insert_result.Successful()) {
       auto got_failure = false;
       if (list_keys_status->got_failure.compare_exchange_strong(got_failure,
@@ -514,7 +514,8 @@ void PrivateKeyClientProvider::OnDecryptCallback(
       vector<DecryptResult> success_decrypt_result;
       if (single_party_key.has_value()) {
         // If contains single party key, ignore the fetch and decrypt results.
-        success_decrypt_result.emplace_back(move(single_party_key.value()));
+        success_decrypt_result.emplace_back(
+            std::move(single_party_key.value()));
       } else {
         // If doesn't contain single party key, validate every fetch and
         // decrypt results.
@@ -594,7 +595,7 @@ void PrivateKeyClientProvider::OnDecryptCallback(
                           "Successfully obtained private key for key %s.",
                           private_key_or->key_id().c_str());
         *list_private_keys_context.response->add_private_keys() =
-            move(*private_key_or);
+            std::move(*private_key_or);
       }
     }
 

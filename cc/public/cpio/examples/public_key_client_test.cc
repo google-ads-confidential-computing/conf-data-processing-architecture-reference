@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "core/interface/async_context.h"
 #include "core/test/utils/conditional_wait.h"
@@ -45,7 +46,6 @@ using std::atomic;
 using std::make_shared;
 using std::make_unique;
 using std::map;
-using std::move;
 using std::shared_ptr;
 using std::stod;
 using std::string;
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
   public_key_client_options.endpoints.emplace_back(kPublicKeyEndpoint);
 
   auto public_key_client =
-      PublicKeyClientFactory::Create(move(public_key_client_options));
+      PublicKeyClientFactory::Create(std::move(public_key_client_options));
   result = public_key_client->Init();
   if (!result.Successful()) {
     std::cout << "Cannot init public key client!"
@@ -90,8 +90,9 @@ int main(int argc, char* argv[]) {
   atomic<bool> finished = false;
   auto list_public_keys_context =
       AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse>(
-          move(request), [&](AsyncContext<ListPublicKeysRequest,
-                                          ListPublicKeysResponse>& context) {
+          std::move(request),
+          [&](AsyncContext<ListPublicKeysRequest, ListPublicKeysResponse>&
+                  context) {
             if (!context.result.Successful()) {
               std::cout << "ListPublicKeys failed: "
                         << GetErrorMessage(context.result.status_code)

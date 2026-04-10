@@ -460,7 +460,6 @@ resource "google_kms_crypto_key_iam_member" "key_set_wip_sa" {
 }
 
 module "key_sets_parameter_config" {
-  count          = var.enable_parameter_manager ? 1 : 0
   source         = "../../modules/parameter_manager"
   project        = var.project_id
   environment    = var.environment

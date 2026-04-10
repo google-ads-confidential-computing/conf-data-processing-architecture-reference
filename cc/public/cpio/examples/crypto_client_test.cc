@@ -18,6 +18,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/errors.h"
@@ -53,7 +54,6 @@ using std::atomic;
 using std::bind;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::string;
 using std::unique_ptr;
 using std::placeholders::_1;
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
 
   CryptoClientOptions crypto_client_options;
 
-  crypto_client = CryptoClientFactory::Create(move(crypto_client_options));
+  crypto_client = CryptoClientFactory::Create(std::move(crypto_client_options));
   result = crypto_client->Init();
   if (!result.Successful()) {
     std::cout << "Cannot init crypto client!"

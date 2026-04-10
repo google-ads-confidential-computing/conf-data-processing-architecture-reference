@@ -51,17 +51,3 @@ java_test(
         "//javatests/com/google/scp/coordinator/keymanagement/testutils",
     ],
 )
-
-java_test(
-    name = "DataKeyConverterTest",
-    srcs = [
-        "DataKeyConverterTest.java",
-    ],
-    deps = [
-        "//coordinator/protos/keymanagement/keystorage/api/v1:java_proto",
-        "//coordinator/protos/keymanagement/shared/backend:java_proto",
-        "//java/com/google/scp/coordinator/keymanagement/shared/converter",
-        "//java/com/google/scp/coordinator/keymanagement/shared/model",
-        "//java/external:google_truth",
-    ],
-)

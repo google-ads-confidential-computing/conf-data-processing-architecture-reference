@@ -57,7 +57,6 @@ using std::bind;
 using std::make_shared;
 using std::make_unique;
 using std::map;
-using std::move;
 using std::string;
 using std::placeholders::_1;
 
@@ -110,7 +109,7 @@ InstanceClient::GetCurrentInstanceResourceNameSync(
       SyncUtils::AsyncToSync2<GetCurrentInstanceResourceNameRequest,
                               GetCurrentInstanceResourceNameResponse>(
           bind(&InstanceClient::GetCurrentInstanceResourceName, this, _1),
-          move(request), response);
+          std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kInstanceClient, kZeroUuid,
                             "Failed to GetCurrentInstanceResourceName.");
   return response;
@@ -129,8 +128,8 @@ InstanceClient::GetTagsByResourceNameSync(
   auto execution_result =
       SyncUtils::AsyncToSync2<GetTagsByResourceNameRequest,
                               GetTagsByResourceNameResponse>(
-          bind(&InstanceClient::GetTagsByResourceName, this, _1), move(request),
-          response);
+          bind(&InstanceClient::GetTagsByResourceName, this, _1),
+          std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kInstanceClient, kZeroUuid,
                             "Failed to GetTagsByResourceName.");
   return response;
@@ -150,7 +149,7 @@ InstanceClient::GetInstanceDetailsByResourceNameSync(
       SyncUtils::AsyncToSync2<GetInstanceDetailsByResourceNameRequest,
                               GetInstanceDetailsByResourceNameResponse>(
           bind(&InstanceClient::GetInstanceDetailsByResourceName, this, _1),
-          move(request), response);
+          std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kInstanceClient, kZeroUuid,
                             "Failed to GetInstanceDetailsByResourceName.");
   return response;

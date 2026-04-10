@@ -55,7 +55,6 @@ using google::scp::core::errors::SC_CUSTOMIZED_METRIC_PUSH_CANNOT_SCHEDULE;
 using google::scp::cpio::MetricClientInterface;
 using std::make_shared;
 using std::map;
-using std::move;
 using std::mutex;
 using std::pair;
 using std::shared_ptr;
@@ -77,7 +76,7 @@ AggregateMetric::AggregateMetric(core::AsyncExecutorInterface* async_executor,
                                  TimeDuration push_interval_duration_in_ms)
     : async_executor_(async_executor),
       metric_client_(metric_client),
-      metric_info_(move(metric_info)),
+      metric_info_(std::move(metric_info)),
       push_interval_duration_in_ms_(push_interval_duration_in_ms),
       counter_(0),
       is_running_(false),
@@ -92,7 +91,7 @@ AggregateMetric::AggregateMetric(core::AsyncExecutorInterface* async_executor,
                                  const std::string& event_code_label_key)
     : async_executor_(async_executor),
       metric_client_(metric_client),
-      metric_info_(move(metric_info)),
+      metric_info_(std::move(metric_info)),
       push_interval_duration_in_ms_(push_interval_duration_in_ms),
       counter_(0),
       is_running_(false),
@@ -104,11 +103,11 @@ AggregateMetric::AggregateMetric(core::AsyncExecutorInterface* async_executor,
 
     // a copy of metric_info_
     auto event_metric = MetricDefinition(metric_info_);
-    event_metric.AddMetricLabels(move(labels));
+    event_metric.AddMetricLabels(std::move(labels));
 
     event_counters_[event_code] = 0;
     event_metric_infos_.insert(
-        pair<string, MetricDefinition>(event_code, move(event_metric)));
+        pair<string, MetricDefinition>(event_code, std::move(event_metric)));
   }
 }
 
@@ -202,7 +201,7 @@ void AggregateMetric::MetricPushHandler(
                                     metric_value);
 
   AsyncContext<PutMetricsRequest, PutMetricsResponse> record_metric_context(
-      move(record_metric_request),
+      std::move(record_metric_request),
       [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {
         if (!context.result.Successful()) {
           std::vector<string> metric_names;

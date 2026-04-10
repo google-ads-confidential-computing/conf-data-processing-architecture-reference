@@ -16,12 +16,9 @@
 
 package com.google.scp.coordinator.keymanagement.shared.util;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertThrows;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
 import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.PublicKeySign;
 import com.google.crypto.tink.PublicKeyVerify;
@@ -34,10 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -88,92 +82,5 @@ public final class KeySplitDataUtilTest {
 
     assertThat(keySplitData.getKeySplitKeyEncryptionKeyUri()).isEqualTo("kek-uri");
     assertThat(keySplitData.getPublicKeySignature()).isEmpty();
-  }
-
-  /** Tests that the signatures added can be verified */
-  @Test
-  public void buildKeySplitData_roundtrip() throws GeneralSecurityException {
-    EncryptionKey baseKey =
-        FakeEncryptionKey.createEncryptionKeyBuilder(SET_NAME).clearKeySplitData().build();
-    ImmutableMap<String, KeysetHandle> keysetHandles =
-        Stream.generate(KeySplitDataUtilTest::unsafeCreateKeysetHandle)
-            .limit(10)
-            .collect(
-                toImmutableMap(
-                    keysetHandle -> UUID.randomUUID().toString(), keysetHandle -> keysetHandle));
-    ImmutableMap<String, PublicKeyVerify> publicKeyVerifiers =
-        keysetHandles.entrySet().stream()
-            .collect(
-                toImmutableMap(Map.Entry::getKey, entry -> getPublicKeyVerify(entry.getValue())));
-
-    EncryptionKey.Builder finalKey = baseKey.toBuilder();
-    for (Map.Entry<String, KeysetHandle> keysetHandle : keysetHandles.entrySet()) {
-      PublicKeySign publicKeySign = keysetHandle.getValue().getPrimitive(PublicKeySign.class);
-      finalKey.addKeySplitData(
-          KeySplitDataUtil.buildKeySplitData(
-              baseKey, keysetHandle.getKey(), Optional.of(publicKeySign)));
-    }
-
-    // should throw if keys fail to verify
-    KeySplitDataUtil.verifyEncryptionKeySignatures(finalKey.build(), publicKeyVerifiers);
-  }
-
-  /** Should throw if a signature is invalid */
-  @Test
-  public void verifyEncryptionKeySignatures_throwIfInvalid() throws GeneralSecurityException {
-    EncryptionKey baseKey = FakeEncryptionKey.createEncryptionKey();
-    KeysetHandle keysetHandle = KeysetHandle.generateNew(EcdsaSignKeyManager.ecdsaP256Template());
-    PublicKeyVerify publicKeyVerify =
-        keysetHandle.getPublicKeysetHandle().getPrimitive(PublicKeyVerify.class);
-
-    EncryptionKey finalKey =
-        baseKey.toBuilder()
-            .addKeySplitData(KeySplitDataUtil.buildKeySplitData(baseKey, "blah", Optional.empty()))
-            .build();
-
-    GeneralSecurityException ex =
-        assertThrows(
-            GeneralSecurityException.class,
-            () ->
-                KeySplitDataUtil.verifyEncryptionKeySignatures(
-                    finalKey, ImmutableMap.of("blah", publicKeyVerify)));
-    assertThat(ex).hasMessageThat().contains("blah");
-    assertThat(ex).hasMessageThat().contains("failed to verify");
-  }
-
-  /** Should throw if a signature is not found */
-  @Test
-  public void verifyEncryptionKeySignatures_throwIfNotFound() throws GeneralSecurityException {
-    EncryptionKey baseKey = FakeEncryptionKey.createEncryptionKey();
-    KeysetHandle keysetHandle = KeysetHandle.generateNew(EcdsaSignKeyManager.ecdsaP256Template());
-    PublicKeyVerify publicKeyVerify =
-        keysetHandle.getPublicKeysetHandle().getPrimitive(PublicKeyVerify.class);
-
-    GeneralSecurityException ex =
-        assertThrows(
-            GeneralSecurityException.class,
-            () ->
-                KeySplitDataUtil.verifyEncryptionKeySignatures(
-                    baseKey, ImmutableMap.of("blah", publicKeyVerify)));
-    assertThat(ex).hasMessageThat().contains("blah");
-    assertThat(ex).hasMessageThat().contains("not found");
-  }
-
-  /** Needed for testing with Stream.generate() */
-  private static KeysetHandle unsafeCreateKeysetHandle() {
-    try {
-      return KeysetHandle.generateNew(EcdsaSignKeyManager.ecdsaP256Template());
-    } catch (GeneralSecurityException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /** Needed for testing with collect() */
-  private static PublicKeyVerify getPublicKeyVerify(KeysetHandle keysetHandle) {
-    try {
-      return keysetHandle.getPublicKeysetHandle().getPrimitive(PublicKeyVerify.class);
-    } catch (GeneralSecurityException e) {
-      throw new RuntimeException(e);
-    }
   }
 }

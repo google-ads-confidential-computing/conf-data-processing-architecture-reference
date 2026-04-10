@@ -31,9 +31,7 @@ import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotati
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.MigrationKmsKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.PopulateMigrationKeyData;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.CreateKeyTask;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.SignDataKeyTask;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpCreateKeyTask;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.gcp.GcpSignDataKeyTask;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
 import java.security.GeneralSecurityException;
@@ -86,7 +84,6 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
 
     // Business layer bindings
     bind(CreateKeyTask.class).to(GcpCreateKeyTask.class);
-    bind(SignDataKeyTask.class).to(GcpSignDataKeyTask.class);
 
     bind(String.class)
         .annotatedWith(KmsKeyEncryptionKeyBaseUri.class)

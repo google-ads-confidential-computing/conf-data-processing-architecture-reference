@@ -65,8 +65,8 @@ class Http2ServerOptions {
       std::optional<std::string> metric_namespace = std::nullopt,
       std::optional<std::string> metric_name = std::nullopt)
       : use_tls(use_tls),
-        private_key_file(move(private_key_file)),
-        certificate_chain_file(move(certificate_chain_file)),
+        private_key_file(std::move(private_key_file)),
+        certificate_chain_file(std::move(certificate_chain_file)),
         retry_strategy_options(retry_strategy_options),
         metric_namespace(metric_namespace),
         metric_name(metric_name) {}

@@ -23,12 +23,6 @@ import java.time.Instant;
 public interface CreateSplitKeyTask {
 
   /**
-   * Amount of days a key must be valid for to not be refreshed. Keys that expire before (now +
-   * keyRefreshWindow) should be replaced with a new key.
-   */
-  int KEY_REFRESH_WINDOW_DAYS = 1;
-
-  /**
    * The actual key generation process. Performs the necessary key exchange key fetching (if
    * applicable), encryption key generation and splitting, key storage request, and database
    * persistence with signatures.

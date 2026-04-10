@@ -259,26 +259,6 @@ container_pull(
     tag = "debug-nonroot-amd64",
 )
 
-# Distroless image for running C++.
-container_pull(
-    name = "cc_base",
-    registry = "gcr.io",
-    repository = "distroless/cc",
-    # Using SHA-256 for reproducibility.
-    # TODO: use digest instead of tag, currently it's not working.
-    tag = "latest",
-)
-
-# Distroless image for running statically linked binaries.
-container_pull(
-    name = "static_base",
-    registry = "gcr.io",
-    repository = "distroless/static",
-    # Using SHA-256 for reproducibility.
-    # TODO: use digest instead of tag, currently it's not working.
-    tag = "latest",
-)
-
 # Needed for cc/pbs/deploy/pbs_server/build_defs
 container_pull(
     name = "debian_11",
@@ -305,16 +285,11 @@ container_pull(
     tag = "v0.2",
 )
 
-# Needed for cc reproducible builds
-load("//cc/tools/build:build_container_params.bzl", "CC_BUILD_CONTAINER_REGISTRY", "CC_BUILD_CONTAINER_REPOSITORY", "CC_BUILD_CONTAINER_TAG")
-
-container_pull(
-    name = "prebuilt_cc_build_container_image_pull",
-    registry = CC_BUILD_CONTAINER_REGISTRY,
-    repository = CC_BUILD_CONTAINER_REPOSITORY,
-    tag = CC_BUILD_CONTAINER_TAG,
-)
-
 ################################################################################
 # Download Containers: End
 ################################################################################
+
+# LINT.ThenChange(
+#   WORKSPACE.bzlmod,
+#   //performance_test/gcp/WORKSPACE
+# )

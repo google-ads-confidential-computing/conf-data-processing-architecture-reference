@@ -109,7 +109,6 @@ variables {
   private_key_service_exception_alert_threshold                 = 0
   private_key_service_config_read_alert_threshold               = 0
   alert_severity_overrides                                      = {}
-  enable_parameter_manager                                      = false
 
   quota_alert_duration_sec        = 60
   quota_alert_eval_period_sec     = 180
@@ -225,19 +224,6 @@ run "doesnt_create_key_sets_parameter_config" {
   }
 }
 
-
-run "does_create_key_sets_parameter_config" {
-  command = plan
-
-  variables {
-    enable_parameter_manager = true
-  }
-
-  assert {
-    condition     = length(module.key_sets_parameter_config) == 1
-    error_message = "Didn't create parameter config"
-  }
-}
 
 run "doesnt_create_key_migration_tool" {
   command = plan

@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 
 /** Creates a key in the database */
 public final class GcpCreateKeyTask implements CreateKeyTask {
-  private static final Logger logger = LoggerFactory.getLogger(CreateKeyTask.class);
+  private static final Logger logger = LoggerFactory.getLogger(GcpCreateKeyTask.class);
 
   private final KeyDb keyDb;
   private final String kmsKeyEncryptionKeyBaseUri;
@@ -150,7 +150,6 @@ public final class GcpCreateKeyTask implements CreateKeyTask {
             ? "Created new key {} with migration data for set {}"
             : "Created new key {} for set {}";
     logger.info(logMessage, newEncryptionKey.getKeyId(), encryptionKey.getSetName());
-    // TODO(b/206030473): Figure out where exactly signing should happen.
     return newEncryptionKey;
   }
 
@@ -159,7 +158,7 @@ public final class GcpCreateKeyTask implements CreateKeyTask {
    * key split is re-encrypted.
    *
    * @return Validated and re-encrypted private key split without associated data.
-   * @throw ServiceException if the private key split is invalid.
+   * @throws ServiceException if the private key split is invalid.
    */
   private String validatedPrivateKeySplit(
       String kmsKeyUri, String privateKeySplit, String publicKeyMaterial) throws ServiceException {
@@ -181,7 +180,7 @@ public final class GcpCreateKeyTask implements CreateKeyTask {
    *
    * @return ValidatedKeySplits containing valid and re-encrypted private key splits without
    *     associated data.
-   * @throw ServiceException if the private key split is invalid.
+   * @throws ServiceException if the private key split is invalid.
    */
   private ValidatedKeySplits validatedPrivateKeySplitWithMigration(
       String kmsKeyUri,

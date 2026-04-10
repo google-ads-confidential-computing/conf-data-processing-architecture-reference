@@ -66,7 +66,6 @@ using google::scp::cpio::MetricUtils;
 using google::scp::cpio::common::GcpUtils;
 using std::bind;
 using std::make_shared;
-using std::move;
 using std::set;
 using std::shared_ptr;
 using std::string;

@@ -57,7 +57,6 @@ using google::scp::cpio::client_providers::KeyData;
 using google::scp::cpio::client_providers::PrivateKeyFetchingResponse;
 using std::make_pair;
 using std::make_shared;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::to_string;
@@ -231,8 +230,8 @@ DecryptResult CreateDecryptResult(
   }
   DecryptResult result;
   result.decrypt_result = decrypt_result;
-  result.encryption_key = move(*encryption_key);
-  result.plaintext = move(plaintext);
+  result.encryption_key = std::move(*encryption_key);
+  result.plaintext = std::move(plaintext);
   return result;
 }
 

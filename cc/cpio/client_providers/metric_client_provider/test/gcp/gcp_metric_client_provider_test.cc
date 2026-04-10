@@ -15,6 +15,7 @@
 #include "cc/cpio/client_providers/metric_client_provider/src/gcp/gcp_metric_client_provider.h"
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <google/protobuf/util/time_util.h>
@@ -64,7 +65,6 @@ using google::scp::cpio::client_providers::mock::MockInstanceClientProvider;
 using std::atomic;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::stod;
 using std::string;
@@ -350,7 +350,7 @@ TEST_F(GcpMetricClientProviderTest, AsyncCreateTimeSeriesCallback) {
   metric_client_provider_->OnAsyncCreateTimeSeriesCallback(
       make_shared<vector<AsyncContext<PutMetricsRequest, PutMetricsResponse>>>(
           requests_vector),
-      move(outcome));
+      std::move(outcome));
   EXPECT_EQ(received_responses, 5);
 }
 

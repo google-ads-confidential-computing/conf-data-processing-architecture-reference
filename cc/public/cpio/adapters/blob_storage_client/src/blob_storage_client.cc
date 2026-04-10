@@ -55,7 +55,6 @@ using google::scp::cpio::client_providers::InstanceClientProviderInterface;
 using std::bind;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::placeholders::_1;
 
@@ -127,7 +126,8 @@ ExecutionResultOr<GetBlobResponse> BlobStorageClient::GetBlobSync(
   GetBlobResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<GetBlobRequest, GetBlobResponse>(
-          bind(&BlobStorageClient::GetBlob, this, _1), move(request), response);
+          bind(&BlobStorageClient::GetBlob, this, _1), std::move(request),
+          response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kBlobStorageClient, kZeroUuid,
                             "Failed to get blob.");
@@ -147,7 +147,7 @@ BlobStorageClient::ListBlobsMetadataSync(
   ListBlobsMetadataResponse response;
   auto execution_result = SyncUtils::AsyncToSync2<ListBlobsMetadataRequest,
                                                   ListBlobsMetadataResponse>(
-      bind(&BlobStorageClient::ListBlobsMetadata, this, _1), move(request),
+      bind(&BlobStorageClient::ListBlobsMetadata, this, _1), std::move(request),
       response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kBlobStorageClient, kZeroUuid,
@@ -166,7 +166,8 @@ ExecutionResultOr<PutBlobResponse> BlobStorageClient::PutBlobSync(
   PutBlobResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<PutBlobRequest, PutBlobResponse>(
-          bind(&BlobStorageClient::PutBlob, this, _1), move(request), response);
+          bind(&BlobStorageClient::PutBlob, this, _1), std::move(request),
+          response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kBlobStorageClient, kZeroUuid,
                             "Failed to put blob.");
@@ -185,7 +186,7 @@ ExecutionResultOr<DeleteBlobResponse> BlobStorageClient::DeleteBlobSync(
   DeleteBlobResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<DeleteBlobRequest, DeleteBlobResponse>(
-          bind(&BlobStorageClient::DeleteBlob, this, _1), move(request),
+          bind(&BlobStorageClient::DeleteBlob, this, _1), std::move(request),
           response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kBlobStorageClient, kZeroUuid,

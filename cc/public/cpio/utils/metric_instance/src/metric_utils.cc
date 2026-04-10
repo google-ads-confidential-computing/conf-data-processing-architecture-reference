@@ -34,7 +34,6 @@ using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
 using std::make_shared;
 using std::map;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::string_view;
@@ -83,9 +82,9 @@ void MetricUtils::GetPutMetricsRequest(
 map<string, string> MetricUtils::CreateMetricLabelsWithComponentSignature(
     string component_name, string method_name) noexcept {
   map<string, string> labels;
-  labels[kComponentName] = move(component_name);
+  labels[kComponentName] = std::move(component_name);
   if (!method_name.empty()) {
-    labels[kMethodName] = move(method_name);
+    labels[kMethodName] = std::move(method_name);
   }
 
   return labels;

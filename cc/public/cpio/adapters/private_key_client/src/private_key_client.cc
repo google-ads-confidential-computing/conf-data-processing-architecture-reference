@@ -63,7 +63,6 @@ using google::scp::cpio::client_providers::RoleCredentialsProviderInterface;
 using std::bind;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::placeholders::_1;
@@ -173,8 +172,8 @@ PrivateKeyClient::ListPrivateKeysSync(ListPrivateKeysRequest request) noexcept {
   ListPrivateKeysResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<ListPrivateKeysRequest, ListPrivateKeysResponse>(
-          bind(&PrivateKeyClient::ListPrivateKeys, this, _1), move(request),
-          response);
+          bind(&PrivateKeyClient::ListPrivateKeys, this, _1),
+          std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kPrivateKeyClient, kZeroUuid,
                             "Failed to list private keys.");
@@ -196,7 +195,7 @@ PrivateKeyClient::ListActiveEncryptionKeysSync(
       SyncUtils::AsyncToSync2<ListActiveEncryptionKeysRequest,
                               ListActiveEncryptionKeysResponse>(
           bind(&PrivateKeyClient::ListActiveEncryptionKeys, this, _1),
-          move(request), response);
+          std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kPrivateKeyClient, kZeroUuid,
                             "Failed to list active encryption keys.");
@@ -218,7 +217,7 @@ PrivateKeyClient::GetKeysetMetadataSync(
   GetKeysetMetadataResponse response;
   auto execution_result = SyncUtils::AsyncToSync2<GetKeysetMetadataRequest,
                                                   GetKeysetMetadataResponse>(
-      bind(&PrivateKeyClient::GetKeysetMetadata, this, _1), move(request),
+      bind(&PrivateKeyClient::GetKeysetMetadata, this, _1), std::move(request),
       response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kPrivateKeyClient, kZeroUuid,

@@ -86,7 +86,6 @@ using google::scp::operators::protos::shared::backend::asginstance::
 using std::atomic_bool;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;

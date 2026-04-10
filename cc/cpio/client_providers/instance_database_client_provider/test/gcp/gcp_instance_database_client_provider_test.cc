@@ -102,7 +102,6 @@ using google::spanner::admin::database::v1::UpdateDatabaseDdlRequest;
 using std::make_pair;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::optional;
 using std::pair;
 using std::shared_ptr;
@@ -162,13 +161,13 @@ class GcpInstanceDatabaseClientProviderTests : public testing::Test {
     GetInstanceByNameRequest get_request;
     get_request.set_instance_name(kInstanceName);
     get_instance_context_.request =
-        make_shared<GetInstanceByNameRequest>(move(get_request));
+        make_shared<GetInstanceByNameRequest>(std::move(get_request));
     get_instance_context_.callback = [this](auto) { finish_called_ = true; };
 
     ListInstancesByStatusRequest list_request;
     list_request.set_instance_status(InstanceStatus::TERMINATING_WAIT);
     list_instances_context_.request =
-        make_shared<ListInstancesByStatusRequest>(move(list_request));
+        make_shared<ListInstancesByStatusRequest>(std::move(list_request));
     list_instances_context_.callback = [this](auto) { finish_called_ = true; };
 
     ON_CALL(*connection_, Commit).WillByDefault(Return(CommitResult{}));

@@ -17,6 +17,7 @@
 package com.google.scp.shared.util;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.shared.util.PublicKeyConversionUtil.getPublicKey;
 import static org.junit.Assert.assertThrows;
 
 import com.google.crypto.tink.CleartextKeysetHandle;
@@ -25,6 +26,15 @@ import com.google.crypto.tink.HybridEncrypt;
 import com.google.crypto.tink.JsonKeysetReader;
 import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.hybrid.HybridConfig;
+import com.google.crypto.tink.proto.HpkePublicKey;
+import com.google.crypto.tink.proto.KeyData;
+import com.google.crypto.tink.proto.KeyData.KeyMaterialType;
+import com.google.crypto.tink.proto.KeyStatusType;
+import com.google.crypto.tink.proto.Keyset;
+import com.google.crypto.tink.proto.OutputPrefixType;
+import com.google.protobuf.ByteString;
+import java.security.GeneralSecurityException;
+import java.util.Base64;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -71,7 +81,7 @@ public final class PublicKeyConversionUtilTest {
   public void getPublicKey_success() throws Exception {
     var keysetHandle = CleartextKeysetHandle.read(JsonKeysetReader.withString(PUBLIC_KEY_EXAMPLE));
 
-    var publicKey = PublicKeyConversionUtil.getPublicKey(keysetHandle);
+    var publicKey = getPublicKey(keysetHandle);
 
     assertThat(publicKey).isEqualTo(RAW_PUBLIC_KEY);
   }
@@ -80,16 +90,14 @@ public final class PublicKeyConversionUtilTest {
   public void getPublicKey_throwsIfPrivateKey() throws Exception {
     var privateKeysetHandle = KeysetHandle.generateNew(KeyParams.getDefaultKeyTemplate());
 
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> PublicKeyConversionUtil.getPublicKey(privateKeysetHandle));
+    assertThrows(IllegalArgumentException.class, () -> getPublicKey(privateKeysetHandle));
   }
 
   @Test
   public void getKeysetHandle_success() throws Exception {
-    KeysetHandle keysetHandle = PublicKeyConversionUtil.getKeysetHandle(RAW_PUBLIC_KEY);
+    KeysetHandle keysetHandle = getKeysetHandle(RAW_PUBLIC_KEY);
 
-    assertThat(PublicKeyConversionUtil.getPublicKey(keysetHandle)).isEqualTo(RAW_PUBLIC_KEY);
+    assertThat(getPublicKey(keysetHandle)).isEqualTo(RAW_PUBLIC_KEY);
   }
 
   /**
@@ -101,8 +109,7 @@ public final class PublicKeyConversionUtilTest {
     var keysetHandle = KeysetHandle.generateNew(KeyParams.getDefaultKeyTemplate());
 
     var convertedPublicKeysetHandle =
-        PublicKeyConversionUtil.getKeysetHandle(
-            PublicKeyConversionUtil.getPublicKey(keysetHandle.getPublicKeysetHandle()));
+        getKeysetHandle(getPublicKey(keysetHandle.getPublicKeysetHandle()));
     var hybridEncrypt = convertedPublicKeysetHandle.getPrimitive(HybridEncrypt.class);
     var hybridDecrypt = keysetHandle.getPrimitive(HybridDecrypt.class);
 
@@ -111,5 +118,35 @@ public final class PublicKeyConversionUtilTest {
     var decryptedText = hybridDecrypt.decrypt(ciphertext, null);
 
     assertThat(decryptedText).isEqualTo("foo".getBytes());
+  }
+
+  /**
+   * Returns a KeysetHandle constructed from a base64-encoded string of the raw public key material
+   * of an Enabled, Asymmetric, Hpke key with the parameters defined in {@link KeyParams}.
+   */
+  private static KeysetHandle getKeysetHandle(String rawPublicKey) throws GeneralSecurityException {
+    return CleartextKeysetHandle.fromKeyset(
+        Keyset.newBuilder()
+            .addKey(
+                Keyset.Key.newBuilder()
+                    .setStatus(KeyStatusType.ENABLED)
+                    .setOutputPrefixType(OutputPrefixType.RAW)
+                    .setKeyData(
+                        KeyData.newBuilder()
+                            .setTypeUrl("type.googleapis.com/google.crypto.tink.HpkePublicKey")
+                            .setKeyMaterialType(KeyMaterialType.ASYMMETRIC_PUBLIC)
+                            .setValue(createSerializedKeyFromRawKey(rawPublicKey))
+                            .build())
+                    .build())
+            .build());
+  }
+
+  private static ByteString createSerializedKeyFromRawKey(String rawPublicKey) {
+    var keyProto =
+        HpkePublicKey.newBuilder()
+            .setPublicKey(ByteString.copyFrom(Base64.getDecoder().decode(rawPublicKey)))
+            .setParams(KeyParams.getHpkeParams())
+            .build();
+    return keyProto.toByteString();
   }
 }

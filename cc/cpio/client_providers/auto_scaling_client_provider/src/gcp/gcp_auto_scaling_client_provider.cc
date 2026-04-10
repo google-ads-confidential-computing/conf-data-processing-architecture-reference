@@ -115,14 +115,14 @@ ExecutionResult GcpAutoScalingClientProvider::Run() noexcept {
   RETURN_AND_LOG_IF_FAILURE(current_region_or.result(),
                             kGcpAutoScalingClientProvider, kZeroUuid,
                             "Failed to extract current instance region ID.");
-  current_region_ = move(*current_region_or);
+  current_region_ = std::move(*current_region_or);
   auto current_project_id_or_ =
       GcpInstanceClientUtils::ParseProjectIdFromInstanceResourceName(
           current_instance_resource_name);
   RETURN_AND_LOG_IF_FAILURE(current_project_id_or_.result(),
                             kGcpAutoScalingClientProvider, kZeroUuid,
                             "Failed to parse current project ID.");
-  current_project_id_ = move(*current_project_id_or_);
+  current_project_id_ = std::move(*current_project_id_or_);
 
   instance_group_managers_client_ =
       instance_group_managers_client_factory_->CreateClient(options_);
@@ -172,11 +172,11 @@ void GcpAutoScalingClientProvider::TryFinishInstanceTermination(
     try_termination_context.Finish();
     return;
   }
-  request->set_instance_name(move(*instance_name_or));
+  request->set_instance_name(std::move(*instance_name_or));
 
   AsyncContext<GetInstanceByNameRequest, GetInstanceByNameResponse>
       get_instance_context(
-          move(request),
+          std::move(request),
           std::bind(&GcpAutoScalingClientProvider::OnGetInstanceByNameCallback,
                     this, try_termination_context, _1),
           try_termination_context);

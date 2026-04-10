@@ -17,6 +17,7 @@
 #include "test_lib_cpio.h"
 
 #include <memory>
+#include <utility>
 
 #include "cpio/client_providers/global_cpio/src/global_cpio.h"
 #include "cpio/client_providers/global_cpio/test/test_lib_cpio_provider.h"
@@ -38,7 +39,8 @@ static ExecutionResult SetGlobalCpio(const TestCpioOptions& options) {
   cpio_ptr =
       make_unique<TestLibCpioProvider>(make_shared<TestCpioOptions>(options));
 
-  CpioUtils::RunAndSetGlobalCpio(move(cpio_ptr), options.cpu_async_executor,
+  CpioUtils::RunAndSetGlobalCpio(std::move(cpio_ptr),
+                                 options.cpu_async_executor,
                                  options.io_async_executor);
 
   return SuccessExecutionResult();

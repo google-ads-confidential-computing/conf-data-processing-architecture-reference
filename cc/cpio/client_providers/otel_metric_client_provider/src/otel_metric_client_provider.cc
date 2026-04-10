@@ -60,7 +60,6 @@ using opentelemetry::metrics::Gauge;
 using opentelemetry::metrics::Histogram;
 using std::bind;
 using std::make_shared;
-using std::move;
 using std::shared_ptr;
 using std::stod;
 using std::string;

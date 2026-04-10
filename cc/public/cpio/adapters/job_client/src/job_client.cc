@@ -60,7 +60,6 @@ using google::scp::cpio::client_providers::QueueClientProviderFactory;
 using std::bind;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::placeholders::_1;
@@ -113,7 +112,7 @@ ExecutionResult JobClient::Init() noexcept {
       ConvertToPublicExecutionResult(queue_client_options_or.result()),
       kJobClient, kZeroUuid, "Failed to create QueueClientOptions.");
   queue_client_provider_ = QueueClientProviderFactory::Create(
-      move(*queue_client_options_or), instance_client, cpu_async_executor,
+      std::move(*queue_client_options_or), instance_client, cpu_async_executor,
       io_async_executor);
   RETURN_AND_LOG_IF_FAILURE(
       ConvertToPublicExecutionResult(queue_client_provider_->Init()),
@@ -124,7 +123,7 @@ ExecutionResult JobClient::Init() noexcept {
       ConvertToPublicExecutionResult(nosql_database_client_options_or.result()),
       kJobClient, kZeroUuid, "Failed to create NoSQLDatabaseClientOptions.");
   nosql_database_client_provider_ = NoSQLDatabaseClientProviderFactory::Create(
-      move(*nosql_database_client_options_or), instance_client,
+      std::move(*nosql_database_client_options_or), instance_client,
       cpu_async_executor, io_async_executor);
   RETURN_AND_LOG_IF_FAILURE(
       ConvertToPublicExecutionResult(nosql_database_client_provider_->Init()),
@@ -177,7 +176,7 @@ ExecutionResultOr<PutJobResponse> JobClient::PutJobSync(
   PutJobResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<PutJobRequest, PutJobResponse>(
-          bind(&JobClient::PutJob, this, _1), move(request), response);
+          bind(&JobClient::PutJob, this, _1), std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kJobClient, kZeroUuid, "Failed to put job.");
   return response;
@@ -194,7 +193,7 @@ ExecutionResultOr<GetNextJobResponse> JobClient::GetNextJobSync(
   GetNextJobResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<GetNextJobRequest, GetNextJobResponse>(
-          bind(&JobClient::GetNextJob, this, _1), move(request), response);
+          bind(&JobClient::GetNextJob, this, _1), std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kJobClient, kZeroUuid, "Failed to get next job.");
   return response;
@@ -211,7 +210,7 @@ ExecutionResultOr<GetJobByIdResponse> JobClient::GetJobByIdSync(
   GetJobByIdResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<GetJobByIdRequest, GetJobByIdResponse>(
-          bind(&JobClient::GetJobById, this, _1), move(request), response);
+          bind(&JobClient::GetJobById, this, _1), std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kJobClient, kZeroUuid, "Failed to get job by ID.");
   return response;
@@ -229,7 +228,8 @@ ExecutionResultOr<UpdateJobBodyResponse> JobClient::UpdateJobBodySync(
   UpdateJobBodyResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<UpdateJobBodyRequest, UpdateJobBodyResponse>(
-          bind(&JobClient::UpdateJobBody, this, _1), move(request), response);
+          bind(&JobClient::UpdateJobBody, this, _1), std::move(request),
+          response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kJobClient, kZeroUuid,
                             "Failed to update job body.");
@@ -248,7 +248,8 @@ ExecutionResultOr<UpdateJobStatusResponse> JobClient::UpdateJobStatusSync(
   UpdateJobStatusResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<UpdateJobStatusRequest, UpdateJobStatusResponse>(
-          bind(&JobClient::UpdateJobStatus, this, _1), move(request), response);
+          bind(&JobClient::UpdateJobStatus, this, _1), std::move(request),
+          response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kJobClient, kZeroUuid,
                             "Failed to update job status.");
@@ -271,8 +272,8 @@ JobClient::UpdateJobVisibilityTimeoutSync(
   auto execution_result =
       SyncUtils::AsyncToSync2<UpdateJobVisibilityTimeoutRequest,
                               UpdateJobVisibilityTimeoutResponse>(
-          bind(&JobClient::UpdateJobVisibilityTimeout, this, _1), move(request),
-          response);
+          bind(&JobClient::UpdateJobVisibilityTimeout, this, _1),
+          std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kJobClient, kZeroUuid,
                             "Failed to update job visibility timeout.");
@@ -294,8 +295,8 @@ JobClient::DeleteOrphanedJobMessageSync(
   auto execution_result =
       SyncUtils::AsyncToSync2<DeleteOrphanedJobMessageRequest,
                               DeleteOrphanedJobMessageResponse>(
-          bind(&JobClient::DeleteOrphanedJobMessage, this, _1), move(request),
-          response);
+          bind(&JobClient::DeleteOrphanedJobMessage, this, _1),
+          std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kJobClient, kZeroUuid,
                             "Failed to delete orphaned job message.");

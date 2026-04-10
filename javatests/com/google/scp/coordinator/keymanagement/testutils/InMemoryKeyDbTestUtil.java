@@ -35,7 +35,6 @@ import java.util.stream.IntStream;
 
 public final class InMemoryKeyDbTestUtil {
 
-  public static final Long SECONDS_PER_DAY = 86400L;
   public static final Long CACHE_CONTROL_MAX = 604800L;
   public static final Integer KEY_LIMIT = 5;
 
@@ -96,16 +95,13 @@ public final class InMemoryKeyDbTestUtil {
   }
 
   /** Builds {@link EncodedPublicKey} given its properties */
-  public static EncodedPublicKey expectedEncodedPublicKey(String keyId, String publicKey) {
-    return EncodedPublicKey.newBuilder().setId(keyId).setKey(publicKey).build();
+  public static EncodedPublicKey expectedEncodedPublicKey(String keyId) {
+    return EncodedPublicKey.newBuilder().setId(keyId).build();
   }
 
   /** Builds {@link EncodedPublicKey} representation of {@link EncryptionKey} */
   public static EncodedPublicKey expectedEncodedPublicKey(EncryptionKey encryptionKey) {
-    return EncodedPublicKey.newBuilder()
-        .setId(encryptionKey.getKeyId())
-        .setKey(encryptionKey.getPublicKeyMaterial())
-        .build();
+    return EncodedPublicKey.newBuilder().setId(encryptionKey.getKeyId()).build();
   }
 
   public static String expectedErrorResponseBody(int code, String message, String reason) {

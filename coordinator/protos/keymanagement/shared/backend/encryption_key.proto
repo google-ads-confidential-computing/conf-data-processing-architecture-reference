@@ -55,7 +55,6 @@ message EncryptionKey {
   // keyset). Not set when returning Private Key.
   string public_key_material = 3;
 
-
   // Key data payload. The meaning of this field depends on keyType.
   // If keyType is the empty string, then this acts as json-encoded private key
   // data in the single-party protocol. Is empty when returning Public Keys.

@@ -34,7 +34,6 @@ using boost::asio::local::stream_protocol;
 using std::atomic_bool;
 using std::make_pair;
 using std::make_shared;
-using std::move;
 using std::multimap;
 using std::string;
 using std::thread;

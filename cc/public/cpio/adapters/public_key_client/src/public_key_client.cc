@@ -52,7 +52,6 @@ using std::bind;
 using std::make_shared;
 using std::make_unique;
 using std::map;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::placeholders::_1;
@@ -118,7 +117,7 @@ ExecutionResultOr<ListPublicKeysResponse> PublicKeyClient::ListPublicKeysSync(
   ListPublicKeysResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<ListPublicKeysRequest, ListPublicKeysResponse>(
-          bind(&PublicKeyClient::ListPublicKeys, this, _1), move(request),
+          bind(&PublicKeyClient::ListPublicKeys, this, _1), std::move(request),
           response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kPublicKeyClient, kZeroUuid,
                             "Failed to list public keys.");

@@ -37,7 +37,6 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotati
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.PeerKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
-import com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
@@ -105,7 +104,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
    * The actual key generation process. Performs the necessary encryption key generation and
    * splitting, key storage request, and database persistence with signatures.
    *
-   * @see CreateSplitKeyTaskBase#createSplitKey(String, String, int, int, int, Instant)
+   * @see CreateSplitKeyTaskBase#createSplitKey(String, String, int, int, int, int, Instant)
    */
   public void createSplitKey(
       String setName,
@@ -124,31 +123,20 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
         ttlInDays,
         backfillDays,
         activation,
-        Optional.empty(),
         populateMigrationDataProvider.get());
   }
 
-  /**
-   * Encrypt CoordinatorB KeySplit using Peer Coordinator KMS Key.
-   *
-   * @param dataKey Unused by design since GCP encrypts the keySplit directly.
-   */
+  /** Encrypt CoordinatorB KeySplit using Peer Coordinator KMS Key. */
   @Override
   protected String encryptPeerCoordinatorSplit(
-      String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKeyMaterial)
-      throws ServiceException {
+      String setName, ByteString keySplit, String publicKeyMaterial) throws ServiceException {
     return encryptPeerCoordinatorSplit(setName, keySplit, publicKeyMaterial, false);
   }
 
-  /**
-   * Encrypt CoordinatorB Migration KeySplit using Migration Peer Coordinator KMS Key.
-   *
-   * @param dataKey Unused by design since GCP encrypts the keySplit directly.
-   */
+  /** Encrypt CoordinatorB Migration KeySplit using Migration Peer Coordinator KMS Key. */
   @Override
   protected String encryptMigrationPeerCoordinatorSplit(
-      String setName, ByteString keySplit, Optional<DataKey> dataKey, String publicKeyMaterial)
-      throws ServiceException {
+      String setName, ByteString keySplit, String publicKeyMaterial) throws ServiceException {
     return encryptPeerCoordinatorSplit(
         setName, keySplit, publicKeyMaterial, populateMigrationDataProvider.get());
   }
@@ -218,18 +206,12 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
     return migrationPeerKmsClient.getAead(keyEncryptionKeyUri);
   }
 
-  /**
-   * Send KeySplit to Peer Coordinator using KeyStorageService.
-   *
-   * @param dataKey Unused by design since GCP does not use a data key to encrypt keySplit. See
-   *     {@link GcpCreateSplitKeyTask#encryptPeerCoordinatorSplit}
-   */
+  /** Send KeySplit to Peer Coordinator using KeyStorageService. */
   @Override
   protected EncryptionKey sendKeySplitToPeerCoordinator(
       EncryptionKey unsignedCoordinatorBKey,
       String encryptedKeySplitB,
-      Optional<String> encryptedMigrationKeySplitB,
-      Optional<DataKey> dataKey)
+      Optional<String> encryptedMigrationKeySplitB)
       throws ServiceException {
     try {
       return keyStorageClient.createKey(

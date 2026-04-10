@@ -18,6 +18,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "core/http2_client/mock/mock_http_client.h"
 #include "core/interface/async_context.h"
@@ -56,7 +57,6 @@ using google::scp::cpio::client_providers::mock::
 using std::atomic;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
@@ -115,7 +115,7 @@ class PrivateKeyFetcherProviderTest : public ScpTestBase {
     bytes_buffer.capacity = sizeof(str);
 
     http_client_->response_mock = HttpResponse();
-    http_client_->response_mock.body = move(bytes_buffer);
+    http_client_->response_mock.body = std::move(bytes_buffer);
   }
 
   shared_ptr<MockHttpClient> http_client_;
@@ -162,7 +162,7 @@ TEST_F(PrivateKeyFetcherProviderTest, FailedToFetchKeysetMetadata) {
 
   atomic<bool> condition = false;
   AsyncContext<KeysetMetadataFetchingRequest, KeysetMetadataFetchingResponse>
-      context(move(keyset_metadata_request_),
+      context(std::move(keyset_metadata_request_),
               [&](AsyncContext<KeysetMetadataFetchingRequest,
                                KeysetMetadataFetchingResponse>& context) {
                 EXPECT_THAT(context.result, ResultIs(result));
@@ -222,8 +222,9 @@ TEST_F(PrivateKeyFetcherProviderTest, FailedToFetchPrivateKey) {
 
   atomic<bool> condition = false;
   AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse> context(
-      move(request_), [&](AsyncContext<PrivateKeyFetchingRequest,
-                                       PrivateKeyFetchingResponse>& context) {
+      std::move(request_),
+      [&](AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>&
+              context) {
         EXPECT_THAT(context.result, ResultIs(result));
         condition = true;
       });
@@ -237,8 +238,9 @@ TEST_F(PrivateKeyFetcherProviderTest, FailedToSignHttpRequest) {
 
   atomic<bool> condition = false;
   AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse> context(
-      move(request_), [&](AsyncContext<PrivateKeyFetchingRequest,
-                                       PrivateKeyFetchingResponse>& context) {
+      std::move(request_),
+      [&](AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>&
+              context) {
         EXPECT_THAT(context.result, ResultIs(result));
         condition = true;
       });
@@ -263,8 +265,9 @@ TEST_F(PrivateKeyFetcherProviderTest, PrivateKeyNotFound) {
 
   atomic<bool> condition = false;
   AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse> context(
-      move(request_), [&](AsyncContext<PrivateKeyFetchingRequest,
-                                       PrivateKeyFetchingResponse>& context) {
+      std::move(request_),
+      [&](AsyncContext<PrivateKeyFetchingRequest, PrivateKeyFetchingResponse>&
+              context) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(
                         SC_PRIVATE_KEY_FETCHER_PROVIDER_KEY_DATA_NOT_FOUND)));

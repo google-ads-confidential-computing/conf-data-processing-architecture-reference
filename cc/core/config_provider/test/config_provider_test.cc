@@ -23,6 +23,7 @@
 #include <fstream>
 #include <list>
 #include <memory>
+#include <utility>
 
 #include "core/config_provider/src/error_codes.h"
 #include "public/core/test/interface/execution_result_matchers.h"
@@ -32,7 +33,6 @@ using google::scp::core::FailureExecutionResult;
 using google::scp::core::SuccessExecutionResult;
 
 using std::list;
-using std::move;
 using std::string;
 using std::filesystem::path;
 
@@ -41,7 +41,8 @@ path GetTestDataDir(std::string relative_path) {
   path test_srcdir_env = std::getenv("TEST_SRCDIR");
   path test_workspace_env = std::getenv("TEST_WORKSPACE");
 
-  return path(test_srcdir_env) / path(test_workspace_env) / move(relative_path);
+  return path(test_srcdir_env) / path(test_workspace_env) /
+         std::move(relative_path);
 }
 
 TEST(ConfigProviderTest, GetConfigs) {

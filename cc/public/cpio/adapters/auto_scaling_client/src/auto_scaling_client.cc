@@ -53,7 +53,6 @@ using std::bind;
 using std::make_shared;
 using std::make_unique;
 using std::map;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::placeholders::_1;
@@ -133,7 +132,7 @@ AutoScalingClient::TryFinishInstanceTerminationSync(
       SyncUtils::AsyncToSync2<TryFinishInstanceTerminationRequest,
                               TryFinishInstanceTerminationResponse>(
           bind(&AutoScalingClient::TryFinishInstanceTermination, this, _1),
-          move(request), response);
+          std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kAutoScalingClient, kZeroUuid,
                             "Failed to TryFinishInstanceTermination.");
@@ -143,6 +142,6 @@ AutoScalingClient::TryFinishInstanceTerminationSync(
 std::unique_ptr<AutoScalingClientInterface> AutoScalingClientFactory::Create(
     AutoScalingClientOptions options) {
   return make_unique<AutoScalingClient>(
-      make_shared<AutoScalingClientOptions>(move(options)));
+      make_shared<AutoScalingClientOptions>(std::move(options)));
 }
 }  // namespace google::scp::cpio

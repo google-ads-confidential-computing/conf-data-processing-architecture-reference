@@ -20,6 +20,7 @@
 #include <optional>
 #include <string>
 #include <unordered_set>
+#include <utility>
 
 #include "absl/strings/str_cat.h"
 #include "core/interface/async_context.h"
@@ -85,7 +86,6 @@ using google::scp::core::test::WaitUntil;
 using std::atomic;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::nullopt;
 using std::optional;
 using std::shared_ptr;
@@ -229,7 +229,7 @@ class ConfigurationFetcherTest : public ScpTestBase {
                       absl::StrCat(parameter_name_prefix, env_name_prefix,
                                    parameter_name)) {
                 response->set_parameter_value(parameter_value);
-                context.response = move(response);
+                context.response = std::move(response);
               }
               context.Finish();
             });

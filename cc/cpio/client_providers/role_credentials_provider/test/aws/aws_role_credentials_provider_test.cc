@@ -142,7 +142,7 @@ TEST_F(AwsRoleCredentialsProviderTest, AssumRoleSuccess) {
   request->account_identity = make_shared<string>(kAssumeRoleArn);
   AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
       get_credentials_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<GetRoleCredentialsRequest,
                            GetRoleCredentialsResponse>& context) {
             EXPECT_SUCCESS(context.result);
@@ -176,7 +176,7 @@ TEST_F(AwsRoleCredentialsProviderTest, AssumRoleFailure) {
   request->account_identity = make_shared<string>(kAssumeRoleArn);
   AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
       get_credentials_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<GetRoleCredentialsRequest,
                            GetRoleCredentialsResponse>& context) {
             EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(
@@ -197,7 +197,7 @@ TEST_F(AwsRoleCredentialsProviderTest,
   auto request = make_shared<GetRoleCredentialsRequest>();
   AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
       get_credentials_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<GetRoleCredentialsRequest,
                            GetRoleCredentialsResponse>& context) {
             EXPECT_THAT(context.result,
@@ -249,7 +249,7 @@ TEST_F(AwsRoleCredentialsProviderTest, AssumRoleWithWebIdentitySuccess) {
   request->target_audience_for_web_identity = kAudience;
   AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
       get_credentials_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<GetRoleCredentialsRequest,
                            GetRoleCredentialsResponse>& context) {
             EXPECT_SUCCESS(context.result);
@@ -306,7 +306,7 @@ TEST_F(AwsRoleCredentialsProviderTest,
   request->key_ids = make_shared<vector<string>>(kKeyIds);
   AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
       get_credentials_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<GetRoleCredentialsRequest,
                            GetRoleCredentialsResponse>& context) {
             EXPECT_SUCCESS(context.result);
@@ -338,7 +338,7 @@ TEST_F(AwsRoleCredentialsProviderTest, GetTeeTokenFailure) {
   request->target_audience_for_web_identity = kAudience;
   AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
       get_credentials_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<GetRoleCredentialsRequest,
                            GetRoleCredentialsResponse>& context) {
             EXPECT_THAT(context.result,
@@ -380,7 +380,7 @@ TEST_F(AwsRoleCredentialsProviderTest, AssumRoleWithWebIdentityFailure) {
   request->target_audience_for_web_identity = kAudience;
   AsyncContext<GetRoleCredentialsRequest, GetRoleCredentialsResponse>
       get_credentials_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<GetRoleCredentialsRequest,
                            GetRoleCredentialsResponse>& context) {
             EXPECT_THAT(context.result, ResultIs(FailureExecutionResult(

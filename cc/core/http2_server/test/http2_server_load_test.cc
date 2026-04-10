@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "core/async_executor/src/async_executor.h"
 #include "core/authorization_proxy/src/pass_thru_authorization_proxy.h"
@@ -224,7 +225,7 @@ TEST_F(HttpServerLoadTest,
       request->path =
           make_shared<string>("http://" + host_ + ":" + port_ + "/v1/test");
       AsyncContext<HttpRequest, HttpResponse> request_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<HttpRequest, HttpResponse>& result_context) {
             client_requests_completed_in_current_round++;
           });
@@ -248,7 +249,7 @@ TEST_F(HttpServerLoadTest,
       request->path =
           make_shared<string>("http://" + host_ + ":" + port_ + "/v1/test");
       AsyncContext<HttpRequest, HttpResponse> request_context(
-          move(request),
+          std::move(request),
           [&](AsyncContext<HttpRequest, HttpResponse>& result_context) {
             client_requests_completed_in_current_round++;
           });

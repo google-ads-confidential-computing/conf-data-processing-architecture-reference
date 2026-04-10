@@ -56,7 +56,6 @@ using google::scp::core::errors::
 using google::scp::core::errors::SC_METRIC_CLIENT_PROVIDER_NAMESPACE_NOT_SET;
 using std::bind;
 using std::make_shared;
-using std::move;
 using std::scoped_lock;
 using std::shared_ptr;
 using std::string;

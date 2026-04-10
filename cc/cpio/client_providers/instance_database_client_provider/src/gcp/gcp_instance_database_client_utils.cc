@@ -50,7 +50,6 @@ using google::scp::operators::protos::shared::backend::asginstance::
     InstanceStatus;
 using google::scp::operators::protos::shared::backend::asginstance::
     InstanceStatus_Parse;
-using std::move;
 using std::string;
 
 namespace {
@@ -98,7 +97,7 @@ GcpInstanceDatabaseClientUtils::ConvertJsonToInstance(const Row& row) noexcept {
         kGcpInstanceDatabaseClientUtils, kZeroUuid,
         "Spanner get instance name failed");
   }
-  instance.set_instance_name(move(*instance_name_or));
+  instance.set_instance_name(std::move(*instance_name_or));
 
   const auto instance_status_or = row.values()[1].get<string>();
   if (!instance_status_or.ok()) {
@@ -122,7 +121,7 @@ GcpInstanceDatabaseClientUtils::ConvertJsonToInstance(const Row& row) noexcept {
               request_time_or.result(), "Spanner get request time failed");
     return request_time_or.result();
   }
-  *instance.mutable_request_time() = move(*request_time_or);
+  *instance.mutable_request_time() = std::move(*request_time_or);
 
   auto termination_time_or = GetTimestampFromRow(row, 3);
   if (!termination_time_or.Successful()) {
@@ -131,7 +130,7 @@ GcpInstanceDatabaseClientUtils::ConvertJsonToInstance(const Row& row) noexcept {
               "Spanner get termination time failed");
     return termination_time_or.result();
   }
-  *instance.mutable_termination_time() = move(*termination_time_or);
+  *instance.mutable_termination_time() = std::move(*termination_time_or);
 
   auto ttl_or = GetTimestampFromRow(row, 4);
   if (!ttl_or.Successful()) {

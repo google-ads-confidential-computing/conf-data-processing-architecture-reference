@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/errors.h"
@@ -46,7 +47,6 @@ using std::atomic;
 using std::make_shared;
 using std::make_unique;
 using std::map;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
@@ -91,7 +91,7 @@ void GetCurrentInstanceResourceNameCallback(
       context.response->instance_resource_name());
   auto get_tags_context =
       AsyncContext<GetTagsByResourceNameRequest, GetTagsByResourceNameResponse>(
-          move(get_tags_request),
+          std::move(get_tags_request),
           bind(GetTagsByResourceNameCallback, std::ref(finished), _1));
   instance_client->GetTagsByResourceName(get_tags_context);
 }
@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
 
   InstanceClientOptions instance_client_options;
   instance_client =
-      InstanceClientFactory::Create(move(instance_client_options));
+      InstanceClientFactory::Create(std::move(instance_client_options));
   result = instance_client->Init();
   if (!result.Successful()) {
     std::cout << "Cannot init instance client!"

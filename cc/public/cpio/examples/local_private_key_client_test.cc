@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "core/test/utils/conditional_wait.h"
 #include "public/core/interface/errors.h"
@@ -43,7 +44,6 @@ using std::atomic;
 using std::make_shared;
 using std::make_unique;
 using std::map;
-using std::move;
 using std::shared_ptr;
 using std::stod;
 using std::string;
@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
 
   PrivateKeyClientOptions private_key_client_options;
   auto private_key_client =
-      PrivateKeyClientFactory::Create(move(private_key_client_options));
+      PrivateKeyClientFactory::Create(std::move(private_key_client_options));
   result = private_key_client->Init();
   if (!result.Successful()) {
     std::cout << "Cannot init private key client!"
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
   atomic<bool> finished = false;
   auto list_private_keys_context =
       AsyncContext<ListPrivateKeysRequest, ListPrivateKeysResponse>(
-          move(request),
+          std::move(request),
           [&](AsyncContext<ListPrivateKeysRequest, ListPrivateKeysResponse>
                   context) {
             if (!context.result.Successful()) {

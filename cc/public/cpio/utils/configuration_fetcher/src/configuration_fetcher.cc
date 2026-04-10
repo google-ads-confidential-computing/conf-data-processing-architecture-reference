@@ -98,7 +98,6 @@ using google::scp::core::errors::
 using google::scp::core::utils::ConvertToPublicExecutionResult;
 using std::bind;
 using std::make_shared;
-using std::move;
 using std::shared_ptr;
 using std::string;
 using std::unordered_set;
@@ -1306,7 +1305,7 @@ void ConfigurationFetcher::GetConfiguration(
                                            env_name_with_suffix,
                                            *get_configuration_context.request));
   auto context = AsyncContext<GetParameterRequest, GetParameterResponse>(
-      move(request),
+      std::move(request),
       bind(&ConfigurationFetcher::GetParameterCallback, this, _1,
            get_configuration_context),
       get_configuration_context);
@@ -1329,7 +1328,7 @@ void ConfigurationFetcher::GetParameterCallback(
 
   get_configuration_context.result = SuccessExecutionResult();
   get_configuration_context.response = make_shared<string>(
-      move(get_parameter_context.response->parameter_value()));
+      std::move(get_parameter_context.response->parameter_value()));
   get_configuration_context.Finish();
 }
 }  // namespace google::scp::cpio

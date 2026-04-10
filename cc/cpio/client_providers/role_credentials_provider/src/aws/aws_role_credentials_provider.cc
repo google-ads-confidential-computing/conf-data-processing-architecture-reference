@@ -74,7 +74,8 @@ namespace google::scp::cpio::client_providers {
 shared_ptr<ClientConfiguration>
 AwsRoleCredentialsProvider::CreateClientConfiguration(
     const string& region) noexcept {
-  return common::CreateClientConfiguration(make_shared<string>(move(region)));
+  return common::CreateClientConfiguration(
+      make_shared<string>(std::move(region)));
 }
 
 ExecutionResult AwsRoleCredentialsProvider::Init() noexcept {
@@ -146,7 +147,7 @@ void AwsRoleCredentialsProvider::GetRoleCredentials(
     if (key_ids) {
       get_token_request->token_type =
           make_shared<string>(kGcpTokenTypeForAwsForKeyIds);
-      get_token_request->key_ids = move(key_ids);
+      get_token_request->key_ids = std::move(key_ids);
     }
     AsyncContext<GetTeeSessionTokenRequest, GetSessionTokenResponse>
         get_token_context(

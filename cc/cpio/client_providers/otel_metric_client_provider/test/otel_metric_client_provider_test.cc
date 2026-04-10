@@ -233,7 +233,7 @@ TEST_F(OtelMetricClientProviderTest, FailsWhenNoMetricInRequest) {
   auto request = make_shared<PutMetricsRequest>();
   request->set_metric_namespace(kNamespaceInRequest);
   AsyncContext<PutMetricsRequest, PutMetricsResponse> context(
-      move(request),
+      std::move(request),
       [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(

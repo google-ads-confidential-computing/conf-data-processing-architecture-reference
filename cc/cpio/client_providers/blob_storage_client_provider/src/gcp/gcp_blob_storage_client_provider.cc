@@ -130,7 +130,6 @@ using std::istream;
 using std::make_shared;
 using std::make_unique;
 using std::min;
-using std::move;
 using std::ostream;
 using std::ref;
 using std::shared_ptr;
@@ -202,7 +201,7 @@ ExecutionResult GcpBlobStorageClientProvider::Init() noexcept {
               "Failed to get project ID for current instance");
     return project_id_or.result();
   }
-  current_project_id_ = move(*project_id_or);
+  current_project_id_ = std::move(*project_id_or);
 
   CloudIdentityInfo cloud_identity_info;
   cloud_identity_info.set_owner_id(current_project_id_);
@@ -372,7 +371,7 @@ void GcpBlobStorageClientProvider::GetBlobStreamInternal(
   if (!tracker) {
     auto tracker_or = InitGetBlobStreamTracker(get_blob_stream_context);
     if (!tracker_or.Successful()) return;
-    tracker = move(*tracker_or);
+    tracker = std::move(*tracker_or);
   }
   if (get_blob_stream_context.IsCancelled()) {
     auto result = FailureExecutionResult(
@@ -389,7 +388,8 @@ void GcpBlobStorageClientProvider::GetBlobStreamInternal(
     return;
   }
 
-  auto push_result = get_blob_stream_context.TryPushResponse(move(response));
+  auto push_result =
+      get_blob_stream_context.TryPushResponse(std::move(response));
   if (!push_result.Successful()) {
     SCP_ERROR_CONTEXT(kGcpBlobStorageClientProvider, get_blob_stream_context,
                       push_result, "Failed to push new message.");
@@ -423,7 +423,7 @@ void GcpBlobStorageClientProvider::GetBlobStreamInternal(
   // Schedule reading the next section.
   schedule_result = io_async_executor_->Schedule(
       bind(&GcpBlobStorageClientProvider::GetBlobStreamInternal, this,
-           get_blob_stream_context, move(tracker)),
+           get_blob_stream_context, std::move(tracker)),
       AsyncPriority::Normal);
   if (!schedule_result.Successful()) {
     get_blob_stream_context.result = schedule_result;
@@ -671,7 +671,8 @@ void GcpBlobStorageClientProvider::ListBlobsMetadataInternal(
     BlobMetadata blob_metadata;
     blob_metadata.set_blob_name(object_metadata->name());
     blob_metadata.set_bucket_name(request.blob_metadata().bucket_name());
-    *list_blobs_context.response->add_blob_metadatas() = move(blob_metadata);
+    *list_blobs_context.response->add_blob_metadatas() =
+        std::move(blob_metadata);
     if (list_blobs_context.response->blob_metadatas().size() ==
         GetMaxPageSize(request)) {
       // Force the page to end here, mark the final result in this page as
@@ -871,7 +872,7 @@ void GcpBlobStorageClientProvider::PutBlobStreamInternal(
     RestoreUploadIfSuspended(*tracker, cloud_storage_client);
     auto session_id = tracker->stream.resumable_session_id();
     // Cancel any outstanding uploads.
-    move(tracker->stream).Suspend();
+    std::move(tracker->stream).Suspend();
     auto status = cloud_storage_client.DeleteResumableUpload(session_id);
     auto result = FailureExecutionResult(
         SC_BLOB_STORAGE_PROVIDER_STREAM_SESSION_CANCELLED);
@@ -914,7 +915,7 @@ void GcpBlobStorageClientProvider::PutBlobStreamInternal(
       auto session_id =
           tracker->session_id.value_or(tracker->stream.resumable_session_id());
       // Cancel any outstanding uploads.
-      move(tracker->stream).Suspend();
+      std::move(tracker->stream).Suspend();
       cloud_storage_client.DeleteResumableUpload(session_id);
       FinishStreamingContext(result, put_blob_stream_context,
                              cpu_async_executor_);
@@ -923,7 +924,7 @@ void GcpBlobStorageClientProvider::PutBlobStreamInternal(
     // No message is available but we're holding a session - let's suspend it.
     if (!tracker->session_id.has_value()) {
       tracker->session_id = tracker->stream.resumable_session_id();
-      move(tracker->stream).Suspend();
+      std::move(tracker->stream).Suspend();
     }
     // Schedule checking for a new message.
     auto schedule_result = io_async_executor_->ScheduleFor(

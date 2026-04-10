@@ -108,7 +108,6 @@ using std::bind;
 using std::make_pair;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::optional;
 using std::pair;
 using std::ref;
@@ -281,7 +280,7 @@ ExecutionResult AppendJsonWhereClauses(const AttributesList& attributes,
           GcpNoSQLDatabaseClientUtils::ConvertItemAttributeToSpannerValue(
               attributes.at(attribute_index));
       RETURN_IF_FAILURE(spanner_val_or.result());
-      params.emplace(attribute_alias, move(*spanner_val_or));
+      params.emplace(attribute_alias, std::move(*spanner_val_or));
     }
   }
   return SuccessExecutionResult();
@@ -445,8 +444,8 @@ void GcpNoSQLDatabaseClientProvider::GetDatabaseItemInternal(
         get_database_item_context,
     string query, SqlStatement::ParamType params) noexcept {
   Client spanner_client(*spanner_client_shared_);
-  auto row_stream =
-      spanner_client.ExecuteQuery(SqlStatement(move(query), move(params)));
+  auto row_stream = spanner_client.ExecuteQuery(
+      SqlStatement(std::move(query), std::move(params)));
 
   auto row_it = row_stream.begin();
   if (row_it == row_stream.end() || !row_it->ok()) {
@@ -507,7 +506,7 @@ void GcpNoSQLDatabaseClientProvider::GetDatabaseItemInternal(
     }
     attribute_or->set_name(json_attr_name);
     *get_database_item_context.response->mutable_item()->add_attributes() =
-        move(*attribute_or);
+        std::move(*attribute_or);
   }
 
   FinishContext(SuccessExecutionResult(), get_database_item_context,
@@ -565,7 +564,7 @@ void GcpNoSQLDatabaseClientProvider::GetDatabaseItem(
                   kPartitionKeyParamName);
 
   SqlStatement::ParamType params;
-  params.emplace(kPartitionKeyParamName, move(*spanner_part_key_val_or));
+  params.emplace(kPartitionKeyParamName, std::move(*spanner_part_key_val_or));
 
   // sort_key is optional
   if (request.key().has_sort_key()) {
@@ -583,7 +582,7 @@ void GcpNoSQLDatabaseClientProvider::GetDatabaseItem(
 
     absl::StrAppend(&query, " AND ", request.key().sort_key().name(), " = @",
                     kSortKeyParamName);
-    params.emplace(kSortKeyParamName, move(*spanner_sort_key_val_or));
+    params.emplace(kSortKeyParamName, std::move(*spanner_sort_key_val_or));
   }
 
   // Set the filter expression
@@ -599,7 +598,7 @@ void GcpNoSQLDatabaseClientProvider::GetDatabaseItem(
 
   if (auto schedule_result = io_async_executor_->Schedule(
           bind(&GcpNoSQLDatabaseClientProvider::GetDatabaseItemInternal, this,
-               get_database_item_context, move(query), move(params)),
+               get_database_item_context, std::move(query), std::move(params)),
           AsyncPriority::Normal);
       !schedule_result.Successful()) {
     SCP_ERROR_CONTEXT(kGcpSpanner, get_database_item_context, schedule_result,
@@ -701,7 +700,8 @@ void GcpNoSQLDatabaseClientProvider::CreateDatabaseItem(
     create_database_item_context.Finish();
     return;
   }
-  create_item_options.partition_key_val = move(*partition_key_spanner_value_or);
+  create_item_options.partition_key_val =
+      std::move(*partition_key_spanner_value_or);
 
   create_item_options.column_names.push_back(
       request.key().partition_key().name());
@@ -722,7 +722,7 @@ void GcpNoSQLDatabaseClientProvider::CreateDatabaseItem(
       create_database_item_context.Finish();
       return;
     }
-    create_item_options.sort_key_val = move(*sort_key_spanner_value_or);
+    create_item_options.sort_key_val = std::move(*sort_key_spanner_value_or);
 
     create_item_options.column_names.push_back(request.key().sort_key().name());
   }
@@ -739,7 +739,7 @@ void GcpNoSQLDatabaseClientProvider::CreateDatabaseItem(
       create_database_item_context.Finish();
       return;
     }
-    create_item_options.attributes[attr.name()] = move(*json_attr_or);
+    create_item_options.attributes[attr.name()] = std::move(*json_attr_or);
   }
 
   create_item_options.column_names.push_back(kValueColumnName);
@@ -756,7 +756,8 @@ void GcpNoSQLDatabaseClientProvider::CreateDatabaseItem(
 
   if (auto schedule_result = io_async_executor_->Schedule(
           bind(&GcpNoSQLDatabaseClientProvider::CreateDatabaseItemInternal,
-               this, create_database_item_context, move(create_item_options)),
+               this, create_database_item_context,
+               std::move(create_item_options)),
           AsyncPriority::Normal);
       !schedule_result.Successful()) {
     create_database_item_context.result = schedule_result;
@@ -779,7 +780,7 @@ GcpNoSQLDatabaseClientProvider::UpsertSelectOptions::BuildUpsertSelectOptions(
       GcpNoSQLDatabaseClientUtils::ConvertItemAttributeToSpannerValue(
           request.key().partition_key());
   RETURN_IF_FAILURE(partition_key_val_or.result());
-  upsert_select_options.partition_key_val = move(*partition_key_val_or);
+  upsert_select_options.partition_key_val = std::move(*partition_key_val_or);
   absl::StrAppendFormat(&select_query, "%s = @%s",
                         request.key().partition_key().name(),
                         kPartitionKeyParamName);
@@ -795,7 +796,7 @@ GcpNoSQLDatabaseClientProvider::UpsertSelectOptions::BuildUpsertSelectOptions(
         GcpNoSQLDatabaseClientUtils::ConvertItemAttributeToSpannerValue(
             request.key().sort_key());
     RETURN_IF_FAILURE(sort_key_val_or.result());
-    upsert_select_options.sort_key_val = move(*sort_key_val_or);
+    upsert_select_options.sort_key_val = std::move(*sort_key_val_or);
     absl::StrAppendFormat(&select_query, " AND %s = @%s",
                           request.key().sort_key().name(), kSortKeyParamName);
     params.emplace(kSortKeyParamName, upsert_select_options.sort_key_val);
@@ -809,7 +810,7 @@ GcpNoSQLDatabaseClientProvider::UpsertSelectOptions::BuildUpsertSelectOptions(
                                            params, select_query));
 
   upsert_select_options.select_statement =
-      SqlStatement(move(select_query), move(params));
+      SqlStatement(std::move(select_query), std::move(params));
 
   return upsert_select_options;
 }
@@ -879,7 +880,7 @@ ExecutionResult GcpNoSQLDatabaseClientProvider::GetMergedData(
     return result;
   }
 
-  json final_json = move(new_attributes);
+  json final_json = std::move(new_attributes);
   // Emplace all members from the existing value only if they do not already
   // exist.
   for (const auto& [key, val] : existing_json.items()) {
@@ -906,8 +907,8 @@ Mutations GcpNoSQLDatabaseClientProvider::UpsertFunctor(
   optional<SpannerJson> spanner_json;
   optional<google::cloud::spanner::Timestamp> ttl;
   prepare_result = GetMergedData(upsert_database_item_context, row_stream,
-                                 enforce_row_existence, move(new_attributes),
-                                 spanner_json, ttl);
+                                 enforce_row_existence,
+                                 std::move(new_attributes), spanner_json, ttl);
   if (!prepare_result.Successful()) {
     return Mutations{};
   }
@@ -1034,13 +1035,14 @@ void GcpNoSQLDatabaseClientProvider::UpsertDatabaseItem(
       upsert_database_item_context.Finish();
       return;
     }
-    new_attributes[new_attr.name()] = move(*json_attr_or);
+    new_attributes[new_attr.name()] = std::move(*json_attr_or);
   }
 
   if (auto schedule_result = io_async_executor_->Schedule(
           bind(&GcpNoSQLDatabaseClientProvider::UpsertDatabaseItemInternal,
-               this, upsert_database_item_context, move(*select_options_or),
-               enforce_row_existence, move(new_attributes)),
+               this, upsert_database_item_context,
+               std::move(*select_options_or), enforce_row_existence,
+               std::move(new_attributes)),
           AsyncPriority::Normal);
       !schedule_result.Successful()) {
     upsert_database_item_context.result = schedule_result;

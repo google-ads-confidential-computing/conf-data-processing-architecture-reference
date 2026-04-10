@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,32 +16,15 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
-licenses(["notice"])  # Apache 2.0
-
-exports_files(["LICENSE"])
-
 cc_library(
-    name = "aws_c_common",
-    srcs = glob(
-        [
-            "lib/libaws-c-common.a",
-        ],
-    ),
-    hdrs = glob(
-        [
-            "include/aws/common/*.h",
-            "include/aws/common/external/*.h",
-            "include/aws/common/private/*.h",
-        ],
-    ),
-    defines = [
-        "AWS_AFFINITY_METHOD",
+    name = "key_fetcher_with_cache_interface",
+    hdrs = ["key_fetcher_with_cache_interface.h"],
+    deps = [
+        "//cc/core/common/time_provider/src:time_provider_lib",
+        "//cc/core/interface:service_interface_lib",
+        "//cc/public/core/interface:execution_result",
+        "//cc/public/cpio/utils/key_fetching/proto:encryption_key_prefetch_config_cc_proto",
+        "//cc/public/cpio/utils/key_fetching/proto:key_coordinator_configuration_cc_proto",
+        "@com_google_absl//absl/container:flat_hash_map",
     ],
-    includes = [
-        "include",
-    ],
-    linkopts = ["-ldl"],
-    textual_hdrs = glob([
-        "include/**/*.inl",
-    ]),
 )

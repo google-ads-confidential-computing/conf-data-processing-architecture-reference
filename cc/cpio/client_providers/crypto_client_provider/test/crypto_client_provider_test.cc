@@ -134,7 +134,6 @@ using std::istream;
 using std::make_shared;
 using std::make_unique;
 using std::min;
-using std::move;
 using std::ostream;
 using std::shared_ptr;
 using std::string;

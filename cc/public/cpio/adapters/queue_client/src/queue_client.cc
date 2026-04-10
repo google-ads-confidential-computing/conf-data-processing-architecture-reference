@@ -51,7 +51,6 @@ using google::scp::cpio::client_providers::QueueClientProviderFactory;
 using std::bind;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::unique_ptr;
 using std::placeholders::_1;
@@ -109,7 +108,7 @@ ExecutionResultOr<EnqueueMessageResponse> QueueClient::EnqueueMessageSync(
   EnqueueMessageResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<EnqueueMessageRequest, EnqueueMessageResponse>(
-          bind(&QueueClient::EnqueueMessage, this, _1), move(request),
+          bind(&QueueClient::EnqueueMessage, this, _1), std::move(request),
           response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kQueueClient, kZeroUuid,
                             "Failed to enqueue message.");
@@ -127,7 +126,8 @@ ExecutionResultOr<GetTopMessageResponse> QueueClient::GetTopMessageSync(
   GetTopMessageResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<GetTopMessageRequest, GetTopMessageResponse>(
-          bind(&QueueClient::GetTopMessage, this, _1), move(request), response);
+          bind(&QueueClient::GetTopMessage, this, _1), std::move(request),
+          response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kQueueClient, kZeroUuid,
                             "Failed to get top message.");
   return response;
@@ -149,7 +149,7 @@ QueueClient::UpdateMessageVisibilityTimeoutSync(
       SyncUtils::AsyncToSync2<UpdateMessageVisibilityTimeoutRequest,
                               UpdateMessageVisibilityTimeoutResponse>(
           bind(&QueueClient::UpdateMessageVisibilityTimeout, this, _1),
-          move(request), response);
+          std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kQueueClient, kZeroUuid,
                             "Failed to update message visibility timeout.");
   return response;
@@ -166,7 +166,8 @@ ExecutionResultOr<DeleteMessageResponse> QueueClient::DeleteMessageSync(
   DeleteMessageResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<DeleteMessageRequest, DeleteMessageResponse>(
-          bind(&QueueClient::DeleteMessage, this, _1), move(request), response);
+          bind(&QueueClient::DeleteMessage, this, _1), std::move(request),
+          response);
   RETURN_AND_LOG_IF_FAILURE(execution_result, kQueueClient, kZeroUuid,
                             "Failed to delete message.");
   return response;

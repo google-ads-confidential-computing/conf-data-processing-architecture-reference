@@ -52,7 +52,6 @@ using google::scp::cpio::MockMetricClient;
 using google::scp::cpio::MockMetricInstanceFactory;
 using google::scp::cpio::MockTimeAggregateMetric;
 using std::make_unique;
-using std::move;
 using std::nullopt;
 using std::optional;
 using std::stoull;
@@ -187,8 +186,8 @@ TEST_F(DualWritingMetricClientTest, CreateAggregateMetricWorks) {
   auto* legacy_metric_ptr = legacy_metric.get();
   EXPECT_CALL(mock_factory_, ConstructAggregateMetricInstance(
                                  MetricDefinitionEquals(metric_definition)))
-      .WillOnce(Return(ByMove(move(dual_write_metric))))
-      .WillOnce(Return(ByMove(move(legacy_metric))));
+      .WillOnce(Return(ByMove(std::move(dual_write_metric))))
+      .WillOnce(Return(ByMove(std::move(legacy_metric))));
 
   EXPECT_THAT(dual_write_client_.CreateAggregateMetric(metric_definition),
               EqualsMetric(expected_metric));
@@ -271,8 +270,8 @@ TEST_F(DualWritingMetricClientTest,
   auto* legacy_metric_ptr = legacy_metric.get();
   EXPECT_CALL(mock_factory_, ConstructAggregateMetricInstance(
                                  MetricDefinitionEquals(metric_definition)))
-      .WillOnce(Return(ByMove(move(dual_write_metric))))
-      .WillOnce(Return(ByMove(move(legacy_metric))));
+      .WillOnce(Return(ByMove(std::move(dual_write_metric))))
+      .WillOnce(Return(ByMove(std::move(legacy_metric))));
 
   EXPECT_THAT(dual_write_client_.CreateAggregateMetric(metric_definition),
               EqualsMetric(expected_metric));
@@ -322,8 +321,8 @@ TEST_F(DualWritingMetricClientTest, CreateTimeAggregateMetricWorks) {
   auto* legacy_metric_ptr = legacy_metric.get();
   EXPECT_CALL(mock_factory_, ConstructTimeAggregateMetricInstance(
                                  MetricDefinitionEquals(metric_definition)))
-      .WillOnce(Return(ByMove(move(dual_write_metric))))
-      .WillOnce(Return(ByMove(move(legacy_metric))));
+      .WillOnce(Return(ByMove(std::move(dual_write_metric))))
+      .WillOnce(Return(ByMove(std::move(legacy_metric))));
 
   EXPECT_THAT(dual_write_client_.CreateTimeAggregateMetric(metric_definition),
               EqualsMetric(expected_metric));
@@ -405,8 +404,8 @@ TEST_F(DualWritingMetricClientTest, PutMetricWorksWithAggregateMetric) {
   // One call for each client.
   EXPECT_CALL(mock_factory_, ConstructAggregateMetricInstance(
                                  MetricDefinitionEquals(metric_definition)))
-      .WillOnce(Return(ByMove(move(dual_write_metric))))
-      .WillOnce(Return(ByMove(move(legacy_metric))));
+      .WillOnce(Return(ByMove(std::move(dual_write_metric))))
+      .WillOnce(Return(ByMove(std::move(legacy_metric))));
 
   EXPECT_THAT(dual_write_client_.CreateAggregateMetric(metric_definition),
               EqualsMetric(expected_metric));
@@ -470,8 +469,8 @@ TEST_F(DualWritingMetricClientTest,
   // One call for each client.
   EXPECT_CALL(mock_factory_, ConstructAggregateMetricInstance(
                                  MetricDefinitionEquals(metric_definition)))
-      .WillOnce(Return(ByMove(move(dual_write_metric))))
-      .WillOnce(Return(ByMove(move(legacy_metric))));
+      .WillOnce(Return(ByMove(std::move(dual_write_metric))))
+      .WillOnce(Return(ByMove(std::move(legacy_metric))));
 
   EXPECT_THAT(dual_write_client_.CreateAggregateMetric(metric_definition),
               EqualsMetric(expected_metric));
@@ -535,8 +534,8 @@ TEST_F(DualWritingMetricClientTest,
   EXPECT_CALL(mock_factory_,
               ConstructAggregateMetricInstance(
                   MetricDefinitionEquals(metric_definition), event_codes))
-      .WillOnce(Return(ByMove(move(dual_write_metric))))
-      .WillOnce(Return(ByMove(move(legacy_metric))));
+      .WillOnce(Return(ByMove(std::move(dual_write_metric))))
+      .WillOnce(Return(ByMove(std::move(legacy_metric))));
 
   EXPECT_THAT(
       dual_write_client_.CreateAggregateMetric(metric_definition, event_codes),
@@ -633,8 +632,8 @@ TEST_F(DualWritingMetricClientTest, PutMetricWorksWithTimeAggregateMetric) {
   // One call for each client.
   EXPECT_CALL(mock_factory_, ConstructTimeAggregateMetricInstance(
                                  MetricDefinitionEquals(metric_definition)))
-      .WillOnce(Return(ByMove(move(dual_write_metric))))
-      .WillOnce(Return(ByMove(move(legacy_metric))));
+      .WillOnce(Return(ByMove(std::move(dual_write_metric))))
+      .WillOnce(Return(ByMove(std::move(legacy_metric))));
 
   EXPECT_THAT(dual_write_client_.CreateTimeAggregateMetric(metric_definition),
               EqualsMetric(expected_metric));
@@ -697,8 +696,8 @@ TEST_F(DualWritingMetricClientTest,
   EXPECT_CALL(mock_factory_,
               ConstructTimeAggregateMetricInstance(
                   MetricDefinitionEquals(metric_definition), event_codes))
-      .WillOnce(Return(ByMove(move(dual_write_metric))))
-      .WillOnce(Return(ByMove(move(legacy_metric))));
+      .WillOnce(Return(ByMove(std::move(dual_write_metric))))
+      .WillOnce(Return(ByMove(std::move(legacy_metric))));
 
   EXPECT_THAT(dual_write_client_.CreateTimeAggregateMetric(metric_definition,
                                                            event_codes),

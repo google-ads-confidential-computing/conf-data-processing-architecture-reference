@@ -123,7 +123,8 @@ module "load_balancer" {
   lb_outlier_detection_enforcing_consecutive_gateway_failure = var.lb_outlier_detection_enforcing_consecutive_gateway_failure
 
   # Key Storage Service is not publicly accessible, so we are not configuring a Cloud Armor Security Policy for it.
-  lb_security_policy = null
+  lb_security_policy         = null
+  enable_cloud_armor_configs = false
   # The Cloud Armor alerts are disabled for key storage service, but we still need to define the thresholds.
   cloud_armor_high_block_ratio_threshold         = 1
   cloud_armor_rate_limit_denials_alert_threshold = 1000

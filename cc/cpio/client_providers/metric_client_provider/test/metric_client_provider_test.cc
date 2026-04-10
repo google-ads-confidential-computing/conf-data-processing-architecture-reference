@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <aws/core/Aws.h>
@@ -63,7 +64,6 @@ using std::atomic;
 using std::function;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::static_pointer_cast;
 using std::string;
@@ -187,7 +187,7 @@ TEST_F(MetricClientProviderTest, FailsWhenNoMetricInRequest) {
   auto request = make_shared<PutMetricsRequest>();
   request->set_metric_namespace(kMetricNamespace);
   AsyncContext<PutMetricsRequest, PutMetricsResponse> context(
-      move(request),
+      std::move(request),
       [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(
@@ -210,7 +210,7 @@ TEST_F(MetricClientProviderTest, FailedWithoutRunning) {
   auto request = make_shared<PutMetricsRequest>();
   request->set_metric_namespace(kMetricNamespace);
   AsyncContext<PutMetricsRequest, PutMetricsResponse> context(
-      move(request),
+      std::move(request),
       [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {
         EXPECT_THAT(context.result,
                     ResultIs(FailureExecutionResult(
@@ -354,7 +354,7 @@ TEST_F(MetricClientProviderTest, PutMetricSuccessWithMultipleThreads) {
   EXPECT_SUCCESS(client->Run());
   auto request = CreatePutMetricsRequest(kMetricNamespace);
   AsyncContext<PutMetricsRequest, PutMetricsResponse> context(
-      move(request),
+      std::move(request),
       [&](AsyncContext<PutMetricsRequest, PutMetricsResponse>& context) {});
 
   atomic<int> batch_push_called_count = 0;

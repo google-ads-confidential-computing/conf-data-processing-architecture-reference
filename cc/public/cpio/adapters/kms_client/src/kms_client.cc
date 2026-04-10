@@ -45,7 +45,6 @@ using google::scp::cpio::client_providers::RoleCredentialsProviderInterface;
 using std::bind;
 using std::make_shared;
 using std::make_unique;
-using std::move;
 using std::shared_ptr;
 using std::placeholders::_1;
 
@@ -134,7 +133,7 @@ ExecutionResultOr<DecryptResponse> KmsClient::DecryptSync(
   DecryptResponse response;
   auto execution_result =
       SyncUtils::AsyncToSync2<DecryptRequest, DecryptResponse>(
-          bind(&KmsClient::Decrypt, this, _1), move(request), response);
+          bind(&KmsClient::Decrypt, this, _1), std::move(request), response);
   RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
                             kKmsClient, kZeroUuid, "Failed to decrypt.");
   return response;
@@ -142,6 +141,7 @@ ExecutionResultOr<DecryptResponse> KmsClient::DecryptSync(
 
 std::unique_ptr<KmsClientInterface> KmsClientFactory::Create(
     KmsClientOptions options) {
-  return make_unique<KmsClient>(make_shared<KmsClientOptions>(move(options)));
+  return make_unique<KmsClient>(
+      make_shared<KmsClientOptions>(std::move(options)));
 }
 }  // namespace google::scp::cpio

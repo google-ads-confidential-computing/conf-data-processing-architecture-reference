@@ -43,7 +43,6 @@ using google::scp::core::common::kZeroUuid;
 using std::cerr;
 using std::endl;
 using std::make_shared;
-using std::move;
 using std::nullopt;
 using std::optional;
 using std::stoull;
@@ -127,7 +126,7 @@ MetricWrapper DualWritingMetricClient::CreateAggregateMetric(
     }
     aggregate_metrics_[GetMetricIdentifier(metric.metric)] =
         metric_instance_factory_->ConstructAggregateMetricInstance(
-            move(metric_definition));
+            std::move(metric_definition));
   }
   return metric;
 }
@@ -146,7 +145,7 @@ MetricWrapper DualWritingMetricClient::CreateAggregateMetric(
     }
     aggregate_metrics_[GetMetricIdentifier(metric.metric)] =
         metric_instance_factory_->ConstructAggregateMetricInstance(
-            move(metric_definition), event_code_labels_list);
+            std::move(metric_definition), event_code_labels_list);
   }
   return metric;
 }
@@ -164,7 +163,7 @@ MetricWrapper DualWritingMetricClient::CreateTimeAggregateMetric(
     }
     time_aggregate_metrics_[GetMetricIdentifier(metric.metric)] =
         metric_instance_factory_->ConstructTimeAggregateMetricInstance(
-            move(metric_definition));
+            std::move(metric_definition));
   }
   return metric;
 }
@@ -183,7 +182,7 @@ MetricWrapper DualWritingMetricClient::CreateTimeAggregateMetric(
     }
     time_aggregate_metrics_[GetMetricIdentifier(metric.metric)] =
         metric_instance_factory_->ConstructTimeAggregateMetricInstance(
-            move(metric_definition), event_code_labels_list);
+            std::move(metric_definition), event_code_labels_list);
   }
   return metric;
 }

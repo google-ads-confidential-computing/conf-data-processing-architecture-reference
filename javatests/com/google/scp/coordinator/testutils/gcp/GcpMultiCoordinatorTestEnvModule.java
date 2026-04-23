@@ -1,5 +1,12 @@
 package com.google.scp.coordinator.testutils.gcp;
 
+import static com.google.scp.coordinator.keymanagement.keystorage.service.gcp.testing.LocalKeyStorageServiceHttpFunction.KEYSET_HANDLE_ENCODE_STRING_ENV_NAME;
+import static com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbTestModule.TEST_DB_CONFIG;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.ENVIRONMENT_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.PROJECT_ID_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_DATABASE_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_INSTANCE_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.testutils.gcp.cloudfunction.KeyManagementCloudFunctionContainersModule.TEST_ENVIRONMENT;
 import static com.google.scp.shared.gcp.Constants.SPANNER_COORD_B_TEST_DB_NAME;
 
 import com.google.acai.TestingServiceModule;
@@ -22,11 +29,9 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.testing.Ke
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.testing.KeyGenerationAnnotations.KeyStorageEndpoint;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.testing.KeyGenerationAnnotations.PubSubEndpoint;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.testing.KeyGenerationArgsLocalEmulatorProvider;
-import com.google.scp.coordinator.keymanagement.keystorage.service.gcp.testing.LocalKeyStorageServiceHttpFunction;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.Annotations.KeyDbClient;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbTestModule;
-import com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageCloudFunctionContainer;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.KeyStorageEnvironmentVariables;
 import com.google.scp.coordinator.keymanagement.testutils.gcp.Annotations.PrivateKeyCoordinatorAEnvironmentVariables;
@@ -120,28 +125,18 @@ public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
       @Named("CoordinatorBKeyDbConfig") SpannerKeyDbConfig config) {
     return Optional.of(
         ImmutableMap.of(
-            LocalKeyStorageServiceHttpFunction.KEYSET_HANDLE_ENCODE_STRING_ENV_NAME,
-            encodedKeysetHandle,
-            CloudFunctionEnvironmentVariables.ENV_VAR_GCP_PROJECT_ID,
-            config.gcpProjectId(),
-            CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_INSTANCE_ID,
-            config.spannerInstanceId(),
-            CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_DB_NAME,
-            config.spannerDbName()));
+            KEYSET_HANDLE_ENCODE_STRING_ENV_NAME, encodedKeysetHandle,
+            ENVIRONMENT_ENV_VAR, TEST_ENVIRONMENT,
+            PROJECT_ID_ENV_VAR, config.gcpProjectId(),
+            SPANNER_INSTANCE_ENV_VAR, config.spannerInstanceId(),
+            SPANNER_DATABASE_ENV_VAR, config.spannerDbName()));
   }
 
   @ProvidesIntoOptional(ProvidesIntoOptional.Type.ACTUAL)
   @Singleton
   @PrivateKeyCoordinatorAEnvironmentVariables
   public Optional<Map<String, String>> providesEncryptionKeyCoordinatorAEnvVars() {
-    return Optional.of(
-        ImmutableMap.of(
-            CloudFunctionEnvironmentVariables.ENV_VAR_GCP_PROJECT_ID_V2,
-            SpannerKeyDbTestModule.TEST_DB_CONFIG.gcpProjectId(),
-            CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_INSTANCE_ID_V2,
-            SpannerKeyDbTestModule.TEST_DB_CONFIG.spannerInstanceId(),
-            CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_DB_NAME_V2,
-            SpannerKeyDbTestModule.TEST_DB_CONFIG.spannerDbName()));
+    return Optional.of(getEnvVars(TEST_DB_CONFIG));
   }
 
   @ProvidesIntoOptional(ProvidesIntoOptional.Type.ACTUAL)
@@ -149,20 +144,21 @@ public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
   @PrivateKeyCoordinatorBEnvironmentVariables
   public Optional<Map<String, String>> providesEncryptionKeyCoordinatorBEnvVars(
       @Named("CoordinatorBKeyDbConfig") SpannerKeyDbConfig config) {
-    return Optional.of(
-        ImmutableMap.of(
-            CloudFunctionEnvironmentVariables.ENV_VAR_GCP_PROJECT_ID_V2,
-            config.gcpProjectId(),
-            CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_INSTANCE_ID_V2,
-            config.spannerInstanceId(),
-            CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_DB_NAME_V2,
-            config.spannerDbName()));
+    return Optional.of(getEnvVars(config));
+  }
+
+  private static ImmutableMap<String, String> getEnvVars(SpannerKeyDbConfig config) {
+    return ImmutableMap.of(
+        ENVIRONMENT_ENV_VAR, TEST_ENVIRONMENT,
+        PROJECT_ID_ENV_VAR, config.gcpProjectId(),
+        SPANNER_INSTANCE_ENV_VAR, config.spannerInstanceId(),
+        SPANNER_DATABASE_ENV_VAR, config.spannerDbName());
   }
 
   @Provides
   @Singleton
   public SpannerKeyDbConfig providesSpannerKeyDbConfig() {
-    return SpannerKeyDbTestModule.TEST_DB_CONFIG;
+    return TEST_DB_CONFIG;
   }
 
   @Provides
@@ -170,9 +166,9 @@ public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
   @Singleton
   public SpannerKeyDbConfig providesSpannerKeyDbConfig(@CloudSpannerEndpoint String endpoint) {
     return SpannerKeyDbConfig.builder()
-        .setGcpProjectId(SpannerKeyDbTestModule.TEST_DB_CONFIG.gcpProjectId())
-        .setSpannerInstanceId(SpannerKeyDbTestModule.TEST_DB_CONFIG.spannerInstanceId())
-        .setSpannerDbName(SpannerKeyDbTestModule.TEST_DB_CONFIG.spannerDbName())
+        .setGcpProjectId(TEST_DB_CONFIG.gcpProjectId())
+        .setSpannerInstanceId(TEST_DB_CONFIG.spannerInstanceId())
+        .setSpannerDbName(TEST_DB_CONFIG.spannerDbName())
         .setEndpointUrl(Optional.of(endpoint))
         .setReadStalenessSeconds(0)
         .build();
@@ -188,8 +184,8 @@ public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
     SpannerDbCreationHelper creator =
         new SpannerDbCreationHelper(
             endpoint,
-            SpannerKeyDbTestModule.TEST_DB_CONFIG.gcpProjectId(),
-            SpannerKeyDbTestModule.TEST_DB_CONFIG.spannerInstanceId(),
+            TEST_DB_CONFIG.gcpProjectId(),
+            TEST_DB_CONFIG.spannerInstanceId(),
             SPANNER_COORD_B_TEST_DB_NAME,
             SpannerKeyDbTestModule.CREATE_TABLE_STATEMENTS);
     creator.create();
@@ -254,9 +250,9 @@ public class GcpMultiCoordinatorTestEnvModule extends AbstractModule {
     install(new GcpPubSubIntegrationTestModule());
     install(
         new SpannerEmulatorContainerTestModule(
-            SpannerKeyDbTestModule.TEST_DB_CONFIG.gcpProjectId(),
-            SpannerKeyDbTestModule.TEST_DB_CONFIG.spannerInstanceId(),
-            SpannerKeyDbTestModule.TEST_DB_CONFIG.spannerDbName(),
+            TEST_DB_CONFIG.gcpProjectId(),
+            TEST_DB_CONFIG.spannerInstanceId(),
+            TEST_DB_CONFIG.spannerDbName(),
             ALL_CREATE_TABLE_QUERIES));
     install(TestingServiceModule.forServices(SpannerLocalService.class));
     install(new KeyManagementCloudFunctionContainersModule());

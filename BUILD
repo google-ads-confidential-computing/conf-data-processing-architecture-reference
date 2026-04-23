@@ -41,19 +41,6 @@ buildifier(
     mode = "fix",
 )
 
-exports_files([
-    "original_source_code.tar",
-])
-
-genrule(
-    name = "copy_source_code_tar",
-    srcs = [
-        "//:original_source_code.tar",
-    ],
-    outs = ["source_code.tar"],
-    cmd = "cp $(location //:original_source_code.tar) $@",
-)
-
 package_group(
     name = "scp_internal_pkg",
     packages = [

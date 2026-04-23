@@ -13,7 +13,7 @@
 # limitations under the License.
 """ Rule to build and push an image that uses the CMRT SDK to a docker registry. """
 
-load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+load("@rules_oci//oci:defs.bzl", "oci_push")
 load("//cc/public/cpio/build_deps/shared:sdk_runtime_image.bzl", "sdk_runtime_image")
 
 def gcp_sdk_lib_container(
@@ -54,12 +54,10 @@ def gcp_sdk_lib_container(
     )
 
     # Push image to GCP
-    container_push(
+    oci_push(
         name = name,
-        format = "Docker",
         image = ":%s" % sdk_container_name,
-        registry = image_registry,
-        repository = image_repository,
-        tag = image_tag,
+        repository = "%s/%s" % (image_registry, image_repository),
+        remote_tags = [image_tag],
         tags = ["manual"],
     )

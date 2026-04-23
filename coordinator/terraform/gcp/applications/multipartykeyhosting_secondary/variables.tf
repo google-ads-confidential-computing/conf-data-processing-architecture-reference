@@ -209,6 +209,11 @@ variable "private_key_service_load_balancer_allowed_paths" {
   type        = list(string)
 }
 
+variable "private_key_service_addon_load_balancer_allowed_paths" {
+  description = "List of allowed paths for the private key service addon load balancer. Requests to other paths will be denied."
+  type        = list(string)
+}
+
 ################################################################################
 # Private Key Service Cloud Run Variables.
 ################################################################################
@@ -577,10 +582,10 @@ variable "key_sets_config" {
   Attributes:
     key_sets                         (list) - The list of individual key set configuration, one for each unique key set.
     key_sets[].name                  (string) - The unique set name for the key set, the value should be a valid URL path segment (e.g. ^[a-zA-Z0-9\\-\\._~]+$).
-    key_sets[].tink_template         (optional(string)) - The Tink template to be used for key generation.
-    key_sets[].count                 (optional(number)) - The number of keys to be generated.
-    key_sets[].validity_in_days      (optional(number)) - Number of days the generated keys will be valid. If set to 0, the keys will never expire.
-    key_sets[].ttl_in_days           (optional(number)) - Number of days the generated keys will be kept in the database. If set to 0, the keys will never be deleted.
+    key_sets[].tink_template         (string) - The Tink template to be used for key generation.
+    key_sets[].count                 (number) - The number of keys to be generated.
+    key_sets[].validity_in_days      (number) - Number of days the generated keys will be valid. If set to 0, the keys will never expire.
+    key_sets[].ttl_in_days           (number) - Number of days the generated keys will be kept in the database. If set to 0, the keys will never be deleted.
     key_sets[].create_max_days_ahead (optional(number)) - Number of days ahead that a key can be created.
     key_sets[].overlap_period_days   (optional(number)) - Number of days each consecutive active set should overlap.
     key_sets[].backfill_days         (optional(number)) - Number of days allowed for a key to be used past its expiration date for a backfill job.

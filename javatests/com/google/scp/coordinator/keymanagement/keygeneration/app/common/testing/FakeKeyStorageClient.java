@@ -16,8 +16,6 @@
 
 package com.google.scp.coordinator.keymanagement.keygeneration.app.common.testing;
 
-import static com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil.buildKeySplitData;
-
 import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.PublicKeySign;
 import com.google.crypto.tink.PublicKeyVerify;
@@ -25,14 +23,11 @@ import com.google.crypto.tink.signature.EcdsaSignKeyManager;
 import com.google.crypto.tink.signature.SignatureConfig;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
+import com.google.scp.coordinator.protos.keymanagement.shared.backend.KeySplitDataProto.KeySplitData;
 import java.security.GeneralSecurityException;
 import java.util.Optional;
 
-/**
- * Simple in-memory KeyStorageClient.
- *
- * <p>Generated data keys are compatible with {@link FakeDataKeyUtil}
- */
+/** Simple in-memory KeyStorageClient. */
 public class FakeKeyStorageClient implements KeyStorageClient {
 
   public static final String KEK_URI = "aws-kms://arn:aws:kms:us-east-1:000000000000:key/b";
@@ -54,8 +49,7 @@ public class FakeKeyStorageClient implements KeyStorageClient {
   }
 
   /**
-   * Returns the passed in EncryptionKey with an additional KeySplitData containing {@link #KEK_URI}
-   * and {@link #SIGNATURE}.
+   * Returns the passed in EncryptionKey with an additional KeySplitData
    *
    * <p>This method is safe to mock with {@code when(createKey(any(), any(), any())}.
    */
@@ -67,21 +61,16 @@ public class FakeKeyStorageClient implements KeyStorageClient {
       throws KeyStorageServiceException {
     // Return early to prevent an exception being thrown when mocking. When invoked with generic
     // Mockito argument matchers for the purposes of stubbing, null is passed to this function.
-    if (encryptionKey == null && encryptedKeySplit == null) {
+    if (encryptionKey == null) {
       return null;
     }
 
-    try {
-      EncryptionKey.Builder signedKey = encryptionKey.toBuilder();
-      signedKey.addKeySplitData(
-          buildKeySplitData(encryptionKey, KEK_URI, Optional.of(PUBLIC_KEY_SIGN)));
-      if (migrationEncryptedKeySplit.isPresent()) {
-        signedKey.addMigrationKeySplitData(
-            buildKeySplitData(encryptionKey, MIGRATION_KEK_URI, Optional.of(PUBLIC_KEY_SIGN)));
-      }
-      return signedKey.build();
-    } catch (GeneralSecurityException e) {
-      throw new KeyStorageServiceException("Encryption Key Signature Key error", e);
+    EncryptionKey.Builder signedKey = encryptionKey.toBuilder();
+    signedKey.addKeySplitData(KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(KEK_URI));
+    if (migrationEncryptedKeySplit.isPresent()) {
+      signedKey.addMigrationKeySplitData(
+          KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(MIGRATION_KEK_URI));
     }
+    return signedKey.build();
   }
 }

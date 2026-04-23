@@ -49,6 +49,7 @@ cc_library(
         "//cc/public/cpio/interface/metric_client:type_def",
         "//cc/public/cpio/proto/metric_service/v1:metric_service_cc_proto",
         "//cc/public/cpio/utils/metric_instance/interface:type_def",
+        "//cc/public/cpio/utils/sync_utils/src:sync_utils",
         "@com_google_protobuf//:protobuf",
     ],
 )

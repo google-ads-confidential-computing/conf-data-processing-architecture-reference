@@ -27,7 +27,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
-import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import com.google.scp.shared.api.model.Code;
@@ -43,7 +42,6 @@ import org.mockito.junit.MockitoRule;
 public class AllKeysForSetNameCacheTest {
 
   private static final String SET_NAME = "setName";
-  private static final LogMetricHelper LOG_METRIC_HELPER = new LogMetricHelper("test");
   private static final EncryptionKey ENCRYPTION_KEY =
       EncryptionKey.newBuilder().setKeyId("keyId").setKeyType("keyType").build();
   private static final ImmutableList<EncryptionKey> ENCRYPTION_KEYS =
@@ -58,14 +56,14 @@ public class AllKeysForSetNameCacheTest {
   @Test
   public void readDbThrowsTest() throws Exception {
     when(mockKeyDb.listAllKeysForSetName(anyString())).thenThrow(SERVICE_EXCEPTION);
-    var cache = new AllKeysForSetNameCache(mockKeyDb, 1, LOG_METRIC_HELPER);
+    var cache = new AllKeysForSetNameCache(mockKeyDb, 1);
     assertThrows(ServiceException.class, () -> cache.get(SET_NAME));
   }
 
   @Test
   public void readCacheAfterRefreshTest() throws Exception {
     when(mockKeyDb.listAllKeysForSetName(eq(SET_NAME))).thenReturn(ENCRYPTION_KEYS);
-    var cache = new AllKeysForSetNameCache(mockKeyDb, 1, SECONDS, LOG_METRIC_HELPER);
+    var cache = new AllKeysForSetNameCache(mockKeyDb, 1, SECONDS);
 
     assertThat(cache.get(SET_NAME)).isEqualTo(ENCRYPTION_KEYS);
     Thread.sleep(1000 * 3); // 3 seconds
@@ -76,7 +74,7 @@ public class AllKeysForSetNameCacheTest {
   @Test
   public void readDbSucceeds_dbCalledOnceTest() throws Exception {
     when(mockKeyDb.listAllKeysForSetName(eq(SET_NAME))).thenReturn(ENCRYPTION_KEYS);
-    var cache = new AllKeysForSetNameCache(mockKeyDb, 1, LOG_METRIC_HELPER);
+    var cache = new AllKeysForSetNameCache(mockKeyDb, 1);
     assertThat(cache.get(SET_NAME)).isEqualTo(ENCRYPTION_KEYS);
     assertThat(cache.get(SET_NAME)).isEqualTo(ENCRYPTION_KEYS);
     assertThat(cache.get(SET_NAME)).isEqualTo(ENCRYPTION_KEYS);

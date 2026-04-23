@@ -86,7 +86,7 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       KeyDb keyDb,
       KeyStorageClient keyStorageClient,
       LogMetricHelper logMetricHelper) {
-    super(Optional.empty(), keyDb, keyStorageClient, keyIdFactory, logMetricHelper);
+    super(keyDb, keyStorageClient, keyIdFactory, logMetricHelper);
     this.logMetricHelper = logMetricHelper;
     this.keyEncryptionKeyBaseUri = keyEncryptionKeyBaseUri;
     this.migrationKeyEncryptionKeyBaseUri = migrationKeyEncryptionKeyBaseUri;

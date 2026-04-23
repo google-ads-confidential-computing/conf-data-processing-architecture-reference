@@ -36,6 +36,7 @@ java_library(
     deps = [
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/exception",
         "//java/external:guava",
         "//javatests/com/google/scp/coordinator/keymanagement/shared/dao/gcp",

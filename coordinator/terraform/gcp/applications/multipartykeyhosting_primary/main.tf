@@ -289,6 +289,7 @@ module "public_key_service" {
   cloud_armor_rate_limit_interval_sec            = var.public_key_service_cloud_armor_rate_limit_interval_sec
   cloud_armor_log_level                          = var.public_key_service_cloud_armor_log_level
   cloud_armor_high_block_ratio_threshold         = var.public_key_service_cloud_armor_high_block_ratio_threshold
+  cloud_armor_high_block_ratio_min_samples       = var.public_key_service_cloud_armor_high_block_ratio_min_samples
   cloud_armor_rate_limit_denials_alert_threshold = var.public_key_service_cloud_armor_rate_limit_denials_alert_threshold
 
   # Cloud Run settings
@@ -358,7 +359,6 @@ module "private_key_service" {
   min_instance_count        = var.private_key_service_cloud_run_min_instances
   max_instance_count        = var.private_key_service_cloud_run_max_instances
   execution_environment     = var.private_key_service_execution_environment
-  ingress                   = var.private_key_service_cloud_run_ingress
   enable_revision_pinning   = var.private_key_service_enable_revision_pinning
   canary_region             = var.primary_region
   stable_revisions          = var.private_key_service_stable_revisions
@@ -407,7 +407,7 @@ module "private_key_service_addon" {
 
   # Load Balancer
   load_balancer_protocol      = var.private_key_service_load_balancer_protocol
-  load_balancer_allowed_paths = var.private_key_service_load_balancer_allowed_paths
+  load_balancer_allowed_paths = var.private_key_service_addon_load_balancer_allowed_paths
 
   # Load Balancer Outlier Detection
   lb_outlier_detection_enabled                               = var.private_key_service_lb_outlier_detection_enabled
@@ -566,13 +566,6 @@ module "key_storage_service_base_url" {
   source          = "../../modules/secret_manager"
   environment     = var.environment
   parameter_name  = "KEY_STORAGE_SERVICE_BASE_URL"
-  parameter_value = var.key_storage_service_base_url
-}
-
-module "key_storage_service_cloudfunction_url" {
-  source          = "../../modules/secret_manager"
-  environment     = var.environment
-  parameter_name  = "KEY_STORAGE_SERVICE_CLOUDFUNCTION_URL"
   parameter_value = var.key_storage_service_base_url
 }
 

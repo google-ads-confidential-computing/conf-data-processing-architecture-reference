@@ -12,13 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//cc/public/cpio/build_deps/shared:build_time_image.bzl", "build_time_image")
 load("//cc/public/cpio/build_deps/shared/examples:test_runtime_tar.bzl", "test_runtime_tar")
 
 package(default_visibility = ["//visibility:public"])
-
-build_time_image(
-    name = "test_build_time_image",
-)
 
 test_runtime_tar(name = "runtime_test")

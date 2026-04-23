@@ -20,6 +20,13 @@ java_library(
     name = "common",
     srcs = glob(["*.java"]),
     deps = [
+        "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common/keyset",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
+        "//java/com/google/scp/shared/util",
+        "//java/external:guava",
         "//java/external:guice",
+        "//java/external:jackson_core",
+        "//java/external:jackson_databind",
+        "//java/external:slf4j",
     ],
 )

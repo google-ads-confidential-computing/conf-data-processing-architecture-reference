@@ -42,13 +42,22 @@ cc_library(
 )
 
 cc_library(
+    name = "error_codes",
+    hdrs = ["error_codes.h"],
+    deps = [
+        "//cc/core/interface:errors_lib",
+        "//cc/public/core/interface:execution_result",
+    ],
+)
+
+cc_library(
     name = "ondemand_key_fetcher_with_cache",
     srcs = ["ondemand_key_fetcher_with_cache.cc"],
     hdrs = [
-        "error_codes.h",
         "ondemand_key_fetcher_with_cache.h",
     ],
     deps = [
+        ":error_codes",
         ":key_fetching_metric_utils",
         ":key_fetching_utils",
         "//cc/core/common/auto_expiry_concurrent_map/src:auto_expiry_concurrent_map_lib",
@@ -63,5 +72,31 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
+    ],
+)
+
+cc_library(
+    name = "auto_refresh_key_fetcher_with_cache",
+    srcs = ["auto_refresh_key_fetcher_with_cache.cc"],
+    hdrs = [
+        "auto_refresh_key_fetcher_with_cache.h",
+    ],
+    deps = [
+        ":error_codes",
+        ":key_fetching_metric_utils",
+        ":key_fetching_utils",
+        "//cc/core/common/concurrent_map/src:concurrent_map_lib",
+        "//cc/core/common/global_logger/src:global_logger_lib",
+        "//cc/core/common/time_provider/src:time_provider_lib",
+        "//cc/public/core/interface:execution_result",
+        "//cc/public/cpio/interface:cpio_errors",
+        "//cc/public/cpio/interface/private_key_client",
+        "//cc/public/cpio/utils/dual_writing_metric_client/interface:dual_writing_metric_client_interface",
+        "//cc/public/cpio/utils/key_fetching/interface:key_fetcher_with_cache_interface",
+        "//cc/public/cpio/utils/key_fetching/proto:key_coordinator_configuration_cc_proto",
+        "//cc/public/cpio/utils/metric_instance/src:metric_instance",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_protobuf//:protobuf",
     ],
 )

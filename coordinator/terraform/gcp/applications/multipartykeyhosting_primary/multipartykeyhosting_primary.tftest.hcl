@@ -109,7 +109,6 @@ variables {
   private_key_service_addon_container_image_url                 = ""
   private_key_service_cloud_run_cpu_count                       = 1
   private_key_service_cloud_run_concurrency                     = 0
-  private_key_service_cloud_run_ingress                         = ""
   enable_private_key_service_cache                              = false
   private_key_service_load_balancer_protocol                    = "HTTP"
   private_key_service_cache_refresh_in_minutes                  = 0
@@ -153,9 +152,11 @@ variables {
   public_key_service_cloud_armor_rate_limit_interval_sec            = 60
   public_key_service_cloud_armor_log_level                          = "VERBOSE"
   public_key_service_cloud_armor_high_block_ratio_threshold         = 0.95
+  public_key_service_cloud_armor_high_block_ratio_min_samples       = 10
   public_key_service_cloud_armor_rate_limit_denials_alert_threshold = 1000
 
-  private_key_service_load_balancer_allowed_paths = ["/*"]
+  private_key_service_load_balancer_allowed_paths       = ["/*"]
+  private_key_service_addon_load_balancer_allowed_paths = ["/*"]
 
   private_key_service_lb_outlier_detection_enabled                               = false
   private_key_service_lb_outlier_detection_consecutive_errors                    = 0

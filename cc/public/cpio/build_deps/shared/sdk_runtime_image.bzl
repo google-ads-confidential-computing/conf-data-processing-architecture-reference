@@ -14,7 +14,7 @@
 
 """Defs for creating a sdk runtime image"""
 
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("//cc/process_launcher:helpers.bzl", "executable_struct_to_json_str")
 
@@ -67,7 +67,8 @@ def sdk_runtime_image(
       additional_files: Additional files to include in the container root.
       additional_tars: Additional files include in the container based on their
         paths within the tar.
-      ports: ports to expose in the docker container. If not specified, 80 is expose as default.
+      ports: ports to expose in the docker container in format <PORT>/<PROTOCOL>.
+        If no protocol is specified, TCP is assumed.
       sdk_cmd_override: "cmd" parameter to use with the container_image.
         Only used for testing purposes.
     """
@@ -90,13 +91,33 @@ def sdk_runtime_image(
         ownername = "root.root",
         tags = ["manual"],
     )
-    container_files = []
-    container_files = [
-        Label("//cc/process_launcher:scp_process_launcher"),
-    ] + additional_files
+
+    # Create tar for files
+    files_tar = "%s_files" % name
+    pkg_tar(
+        name = files_tar,
+        srcs = [
+            Label("//cc/process_launcher:scp_process_launcher"),
+        ] + additional_files,
+        mode = "0755",
+        ownername = "root.root",
+        tags = ["manual"],
+    )
+
+    # Create tar for empty dirs
+    tmp_dir_tar = "%s_tmp_dir" % name
+    pkg_tar(
+        name = tmp_dir_tar,
+        empty_dirs = ["/tmp"],
+        mode = "1777",
+        ownername = "root.root",
+        tags = ["manual"],
+    )
 
     container_tars = [
         ":%s" % binary_tar,
+        ":%s" % files_tar,
+        ":%s" % tmp_dir_tar,
     ] + additional_tars
 
     # Recreate the binary targets list to generate executing cmd.
@@ -143,34 +164,34 @@ def sdk_runtime_image(
     for d in sdk_binaries.values():
         container_env.update(d)
 
-    # Differentiate no ports configured and empty ports/default port configured
-    # by using if else here.
-    if len(ports) == 0:
-        container_image(
-            name = name,
-            base = "@linux_debian_11_runtime_snapshot//image",
-            cmd = sdk_cmd,
-            entrypoint = None,
-            env = container_env,
-            files = container_files,
-            tars = container_tars,
-            tags = ["manual"],
-            user = "root",
-            empty_dirs = ["/tmp"],
-            labels = labels,
-        )
-    else:
-        container_image(
-            name = name,
-            base = "@linux_debian_11_runtime_snapshot//image",
-            cmd = sdk_cmd,
-            entrypoint = None,
-            env = container_env,
-            files = container_files,
-            tars = container_tars,
-            tags = ["manual"],
-            ports = ports,
-            user = "root",
-            empty_dirs = ["/tmp"],
-            labels = labels,
-        )
+    # Check if the ports have specified protocols, if not, default to TCP
+    # oci_image requires the ports to be in format <PORT>/<PROTOCOL>
+    exposed_ports = []
+    for p in ports:
+        port_str = str(p)
+        if "/" in port_str:
+            if port_str.endswith("/"):
+                fail("Invalid port '%s': missing protocol after '/'" % port_str)
+            exposed_ports.append(port_str)
+        else:
+            exposed_ports.append(port_str + "/tcp")
+
+    oci_image(
+        name = name,
+        base = Label("//cc/public/cpio/build_deps/shared:base_runtime_image"),
+        cmd = sdk_cmd,
+        entrypoint = [],
+        env = container_env,
+        tars = container_tars,
+        tags = ["manual"],
+        labels = labels,
+        user = "root",
+        exposed_ports = exposed_ports if len(exposed_ports) > 0 else None,
+    )
+
+    oci_load(
+        name = "%s_load" % name,
+        image = ":%s" % name,
+        repo_tags = ["%s:latest" % name],
+        tags = ["manual"],
+    )

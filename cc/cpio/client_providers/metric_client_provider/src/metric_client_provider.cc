@@ -33,6 +33,7 @@
 #include "google/protobuf/any.pb.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
+#include "public/cpio/utils/sync_utils/src/sync_utils.h"
 
 #include "metric_client_utils.h"
 
@@ -220,6 +221,16 @@ ExecutionResult MetricClientProvider::ScheduleMetricsBatchPush() noexcept {
 
 ExecutionResultOr<PutMetricsResponse> MetricClientProvider::PutMetricsSync(
     PutMetricsRequest request) noexcept {
-  return FailureExecutionResult(SC_COMMON_ERRORS_UNIMPLEMENTED);
+  PutMetricsResponse response;
+  auto execution_result =
+      SyncUtils::AsyncToSync2<PutMetricsRequest, PutMetricsResponse>(
+          bind(&MetricClientProvider::PutMetrics, this, _1), std::move(request),
+          response);
+
+  if (!execution_result.Successful()) {
+    return execution_result;
+  }
+
+  return response;
 }
 }  // namespace google::scp::cpio::client_providers

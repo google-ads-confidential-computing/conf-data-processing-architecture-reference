@@ -16,7 +16,6 @@
 
 package com.google.scp.coordinator.keymanagement.testutils;
 
-import static com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil.buildKeySplitData;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleartext;
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -35,7 +34,6 @@ import com.google.scp.shared.util.PublicKeyConversionUtil;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
@@ -88,15 +86,10 @@ public final class FakeEncryptionKey {
             .setTtlTime(now.plus(Duration.ofDays(30)).getEpochSecond())
             .setKeyType(keyType.name())
             .build();
-    try {
-      return baseKey.toBuilder()
-          .addKeySplitData(
-              buildKeySplitData(baseKey, encryptionKeyUri, Optional.of(PUBLIC_KEY_SIGN)))
-          .addKeySplitData(
-              buildKeySplitData(baseKey, UUID.randomUUID().toString(), Optional.empty()));
-    } catch (GeneralSecurityException e) {
-      throw new IllegalStateException("Signature failure");
-    }
+    return baseKey.toBuilder()
+        .addKeySplitData(KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(encryptionKeyUri))
+        .addKeySplitData(
+            KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(UUID.randomUUID().toString()));
   }
 
   /**
@@ -123,16 +116,12 @@ public final class FakeEncryptionKey {
             .setMigrationKeyEncryptionKeyUri(migrationEncryptionKeyUri)
             .build();
 
-    try {
-      return baseKey.toBuilder()
-          .addMigrationKeySplitData(
-              buildKeySplitData(baseKey, migrationEncryptionKeyUri, Optional.of(PUBLIC_KEY_SIGN)))
-          .addMigrationKeySplitData(
-              buildKeySplitData(baseKey, UUID.randomUUID().toString(), Optional.empty()))
-          .build();
-    } catch (GeneralSecurityException e) {
-      throw new IllegalStateException("Signature failure");
-    }
+    return baseKey.toBuilder()
+        .addMigrationKeySplitData(
+            KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(migrationEncryptionKeyUri))
+        .addMigrationKeySplitData(
+            KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(UUID.randomUUID().toString()))
+        .build();
   }
 
   /** Creates a key which actives and expires at the specified time plus setName. */

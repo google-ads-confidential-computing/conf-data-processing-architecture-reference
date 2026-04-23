@@ -33,4 +33,15 @@ DEFINE_ERROR_CODE(SC_CPIO_KEY_COUNT_MISMATCH, SC_CPIO_KEY_FETCHER, 0x0002,
 DEFINE_ERROR_CODE(SC_CPIO_KEY_FETCHER_FETCHING_TIMEOUT, SC_CPIO_KEY_FETCHER,
                   0x0003, "The key fetching timeout",
                   HttpStatusCode::REQUEST_TIMEOUT)
+DEFINE_ERROR_CODE(SC_CPIO_KEY_FETCHER_NO_KEY_FETCHED, SC_CPIO_KEY_FETCHER,
+                  0x0004,
+                  "The key fetching response is empty from the key service",
+                  HttpStatusCode::BAD_REQUEST)
+DEFINE_ERROR_CODE(SC_CPIO_KEY_FETCHER_CACHE_INSERT_FAILURE,
+                  SC_CPIO_KEY_FETCHER, 0x0005, "Failed to insert keys to cache",
+                  HttpStatusCode::INTERNAL_SERVER_ERROR)
+DEFINE_ERROR_CODE(SC_CPIO_KEY_FETCHER_INVALID_KEY_SELECTION_TIMESTAMP,
+                  SC_CPIO_KEY_FETCHER, 0x0006,
+                  "The key selection timestamp is invalid",
+                  HttpStatusCode::BAD_REQUEST)
 }  // namespace google::scp::core::errors

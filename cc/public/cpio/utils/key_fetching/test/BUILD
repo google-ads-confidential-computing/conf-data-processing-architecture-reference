@@ -62,6 +62,24 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "auto_refresh_key_fetcher_with_cache_test",
+    srcs = [
+        "auto_refresh_key_fetcher_with_cache_test.cc",
+    ],
+    deps = [
+        ":key_fetching_metric_matcher",
+        "//cc:cc_base_include_dir",
+        "//cc/core/test/utils:utils_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "//cc/public/cpio/mock/private_key_client:private_key_client_mock",
+        "//cc/public/cpio/utils/dual_writing_metric_client/mock:dual_writing_metric_client_mock",
+        "//cc/public/cpio/utils/key_fetching/src:auto_refresh_key_fetcher_with_cache",
+        "//cc/public/cpio/utils/key_fetching/src:key_fetching_metric_utils",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "key_fetching_metric_matcher",
     testonly = 1,

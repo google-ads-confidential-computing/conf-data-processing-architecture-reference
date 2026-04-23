@@ -116,7 +116,8 @@ variables {
   quota_alert_threshold_important = 0.6
   quota_alert_threshold_urgent    = 0.8
 
-  private_key_service_load_balancer_allowed_paths = ["/*"]
+  private_key_service_load_balancer_allowed_paths       = ["/*"]
+  private_key_service_addon_load_balancer_allowed_paths = ["/*"]
 
   private_key_service_load_balancer_protocol                                     = "HTTP"
   private_key_service_lb_outlier_detection_enabled                               = false

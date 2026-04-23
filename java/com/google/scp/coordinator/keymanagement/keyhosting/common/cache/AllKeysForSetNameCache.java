@@ -25,7 +25,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheRefreshInMinutes;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
-import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.backend.EncryptionKeyProto.EncryptionKey;
 import com.google.scp.shared.api.exception.ServiceException;
 import java.util.concurrent.TimeUnit;
@@ -36,14 +35,12 @@ public class AllKeysForSetNameCache extends KeyDbCache<String, ImmutableList<Enc
   private final KeyDb keyDb;
 
   @Inject
-  public AllKeysForSetNameCache(
-      KeyDb keyDb, @CacheRefreshInMinutes Integer cacheRefresh, LogMetricHelper logMetricHelper) {
-    this(keyDb, cacheRefresh, MINUTES, logMetricHelper);
+  public AllKeysForSetNameCache(KeyDb keyDb, @CacheRefreshInMinutes Integer cacheRefresh) {
+    this(keyDb, cacheRefresh, MINUTES);
   }
 
   @VisibleForTesting
-  AllKeysForSetNameCache(
-      KeyDb keyDb, Integer cacheRefresh, TimeUnit timeUnit, LogMetricHelper logMetricHelper) {
+  AllKeysForSetNameCache(KeyDb keyDb, Integer cacheRefresh, TimeUnit timeUnit) {
     super(CacheBuilder.newBuilder().refreshAfterWrite(cacheRefresh, timeUnit).maximumSize(200));
     this.keyDb = keyDb;
   }

@@ -28,6 +28,7 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/keystorage/tasks/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/operator/cpio/blobstorageclient",
         "//java/com/google/scp/operator/cpio/blobstorageclient:gcp",
         "//java/com/google/scp/operator/cpio/cryptoclient",

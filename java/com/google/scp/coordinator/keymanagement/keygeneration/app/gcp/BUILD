@@ -43,6 +43,8 @@ java_library(
         "//java/external:apache_httpcore",
         "//java/external:gcp_core",
         "//java/external:gcp_kms",
+        "//java/external:gcp_parametermanager",
+        "//java/external:gcp_parametermanager_proto",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jcommander",

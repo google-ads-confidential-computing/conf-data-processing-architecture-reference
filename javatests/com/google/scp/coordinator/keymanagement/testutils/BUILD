@@ -37,6 +37,7 @@ java_library(
         "//java/com/google/scp/shared/proto",
         "//java/com/google/scp/shared/util",
         "//java/external:acai",
+        "//java/external:gcp_parametermanager",
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:guice",

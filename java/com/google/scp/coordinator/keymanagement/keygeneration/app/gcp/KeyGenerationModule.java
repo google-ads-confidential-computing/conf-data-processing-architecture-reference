@@ -30,6 +30,8 @@ import static com.google.scp.coordinator.keymanagement.shared.model.KeyGeneratio
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.SPANNER_INSTANCE;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.SUBSCRIPTION_ID;
 
+import com.google.cloud.parametermanager.v1.ParameterManagerClient;
+import com.google.cloud.parametermanager.v1.ParameterVersionName;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -66,12 +68,19 @@ import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectIdOv
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpZoneOverride;
 import com.google.scp.shared.clients.configclient.gcp.GcpParameterModule;
 import com.google.scp.shared.clients.configclient.model.ErrorReason;
+import java.io.IOException;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Module for Key Generation Application. */
 public final class KeyGenerationModule extends AbstractModule {
 
+  private static final Logger logger = LoggerFactory.getLogger(KeyGenerationModule.class);
   private static final int DEFAULT_CREATE_MAX_DAYS_AHEAD = 365;
+  private static final String KEY_SETS_CONFIG_ENV_VAR = "KEY_SETS_CONFIG";
+  private static final String LOCATION_ID = "global";
+  private static final String VERSION_ID = "v1";
 
   private final KeyGenerationArgs args;
 
@@ -227,10 +236,32 @@ public final class KeyGenerationModule extends AbstractModule {
   }
 
   @Provides
+  @Singleton
+  ParameterManagerClient provideParameterManagerClient() throws IOException {
+    return ParameterManagerClient.create();
+  }
+
+  @Provides
   @KeySetsJson
-  Optional<String> provideKeySetsConfig(ParameterClient parameterClient)
+  Optional<String> provideKeySetsConfig(
+      ParameterClient parameterClient, ParameterManagerClient parameterManagerClient)
       throws ParameterClientException {
-    return parameterClient.getLatestParameter("KEY_SETS_CONFIG");
+    try {
+      var paramName =
+          String.format(
+              "scp-%s-%s",
+              parameterClient.getEnvironmentName().orElseThrow(), KEY_SETS_CONFIG_ENV_VAR);
+      var parameterVersionName =
+          ParameterVersionName.of(args.getProjectId(), LOCATION_ID, paramName, VERSION_ID);
+      var param = parameterManagerClient.getParameterVersion(parameterVersionName);
+      return Optional.of(param.getPayload().getData().toStringUtf8());
+    } catch (Exception e) {
+      logger.error(
+          String.format(
+              "Failed to get parameter %s from Parameter Manager", KEY_SETS_CONFIG_ENV_VAR),
+          e);
+      return parameterClient.getLatestParameter(KEY_SETS_CONFIG_ENV_VAR);
+    }
   }
 
   @Provides

@@ -252,7 +252,7 @@ void GcpKmsClientProvider::AeadDecrypt(
                       status.message().c_str());
 
     // Record metric for decryption error.
-    if (metric_client_) {
+    if (metric_client_ && kms_client_options_->enable_gcp_kms_metrics) {
       MetricUtils::PushGcpKmsDecryptionErrorRateMetric(metric_client_, status);
     }
 
@@ -269,7 +269,7 @@ void GcpKmsClientProvider::AeadDecrypt(
           nanoseconds(start_time_in_ns - finish_time_in_ns))
           .count();
 
-  if (metric_client_) {
+  if (metric_client_ && kms_client_options_->enable_gcp_kms_metrics) {
     MetricUtils::PushGcpKmsDecryptionLatencyMetric(metric_client_,
                                                    waiting_time_in_ms);
   }

@@ -23,6 +23,5 @@ java_library(
         "//coordinator/protos/keymanagement/shared/backend:java_proto",
         "//java/external:guava",
         "//java/external:guice",
-        "//java/external:tink",
     ],
 )

@@ -27,6 +27,7 @@ java_library(
     ],
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/external:guava",
         "//java/external:guice",
         "//javatests/com/google/kms:LocalKmsServerContainer",

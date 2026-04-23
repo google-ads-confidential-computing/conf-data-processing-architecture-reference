@@ -461,8 +461,6 @@ TEST_P(GcpKmsClientProviderTest, ShouldRetryKmsDecryptForRetriableStatusCode) {
   ExpectCallDecryptWithFailuresAndEventualSuccess(
       mock_gcp_key_management_service_client_, failure_times, GetParam());
 
-  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_)).Times(1);
-
   DecryptSuccessfully(client_.get(), kWipProvider);
 }
 
@@ -515,9 +513,6 @@ TEST_F(GcpKmsClientProviderTest, ShouldNotRetryKmsDecryptUponFailure) {
       /* failure_return_times */ 1,
       StatusCode::kPermissionDenied);  // Non-retryable code
 
-  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_))
-      .WillOnce(Return(SuccessExecutionResult()));
-
   DecryptFailure(client_.get(), kWipProvider,
                  SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);
 }
@@ -541,9 +536,6 @@ TEST_F(GcpKmsClientProviderTest,
       /* failure_return_times */ 1,
       StatusCode::kPermissionDenied);  // Non-retryable code
 
-  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_))
-      .WillOnce(Return(SuccessExecutionResult()));
-
   DecryptFailure(client.get(), kWipProvider, SC_GCP_PERMISSION_DENIED);
 
   EXPECT_SUCCESS(client->Stop());
@@ -563,8 +555,49 @@ TEST_F(GcpKmsClientProviderTest, ShouldNotRetryKmsDecryptIfRetriesDisabled) {
       StatusCode::kUnavailable);  // Generally retryable code, but will fail
                                   // right away since retries are disabled
 
-  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_))
-      .WillOnce(Return(SuccessExecutionResult()));
+  DecryptFailure(client.get(), kWipProvider,
+                 SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);
+
+  EXPECT_SUCCESS(client->Stop());
+}
+
+TEST_F(GcpKmsClientProviderTest, ShouldNotPushMetricsIfDisabled) {
+  auto options = make_shared<KmsClientOptions>();
+  options->enable_gcp_kms_metrics = false;
+  auto client = InitGcpKmsClientProvider(options);
+
+  EXPECT_CALL(*mock_gcp_kms_factory_, CreateGcpKeyManagementServiceClient(
+                                          kWipProvider, kServiceAccount))
+      .Times(Exactly(1))
+      .WillOnce(Return(mock_gcp_key_management_service_client_));
+  ExpectCallDecryptWithFailures(
+      mock_gcp_key_management_service_client_,
+      /* failure_return_times */ 1,
+      StatusCode::kPermissionDenied);  // Non-retryable code
+
+  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_)).Times(0);
+
+  DecryptFailure(client.get(), kWipProvider,
+                 SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);
+
+  EXPECT_SUCCESS(client->Stop());
+}
+
+TEST_F(GcpKmsClientProviderTest, ShouldPushMetricsIfEnabled) {
+  auto options = make_shared<KmsClientOptions>();
+  options->enable_gcp_kms_metrics = true;
+  auto client = InitGcpKmsClientProvider(options);
+
+  EXPECT_CALL(*mock_gcp_kms_factory_, CreateGcpKeyManagementServiceClient(
+                                          kWipProvider, kServiceAccount))
+      .Times(Exactly(1))
+      .WillOnce(Return(mock_gcp_key_management_service_client_));
+  ExpectCallDecryptWithFailures(
+      mock_gcp_key_management_service_client_,
+      /* failure_return_times */ 1,
+      StatusCode::kPermissionDenied);  // Non-retryable code
+
+  EXPECT_CALL(*mock_metric_client_, PutMetricsSync(_)).Times(1);
 
   DecryptFailure(client.get(), kWipProvider,
                  SC_GCP_KMS_CLIENT_PROVIDER_DECRYPTION_FAILED);

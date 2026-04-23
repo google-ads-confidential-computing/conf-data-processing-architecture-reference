@@ -16,6 +16,10 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.ENVIRONMENT_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.PROJECT_ID_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_DATABASE_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_INSTANCE_ENV_VAR;
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.SPANNER_KEY_TABLE_NAME;
 import static com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer.startContainerAndConnectToSpannerWithEnvs;
 
@@ -182,9 +186,10 @@ public final class PublicKeyServiceTest {
               spannerEmulatorContainer,
               Optional.of(
                   ImmutableMap.of(
-                      "SPANNER_INSTANCE", keyDbConfig.spannerInstanceId(),
-                      "SPANNER_DATABASE", keyDbConfig.spannerDbName(),
-                      "PROJECT_ID", keyDbConfig.gcpProjectId())),
+                      SPANNER_INSTANCE_ENV_VAR, keyDbConfig.spannerInstanceId(),
+                      SPANNER_DATABASE_ENV_VAR, keyDbConfig.spannerDbName(),
+                      PROJECT_ID_ENV_VAR, keyDbConfig.gcpProjectId(),
+                      ENVIRONMENT_ENV_VAR, "test-environment")),
               "PublicKeyService_deploy.jar",
               "java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/",
               "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PublicKeyService");

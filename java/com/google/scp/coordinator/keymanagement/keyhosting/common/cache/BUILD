@@ -27,10 +27,11 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/shared/util",
         "//java/com/google/scp/shared/api/exception",
         "//java/com/google/scp/shared/api/model",
-        "//java/external:autovalue",
-        "//java/external:autovalue_annotations",
+        "//java/external:gcp_parametermanager",
+        "//java/external:gcp_parametermanager_proto",
         "//java/external:guava",
         "//java/external:guice",
+        "//java/external:jackson_core",
         "//java/external:slf4j",
     ],
 )

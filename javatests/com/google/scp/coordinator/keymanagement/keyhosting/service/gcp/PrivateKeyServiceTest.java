@@ -16,6 +16,12 @@
 package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.scp.coordinator.keymanagement.keyhosting.common.KeySetConfig.KEY_SETS_CONFIG_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.GcpKeyServiceModule.READ_STALENESS_SEC_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.ENVIRONMENT_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.PROJECT_ID_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_DATABASE_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_INSTANCE_ENV_VAR;
 import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
 import static com.google.scp.shared.testutils.gcp.CloudFunctionEmulatorContainer.startContainerAndConnectToSpannerWithEnvs;
@@ -299,11 +305,12 @@ public final class PrivateKeyServiceTest {
               spannerEmulatorContainer,
               Optional.of(
                   ImmutableMap.of(
-                      "SPANNER_INSTANCE", keyDbConfig.spannerInstanceId(),
-                      "SPANNER_DATABASE", keyDbConfig.spannerDbName(),
-                      "PROJECT_ID", keyDbConfig.gcpProjectId(),
-                      "KEY_SETS_CONFIG", keySetConfigEnvVar(),
-                      "READ_STALENESS_SEC", "2")),
+                      SPANNER_INSTANCE_ENV_VAR, keyDbConfig.spannerInstanceId(),
+                      SPANNER_DATABASE_ENV_VAR, keyDbConfig.spannerDbName(),
+                      PROJECT_ID_ENV_VAR, keyDbConfig.gcpProjectId(),
+                      ENVIRONMENT_ENV_VAR, "test-environment",
+                      KEY_SETS_CONFIG_ENV_VAR, keySetConfigEnvVar(),
+                      READ_STALENESS_SEC_ENV_VAR, "2")),
               "PrivateKeyService_deploy.jar",
               "java/com/google/scp/coordinator/keymanagement/keyhosting/service/gcp/",
               "com.google.scp.coordinator.keymanagement.keyhosting.service.gcp.PrivateKeyService");

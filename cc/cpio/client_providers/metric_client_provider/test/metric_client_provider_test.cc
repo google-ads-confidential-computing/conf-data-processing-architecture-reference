@@ -271,6 +271,64 @@ TEST_F(MetricClientProviderTest, RecordMetricWithoutBatch) {
   WaitUntil([&]() { return batch_push_called_count == 2; });
 }
 
+TEST_F(MetricClientProviderTest, PutMetricsSyncSuccess) {
+  auto client = make_unique<MockMetricClientWithOverrides>(
+      nullptr, CreateMetricClientOptions(false));
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
+
+  auto request = *CreatePutMetricsRequest(kMetricNamespace);
+
+  int64_t batch_push_called_count = 0;
+  client->metrics_batch_push_mock =
+      [&](const std::shared_ptr<std::vector<core::AsyncContext<
+              cmrt::sdk::metric_service::v1::PutMetricsRequest,
+              cmrt::sdk::metric_service::v1::PutMetricsResponse>>>&
+              metric_requests_vector) noexcept {
+        EXPECT_EQ(metric_requests_vector->size(), 1);
+        batch_push_called_count += 1;
+
+        for (auto& ctx : *metric_requests_vector) {
+          ctx.response = make_shared<PutMetricsResponse>();
+          ctx.result = SuccessExecutionResult();
+          ctx.Finish();
+        }
+        return SuccessExecutionResult();
+      };
+
+  auto result_or = client->PutMetricsSync(request);
+  EXPECT_SUCCESS(result_or.result());
+  EXPECT_EQ(batch_push_called_count, 1);
+}
+
+TEST_F(MetricClientProviderTest, PutMetricsSyncFailure) {
+  auto client = make_unique<MockMetricClientWithOverrides>(
+      nullptr, CreateMetricClientOptions(false));
+  EXPECT_SUCCESS(client->Init());
+  EXPECT_SUCCESS(client->Run());
+
+  auto request = *CreatePutMetricsRequest(kMetricNamespace);
+
+  int64_t batch_push_called_count = 0;
+  client->metrics_batch_push_mock =
+      [&](const std::shared_ptr<std::vector<core::AsyncContext<
+              cmrt::sdk::metric_service::v1::PutMetricsRequest,
+              cmrt::sdk::metric_service::v1::PutMetricsResponse>>>&
+              metric_requests_vector) noexcept {
+        batch_push_called_count += 1;
+
+        for (auto& ctx : *metric_requests_vector) {
+          ctx.result = FailureExecutionResult(SC_UNKNOWN);
+          ctx.Finish();
+        }
+        return SuccessExecutionResult();
+      };
+
+  auto result_or = client->PutMetricsSync(request);
+  EXPECT_THAT(result_or.result(), ResultIs(FailureExecutionResult(SC_UNKNOWN)));
+  EXPECT_EQ(batch_push_called_count, 1);
+}
+
 TEST_F(MetricClientProviderTest, RecordMetricWithBatch) {
   auto client = make_unique<MockMetricClientWithOverrides>(
       mock_async_executor_, CreateMetricClientOptions(true));

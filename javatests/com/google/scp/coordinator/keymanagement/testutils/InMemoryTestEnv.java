@@ -20,22 +20,27 @@ import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTe
 import static com.google.scp.coordinator.keymanagement.testutils.InMemoryKeyDbTestUtil.KEY_LIMIT;
 
 import com.google.acai.TestScoped;
+import com.google.cloud.parametermanager.v1.ParameterManagerClient;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheRefreshInMinutes;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.DisableActivationTime;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.Environment;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetConfigMap;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigAllowedMigrators;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetsVendingConfigCacheUsers;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.ProjectId;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.KeySetConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.dao.testing.InMemoryKeyDb;
+import java.io.IOException;
 
 public final class InMemoryTestEnv extends AbstractModule {
 
@@ -49,6 +54,24 @@ public final class InMemoryTestEnv extends AbstractModule {
   @TestScoped
   public KeyDb getKeyDb(InMemoryKeyDb inMemoryKeyDb) {
     return inMemoryKeyDb;
+  }
+
+  @Provides
+  @Singleton
+  ParameterManagerClient provideParameterManagerClient() throws IOException {
+    return ParameterManagerClient.create();
+  }
+
+  @Provides
+  @ProjectId
+  String provideProjectId() {
+    return "projectId";
+  }
+
+  @Provides
+  @Environment
+  String provideEnvironment() {
+    return "environment";
   }
 
   private static ImmutableMap<String, KeySetConfig> createConfigMap() {

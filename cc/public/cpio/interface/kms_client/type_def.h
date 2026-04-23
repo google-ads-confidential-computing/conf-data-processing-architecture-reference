@@ -37,6 +37,9 @@ struct KmsClientOptions {
 
   // Temporary flag to use the new GCP Error Code Converter.
   bool enable_new_gcp_error_code_converter = false;
+
+  // Flag to enable/disable pushing metrics for GCP KMS.
+  bool enable_gcp_kms_metrics = false;
 };
 }  // namespace google::scp::cpio
 

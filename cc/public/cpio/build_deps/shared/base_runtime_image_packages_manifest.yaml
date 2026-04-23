@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,19 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-load("@rules_java//java:java_test.bzl", "java_test")
-
-package(default_visibility = ["//visibility:public"])
-
-java_test(
-    name = "LogMetricHelperTest",
-    srcs = [
-        "LogMetricHelperTest.java",
-    ],
-    deps = [
-        "//java/com/google/scp/coordinator/keymanagement/shared/util",
-        "//java/external:google_truth",
-        "//java/external:guava",
-    ],
-)
+version: 1
+sources:
+  - channel: bullseye main
+    url: https://snapshot-cloudflare.debian.org/archive/debian/20240210T223313Z
+archs:
+  - amd64
+packages:
+  - rsyslog

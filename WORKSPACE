@@ -226,15 +226,34 @@ load("@rules_oci//oci:repositories.bzl", "oci_register_toolchains")
 
 oci_register_toolchains(name = "oci")
 
+load("@aspect_bazel_lib//lib:repositories.bzl", "aspect_bazel_lib_dependencies", "aspect_bazel_lib_register_toolchains")
+
+aspect_bazel_lib_dependencies()
+
+aspect_bazel_lib_register_toolchains()
+
+load("@rules_distroless//apt:apt.bzl", "apt")
+
+apt.install(
+    name = "scp_base_runtime_image_debian_packages",
+    lock = "//cc/public/cpio/build_deps/shared:base_runtime_image_packages_manifest.lock.json",
+    manifest = "//cc/public/cpio/build_deps/shared:base_runtime_image_packages_manifest.yaml",
+)
+
+load("@scp_base_runtime_image_debian_packages//:packages.bzl", "scp_base_runtime_image_debian_packages_packages")
+
+scp_base_runtime_image_debian_packages_packages()
+
 ################################################################################
 # Download Containers: Begin
+
 ################################################################################
 load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 load("@rules_oci//oci:pull.bzl", "oci_pull")
 
 # Distroless image for running Java.
-container_pull(
-    name = "java_base",
+oci_pull(
+    name = "java_base_oci",
     # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-06-12.
     digest = "sha256:1e4181aaff242e2b305bb4abbe811eb122d68ffd7fd87c25c19468a1bc387ce6",
     registry = "gcr.io",
@@ -249,16 +268,6 @@ oci_pull(
     repository = "distroless/java21-debian12",
 )
 
-# Distroless debug image for running Java. Need to use debug image to install more dependencies for CC.
-container_pull(
-    name = "java_debug_runtime",
-    # Using SHA-256 for reproducibility.
-    digest = "sha256:66f354398a000c573a1e166cf53ab99cd4766c9084a47b6fd7b814632a3379a9",
-    registry = "gcr.io",
-    repository = "distroless/java17-debian11",
-    tag = "debug-nonroot-amd64",
-)
-
 # Needed for cc/pbs/deploy/pbs_server/build_defs
 container_pull(
     name = "debian_11",
@@ -266,23 +275,6 @@ container_pull(
     registry = "index.docker.io",
     repository = "amd64/debian",
     tag = "11",
-)
-
-# Needed for cc/public/cpio/build_deps
-container_pull(
-    name = "linux_debian_11_runtime_snapshot",
-    digest = "sha256:5dcb0a12205a1381d530dd2175445467283d83b002c9478da487def7e5589ee0",
-    registry = "us-docker.pkg.dev",
-    repository = "admcloud-scp/cc-runtime-snapshot/linux_debian_11_runtime",
-    tag = "v0.3",
-)
-
-container_pull(
-    name = "linux_debian_11_build_time_snapshot",
-    digest = "sha256:77d89a40b7e122d7dd22e367a7e274a126fa1cfb1c917f9c1eeedbdaa8326993",
-    registry = "us-docker.pkg.dev",
-    repository = "admcloud-scp/cc-build-time-snapshot/linux_debian_11_build_time",
-    tag = "v0.2",
 )
 
 ################################################################################

@@ -52,7 +52,6 @@ module "cloud_run" {
   allowed_all_users                      = false
   allowed_invoker_service_account_emails = var.allowed_wip_service_accounts
   allowed_user_group                     = var.allowed_wip_user_group
-  ingress                                = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   # CR settings
   source_container_image_url = var.source_container_image_url
@@ -127,6 +126,7 @@ module "load_balancer" {
   enable_cloud_armor_configs = false
   # The Cloud Armor alerts are disabled for key storage service, but we still need to define the thresholds.
   cloud_armor_high_block_ratio_threshold         = 1
+  cloud_armor_high_block_ratio_min_samples       = 10
   cloud_armor_rate_limit_denials_alert_threshold = 1000
 
   enable_cdn                    = false

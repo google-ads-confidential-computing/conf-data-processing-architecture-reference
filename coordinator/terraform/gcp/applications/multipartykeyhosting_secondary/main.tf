@@ -290,7 +290,7 @@ module "private_key_service_addon" {
 
   # Load Balancer
   load_balancer_protocol      = var.private_key_service_load_balancer_protocol
-  load_balancer_allowed_paths = var.private_key_service_load_balancer_allowed_paths
+  load_balancer_allowed_paths = var.private_key_service_addon_load_balancer_allowed_paths
 
   # Load Balancer Outlier Detection
   lb_outlier_detection_enabled                               = var.private_key_service_lb_outlier_detection_enabled

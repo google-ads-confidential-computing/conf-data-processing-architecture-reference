@@ -38,6 +38,27 @@ java_test(
 )
 
 java_test(
+    name = "KeysetConfigCacheTest",
+    srcs = [
+        "KeysetConfigCacheTest.java",
+    ],
+    deps = [
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common",
+        "//java/com/google/scp/coordinator/keymanagement/keyhosting/common/cache",
+        "//java/com/google/scp/coordinator/keymanagement/shared/util",
+        "//java/com/google/scp/shared/api/exception",
+        "//java/external:gcp_parametermanager",
+        "//java/external:gcp_parametermanager_proto",
+        "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:mockito",
+        "//java/external:protobuf_java",
+        "//java/external:protobuf_java_util",
+        "//java/external:slf4j",
+    ],
+)
+
+java_test(
     name = "AllKeysForSetNameCacheTest",
     srcs = [
         "AllKeysForSetNameCacheTest.java",

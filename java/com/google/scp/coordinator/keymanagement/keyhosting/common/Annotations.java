@@ -30,6 +30,18 @@ public final class Annotations {
 
   private Annotations() {}
 
+  /** Binds project id for key services */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface ProjectId {}
+
+  /** Binds environment for key services */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface Environment {}
+
   /** Binds cache control maximum for active public keys */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})

@@ -16,6 +16,11 @@
 
 package com.google.scp.coordinator.keymanagement.keystorage.service.gcp;
 
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.PROJECT_ID_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_DATABASE_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_ENDPOINT;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_INSTANCE_ENV_VAR;
+
 import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KeyTemplates;
 import com.google.crypto.tink.KeysetHandle;
@@ -43,10 +48,6 @@ import java.util.Optional;
  * the CreateKeyHttpFunction.
  */
 public class GcpKeyStorageServiceModule extends AbstractModule {
-  private static final String PROJECT_ID_ENV_VAR = "PROJECT_ID";
-  private static final String SPANNER_INSTANCE_ENV_VAR = "SPANNER_INSTANCE";
-  private static final String SPANNER_DATABASE_ENV_VAR = "SPANNER_DATABASE";
-  private static final String SPANNER_ENDPOINT = "SPANNER_ENDPOINT";
   private static final String GCP_KMS_BASE_URI_ENV_VAR = "GCP_KMS_BASE_URI";
   private static final String MIGRATION_GCP_KMS_BASE_URI_ENV_VAR = "MIGRATION_GCP_KMS_BASE_URI";
   private static final String POPULATE_MIGRATION_KEY_DATA_ENV_VAR = "POPULATE_MIGRATION_KEY_DATA";
@@ -77,9 +78,9 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
   @Override
   protected void configure() {
     Map<String, String> env = System.getenv();
-    String projectId = env.getOrDefault(PROJECT_ID_ENV_VAR, "adhcloud-tp2");
-    String spannerInstanceId = env.getOrDefault(SPANNER_INSTANCE_ENV_VAR, "keydbinstance");
-    String spannerDatabaseId = env.getOrDefault(SPANNER_DATABASE_ENV_VAR, "keydb");
+    String projectId = env.get(PROJECT_ID_ENV_VAR);
+    String spannerInstanceId = env.get(SPANNER_INSTANCE_ENV_VAR);
+    String spannerDatabaseId = env.get(SPANNER_DATABASE_ENV_VAR);
     String spannerEndpoint = env.get(SPANNER_ENDPOINT);
 
     // Business layer bindings

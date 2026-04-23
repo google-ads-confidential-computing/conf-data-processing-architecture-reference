@@ -18,7 +18,6 @@ package com.google.scp.coordinator.keymanagement.keygeneration.tasks.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.scp.coordinator.keymanagement.shared.util.KeySplitDataUtil.buildKeySplitData;
 import static com.google.scp.shared.api.model.Code.INVALID_ARGUMENT;
 import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleartext;
 import static java.time.temporal.ChronoUnit.DAYS;
@@ -30,7 +29,6 @@ import com.google.crypto.tink.Aead;
 import com.google.crypto.tink.KeyTemplate;
 import com.google.crypto.tink.KeyTemplates;
 import com.google.crypto.tink.KeysetHandle;
-import com.google.crypto.tink.PublicKeySign;
 import com.google.crypto.tink.hybrid.HybridConfig;
 import com.google.crypto.tink.mac.MacConfig;
 import com.google.protobuf.ByteString;
@@ -65,7 +63,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
   private static final Logger LOGGER = LoggerFactory.getLogger(CreateSplitKeyTaskBase.class);
   private static final int KEY_ID_CONFLICT_MAX_RETRY = 5;
 
-  protected final Optional<PublicKeySign> signatureKey;
   protected final KeyDb keyDb;
   protected final KeyStorageClient keyStorageClient;
   protected final KeyIdFactory keyIdFactory;
@@ -81,12 +78,10 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
   }
 
   protected CreateSplitKeyTaskBase(
-      Optional<PublicKeySign> signatureKey,
       KeyDb keyDb,
       KeyStorageClient keyStorageClient,
       KeyIdFactory keyIdFactory,
       LogMetricHelper logMetricHelper) {
-    this.signatureKey = signatureKey;
     this.keyDb = keyDb;
     this.keyStorageClient = keyStorageClient;
     this.keyIdFactory = keyIdFactory;
@@ -337,8 +332,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
               backfillDays,
               publicKeysetHandle,
               keyEncryptionKeyUri,
-              migrationKeyEncryptionKeyUri,
-              signatureKey);
+              migrationKeyEncryptionKeyUri);
       unsignedCoordinatorAKey =
           migrationKeyEncryptionKeyUri.isEmpty()
               ? createCoordinatorAKey(
@@ -525,8 +519,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int backfillDays,
       Optional<KeysetHandle> publicKeysetHandle,
       String keyEncryptionKeyUri,
-      Optional<String> migrationkeyEncryptionKeyUri,
-      Optional<PublicKeySign> signatureKey)
+      Optional<String> migrationkeyEncryptionKeyUri)
       throws ServiceException, IOException {
     // LINT.IfChange
     EncryptionKey.Builder unsignedEncryptionKey =
@@ -558,20 +551,15 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
                   activation.plus(validityInDays + backfillDays, DAYS).toEpochMilli()));
     }
 
-    try {
-      EncryptionKey unsignedKey = unsignedEncryptionKey.build();
-      EncryptionKey.Builder signedEncryptionKey = unsignedKey.toBuilder();
-      signedEncryptionKey.addKeySplitData(
-          buildKeySplitData(unsignedKey, keyEncryptionKeyUri, signatureKey));
-      if (migrationkeyEncryptionKeyUri.isPresent()) {
-        signedEncryptionKey.addMigrationKeySplitData(
-            buildKeySplitData(unsignedKey, migrationkeyEncryptionKeyUri.get(), signatureKey));
-      }
-      return signedEncryptionKey.build();
-    } catch (GeneralSecurityException e) {
-      String msg = "Error generating public key signature";
-      throw new ServiceException(Code.INTERNAL, "CRYPTO_ERROR", msg, e);
-    }
+    EncryptionKey unsignedKey = unsignedEncryptionKey.build();
+    EncryptionKey.Builder signedEncryptionKey = unsignedKey.toBuilder();
+    signedEncryptionKey.addKeySplitData(
+        KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(keyEncryptionKeyUri));
+    migrationkeyEncryptionKeyUri.ifPresent(
+        s ->
+            signedEncryptionKey.addMigrationKeySplitData(
+                KeySplitData.newBuilder().setKeySplitKeyEncryptionKeyUri(s)));
+    return signedEncryptionKey.build();
   }
 
   /**

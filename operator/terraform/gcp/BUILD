@@ -55,7 +55,6 @@ pkg_tar(
     name = "cc_operator_tar",
     srcs = [
         ":cc_dist_jars",
-        "//cc/public/cpio/build_deps/shared:reproducible_build_scripts_pkg",
         "//operator/terraform/gcp/applications:cc_applications_pkg",
         "//operator/terraform/gcp/environments_cc_operator_service:cc_operator_tar_environments",
         "//operator/terraform/gcp/modules:cc_modules_pkg",

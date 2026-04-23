@@ -16,10 +16,9 @@
 
 package com.google.scp.coordinator.keymanagement.testutils.gcp;
 
-import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables.ENV_VAR_GCP_PROJECT_ID;
-import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_DB_NAME;
-import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_ENDPOINT;
-import static com.google.scp.coordinator.keymanagement.testutils.CloudFunctionEnvironmentVariables.ENV_VAR_SPANNER_INSTANCE_ID;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.PROJECT_ID_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_DATABASE_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_INSTANCE_ENV_VAR;
 
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDb;
@@ -35,6 +34,7 @@ import java.util.stream.IntStream;
 public class SpannerKeyDbTestUtil {
 
   public static final String SPANNER_KEY_TABLE_NAME = "KeySets";
+  private static final String ENV_VAR_SPANNER_ENDPOINT = "SPANNER_EMULATOR_HOST";
   private static final SpannerKeyDbConfig DEFAULT_DB_CONFIG = SpannerKeyDbTestModule.TEST_DB_CONFIG;
 
   private SpannerKeyDbTestUtil() {}
@@ -93,12 +93,12 @@ public class SpannerKeyDbTestUtil {
     // Allow configuration of Cloud Functions via parameters passed as environment variables so
     // they can handle different situations (e.g. pointing to different Spanner databases).
     String gcpProjectId =
-        System.getenv().getOrDefault(ENV_VAR_GCP_PROJECT_ID, DEFAULT_DB_CONFIG.gcpProjectId());
+        System.getenv().getOrDefault(PROJECT_ID_ENV_VAR, DEFAULT_DB_CONFIG.gcpProjectId());
     String spannerInstanceId =
         System.getenv()
-            .getOrDefault(ENV_VAR_SPANNER_INSTANCE_ID, DEFAULT_DB_CONFIG.spannerInstanceId());
+            .getOrDefault(SPANNER_INSTANCE_ENV_VAR, DEFAULT_DB_CONFIG.spannerInstanceId());
     String spannerDbName =
-        System.getenv().getOrDefault(ENV_VAR_SPANNER_DB_NAME, DEFAULT_DB_CONFIG.spannerDbName());
+        System.getenv().getOrDefault(SPANNER_DATABASE_ENV_VAR, DEFAULT_DB_CONFIG.spannerDbName());
     String endpoint = System.getenv(ENV_VAR_SPANNER_ENDPOINT);
 
     return SpannerKeyDbConfig.builder()

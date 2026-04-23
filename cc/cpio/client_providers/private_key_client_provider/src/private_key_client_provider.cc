@@ -625,6 +625,9 @@ static shared_ptr<KmsClientOptions> CreateKmsClientOptions(
   // Client only.
   kms_client_options->enable_new_gcp_error_code_converter =
       options->enable_new_gcp_error_code_converter;
+
+  kms_client_options->enable_gcp_kms_metrics = options->enable_gcp_kms_metrics;
+
   return kms_client_options;
 }
 

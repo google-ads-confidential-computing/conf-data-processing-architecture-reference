@@ -99,10 +99,6 @@ public final class KeySetManager {
   /**
    * Creates a cached fetcher fetch config every {@link #FETCHER_CACHE_DURATION} seconds. Remote
    * config is intended to take effect near-read-time and the cache is to throttle the rate.
-   *
-   * <p>Note ATTOW this does not work as intended yet due to the underlying provider backed by a
-   * {@link com.google.scp.shared.clients.configclient.ParameterClient} with a much longer cache
-   * duration such that re-fetching may still return stale config.
    */
   private Supplier<Optional<KeySetsConfig>> createFetcher(
       Provider<Optional<String>> configProvider) {

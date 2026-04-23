@@ -16,11 +16,20 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.service.gcp;
 
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.ENVIRONMENT_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.PROJECT_ID_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_DATABASE_ENV_VAR;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_ENDPOINT;
+import static com.google.scp.coordinator.keymanagement.shared.util.EnvironmentVariables.SPANNER_INSTANCE_ENV_VAR;
+
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheRefreshInMinutes;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.EnableCache;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.Environment;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.ProjectId;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbModule;
 import java.util.Map;
@@ -32,12 +41,8 @@ import java.util.Optional;
  */
 public final class GcpKeyServiceModule extends AbstractModule {
 
+  public static final String READ_STALENESS_SEC_ENV_VAR = "READ_STALENESS_SEC";
   private static final String KEY_LIMIT_ENV_VAR = "KEY_LIMIT";
-  private static final String READ_STALENESS_SEC_ENV_VAR = "READ_STALENESS_SEC";
-  private static final String SPANNER_INSTANCE_ENV_VAR = "SPANNER_INSTANCE";
-  private static final String SPANNER_DATABASE_ENV_VAR = "SPANNER_DATABASE";
-  private static final String SPANNER_ENDPOINT = "SPANNER_ENDPOINT";
-  private static final String PROJECT_ID_ENV_VAR = "PROJECT_ID";
   private static final String CACHE_CONTROL_MAXIMUM_ENV_VAR = "CACHE_CONTROL_MAXIMUM";
   private static final String ENABLE_CACHE_ENV_VAR = "ENABLE_CACHE";
   private static final String CACHE_REFRESH_ENV_VAR = "CACHE_REFRESH_IN_MINUTES";
@@ -75,12 +80,24 @@ public final class GcpKeyServiceModule extends AbstractModule {
     return Integer.valueOf(env.getOrDefault(CACHE_REFRESH_ENV_VAR, "90"));
   }
 
+  @Provides
+  @ProjectId
+  String providesProjectId() {
+    return System.getenv().get(PROJECT_ID_ENV_VAR);
+  }
+
+  @Provides
+  @Environment
+  String providesEnvironment() {
+    return System.getenv().get(ENVIRONMENT_ENV_VAR);
+  }
+
   @Override
   protected void configure() {
     Map<String, String> env = System.getenv();
-    String spannerInstanceId = env.getOrDefault(SPANNER_INSTANCE_ENV_VAR, "keydbinstance");
-    String spannerDatabaseId = env.getOrDefault(SPANNER_DATABASE_ENV_VAR, "keydb");
-    String projectId = env.getOrDefault(PROJECT_ID_ENV_VAR, "adhcloud-tp1");
+    String spannerInstanceId = env.get(SPANNER_INSTANCE_ENV_VAR);
+    String spannerDatabaseId = env.get(SPANNER_DATABASE_ENV_VAR);
+    String projectId = env.get(PROJECT_ID_ENV_VAR);
     String spannerEndpoint = env.get(SPANNER_ENDPOINT);
 
     // Service layer bindings

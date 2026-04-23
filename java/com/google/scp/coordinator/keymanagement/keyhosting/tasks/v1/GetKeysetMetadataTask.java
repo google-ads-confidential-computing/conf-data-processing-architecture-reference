@@ -16,13 +16,9 @@
 
 package com.google.scp.coordinator.keymanagement.keyhosting.tasks.v1;
 
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.MISSING_SET_NAME;
-import static com.google.scp.shared.api.model.Code.NOT_FOUND;
-
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetConfigMap;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.KeySetConfig;
+import com.google.scp.coordinator.keymanagement.keyhosting.common.cache.KeysetConfigCache;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
@@ -34,36 +30,31 @@ import java.util.regex.Pattern;
 
 public class GetKeysetMetadataTask extends ApiTask {
 
-  private final ImmutableMap<String, KeySetConfig> keySetConfigMap;
+  private final KeysetConfigCache keysetConfigCache;
 
   @Inject
   protected GetKeysetMetadataTask(
-      @KeySetConfigMap ImmutableMap<String, KeySetConfig> keySetConfigMap,
-      LogMetricHelper logMetricHelper) {
+      KeysetConfigCache keysetConfigCache, LogMetricHelper logMetricHelper) {
     super(
         "GET",
         Pattern.compile("/sets/(?<name>[a-zA-Z0-9\\-]*)/keysetMetadata"),
         "GetKeysetMetadata",
         "v1Beta",
         logMetricHelper);
-    this.keySetConfigMap = keySetConfigMap;
+    this.keysetConfigCache = keysetConfigCache;
   }
 
   @Override
   protected void execute(Matcher matcher, RequestContext request, ResponseContext response)
       throws ServiceException {
     var setName = matcher.group("name");
-    if (keySetConfigMap.containsKey(setName)) {
-      response.setBody(
-          GetKeysetMetadataResponse.newBuilder()
-              .setActiveKeyCount(computeExpectedActiveKeyCount(keySetConfigMap.get(setName)))
-              .setActiveKeyCadenceDays(computeActiveKeyCadence(keySetConfigMap.get(setName)))
-              .setBackfillDays(keySetConfigMap.get(setName).backfillDays())
-              .build());
-    } else {
-      throw new ServiceException(
-          NOT_FOUND, MISSING_SET_NAME.name(), "Do not have config for setName " + setName);
-    }
+    var keysetConfig = keysetConfigCache.get(setName);
+    response.setBody(
+        GetKeysetMetadataResponse.newBuilder()
+            .setActiveKeyCount(computeExpectedActiveKeyCount(keysetConfig))
+            .setActiveKeyCadenceDays(computeActiveKeyCadence(keysetConfig))
+            .setBackfillDays(keysetConfig.backfillDays())
+            .build());
   }
 
   private static int computeActiveKeyCadence(KeySetConfig config) {

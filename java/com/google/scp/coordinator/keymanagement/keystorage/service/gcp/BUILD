@@ -14,7 +14,7 @@
 
 load("@rules_java//java:java_binary.bzl", "java_binary")
 load("@rules_java//java:java_library.bzl", "java_library")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_pkg//pkg:zip.bzl", "pkg_zip")
 
@@ -125,5 +125,11 @@ oci_load(
     repo_tags = [
         "bazel/java/com/google/scp/coordinator/keymanagement/keystorage/service/gcp:KeyStorageServiceRuntimeContainer",
     ],
+    tags = ["manual"],
+)
+
+oci_push(
+    name = "KeyStorageServiceRuntimeImagePush",
+    image = ":KeyStorageServiceRuntimeImage",
     tags = ["manual"],
 )

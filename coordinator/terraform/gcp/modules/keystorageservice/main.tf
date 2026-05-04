@@ -62,6 +62,7 @@ module "cloud_run" {
   max_instance_count         = var.max_instances
   execution_environment      = var.execution_environment
   memory_mb                  = var.key_storage_memory
+  timeout_sec                = 120
 
   environment_variables = {
     PROJECT_ID                  = var.project_id
@@ -132,10 +133,11 @@ module "load_balancer" {
   cloud_armor_high_block_ratio_min_samples       = 10
   cloud_armor_rate_limit_denials_alert_threshold = 1000
 
-  enable_cdn                    = false
-  cdn_default_ttl_seconds       = 30
-  cdn_max_ttl_seconds           = 60
-  cdn_serve_while_stale_seconds = 60
+  enable_cdn                      = false
+  cdn_default_ttl_seconds         = 30
+  cdn_max_ttl_seconds             = 60
+  cdn_serve_while_stale_seconds   = 60
+  cdn_bypass_cache_header_enabled = false
 
   cloud_run_ids = local.cloud_run_ids
 
@@ -146,7 +148,7 @@ module "load_balancer" {
   alarm_eval_period_sec     = var.alarm_eval_period_sec
   alarm_duration_sec        = var.alarm_duration_sec
   alert_severity_overrides  = var.key_storage_severity_map
-  alert_5xx_threshold       = var.load_balancer_5xx_threshold
+  alert_5xx_error_ratio     = "0.2"
   max_95_percent_latency_ms = var.load_balancer_max_95_percent_latency_ms
   max_99_percent_latency_ms = var.load_balancer_max_99_percent_latency_ms
 }

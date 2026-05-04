@@ -14,7 +14,7 @@
 
 load("@rules_java//java:java_binary.bzl", "java_binary")
 load("@rules_java//java:java_library.bzl", "java_library")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 
 package(default_visibility = ["//visibility:public"])
@@ -99,5 +99,11 @@ oci_load(
     repo_tags = [
         "bazel/java/com/google/scp/coordinator/keymanagement/keygeneration/app/gcp:KeyGenerationServiceRuntimeContainer",
     ],
+    tags = ["manual"],
+)
+
+oci_push(
+    name = "KeyGenerationServiceRuntimeImagePush",
+    image = ":KeyGenerationServiceRuntimeImage",
     tags = ["manual"],
 )

@@ -27,6 +27,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.Environment;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeySetConfigMap;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.ProjectId;
@@ -40,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Cache used by Private Key Service to retrieve latest keyset config. */
+@Singleton
 public class KeysetConfigCache {
   private static final Logger logger = LoggerFactory.getLogger(KeysetConfigCache.class);
   private static final String LOCATION_ID = "global";
@@ -70,7 +72,7 @@ public class KeysetConfigCache {
     cache =
         CacheBuilder.newBuilder()
             .maximumSize(1)
-            .expireAfterAccess(2, TimeUnit.HOURS)
+            .refreshAfterWrite(2, TimeUnit.HOURS)
             .build(
                 CacheLoader.asyncReloading(
                     new CacheLoader<>() {

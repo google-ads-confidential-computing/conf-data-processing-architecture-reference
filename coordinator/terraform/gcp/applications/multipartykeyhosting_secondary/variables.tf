@@ -239,6 +239,11 @@ variable "private_key_service_execution_environment" {
   nullable    = false
 }
 
+variable "private_key_service_cloud_run_timeout_sec" {
+  description = "Max allowed time for an Private KS instance to respond to a request."
+  type        = number
+}
+
 variable "enable_private_key_service_cache" {
   description = "Variable to enable server side cache in the Private Key Service."
   type        = bool
@@ -507,8 +512,8 @@ variable "private_key_service_cloud_run_cpu_usage_urgent_threshold" {
   type        = number
 }
 
-variable "private_key_service_lb_5xx_threshold" {
-  description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
+variable "private_key_service_lb_alert_5xx_error_ratio" {
+  description = "Private KS Load Balancer 5xx error ratio greater than this to send alarm. Example: 0.1"
   type        = number
 }
 

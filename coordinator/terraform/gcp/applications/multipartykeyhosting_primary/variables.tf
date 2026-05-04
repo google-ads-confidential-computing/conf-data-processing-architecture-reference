@@ -482,6 +482,11 @@ variable "private_key_service_cloud_run_max_instances" {
   type        = number
 }
 
+variable "private_key_service_cloud_run_timeout_sec" {
+  description = "Max allowed time for an Private KS instance to respond to a request."
+  type        = number
+}
+
 variable "private_key_service_execution_environment" {
   description = "The sandbox environment to host Private KS."
   type        = string
@@ -538,6 +543,11 @@ variable "public_key_service_cdn_serve_while_stale_seconds" {
   type        = number
 }
 
+variable "public_key_service_cdn_bypass_cache_header_enabled" {
+  description = "Enable bypass cache header for the public key service CDN."
+  type        = bool
+}
+
 ################################################################################
 # Public Key Alarm Variables.
 ################################################################################
@@ -582,8 +592,8 @@ variable "public_key_service_cloud_run_cpu_usage_urgent_threshold" {
   type        = number
 }
 
-variable "public_key_service_lb_5xx_threshold" {
-  description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
+variable "public_key_service_lb_alert_5xx_error_ratio" {
+  description = "Private KS Load Balancer 5xx error ratio greater than this to send alarm. Example: 0.1"
   type        = number
 }
 
@@ -734,8 +744,8 @@ variable "private_key_service_cloud_run_cpu_usage_urgent_threshold" {
   type        = number
 }
 
-variable "private_key_service_lb_5xx_threshold" {
-  description = "Private Key Service Load Balancer 5xx error count greater than this to send alarm. Example: 0."
+variable "private_key_service_lb_alert_5xx_error_ratio" {
+  description = "Private KS Load Balancer 5xx error ratio greater than this to send alarm. Example: 0.1"
   type        = number
 }
 

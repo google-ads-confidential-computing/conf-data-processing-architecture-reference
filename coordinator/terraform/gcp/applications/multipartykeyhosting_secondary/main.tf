@@ -241,6 +241,7 @@ module "private_key_service" {
   concurrency               = var.private_key_service_cloud_run_concurrency
   min_instance_count        = var.private_key_service_cloud_run_min_instances
   max_instance_count        = var.private_key_service_cloud_run_max_instances
+  timeout_sec               = var.private_key_service_cloud_run_timeout_sec
   execution_environment     = var.private_key_service_execution_environment
   enable_revision_pinning   = var.private_key_service_enable_revision_pinning
   canary_region             = var.primary_region
@@ -276,7 +277,7 @@ module "private_key_service" {
   cloud_run_alert_on_cpu_usage_urgent_threshold       = var.private_key_service_cloud_run_cpu_usage_urgent_threshold
   cloud_run_max_execution_time_max                    = var.private_key_service_cloud_run_max_execution_time_max
 
-  load_balancer_5xx_threshold             = var.private_key_service_lb_5xx_threshold
+  load_balancer_alert_5xx_error_ratio     = var.private_key_service_lb_alert_5xx_error_ratio
   load_balancer_max_95_percent_latency_ms = var.private_key_service_lb_max_95_percent_latency_ms
   load_balancer_max_99_percent_latency_ms = var.private_key_service_lb_max_99_percent_latency_ms
 }
@@ -317,6 +318,7 @@ module "private_key_service_addon" {
   min_instance_count    = var.private_key_service_cloud_run_min_instances
   max_instance_count    = var.private_key_service_cloud_run_max_instances
   execution_environment = var.private_key_service_execution_environment
+  timeout_sec           = var.private_key_service_cloud_run_timeout_sec
 
   # private_key_service_addon does not use canary deployments
   enable_revision_pinning   = false
@@ -353,7 +355,7 @@ module "private_key_service_addon" {
   cloud_run_alert_on_cpu_usage_urgent_threshold       = var.private_key_service_cloud_run_cpu_usage_urgent_threshold
   cloud_run_max_execution_time_max                    = var.private_key_service_cloud_run_max_execution_time_max
 
-  load_balancer_5xx_threshold             = var.private_key_service_lb_5xx_threshold
+  load_balancer_alert_5xx_error_ratio     = var.private_key_service_lb_alert_5xx_error_ratio
   load_balancer_max_95_percent_latency_ms = var.private_key_service_lb_max_95_percent_latency_ms
   load_balancer_max_99_percent_latency_ms = var.private_key_service_lb_max_99_percent_latency_ms
 }

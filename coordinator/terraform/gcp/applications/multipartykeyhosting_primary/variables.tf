@@ -544,12 +544,12 @@ variable "public_key_service_cdn_serve_while_stale_seconds" {
 
 variable "public_key_service_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
-  type        = string
+  type        = number
 }
 
 variable "public_key_service_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
-  type        = string
+  type        = number
 }
 
 variable "public_key_service_max_execution_time_max" {
@@ -562,18 +562,38 @@ variable "public_key_service_5xx_threshold" {
   type        = number
 }
 
-variable "public_key_service_cloud_run_alert_on_memory_usage_threshold" {
-  description = "Memory usage of the Cloud Function should be higher than this value to alert."
+variable "public_key_service_cloud_run_memory_usage_important_threshold" {
+  description = "Memory usage of the Cloud Run should be higher than this value to create bug."
   type        = number
 }
 
-variable "public_key_service_lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
+variable "public_key_service_cloud_run_memory_usage_urgent_threshold" {
+  description = "Memory usage of the Cloud Run should be higher than this value to page."
+  type        = number
+}
+
+variable "public_key_service_cloud_run_cpu_usage_important_threshold" {
+  description = "CPU usage of the Cloud Run should be higher than this value to create bug."
+  type        = number
+}
+
+variable "public_key_service_cloud_run_cpu_usage_urgent_threshold" {
+  description = "CPU usage of the Cloud Run should be higher than this value to page."
   type        = number
 }
 
 variable "public_key_service_lb_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "public_key_service_lb_max_95_percent_latency_ms" {
+  description = "Public Key Service Load Balancer max 95% latency to send alert. Measured in milliseconds. Example: 5000."
+  type        = number
+}
+
+variable "public_key_service_lb_max_99_percent_latency_ms" {
+  description = "Public Key Service Load Balancer max 99% latency to send alert. Measured in milliseconds. Example: 5000."
   type        = number
 }
 
@@ -681,7 +701,7 @@ variable "public_key_service_cloud_armor_rate_limit_denials_alert_threshold" {
 
 variable "private_key_service_alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
-  type        = string
+  type        = number
 }
 
 variable "private_key_service_cloud_run_max_execution_time_max" {
@@ -694,18 +714,38 @@ variable "private_key_service_cloud_run_5xx_threshold" {
   type        = number
 }
 
-variable "private_key_service_cloud_run_alert_on_memory_usage_threshold" {
-  description = "Memory usage of the Cloud Function should be higher than this value to alert."
+variable "private_key_service_cloud_run_memory_usage_important_threshold" {
+  description = "Memory usage of the Cloud Run should be higher than this value to create bug."
   type        = number
 }
 
-variable "private_key_service_lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
+variable "private_key_service_cloud_run_memory_usage_urgent_threshold" {
+  description = "Memory usage of the Cloud Run should be higher than this value to page."
+  type        = number
+}
+
+variable "private_key_service_cloud_run_cpu_usage_important_threshold" {
+  description = "CPU usage of the Cloud Run should be higher than this value to create bug."
+  type        = number
+}
+
+variable "private_key_service_cloud_run_cpu_usage_urgent_threshold" {
+  description = "CPU usage of the Cloud Run should be higher than this value to page."
   type        = number
 }
 
 variable "private_key_service_lb_5xx_threshold" {
-  description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
+  description = "Private Key Service Load Balancer 5xx error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "private_key_service_lb_max_95_percent_latency_ms" {
+  description = "Private Key Service Load Balancer max 95% latency to send alert. Measured in milliseconds. Example: 5000."
+  type        = number
+}
+
+variable "private_key_service_lb_max_99_percent_latency_ms" {
+  description = "Private Key Service Load Balancer max 99% latency to send alert. Measured in milliseconds. Example: 5000."
   type        = number
 }
 

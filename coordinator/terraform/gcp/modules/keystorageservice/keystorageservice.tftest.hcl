@@ -25,30 +25,30 @@ mock_provider "google" {
 }
 
 variables {
-  project_id                                = "project"
-  environment                               = "environment"
-  region                                    = ""
-  key_storage_domain                        = ""
-  source_container_image_url                = ""
-  key_storage_memory                        = 0
-  min_instances                             = 0
-  max_instances                             = 0
-  execution_environment                     = ""
-  spanner_instance_name                     = ""
-  spanner_database_name                     = ""
-  alarms_enabled                            = false
-  alarm_eval_period_sec                     = ""
-  alarm_duration_sec                        = ""
-  cloud_run_max_execution_time_max          = 0
-  cloud_run_5xx_threshold                   = 0
-  cloud_run_alert_on_memory_usage_threshold = 0
-  lb_max_latency_ms                         = 5
-  lb_5xx_threshold                          = 0
-  lb_5xx_ratio_threshold                    = 0
-  key_storage_severity_map                  = {}
-  populate_migration_key_data               = ""
-  kms_key_base_uri                          = ""
-  migration_kms_key_base_uri                = ""
+  project_id                              = "project"
+  environment                             = "environment"
+  region                                  = ""
+  key_storage_domain                      = ""
+  source_container_image_url              = ""
+  key_storage_memory                      = 0
+  min_instances                           = 0
+  max_instances                           = 0
+  execution_environment                   = ""
+  spanner_instance_name                   = ""
+  spanner_database_name                   = ""
+  alarms_enabled                          = false
+  alarm_eval_period_sec                   = 300
+  alarm_duration_sec                      = 60
+  cloud_run_max_execution_time_max        = 0
+  cloud_run_5xx_threshold                 = 0
+  load_balancer_5xx_threshold             = 0
+  load_balancer_max_95_percent_latency_ms = 50
+  load_balancer_max_99_percent_latency_ms = 100
+  lb_5xx_ratio_threshold                  = 0
+  key_storage_severity_map                = {}
+  populate_migration_key_data             = ""
+  kms_key_base_uri                        = ""
+  migration_kms_key_base_uri              = ""
 
   load_balancer_allowed_paths = ["/*"]
 

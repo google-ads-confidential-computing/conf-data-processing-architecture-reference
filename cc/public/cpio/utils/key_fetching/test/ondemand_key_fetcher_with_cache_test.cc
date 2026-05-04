@@ -542,7 +542,8 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
       async_executor_, mock_key_client_, mock_metric_client_,
       CreateKeyServiceOptions(),
       KeyFetcherOptions{.prefetch_keys = true,
-                        .prefetch_keys_max_age = max_age_seconds});
+                        .prefetch_keys_max_age = max_age_seconds,
+                        .enable_active_keys_api_for_encryption_keys = false});
 
   auto key_create_ts =
       duration_cast<nanoseconds>((system_clock::now()).time_since_epoch());
@@ -593,7 +594,8 @@ TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchListingKeysFailsNoRetry) {
       KeyFetcherOptions{.prefetch_keys = true,
                         .prefetch_retry = false,
                         .max_prefetch_wait_time_millis = 1,
-                        .prefetch_keys_max_age = max_age_seconds});
+                        .prefetch_keys_max_age = max_age_seconds,
+                        .enable_active_keys_api_for_encryption_keys = false});
 
   request_.set_max_age_seconds(max_age_seconds.count());
   EXPECT_CALL(mock_key_client_, ListPrivateKeysSync)
@@ -630,7 +632,8 @@ TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchListingKeysFailsWithRetry) {
       KeyFetcherOptions{.prefetch_keys = true,
                         .prefetch_retry = true,
                         .max_prefetch_wait_time_millis = 1,
-                        .prefetch_keys_max_age = max_age_seconds});
+                        .prefetch_keys_max_age = max_age_seconds,
+                        .enable_active_keys_api_for_encryption_keys = false});
 
   request_.set_max_age_seconds(max_age_seconds.count());
   EXPECT_CALL(mock_key_client_, ListPrivateKeysSync)

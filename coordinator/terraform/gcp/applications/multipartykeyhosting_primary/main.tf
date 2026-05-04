@@ -312,22 +312,27 @@ module "public_key_service" {
   cdn_serve_while_stale_seconds = var.public_key_service_cdn_serve_while_stale_seconds
 
   # Alert
-  alarms_enabled                = var.alarms_enabled
-  alarm_eval_period_sec         = var.public_key_service_alarm_eval_period_sec
-  alarm_duration_sec            = var.public_key_service_alarm_duration_sec
-  alert_severity_overrides      = var.alert_severity_overrides
-  empty_key_set_error_threshold = var.public_key_service_empty_key_set_error_threshold
-  general_error_threshold       = var.public_key_service_general_error_threshold
-  lb_max_latency_ms             = var.public_key_service_lb_max_latency_ms
-  lb_5xx_threshold              = var.public_key_service_lb_5xx_threshold
+  alarms_enabled                          = var.alarms_enabled
+  alarm_eval_period_sec                   = var.public_key_service_alarm_eval_period_sec
+  alarm_duration_sec                      = var.public_key_service_alarm_duration_sec
+  alert_severity_overrides                = var.alert_severity_overrides
+  empty_key_set_error_threshold           = var.public_key_service_empty_key_set_error_threshold
+  general_error_threshold                 = var.public_key_service_general_error_threshold
+  load_balancer_5xx_threshold             = var.public_key_service_lb_5xx_threshold
+  load_balancer_max_95_percent_latency_ms = var.public_key_service_lb_max_95_percent_latency_ms
+  load_balancer_max_99_percent_latency_ms = var.public_key_service_lb_max_99_percent_latency_ms
 
-  cloud_run_5xx_threshold                   = var.public_key_service_5xx_threshold
-  cloud_run_max_execution_time_max          = var.public_key_service_max_execution_time_max
-  cloud_run_alert_on_memory_usage_threshold = var.public_key_service_cloud_run_alert_on_memory_usage_threshold
+  cloud_run_5xx_threshold                             = var.public_key_service_5xx_threshold
+  cloud_run_max_execution_time_max                    = var.public_key_service_max_execution_time_max
+  cloud_run_alert_on_memory_usage_important_threshold = var.public_key_service_cloud_run_memory_usage_important_threshold
+  cloud_run_alert_on_memory_usage_urgent_threshold    = var.public_key_service_cloud_run_memory_usage_urgent_threshold
+  cloud_run_alert_on_cpu_usage_important_threshold    = var.public_key_service_cloud_run_cpu_usage_important_threshold
+  cloud_run_alert_on_cpu_usage_urgent_threshold       = var.public_key_service_cloud_run_cpu_usage_urgent_threshold
 }
 
 module "private_key_service" {
   source = "../private_key_service"
+
 
   environment    = var.environment
   project_id     = var.project_id
@@ -386,12 +391,16 @@ module "private_key_service" {
   exception_alert_threshold                         = var.private_key_service_exception_alert_threshold
   config_read_alert_threshold                       = var.private_key_service_config_read_alert_threshold
 
-  cloud_run_5xx_threshold                   = var.private_key_service_cloud_run_5xx_threshold
-  cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloud_run_alert_on_memory_usage_threshold
-  cloud_run_max_execution_time_max          = var.private_key_service_cloud_run_max_execution_time_max
+  cloud_run_5xx_threshold                             = var.private_key_service_cloud_run_5xx_threshold
+  cloud_run_alert_on_memory_usage_important_threshold = var.private_key_service_cloud_run_memory_usage_important_threshold
+  cloud_run_alert_on_memory_usage_urgent_threshold    = var.private_key_service_cloud_run_memory_usage_urgent_threshold
+  cloud_run_alert_on_cpu_usage_important_threshold    = var.private_key_service_cloud_run_cpu_usage_important_threshold
+  cloud_run_alert_on_cpu_usage_urgent_threshold       = var.private_key_service_cloud_run_cpu_usage_urgent_threshold
+  cloud_run_max_execution_time_max                    = var.private_key_service_cloud_run_max_execution_time_max
 
-  lb_5xx_threshold  = var.private_key_service_lb_5xx_threshold
-  lb_max_latency_ms = var.private_key_service_lb_max_latency_ms
+  load_balancer_5xx_threshold             = var.private_key_service_lb_5xx_threshold
+  load_balancer_max_95_percent_latency_ms = var.private_key_service_lb_max_95_percent_latency_ms
+  load_balancer_max_99_percent_latency_ms = var.private_key_service_lb_max_99_percent_latency_ms
 }
 
 module "private_key_service_addon" {
@@ -459,12 +468,16 @@ module "private_key_service_addon" {
   exception_alert_threshold                         = var.private_key_service_exception_alert_threshold
   config_read_alert_threshold                       = var.private_key_service_config_read_alert_threshold
 
-  cloud_run_5xx_threshold                   = var.private_key_service_cloud_run_5xx_threshold
-  cloud_run_alert_on_memory_usage_threshold = var.private_key_service_cloud_run_alert_on_memory_usage_threshold
-  cloud_run_max_execution_time_max          = var.private_key_service_cloud_run_max_execution_time_max
+  cloud_run_5xx_threshold                             = var.private_key_service_cloud_run_5xx_threshold
+  cloud_run_alert_on_memory_usage_important_threshold = var.private_key_service_cloud_run_memory_usage_important_threshold
+  cloud_run_alert_on_memory_usage_urgent_threshold    = var.private_key_service_cloud_run_memory_usage_urgent_threshold
+  cloud_run_alert_on_cpu_usage_important_threshold    = var.private_key_service_cloud_run_cpu_usage_important_threshold
+  cloud_run_alert_on_cpu_usage_urgent_threshold       = var.private_key_service_cloud_run_cpu_usage_urgent_threshold
+  cloud_run_max_execution_time_max                    = var.private_key_service_cloud_run_max_execution_time_max
 
-  lb_5xx_threshold  = var.private_key_service_lb_5xx_threshold
-  lb_max_latency_ms = var.private_key_service_lb_max_latency_ms
+  load_balancer_5xx_threshold             = var.private_key_service_lb_5xx_threshold
+  load_balancer_max_95_percent_latency_ms = var.private_key_service_lb_max_95_percent_latency_ms
+  load_balancer_max_99_percent_latency_ms = var.private_key_service_lb_max_99_percent_latency_ms
 }
 
 module "key_migration_tool" {

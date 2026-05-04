@@ -55,13 +55,13 @@ public abstract class KeySetsConfig {
     @JsonProperty("name")
     public abstract String name();
 
-    public abstract Optional<Integer> count();
+    abstract String tinkTemplate();
 
-    public abstract Optional<Integer> validityInDays();
+    public abstract Integer count();
 
-    abstract Optional<Integer> ttlInDays();
+    public abstract Integer validityInDays();
 
-    abstract Optional<String> tinkTemplate();
+    abstract Integer ttlInDays();
 
     abstract Optional<Integer> createMaxDaysAhead();
 
@@ -76,26 +76,17 @@ public abstract class KeySetsConfig {
       @JsonProperty("name")
       abstract Builder name(String name);
 
-      @JsonProperty("count")
-      Builder count(Integer count) {
-        return count(Optional.ofNullable(count));
-      }
+      @JsonProperty("tink_template")
+      abstract Builder tinkTemplate(String tinkTemplate);
 
-      abstract Builder count(Optional<Integer> count);
+      @JsonProperty("count")
+      abstract Builder count(Integer count);
 
       @JsonProperty("validity_in_days")
-      Builder validityInDays(Integer validityInDays) {
-        return validityInDays(Optional.ofNullable(validityInDays));
-      }
-
-      abstract Builder validityInDays(Optional<Integer> validityInDays);
+      abstract Builder validityInDays(Integer validityInDays);
 
       @JsonProperty("ttl_in_days")
-      Builder ttlInDays(Integer ttlInDays) {
-        return ttlInDays(Optional.ofNullable(ttlInDays));
-      }
-
-      abstract Builder ttlInDays(Optional<Integer> ttlInDays);
+      abstract Builder ttlInDays(Integer ttlInDays);
 
       @JsonProperty("create_max_days_ahead")
       Builder createMaxDaysAhead(Integer createMaxDaysAhead) {
@@ -117,13 +108,6 @@ public abstract class KeySetsConfig {
       }
 
       abstract Builder backfillDays(Optional<Integer> backfillDays);
-
-      @JsonProperty("tink_template")
-      Builder tinkTemplate(String tinkTemplate) {
-        return tinkTemplate(Optional.ofNullable(tinkTemplate));
-      }
-
-      abstract Builder tinkTemplate(Optional<String> tinkTemplate);
 
       abstract KeySet build();
 

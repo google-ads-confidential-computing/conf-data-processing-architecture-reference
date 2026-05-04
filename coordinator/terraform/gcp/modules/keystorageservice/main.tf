@@ -85,9 +85,12 @@ module "cloud_run" {
   alarm_duration_sec       = var.alarm_duration_sec
   alert_severity_overrides = var.key_storage_severity_map
 
-  cloud_run_5xx_threshold                   = var.cloud_run_5xx_threshold
-  cloud_run_alert_on_memory_usage_threshold = var.cloud_run_alert_on_memory_usage_threshold
-  cloud_run_max_execution_time_max          = var.cloud_run_max_execution_time_max
+  alert_5xx_threshold                       = var.cloud_run_5xx_threshold
+  alert_on_memory_usage_important_threshold = 0.7
+  alert_on_memory_usage_urgent_threshold    = 1.1 # never page
+  alert_on_cpu_usage_important_threshold    = 0.7
+  alert_on_cpu_usage_urgent_threshold       = 1.1 # never page
+  max_execution_time_max                    = var.cloud_run_max_execution_time_max
 }
 
 locals {
@@ -140,11 +143,12 @@ module "load_balancer" {
   managed_domain = var.key_storage_domain
 
   # Alert settings
-  alarm_eval_period_sec    = var.alarm_eval_period_sec
-  alarm_duration_sec       = var.alarm_duration_sec
-  alert_severity_overrides = var.key_storage_severity_map
-  lb_5xx_threshold         = var.lb_5xx_threshold
-  lb_max_latency_ms        = var.lb_max_latency_ms
+  alarm_eval_period_sec     = var.alarm_eval_period_sec
+  alarm_duration_sec        = var.alarm_duration_sec
+  alert_severity_overrides  = var.key_storage_severity_map
+  alert_5xx_threshold       = var.load_balancer_5xx_threshold
+  max_95_percent_latency_ms = var.load_balancer_max_95_percent_latency_ms
+  max_99_percent_latency_ms = var.load_balancer_max_99_percent_latency_ms
 }
 
 module "service_monitoring_dashboard" {

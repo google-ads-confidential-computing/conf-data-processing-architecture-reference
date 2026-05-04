@@ -99,12 +99,12 @@ variable "alarms_enabled" {
 
 variable "alarm_eval_period_sec" {
   description = "Amount of time (in seconds) for alarm evaluation. Example: '60'."
-  type        = string
+  type        = number
 }
 
 variable "alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
-  type        = string
+  type        = number
 }
 
 variable "cloud_run_max_execution_time_max" {
@@ -117,18 +117,18 @@ variable "cloud_run_5xx_threshold" {
   type        = number
 }
 
-variable "cloud_run_alert_on_memory_usage_threshold" {
-  description = "Memory usage of the Cloud Function should be higher than this value to alert."
-  type        = number
-}
-
-variable "lb_max_latency_ms" {
-  description = "Load Balancer max latency to send alarm. Measured in milliseconds. Example: 5000."
-  type        = number
-}
-
-variable "lb_5xx_threshold" {
+variable "load_balancer_5xx_threshold" {
   description = "Load Balancer 5xx error count greater than this to send alarm. Example: 0."
+  type        = number
+}
+
+variable "load_balancer_max_95_percent_latency_ms" {
+  description = "Load Balancer max 95% latency to send alert. Measured in milliseconds. Example: 5000."
+  type        = number
+}
+
+variable "load_balancer_max_99_percent_latency_ms" {
+  description = "Load Balancer max 99% latency to send alert. Measured in milliseconds. Example: 5000."
   type        = number
 }
 

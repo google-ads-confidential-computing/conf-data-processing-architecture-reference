@@ -55,8 +55,8 @@ public record KeySetConfig(
               keySet.name(),
               new KeySetConfig(
                   keySet.name(),
-                  keySet.count().orElseThrow(),
-                  keySet.validityInDays().orElseThrow(),
+                  keySet.count(),
+                  keySet.validityInDays(),
                   keySet.overlapPeriodDays().orElse(DEFAULT_OVERLAP_PERIOD_DAYS),
                   keySet.backfillDays().orElse(DEFAULT_BACKFILL_DAYS)));
         } catch (NoSuchElementException e) {

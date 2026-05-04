@@ -30,24 +30,6 @@ public final class Annotations {
 
   private Annotations() {}
 
-  /** Number of keys to generate at a time */
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface KeyGenerationKeyCount {}
-
-  /** Number of days keys will be valid */
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface KeyGenerationValidityInDays {}
-
-  /** Time-to-Live after key creation for keys */
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface KeyGenerationTtlInDays {}
-
   /** How many days ahead are we allowed to create a key */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})

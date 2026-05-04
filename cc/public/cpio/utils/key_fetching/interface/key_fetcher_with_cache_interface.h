@@ -39,7 +39,7 @@ struct KeyFetcherOptions {
   std::chrono::seconds fetching_failure_cache_lifetime =
       std::chrono::seconds(5 * 60);
   bool enable_key_fetching_metrics = true;
-  bool enable_active_keys_api_for_encryption_keys = false;
+  bool enable_active_keys_api_for_encryption_keys = true;
 
   std::chrono::seconds auto_refresh_time_duration =
       std::chrono::seconds(24 * 60 * 60);

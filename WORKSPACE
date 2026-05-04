@@ -192,31 +192,9 @@ rules_pkg_dependencies()
 # Download Indirect Dependencies: End
 ################################################################################
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-
-############
-# Go rules #
-############
-# Need to be after grpc_extra_deps to share go_register_toolchains.
-load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies")
-
-go_rules_dependencies()
-
-gazelle_dependencies()
-
 ###################
 # Container rules #
 ###################
-load(
-    "@io_bazel_rules_docker//repositories:repositories.bzl",
-    container_repositories = "repositories",
-)
-
-container_repositories()
-
-load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
-
-container_deps()
 
 load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
 
@@ -248,7 +226,6 @@ scp_base_runtime_image_debian_packages_packages()
 # Download Containers: Begin
 
 ################################################################################
-load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 load("@rules_oci//oci:pull.bzl", "oci_pull")
 
 # Distroless image for running Java.
@@ -266,15 +243,6 @@ oci_pull(
     digest = "sha256:ed5be62a70c5b99708b4ad0fc53bda628d11e46e917f66720fd218cae8fe1568",
     registry = "gcr.io",
     repository = "distroless/java21-debian12",
-)
-
-# Needed for cc/pbs/deploy/pbs_server/build_defs
-container_pull(
-    name = "debian_11",
-    digest = "sha256:16f0c16160de30e40a408a6e940083bc1b409fe2a7db93bb0b04262a6ef73419",
-    registry = "index.docker.io",
-    repository = "amd64/debian",
-    tag = "11",
 )
 
 ################################################################################

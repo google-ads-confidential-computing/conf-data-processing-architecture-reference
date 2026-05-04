@@ -273,19 +273,25 @@ public final class PrivateKeyServiceTest {
         "key_sets": [
           {
             "name": "noOverlap",
+            "tink_template": "test_template1",
             "count": 5,
-            "validity_in_days": 10
+            "validity_in_days": 10,
+            "ttl_in_days": 7
           },
           {
             "name": "overlap",
+            "tink_template": "test_template1",
             "count": 1,
             "validity_in_days": 8,
+            "ttl_in_days": 7,
             "overlap_period_days": 6
           },
           {
             "name": "backfill",
+            "tink_template": "test_template1",
             "count": 5,
             "validity_in_days": 10,
+            "ttl_in_days": 7,
             "backfill_days": 3
           }
         ]

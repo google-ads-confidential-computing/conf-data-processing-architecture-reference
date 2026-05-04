@@ -20,7 +20,6 @@ import static com.google.scp.shared.util.KeysetHandleSerializerUtil.toJsonCleart
 import static java.time.temporal.ChronoUnit.DAYS;
 
 import com.google.crypto.tink.KeysetHandle;
-import com.google.crypto.tink.PublicKeySign;
 import com.google.crypto.tink.PublicKeyVerify;
 import com.google.crypto.tink.hybrid.HybridConfig;
 import com.google.crypto.tink.signature.EcdsaSignKeyManager;
@@ -42,14 +41,12 @@ public final class FakeEncryptionKey {
   private FakeEncryptionKey() {}
 
   private static final String SET_NAME = "test-set-name";
-  private static final PublicKeySign PUBLIC_KEY_SIGN;
   public static final PublicKeyVerify PUBLIC_KEY_VERIFY;
 
   static {
     try {
       SignatureConfig.register();
       KeysetHandle signatureKey = KeysetHandle.generateNew(EcdsaSignKeyManager.ecdsaP256Template());
-      PUBLIC_KEY_SIGN = signatureKey.getPrimitive(PublicKeySign.class);
       PUBLIC_KEY_VERIFY = signatureKey.getPublicKeysetHandle().getPrimitive(PublicKeyVerify.class);
     } catch (GeneralSecurityException e) {
       throw new RuntimeException("Error initializing Fake Key Storage Client signature keys.");

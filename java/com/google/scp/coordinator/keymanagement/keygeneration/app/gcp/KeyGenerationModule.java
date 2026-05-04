@@ -17,13 +17,10 @@
 package com.google.scp.coordinator.keymanagement.keygeneration.app.gcp;
 
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.CREATE_MAX_DAYS_AHEAD;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEYS_VALIDITY_IN_DAYS;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_DB_NAME;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_ID_TYPE;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_STORAGE_SERVICE_BASE_URL;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_TTL_IN_DAYS;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_BASE_URI;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.NUMBER_OF_KEYS_TO_CREATE;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_SERVICE_ACCOUNT;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_WIP_PROVIDER;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.POPULATE_MIGRATION_KEY_DATA;
@@ -37,9 +34,6 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.clients.configclient.gcp.GcpCoordinatorClientConfigModule;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationCreateMaxDaysAhead;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationKeyCount;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationTtlInDays;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationValidityInDays;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyIdTypeName;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceBaseUrl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KmsKeyBaseUri;
@@ -93,39 +87,6 @@ public final class KeyGenerationModule extends AbstractModule {
   @SubscriptionId
   String provideSubscriptionId(ParameterClient parameterClient) throws ParameterClientException {
     return parameterClient.getParameter(SUBSCRIPTION_ID).orElse(args.getSubscriptionId());
-  }
-
-  @Provides
-  @Singleton
-  @KeyGenerationKeyCount
-  Integer provideKeyGenerationKeyCount(ParameterClient parameterClient)
-      throws ParameterClientException {
-    return parameterClient
-        .getParameter(NUMBER_OF_KEYS_TO_CREATE)
-        .map(Integer::valueOf)
-        .orElseGet(args::getNumberOfKeysToCreate);
-  }
-
-  @Provides
-  @Singleton
-  @KeyGenerationValidityInDays
-  Integer provideKeyGenerationValidityInDays(ParameterClient parameterClient)
-      throws ParameterClientException {
-    return parameterClient
-        .getParameter(KEYS_VALIDITY_IN_DAYS)
-        .map(Integer::valueOf)
-        .orElseGet(args::getKeysValidityInDays);
-  }
-
-  @Provides
-  @Singleton
-  @KeyGenerationTtlInDays
-  Integer provideKeyGenerationTtlInDays(ParameterClient parameterClient)
-      throws ParameterClientException {
-    return parameterClient
-        .getParameter(KEY_TTL_IN_DAYS)
-        .map(Integer::valueOf)
-        .orElseGet(args::getTtlInDays);
   }
 
   @Provides

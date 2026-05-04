@@ -34,8 +34,10 @@ public class KeyGenerationParameterTestModule extends AbstractModule {
         "key_sets": [
           {
             "name": "test-set",
+            "tink_template": "DHKEM_X25519_HKDF_SHA256_HKDF_SHA256_CHACHA20_POLY1305_RAW",
             "count": 3,
-            "validity_in_days": 20
+            "validity_in_days": 20,
+            "ttl_in_days": 50
           }
         ]
       }

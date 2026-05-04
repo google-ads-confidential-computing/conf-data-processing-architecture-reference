@@ -31,10 +31,6 @@ import com.google.inject.BindingAnnotation;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationCreateMaxDaysAhead;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationKeyCount;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationTtlInDays;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationValidityInDays;
-import com.google.scp.shared.util.KeyParams;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;
@@ -50,27 +46,15 @@ public final class KeySetManager {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final Supplier<Optional<KeySetsConfig>> configFetcher;
-  private final int defaultCount;
-  private final int defaultValidityInDays;
-  private final int defaultTtlInDays;
   private final int defaultCreateMaxDaysAhead;
-  private final String defaultTemplate;
   private final Duration configCacheDuration;
 
   @Inject
   KeySetManager(
       @KeySetsJson Provider<Optional<String>> configProvider,
-      @KeyGenerationKeyCount Integer count,
-      @KeyGenerationValidityInDays Integer validityInDays,
-      @KeyGenerationTtlInDays Integer ttlInDays,
       @KeyGenerationCreateMaxDaysAhead Integer createMaxDaysAhead,
       ConfigCacheDuration configCacheDuration) {
-    // TODO: b/437179750 - remove use of default values for required parameters
-    defaultCount = count;
-    defaultValidityInDays = validityInDays;
-    defaultTtlInDays = ttlInDays;
     defaultCreateMaxDaysAhead = createMaxDaysAhead;
-    defaultTemplate = KeyParams.DEFAULT_TINK_TEMPLATE;
     this.configCacheDuration = configCacheDuration.value;
     configFetcher = createFetcher(configProvider);
   }
@@ -86,10 +70,10 @@ public final class KeySetManager {
             keySet ->
                 new KeySetConfig(
                     keySet.name(),
-                    keySet.tinkTemplate().orElse(defaultTemplate),
-                    keySet.count().orElse(defaultCount),
-                    keySet.validityInDays().orElse(defaultValidityInDays),
-                    keySet.ttlInDays().orElse(defaultTtlInDays),
+                    keySet.tinkTemplate(),
+                    keySet.count(),
+                    keySet.validityInDays(),
+                    keySet.ttlInDays(),
                     keySet.createMaxDaysAhead().orElse(defaultCreateMaxDaysAhead),
                     keySet.overlapPeriodDays().orElse(DEFAULT_OVERLAP_PERIOD_DAYS),
                     keySet.backfillDays().orElse(DEFAULT_BACKFILL_DAYS)))

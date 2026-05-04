@@ -53,13 +53,17 @@ public class KeysetConfigCacheTest {
         "key_sets": [
           {
             "name": "setName1",
+            "tink_template": "test_template1",
             "count": 5,
-            "validity_in_days": 10
+            "validity_in_days": 10,
+            "ttl_in_days": 7
           },
           {
             "name": "test-set-2",
+            "tink_template": "test_template1",
             "count": 3,
-            "validity_in_days": 20
+            "validity_in_days": 20,
+            "ttl_in_days": 7
           }
         ]
       }

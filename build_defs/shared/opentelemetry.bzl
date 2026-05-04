@@ -16,10 +16,6 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-# Note: these rules add a dependency on the golang toolchain and must be ordered
-# after any `go_register_toolchains` calls in this file (or else the toolchain
-# defined in io_bazel_rules_docker are used for future go toolchains)
-
 def opentelemetry_cpp():
     maybe(
         http_archive,

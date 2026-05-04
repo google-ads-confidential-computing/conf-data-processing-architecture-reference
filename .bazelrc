@@ -40,8 +40,5 @@ test --test_output=all
 # It creates a dedicated empty /tmp for each Linux sandbox
 test --incompatible_sandbox_hermetic_tmp=true
 
-# TODO (b/448434654): Needed for build to work with bazel 7+
-common --@io_bazel_rules_docker//transitions:enable=false
-
 # Default to using WORKSPACE
 common --enable_bzlmod=false

@@ -74,10 +74,5 @@ public final class Annotations {
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface KeyIdTypeName {}
-
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
   public @interface PopulateMigrationKeyData {}
 }

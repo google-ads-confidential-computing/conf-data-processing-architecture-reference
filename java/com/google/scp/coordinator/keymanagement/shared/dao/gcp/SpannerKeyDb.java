@@ -20,7 +20,6 @@ import static com.google.cloud.Timestamp.ofTimeSecondsAndNanos;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.DATASTORE_ERROR;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.MISSING_KEY;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.UNSUPPORTED_OPERATION;
 import static com.google.scp.shared.api.model.Code.ALREADY_EXISTS;
 import static com.google.scp.shared.api.model.Code.INTERNAL;
 import static com.google.scp.shared.api.model.Code.NOT_FOUND;
@@ -178,12 +177,6 @@ public final class SpannerKeyDb implements KeyDb {
   }
 
   @Override
-  public ImmutableList<EncryptionKey> getAllKeys() throws ServiceException {
-    throw new ServiceException(
-        NOT_FOUND, UNSUPPORTED_OPERATION.name(), "Unsupported operation in Spanner");
-  }
-
-  @Override
   public ImmutableList<EncryptionKey> listAllKeysForSetName(String setName)
       throws ServiceException {
     Statement statement =
@@ -233,13 +226,6 @@ public final class SpannerKeyDb implements KeyDb {
         ImmutableList.of(key).stream()
             .map(a -> toMutation(a, overwrite))
             .collect(toImmutableList());
-    writeTransaction(mutations);
-  }
-
-  @Override
-  public void createKeys(ImmutableList<EncryptionKey> keys) throws ServiceException {
-    List<Mutation> mutations =
-        keys.stream().map(a -> toMutation(a, true)).collect(toImmutableList());
     writeTransaction(mutations);
   }
 

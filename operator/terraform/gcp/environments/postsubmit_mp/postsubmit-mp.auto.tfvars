@@ -163,7 +163,7 @@ instance_disk_image_family = {
   image_family  = "confidential-space"
 }
 # Needs to be a stable image for proper coordinator attestation
-instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-251000"
+instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-260300"
 
 vpcsc_compatible = true
 

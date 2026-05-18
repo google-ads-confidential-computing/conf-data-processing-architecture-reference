@@ -153,10 +153,6 @@ public final class FakeEncryptionKey {
         .build();
   }
 
-  public static EncryptionKey withKeyId(String setName, String keyId) {
-    return createEncryptionKeyBuilder(setName).setKeyId(keyId).build();
-  }
-
   private static EncryptionKey.Builder setPublicKeys(EncryptionKey.Builder encryptionKey) {
     try {
       KeysetHandle key = KeysetHandle.generateNew(KeyParams.getDefaultKeyTemplate());

@@ -22,12 +22,6 @@ public final class KeyHostingUtil {
   private KeyHostingUtil() {}
 
   /**
-   * Cache-Control header key as defined in
-   * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
-   */
-  public static final String CACHE_CONTROL_HEADER_NAME = "Cache-Control";
-
-  /**
    * Cache-Control max-age directive prefix as defined in
    * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
    */

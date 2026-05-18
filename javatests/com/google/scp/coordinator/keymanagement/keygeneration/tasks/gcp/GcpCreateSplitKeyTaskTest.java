@@ -28,8 +28,6 @@ import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annot
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.MigrationKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBase;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.SplitKeyGenerationTestEnv;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.UuidKeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.KmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerCoordinatorKeyEncryptionKeyBaseUri;
@@ -90,8 +88,6 @@ public final class GcpCreateSplitKeyTaskTest extends GcpCreateSplitKeyTaskTestBa
       bind(String.class)
           .annotatedWith(KeyEncryptionKeyBaseUri.class)
           .toInstance("fake-kms://$setName$-fake-id-a");
-      bind(KeyIdFactory.class).toInstance(new UuidKeyIdFactory());
-      // bind( new TypeLiteral<Provider<Boolean>>() {})
       bind(Boolean.class).annotatedWith(PopulateMigrationKeyData.class).toInstance(false);
     }
   }

@@ -70,9 +70,6 @@ public interface KeyDb {
   ImmutableList<EncryptionKey> getActiveKeys(
       String setName, int keyLimit, Instant start, Instant end) throws ServiceException;
 
-  /** Returns all keys in the database without explicit ordering */
-  ImmutableList<EncryptionKey> getAllKeys() throws ServiceException;
-
   /** Returns all keys for a given setName in the database */
   ImmutableList<EncryptionKey> listAllKeysForSetName(String setName) throws ServiceException;
 
@@ -87,9 +84,6 @@ public interface KeyDb {
   default void createKey(EncryptionKey key) throws ServiceException {
     createKey(key, true);
   }
-
-  /** Create given keys. */
-  void createKeys(ImmutableList<EncryptionKey> keys) throws ServiceException;
 
   /** Create key with overwrite option */
   void createKey(EncryptionKey key, boolean overwrite) throws ServiceException;

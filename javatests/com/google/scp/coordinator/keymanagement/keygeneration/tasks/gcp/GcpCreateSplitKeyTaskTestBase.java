@@ -206,7 +206,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
 
     var justAfterCreateTime = now().toEpochMilli();
 
-    ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
+    ImmutableList<EncryptionKey> keys = keyDb.listAllKeysForSetName(setName);
     assertThat(keys).hasSize(keysToCreate);
 
     String keyEncryptionKeyUri = keyEncryptionKeyBaseUri.replace("$setName$", setName);
@@ -284,7 +284,7 @@ public abstract class GcpCreateSplitKeyTaskTestBase extends CreateSplitKeyTaskBa
 
     assertThat(ex).hasCauseThat().isInstanceOf(GeneralSecurityException.class);
     assertThat(ex.getErrorCode()).isEqualTo(Code.INTERNAL);
-    ImmutableList<EncryptionKey> keys = keyDb.getAllKeys();
+    ImmutableList<EncryptionKey> keys = keyDb.listAllKeysForSetName(SET_NAME);
     assertThat(keys).isEmpty();
   }
 

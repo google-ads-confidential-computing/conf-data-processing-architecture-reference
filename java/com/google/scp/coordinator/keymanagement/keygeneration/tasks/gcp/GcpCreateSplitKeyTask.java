@@ -28,7 +28,6 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStor
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.KeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.Annotations.MigrationKeyEncryptionKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.CreateSplitKeyTaskBase;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.KmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationKmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.Annotations.MigrationPeerCoordinatorKeyEncryptionKeyBaseUri;
@@ -82,11 +81,10 @@ public final class GcpCreateSplitKeyTask extends CreateSplitKeyTaskBase {
       @PeerKmsAeadClient KmsClient peerKmsClient,
       @MigrationPeerKmsAeadClient KmsClient migrationPeerKmsClient,
       @PopulateMigrationKeyData Provider<Boolean> populateMigrationDataProvider,
-      KeyIdFactory keyIdFactory,
       KeyDb keyDb,
       KeyStorageClient keyStorageClient,
       LogMetricHelper logMetricHelper) {
-    super(keyDb, keyStorageClient, keyIdFactory, logMetricHelper);
+    super(keyDb, keyStorageClient, logMetricHelper);
     this.logMetricHelper = logMetricHelper;
     this.keyEncryptionKeyBaseUri = keyEncryptionKeyBaseUri;
     this.migrationKeyEncryptionKeyBaseUri = migrationKeyEncryptionKeyBaseUri;

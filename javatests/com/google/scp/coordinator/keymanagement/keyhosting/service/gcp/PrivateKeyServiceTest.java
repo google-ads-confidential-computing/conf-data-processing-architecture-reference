@@ -90,7 +90,9 @@ public final class PrivateKeyServiceTest {
 
   @Before
   public void setUp() throws Exception {
-    keyDb.createKeys(TEST_KEYS);
+    for (var key : TEST_KEYS) {
+      keyDb.createKey(key);
+    }
     // Sleeping for 2s due to the read staleness configured below.
     Thread.sleep(2000);
   }

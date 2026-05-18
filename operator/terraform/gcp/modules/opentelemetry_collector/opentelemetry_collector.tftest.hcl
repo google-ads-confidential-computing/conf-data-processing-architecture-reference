@@ -123,7 +123,7 @@ run "creates_server_replace_trigger" {
 
   assert {
     condition = null_resource.server_instance_replace_trigger.triggers == tomap({
-      replace = sha256("script")
+      replace = join(".", [sha256("script"), "google_service_account_email"])
     })
     error_message = "Wrong trigger"
   }

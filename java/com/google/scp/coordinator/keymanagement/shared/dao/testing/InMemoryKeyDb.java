@@ -70,17 +70,6 @@ public final class InMemoryKeyDb implements KeyDb {
     return key;
   }
 
-  @Override
-  public void createKeys(ImmutableList<EncryptionKey> keys) throws ServiceException {
-    if (serviceException != null) {
-      throw serviceException;
-    }
-    // saves as many keys as possible.
-    for (int i = 0; i < keys.size(); i++) {
-      createKey(keys.get(i));
-    }
-  }
-
   /** Create key with overwrite option */
   @Override
   public void createKey(EncryptionKey key, boolean overwrite) throws ServiceException {
@@ -155,8 +144,7 @@ public final class InMemoryKeyDb implements KeyDb {
     keys.clear();
   }
 
-  @Override
-  public ImmutableList<EncryptionKey> getAllKeys() throws ServiceException {
+  private ImmutableList<EncryptionKey> getAllKeys() throws ServiceException {
     if (serviceException != null) {
       throw serviceException;
     }

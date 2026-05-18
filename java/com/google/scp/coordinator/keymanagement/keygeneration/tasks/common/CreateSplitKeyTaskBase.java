@@ -33,7 +33,6 @@ import com.google.crypto.tink.hybrid.HybridConfig;
 import com.google.crypto.tink.mac.MacConfig;
 import com.google.protobuf.ByteString;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.KeyStorageClient;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
 import com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDb;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
 import com.google.scp.coordinator.protos.keymanagement.shared.api.v1.EncryptionKeyTypeProto.EncryptionKeyType;
@@ -51,6 +50,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +65,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
   protected final KeyDb keyDb;
   protected final KeyStorageClient keyStorageClient;
-  protected final KeyIdFactory keyIdFactory;
   protected final LogMetricHelper logMetricHelper;
 
   static {
@@ -78,13 +77,9 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
   }
 
   protected CreateSplitKeyTaskBase(
-      KeyDb keyDb,
-      KeyStorageClient keyStorageClient,
-      KeyIdFactory keyIdFactory,
-      LogMetricHelper logMetricHelper) {
+      KeyDb keyDb, KeyStorageClient keyStorageClient, LogMetricHelper logMetricHelper) {
     this.keyDb = keyDb;
     this.keyStorageClient = keyStorageClient;
-    this.keyIdFactory = keyIdFactory;
     this.logMetricHelper = logMetricHelper;
   }
 
@@ -324,7 +319,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       EncryptionKey key =
           buildEncryptionKey(
               setName,
-              keyIdFactory.getNextKeyId(keyDb),
               creationTime,
               activation,
               validityInDays,
@@ -511,7 +505,6 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
    */
   private static EncryptionKey buildEncryptionKey(
       String setName,
-      String keyId,
       Instant creationTime,
       Instant activation,
       int validityInDays,
@@ -524,7 +517,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     // LINT.IfChange
     EncryptionKey.Builder unsignedEncryptionKey =
         EncryptionKey.newBuilder()
-            .setKeyId(keyId)
+            .setKeyId(UUID.randomUUID().toString())
             .setSetName(setName)
             .setStatus(EncryptionKeyStatus.ACTIVE)
             .setCreationTime(creationTime.toEpochMilli())

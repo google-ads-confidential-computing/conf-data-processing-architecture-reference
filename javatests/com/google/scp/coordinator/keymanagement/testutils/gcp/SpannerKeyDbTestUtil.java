@@ -42,10 +42,13 @@ public class SpannerKeyDbTestUtil {
   /** Puts itemCount-number of Key items with random values to spannerDb */
   public static void putNItemsRandomValues(SpannerKeyDb spannerKeyDb, String setName, int itemCount)
       throws ServiceException {
-    spannerKeyDb.createKeys(
+    var keys =
         IntStream.range(0, itemCount)
             .mapToObj(unused -> FakeEncryptionKey.createEncryptionKey(setName))
-            .collect(ImmutableList.toImmutableList()));
+            .collect(ImmutableList.toImmutableList());
+    for (var key : keys) {
+      spannerKeyDb.createKey(key);
+    }
   }
 
   /** Inserts the provided key into the provided SpannerKeyDb. */

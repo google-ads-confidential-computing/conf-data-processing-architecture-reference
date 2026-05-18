@@ -158,7 +158,7 @@ public class InMemoryKeyDbTest extends KeyDbBaseTest {
     IntStream.range(0, 10).forEach(unused -> createRandomKey(keyDb));
 
     assertThat(keyDb.getActiveKeys(SET_NAME, 5).size()).isEqualTo(5);
-    assertThat(keyDb.getAllKeys().size()).isEqualTo(10);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME).size()).isEqualTo(10);
   }
 
   private void createRandomKey(InMemoryKeyDb keyDb) {

@@ -22,7 +22,12 @@ locals {
 
 resource "null_resource" "server_instance_replace_trigger" {
   triggers = {
-    replace = local.startup_script_hash
+    replace = join(
+      ".",
+      [
+        local.startup_script_hash,
+        local.collector_service_account_email
+    ])
   }
 }
 
@@ -46,7 +51,7 @@ resource "null_resource" "collector_template_mig_replace_trigger" {
 resource "google_service_account" "collector_service_account" {
   count = var.user_provided_collector_sa_email == "" ? 1 : 0
   # Service account id has a 30 character limit
-  account_id   = "${var.environment}-otel-collector"
+  account_id   = "${var.environment}-otel-sa"
   display_name = "OpenTelemetry Collector Service Account"
 }
 

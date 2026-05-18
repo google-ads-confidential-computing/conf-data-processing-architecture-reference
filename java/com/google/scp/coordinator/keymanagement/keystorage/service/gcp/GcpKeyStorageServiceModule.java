@@ -28,7 +28,6 @@ import com.google.crypto.tink.KmsClient;
 import com.google.crypto.tink.aead.AeadConfig;
 import com.google.crypto.tink.integration.gcpkms.GcpKmsClient;
 import com.google.inject.AbstractModule;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKekUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKeyAead;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyEncryptionKeyBaseUri;
@@ -96,8 +95,6 @@ public class GcpKeyStorageServiceModule extends AbstractModule {
         .annotatedWith(PopulateMigrationKeyData.class)
         .toInstance(getPopulateMigrationKeyData());
 
-    // TODO: refactor so that GCP does not need these. Placeholder values since they are not used
-    bind(String.class).annotatedWith(CoordinatorKekUri.class).toInstance("");
     try {
       bind(KmsClient.class).annotatedWith(KmsAeadClient.class).toInstance(getKmsAeadClient());
       bind(KmsClient.class)

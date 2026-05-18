@@ -18,7 +18,6 @@ package com.google.scp.coordinator.keymanagement.keygeneration.app.gcp;
 
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.CREATE_MAX_DAYS_AHEAD;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_DB_NAME;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_ID_TYPE;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KEY_STORAGE_SERVICE_BASE_URL;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.KMS_KEY_BASE_URI;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_SERVICE_ACCOUNT;
@@ -34,7 +33,6 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.coordinator.clients.configclient.gcp.GcpCoordinatorClientConfigModule;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyGenerationCreateMaxDaysAhead;
-import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyIdTypeName;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KeyStorageServiceBaseUrl;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.KmsKeyBaseUri;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.common.Annotations.PeerCoordinatorKmsKeyBaseUriArg;
@@ -46,8 +44,6 @@ import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.A
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.CreateSplitKeysPubSubListener;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubListener;
 import com.google.scp.coordinator.keymanagement.keygeneration.app.gcp.listener.PubSubListenerConfig;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdFactory;
-import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyid.KeyIdType;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.common.keyset.KeySetManager.KeySetsJson;
 import com.google.scp.coordinator.keymanagement.keygeneration.tasks.gcp.GcpSplitKeyGenerationTasksModule;
 import com.google.scp.coordinator.keymanagement.shared.dao.gcp.SpannerKeyDbConfig;
@@ -61,7 +57,6 @@ import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectId;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectIdOverride;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpZoneOverride;
 import com.google.scp.shared.clients.configclient.gcp.GcpParameterModule;
-import com.google.scp.shared.clients.configclient.model.ErrorReason;
 import java.io.IOException;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -175,25 +170,6 @@ public final class KeyGenerationModule extends AbstractModule {
     return parameterClient
         .getParameter(KEY_STORAGE_SERVICE_BASE_URL)
         .orElse(args.getKeyStorageServiceBaseUrl());
-  }
-
-  @Provides
-  @KeyIdTypeName
-  Optional<String> provideKeyIdTypeProvider(ParameterClient paramClient)
-      throws ParameterClientException {
-    return paramClient.getParameter(KEY_ID_TYPE).or(args::getKeyIdType);
-  }
-
-  @Provides
-  @Singleton
-  KeyIdFactory provideKeyIdFactoryProvider(@KeyIdTypeName Optional<String> keyIdType)
-      throws ParameterClientException {
-    return KeyIdType.fromString(keyIdType)
-        .orElseThrow(
-            () ->
-                new ParameterClientException(
-                    "Key ID Type %s not found", ErrorReason.MISSING_REQUIRED_PARAMETER))
-        .getKeyIdFactory();
   }
 
   @Provides

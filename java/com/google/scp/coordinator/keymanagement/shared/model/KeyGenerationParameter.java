@@ -38,6 +38,4 @@ public final class KeyGenerationParameter {
   public static final String PEER_COORDINATOR_WIP_PROVIDER = "PEER_COORDINATOR_WIP_PROVIDER";
 
   public static final String PEER_COORDINATOR_SERVICE_ACCOUNT = "PEER_COORDINATOR_SERVICE_ACCOUNT";
-
-  public static final String KEY_ID_TYPE = "KEY_ID_TYPE";
 }

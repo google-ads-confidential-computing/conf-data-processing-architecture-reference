@@ -96,7 +96,9 @@ public class GetActiveEncryptionKeysTaskTest extends ApiTaskTestBase {
 
   @Before
   public void setUp() throws Exception {
-    keyDb.createKeys(TEST_KEYS);
+    for (var key : TEST_KEYS) {
+      keyDb.createKey(key);
+    }
     super.task = spy(this.task);
     spyKeyDb = spy(keyDb);
   }

@@ -18,7 +18,6 @@ package com.google.scp.coordinator.keymanagement.shared.dao.gcp;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.coordinator.keymanagement.shared.dao.common.KeyDbUtil.getActiveKeysComparator;
-import static com.google.scp.coordinator.keymanagement.shared.model.KeyManagementErrorReason.UNSUPPORTED_OPERATION;
 import static com.google.scp.coordinator.keymanagement.testutils.FakeEncryptionKey.withAllTimesSet;
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.SPANNER_KEY_TABLE_NAME;
 import static com.google.scp.coordinator.keymanagement.testutils.gcp.SpannerKeyDbTestUtil.putItem;
@@ -162,29 +161,6 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
     } catch (ServiceException e) {
       assertThat(e.getErrorCode()).isEqualTo(ALREADY_EXISTS);
     }
-  }
-
-  @Test
-  public void createKeys_success() throws ServiceException {
-    String keyId = "1";
-    EncryptionKey key =
-        EncryptionKey.newBuilder()
-            .setKeyId(keyId)
-            .setPublicKey("publicKey1")
-            .setPublicKeyMaterial("material1")
-            .setJsonEncodedKeyset("PrivateKey1")
-            .setKeyEncryptionKeyUri("URI")
-            .setExpirationTime(Instant.now().plus(Duration.ofSeconds(2000)).toEpochMilli())
-            .setTtlTime(Instant.now().plus(Duration.ofDays(365)).getEpochSecond())
-            .setActivationTime(Instant.now().plus(Duration.ofSeconds(1000)).toEpochMilli())
-            .build();
-
-    keyDb.createKeys(ImmutableList.of(key));
-    EncryptionKey dbKey = keyDb.getKey(keyId);
-
-    assertThat(dbKey.getKeyId()).isEqualTo(keyId);
-    assertThat(dbKey.getPublicKey()).isEqualTo(key.getPublicKey());
-    assertThat(dbKey.getJsonEncodedKeyset()).isEqualTo(key.getJsonEncodedKeyset());
   }
 
   @Test
@@ -389,14 +365,6 @@ public final class SpannerKeyDbTest extends KeyDbBaseTest {
     putKeyWithActivationAndExpirationTimes(
         keyDb, SET_NAME, Instant.now(), Instant.now().plus(Duration.ofHours(1)));
     awaitAndAssertActiveKeyCount(keyDb, 1);
-  }
-
-  @Test
-  public void getAllKeys_throwsServiceError() {
-    ServiceException exception = assertThrows(ServiceException.class, () -> keyDb.getAllKeys());
-
-    assertThat(exception.getErrorCode()).isEqualTo(Code.NOT_FOUND);
-    assertThat(exception.getErrorReason()).isEqualTo(UNSUPPORTED_OPERATION.name());
   }
 
   @Test

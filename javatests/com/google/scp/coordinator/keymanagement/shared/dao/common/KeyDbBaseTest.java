@@ -84,7 +84,7 @@ public abstract class KeyDbBaseTest {
   @Test
   public void getActiveKeysWithPublicKey_doesNotReturnNonAsymmetricKeys() throws Exception {
     // Given
-    EncryptionKey asymmetricKey = FakeEncryptionKey.createEncryptionKey(SET_NAME);
+    EncryptionKey asymmetricKey1 = FakeEncryptionKey.createEncryptionKey(SET_NAME);
     EncryptionKey asymmetricKey2 = FakeEncryptionKey.createEncryptionKey(SET_NAME);
     EncryptionKey nonAsymmetricKey1 =
         FakeEncryptionKey.createEncryptionKey(SET_NAME).toBuilder()
@@ -96,8 +96,10 @@ public abstract class KeyDbBaseTest {
             .clearPublicKey()
             .clearPublicKeyMaterial()
             .build();
-    db.createKeys(
-        ImmutableList.of(asymmetricKey, asymmetricKey2, nonAsymmetricKey1, nonAsymmetricKey2));
+    db.createKey(asymmetricKey1);
+    db.createKey(asymmetricKey2);
+    db.createKey(nonAsymmetricKey1);
+    db.createKey(nonAsymmetricKey2);
 
     // When
     ImmutableList<EncryptionKey> keys = db.getActiveKeysWithPublicKey(SET_NAME, 100);
@@ -105,7 +107,7 @@ public abstract class KeyDbBaseTest {
     // Then
     ImmutableList<String> ids =
         keys.stream().map(EncryptionKey::getKeyId).collect(toImmutableList());
-    assertThat(ids).containsAtLeast(asymmetricKey.getKeyId(), asymmetricKey2.getKeyId());
+    assertThat(ids).containsAtLeast(asymmetricKey1.getKeyId(), asymmetricKey2.getKeyId());
     assertThat(ids).containsNoneOf(nonAsymmetricKey1.getKeyId(), nonAsymmetricKey2.getKeyId());
   }
 

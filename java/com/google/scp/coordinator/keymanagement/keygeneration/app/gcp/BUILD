@@ -27,7 +27,6 @@ java_library(
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/common",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/app/gcp/listener",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common",
-        "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common/keyid",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/common/keyset",
         "//java/com/google/scp/coordinator/keymanagement/keygeneration/tasks/gcp",
         "//java/com/google/scp/coordinator/keymanagement/shared/dao/common",

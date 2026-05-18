@@ -42,18 +42,6 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface CoordinatorKeyAead {}
 
-  /**
-   * Binds the String URI of the Coordinator B cloud KMS key used for encrypting {@link
-   * com.google.scp.coordinator.protos.keymanagement.shared.backend.DataKeyProto.DataKey}s delivered
-   * to Coordinator A.
-   *
-   * <p>Format: {@code aws-kms://arn:...}
-   */
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface CoordinatorKekUri {}
-
   /** Binds the populate migration key data environment variable. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})

@@ -146,7 +146,7 @@ public class GetActivePublicKeysTaskTest extends ApiTaskTestBase {
             .map(EncodedPublicKey::getId)
             .collect(ImmutableSet.toImmutableSet());
     Long secondsUntilFirstExpiration =
-        keyDb.getAllKeys().stream()
+        keyDb.listAllKeysForSetName(SET_NAME).stream()
             .filter(key -> ids.contains(key.getKeyId()))
             .map(EncryptionKey::getExpirationTime)
             .min(Long::compareTo)

@@ -29,7 +29,6 @@ import com.google.kms.LocalKmsServerContainer;
 import com.google.protobuf.ByteString;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.CacheControlMaximum;
 import com.google.scp.coordinator.keymanagement.keyhosting.common.Annotations.KeyLimit;
-import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKekUri;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.CoordinatorKeyAead;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsAeadClient;
 import com.google.scp.coordinator.keymanagement.keystorage.tasks.common.Annotations.KmsKeyAead;
@@ -70,7 +69,6 @@ public class KeyStorageHttpFunctionModule extends AbstractModule {
     bind(Long.class).annotatedWith(CacheControlMaximum.class).toInstance(604800L);
     bind(SpannerKeyDbConfig.class).toInstance(SpannerKeyDbTestUtil.getSpannerKeyDbConfig());
     bind(CreateKeyTask.class).to(GcpCreateKeyTask.class);
-    bind(String.class).annotatedWith(CoordinatorKekUri.class).toInstance("");
     bind(String.class).annotatedWith(PopulateMigrationKeyData.class).toInstance("false");
     bind(String.class)
         .annotatedWith(KmsKeyEncryptionKeyBaseUri.class)

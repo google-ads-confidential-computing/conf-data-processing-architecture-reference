@@ -210,9 +210,11 @@ variable "private_key_service_load_balancer_allowed_paths" {
 }
 
 variable "private_key_service_addon_load_balancer_allowed_paths" {
-  description = "List of allowed paths for the private key service addon load balancer. Requests to other paths will be denied."
+  description = "[DEPRECATED] List of allowed paths for the private key service addon load balancer. This variable is ignored and will be removed."
   type        = list(string)
+  default     = ["/*"]
 }
+
 
 ################################################################################
 # Private Key Service Cloud Run Variables.

@@ -44,13 +44,13 @@ if [[ "$artifact_base_name" != *"{{VERSION}}"* ]]; then
 fi
 artifact_name=$(echo $artifact_base_name | sed -e "s/{{VERSION}}/$version/g")
 # upload artifact to gcs
-echo "Preparing release package to gcs, with {gcloud_sdk}/bin/gsutil"
-{gcloud_sdk}/bin/gsutil --version
+echo "Preparing release package to gcs, with {gcloud_sdk}/bin/gcloud"
+{gcloud_sdk}/bin/gcloud -v
 echo "bazel working directory:"
 pwd
 echo "-------------------------"
 outputfile=$(mktemp)
-{gcloud_sdk}/bin/gsutil -D cp -n {package_file} gs://{release_bucket}/{release_key}/$version/$artifact_name 2>&1 | tee $outputfile
+{gcloud_sdk}/bin/gcloud storage cp --daisy-chain --no-clobber {package_file} gs://{release_bucket}/{release_key}/$version/$artifact_name 2>&1 | tee $outputfile
 if grep -q "Skipping" "$outputfile"; then
   echo "ERROR: Artifact already exists"
   exit 1
@@ -118,7 +118,7 @@ def gcs_package_release(
     `gs://bucket/key/VERSION/name_of_artifact_VERSION.tgz`
 
     targets:
-      1. '%s_script.sh': script for running gsutil to copy code package to gcs.
+      1. '%s_script.sh': script for running gcloud storage to copy code package to gcs.
       2. artifact file: the package file being uploaded to gcs. This is built from the
         specified build target (e.g. a `pkg_tar` target).
 

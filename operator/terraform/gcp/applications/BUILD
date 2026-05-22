@@ -20,6 +20,7 @@ pkg_filegroup(
     name = "applications_pkg",
     srcs = [
         "//operator/terraform/gcp/applications/jobservice",
+        "//operator/terraform/gcp/applications/otel_collector",
     ],
     prefix = "applications",
 )
@@ -28,6 +29,7 @@ pkg_filegroup(
     name = "cc_applications_pkg",
     srcs = [
         "//operator/terraform/gcp/applications/cc_operator_service",
+        "//operator/terraform/gcp/applications/otel_collector",
     ],
     prefix = "applications",
 )

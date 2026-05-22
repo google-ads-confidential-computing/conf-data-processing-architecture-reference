@@ -280,7 +280,7 @@ module "remote_metric_collector_address" {
   environment     = var.environment
   workgroup       = null
   parameter_name  = var.metric_client_parameter_names.remote_metric_collector_address
-  parameter_value = module.opentelemetry_collector_load_balancer[0].loadbalancer_dns_address
+  parameter_value = module.otel_collector[0].loadbalancer_dns_address
 }
 module "metric_exporter_interval_in_ms" {
   count           = var.metric_client_parameter_values.metric_exporter_interval_in_ms == null ? 0 : 1

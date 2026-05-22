@@ -530,7 +530,7 @@ AutoRefreshKeyFetcherWithCache::GetValidKeys(
     RETURN_AND_LOG_IF_FAILURE(
         ValidateKeySelectionTimestamp(key_selection_timestamp_ns),
         kAutoRefreshKeyFetcherWithCacheComponentName, kZeroUuid,
-        "Key selection timestamp %d validation failed for keyset %s with "
+        "Key selection timestamp %lld validation failed for keyset %s with "
         "backfill %d",
         key_selection_timestamp_ns, keyset_name_.c_str(),
         keyset_backfill_days_.load());

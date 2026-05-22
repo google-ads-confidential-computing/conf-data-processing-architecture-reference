@@ -1,0 +1,223 @@
+# LINT.IfChange
+bazel_dep(name = "rules_cc", version = "0.1.1")
+bazel_dep(name = "abseil-cpp", version = "20240722.0", repo_name = "com_google_absl")
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+bazel_dep(name = "googletest", version = "1.16.0.bcr.1", repo_name = "com_google_googletest")
+bazel_dep(name = "grpc-java", version = "1.78.0", repo_name = "io_grpc_grpc_java")
+bazel_dep(name = "nlohmann_json", version = "3.11.3")
+bazel_dep(name = "onetbb", version = "2021.10.0")
+bazel_dep(name = "protobuf", version = "29.5", repo_name = "com_google_protobuf")
+bazel_dep(name = "rules_java", version = "8.4.0")
+bazel_dep(name = "rules_jvm_external", version = "6.6")
+bazel_dep(name = "rules_oci", version = "2.2.7")
+bazel_dep(name = "rules_distroless", version = "0.5.1")
+bazel_dep(name = "aspect_bazel_lib", version = "2.9.4")
+bazel_dep(name = "rules_pkg", version = "0.7.0")
+bazel_dep(name = "rules_python", version = "0.33.2")
+bazel_dep(name = "tink_cc", version = "2.4.0")
+bazel_dep(name = "toolchains_llvm", version = "1.3.0")
+# LINT.ThenChange(WORKSPACE.bzlmod)
+
+# Dev bazel dependencies
+bazel_dep(name = "google_benchmark", version = "1.8.3", dev_dependency = True)
+
+# LLVM Hermetic Toolchain
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
+llvm.toolchain(
+    llvm_version = "19.1.0",
+)
+
+sysroot_ext = use_extension("//build_defs/cc:sysroot_ext.bzl", "sysroot_ext")
+use_repo(sysroot_ext, "chromium_sysroot")
+
+llvm.sysroot(
+    name = "llvm_toolchain",
+    label = "@chromium_sysroot//:sysroot",
+    targets = ["linux-x86_64"],
+)
+use_repo(llvm, "llvm_toolchain")
+
+register_toolchains("@llvm_toolchain//:all")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+
+# Rules python forbids building as the root user, but we build as the root user
+# in the CI docker container, so we must explicitly tell it to ignore this.
+python.toolchain(
+    ignore_root_user_error = True,
+    python_version = "3.9",
+)
+
+# LINT.IfChange(maven_deps)
+JACKSON_VERSION = "2.21.0"
+
+AUTO_VALUE_VERSION = "1.10.4"
+
+AWS_SDK_VERSION = "2.17.239"
+
+GOOGLE_GAX_VERSION = "2.73.1"
+
+AUTO_SERVICE_VERSION = "1.1.1"
+
+TINK_GCP_KMS_VERSION = "1.10.0"  # Mar 27, 2024
+
+TINK_JAVA_VERSION = "1.18.0"  # Jun 18, 2025
+
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+
+# Note: When updating dependencies, you must update the lockfile by running:
+# `REPIN=1 bazel run --enable_bzlmod @maven//:pin`
+maven.install(
+    artifacts = [
+        "org.slf4j:slf4j-api:2.0.16",
+        "org.slf4j:slf4j-log4j12:2.0.16",
+        "org.slf4j:slf4j-simple:2.0.16",
+        "org.apache.tomcat:annotations-api:6.0.53",
+        # Specify the protobuf-java explicitly to make sure
+        # the version will be upgraded with protobuf cc.
+        "com.google.protobuf:protobuf-java:4.29.5",
+        "com.google.protobuf:protobuf-java-util:4.29.5",
+        "com.google.protobuf:protobuf-javalite:4.29.5",
+        "org.jcommander:jcommander:1.85",
+        "com.fasterxml.jackson.core:jackson-annotations:2.21",
+        "com.fasterxml.jackson.core:jackson-core:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.core:jackson-databind:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.datatype:jackson-datatype-guava:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:" + JACKSON_VERSION,
+        "com.google.acai:acai:1.1",
+        "com.google.auto.factory:auto-factory:1.1.0",
+        "com.google.auto.service:auto-service-annotations:" + AUTO_SERVICE_VERSION,
+        "com.google.auto.service:auto-service:" + AUTO_SERVICE_VERSION,
+        "com.google.auto.value:auto-value-annotations:" + AUTO_VALUE_VERSION,
+        "com.google.auto.value:auto-value:" + AUTO_VALUE_VERSION,
+        "com.google.code.findbugs:jsr305:3.0.2",
+        "com.google.code.gson:gson:2.10",
+        # Need to include these two, otherwise,
+        # complain about google-api-client and cloudkms mismatch.
+        "com.google.api-client:google-api-client:2.7.0",
+        "com.google.cloud:google-cloud-kms:2.48.0",
+        "com.google.cloud:google-cloud-parametermanager:0.26.0",
+        "com.google.cloud:google-cloud-pubsub:1.132.0",
+        "com.google.cloud:google-cloud-storage:2.41.0",
+        "com.google.cloud:google-cloud-storage-transfer:1.46.0",
+        "com.google.cloud:google-cloud-spanner:6.71.0",
+        "com.google.cloud:google-cloud-secretmanager:2.46.0",
+        "com.google.cloud:google-cloud-compute:1.57.0",
+        "com.google.cloud:google-cloudevent-types:0.14.0",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.58.0",
+        "com.google.cloud.functions.invoker:java-function-invoker:1.4.3",
+        "com.google.auth:google-auth-library-oauth2-http:1.24.1",
+        "com.google.cloud.functions:functions-framework-api:1.1.4",
+        "commons-logging:commons-logging:1.1.1",
+        "com.google.api:gax:" + GOOGLE_GAX_VERSION,
+        "com.google.api:gax-grpc:" + GOOGLE_GAX_VERSION,
+        "com.google.http-client:google-http-client-jackson2:1.40.0",
+        "com.google.cloud:google-cloud-monitoring:3.31.0",
+        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.31.0",
+        "com.google.api.grpc:proto-google-cloud-storage-transfer-v1:1.17.0",
+        "com.google.api.grpc:proto-google-common-protos:2.27.0",
+        "com.google.guava:guava:33.5.0-jre",
+        "com.google.guava:guava-testlib:33.5.0-jre",
+        "com.google.inject:guice:5.1.0",
+        "com.google.inject.extensions:guice-assistedinject:5.1.0",
+        "com.google.inject.extensions:guice-testlib:5.1.0",
+        "com.google.jimfs:jimfs:1.2",
+        "com.google.testparameterinjector:test-parameter-injector:1.19",
+        "com.google.truth.extensions:truth-proto-extension:1.4.5",
+        "com.google.truth:truth:1.4.5",
+        "io.cloudevents:cloudevents-api:2.5.0",
+        "io.github.resilience4j:resilience4j-core:1.7.1",
+        "io.github.resilience4j:resilience4j-retry:1.7.1",
+        "javax.annotation:javax.annotation-api:1.3.2",
+        "javax.inject:javax.inject:1",
+        "junit:junit:4.12",
+        "org.apache.avro:avro:1.10.2",
+        "org.apache.commons:commons-lang3:3.14.0",
+        "org.apache.commons:commons-math3:3.6.1",
+        "org.apache.httpcomponents:httpcore:4.4.14",
+        "org.apache.httpcomponents:httpclient:4.5.13",
+        "org.apache.httpcomponents.client5:httpclient5:5.1.3",
+        "org.apache.httpcomponents.core5:httpcore5:5.1.4",
+        "org.apache.httpcomponents.core5:httpcore5-h2:5.1.4",  # Explicit transitive dependency to avoid https://issues.apache.org/jira/browse/HTTPCLIENT-2222
+        "org.apache.logging.log4j:log4j-1.2-api:2.17.0",
+        "org.apache.logging.log4j:log4j-core:2.17.0",
+        "org.awaitility:awaitility:3.0.0",
+        "org.hamcrest:hamcrest-library:1.3",
+        "org.mockito:mockito-core:5.4.0",
+        "org.testcontainers:testcontainers:1.21.4",
+        "org.testcontainers:localstack:1.21.4",
+        "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:kms:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:regions:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:sdk-core:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:sts:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
+        "com.google.api:gapic-generator-java:2.44.0",  # To use generated gRpc Java interface
+        "io.opentelemetry:opentelemetry-api:1.31.0",
+        "io.opentelemetry:opentelemetry-exporter-otlp:1.31.0",
+        "io.opentelemetry:opentelemetry-sdk:1.31.0",
+        "io.opentelemetry:opentelemetry-sdk-common:1.31.0",
+        "io.opentelemetry:opentelemetry-sdk-metrics:1.31.0",
+        "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.31.0",
+        "com.google.cloud.opentelemetry:detector-resources:0.26.0-alpha",
+        "com.google.crypto.tink:tink:" + TINK_JAVA_VERSION,
+        "com.google.crypto.tink:tink-gcpkms:" + TINK_GCP_KMS_VERSION,
+    ],
+    lock_file = "//:maven_install.json",
+    repositories = [
+        "https://repo1.maven.org/maven2",
+    ],
+)
+maven.artifact(
+    artifact = "google-api-services-cloudkms",
+    group = "com.google.apis",
+    version = "v1-rev20240808-2.0.0",
+)
+use_repo(maven, "maven")
+# LINT.ThenChange(build_defs/java/maven_dependencies.bzl)
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "com_google_farmhash",
+    build_file = "//build_defs/cc/shared:farmhash.BUILD",
+    integrity = "sha256-GDks8HNuHWLsu41pXDFJa2UHhZ6MdVQdetC6CS3FIRU=",
+    strip_prefix = "farmhash-0d859a811870d10f53a594927d0d0b97573ad06d",
+    # Commits on May 13, 2019 as the latest stable version. The repo is archived at Jan 10, 2023.
+    urls = [
+        "https://github.com/google/farmhash/archive/0d859a811870d10f53a594927d0d0b97573ad06d.tar.gz",
+    ],
+)
+
+# Load tink-java but only for proto deps. Tink-java was chosen arbitrarily as
+# all tink repos have the protos.
+http_archive(
+    name = "tink_proto",
+    sha256 = "3c0a9d0217fd3dc68a618abe9ef718b7fc5751faf420e7bb388eb373d6f51da1",
+    strip_prefix = "tink-java-{}".format(TINK_JAVA_VERSION),
+    url = "https://github.com/tink-crypto/tink-java/archive/refs/tags/v{}.tar.gz".format(TINK_JAVA_VERSION),
+)
+
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci.pull(
+    name = "java_base_21_oci",
+    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2025-11-17.
+    digest = "sha256:ed5be62a70c5b99708b4ad0fc53bda628d11e46e917f66720fd218cae8fe1568",
+    image = "gcr.io/distroless/java21-debian12",
+)
+oci.pull(
+    name = "java_base_oci",
+    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-06-12.
+    digest = "sha256:1e4181aaff242e2b305bb4abbe811eb122d68ffd7fd87c25c19468a1bc387ce6",
+    image = "gcr.io/distroless/java17-debian11",
+)
+use_repo(oci, "java_base_21_oci", "java_base_oci")
+
+apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
+apt.install(
+    name = "scp_base_runtime_image_debian_packages",
+    lock = "//cc/public/cpio/build_deps/shared:base_runtime_image_packages_manifest.lock.json",
+    manifest = "//cc/public/cpio/build_deps/shared:base_runtime_image_packages_manifest.yaml",
+)
+use_repo(apt, "scp_base_runtime_image_debian_packages")

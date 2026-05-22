@@ -392,12 +392,8 @@ run "doesnt_create_otel_resources" {
     error_message = "Created collector address"
   }
   assert {
-    condition     = length(module.opentelemetry_collector) == 0
+    condition     = length(module.otel_collector) == 0
     error_message = "Created collector"
-  }
-  assert {
-    condition     = length(module.opentelemetry_collector_load_balancer) == 0
-    error_message = "Created collector LB"
   }
 }
 
@@ -419,12 +415,8 @@ run "creates_otel_resources" {
     error_message = "Didn't create collector address"
   }
   assert {
-    condition     = length(module.opentelemetry_collector) == 1
+    condition     = length(module.otel_collector) == 1
     error_message = "Didn't create collector"
-  }
-  assert {
-    condition     = length(module.opentelemetry_collector_load_balancer) == 1
-    error_message = "Didn't create collector LB"
   }
 }
 

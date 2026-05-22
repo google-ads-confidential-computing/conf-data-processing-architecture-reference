@@ -97,22 +97,17 @@ variable "collector_dns_name" {
   default     = "scptestings.dev"
 }
 
-variable "collector_send_batch_max_size" {
-  description = "The upper limit of a single batch. This property ensures that larger batches are split into smaller units. It must be greater than or equal to send_batch_size."
-  type        = number
-  default     = 200
-}
-
-variable "collector_send_batch_size" {
-  description = "Number of metric data points after which batching will be started regardless of the timeout. All data points in this buffer will be split to smaller batches based on collector_send_batch_max_size."
-  type        = number
-  default     = 200
-}
-
-variable "collector_send_batch_timeout" {
-  description = "Time duration after which a batch will be sent regardless of size."
-  type        = string
-  default     = "5s"
+variable "otel_collector_startup_config" {
+  description = "Startup configuration for the OpenTelemetry collector."
+  type = object({
+    otel_collector_image_uri = optional(string, "otel/opentelemetry-collector-contrib:0.122.1")
+    metric_prefix            = optional(string, "custom.googleapis.com")
+    send_batch_max_size      = optional(number, 200)
+    send_batch_size          = optional(number, 200)
+    send_batch_timeout       = optional(string, "5s")
+    collector_queue_size     = optional(number, 5000)
+  })
+  default = {}
 }
 
 variable "max_collector_instances" {
@@ -131,12 +126,6 @@ variable "collector_min_instance_ready_sec" {
   description = "Waiting time for the new instance to be ready."
   type        = number
   default     = 120
-}
-
-variable "collector_queue_size" {
-  description = "The queue size of the sending queue."
-  type        = number
-  default     = 5000
 }
 
 variable "collector_cpu_utilization_target" {

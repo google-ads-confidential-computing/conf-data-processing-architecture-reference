@@ -131,7 +131,7 @@ run "creates_bucket_if_frontend_or_worker_dont_have_buckets" {
     error_message = "Didn't create bucket"
   }
   assert {
-    condition     = length(module.opentelemetry_collector) == 0
+    condition     = length(module.otel_collector) == 0
     error_message = ""
   }
 }
@@ -146,12 +146,8 @@ run "doesnt_create_otel_collector" {
   }
 
   assert {
-    condition     = length(module.opentelemetry_collector) == 0
-    error_message = "Created otel collector"
-  }
-  assert {
-    condition     = length(module.opentelemetry_collector_load_balancer) == 0
-    error_message = "Created LB"
+    condition     = length(module.otel_collector) == 0
+    error_message = "Created otel collector app"
   }
 }
 
@@ -169,12 +165,8 @@ run "creates_otel_collector" {
   }
 
   assert {
-    condition     = length(module.opentelemetry_collector) == 1
-    error_message = "Didn't create otel collector"
-  }
-  assert {
-    condition     = length(module.opentelemetry_collector_load_balancer) == 1
-    error_message = "Didn't create LB"
+    condition     = length(module.otel_collector) == 1
+    error_message = "Didn't create otel collector app"
   }
 }
 

@@ -23,12 +23,6 @@ terraform {
   }
 }
 
-provider "google" {
-  project = var.project_id
-  region  = var.region
-  zone    = var.region_zone
-}
-
 module "otel_collector" {
   source      = "../../modules/opentelemetry_collector"
   environment = var.environment
@@ -46,14 +40,13 @@ module "otel_collector" {
   collector_min_instance_ready_sec = var.collector_min_instance_ready_sec
   collector_cpu_utilization_target = var.collector_cpu_utilization_target
   collector_startup_script = templatefile("../../modules/opentelemetry_collector/collector_startup.tftpl", {
-    otel_collector_image_uri = "otel/opentelemetry-collector-contrib:0.122.1"
-
-    http_receiver_port   = var.collector_service_port
-    metric_prefix        = "custom.googleapis.com"
-    send_batch_max_size  = var.collector_send_batch_max_size
-    send_batch_size      = var.collector_send_batch_size
-    send_batch_timeout   = var.collector_send_batch_timeout
-    collector_queue_size = var.collector_queue_size
+    otel_collector_image_uri = var.otel_collector_startup_config.otel_collector_image_uri
+    metric_prefix            = var.otel_collector_startup_config.metric_prefix
+    send_batch_max_size      = var.otel_collector_startup_config.send_batch_max_size
+    send_batch_size          = var.otel_collector_startup_config.send_batch_size
+    send_batch_timeout       = var.otel_collector_startup_config.send_batch_timeout
+    collector_queue_size     = var.otel_collector_startup_config.collector_queue_size
+    http_receiver_port       = var.collector_service_port
   })
 
   collector_exceed_cpu_usage_alarm         = var.collector_exceed_cpu_usage_alarm

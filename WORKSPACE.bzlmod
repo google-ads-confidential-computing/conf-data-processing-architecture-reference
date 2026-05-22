@@ -1,0 +1,99 @@
+# This file contains all dependencies in WORKSPACE that are not yet migrated to MODULE.bazel
+# If updating the WORKSPACE file, please update this one as well if the dep is not already in MODULE.bazel.
+# LINT.IfChange
+################################################################################
+# Download all http_archives and git_repositories: Begin
+################################################################################
+
+#############################
+# CC SDK Dependencies Rules #
+#############################
+
+load("//build_defs/cc:sdk.bzl", "sdk_dependencies")
+load("//build_defs/shared:protobuf.bzl", "DEFAULT_PROTOBUF_CORE_VERSION", "DEFAULT_PROTOBUF_SHA_256")
+
+sdk_dependencies(DEFAULT_PROTOBUF_CORE_VERSION, DEFAULT_PROTOBUF_SHA_256)
+
+# All llvm_toolchain related dependencies should be defined in MODULE.bazel
+
+###########################
+# CC Dependencies #
+###########################
+
+# Add our own newer opentelemetry before gcp c++ sdk
+load("//build_defs/shared:opentelemetry.bzl", "opentelemetry_cpp")
+
+opentelemetry_cpp()
+
+# Load indirect dependencies due to
+#     https://github.com/bazelbuild/bazel/issues/1943
+load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl", "google_cloud_cpp_deps")
+
+google_cloud_cpp_deps()
+
+##########
+# GRPC C Deps #
+##########
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
+grpc_deps()
+
+load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
+
+grpc_extra_deps()
+
+bind(
+    name = "cares",
+    actual = "@com_github_cares_cares//:ares",
+)
+
+bind(
+    name = "madler_zlib",
+    actual = "@zlib//:zlib",
+)
+
+# Boost
+load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
+
+boost_deps()
+
+load("@io_opentelemetry_cpp//bazel:repository.bzl", "opentelemetry_cpp_deps")
+
+opentelemetry_cpp_deps()
+
+# (required after v1.8.0) Load extra dependencies required for OpenTelemetry
+load("@io_opentelemetry_cpp//bazel:extra_deps.bzl", "opentelemetry_extra_deps")
+
+opentelemetry_extra_deps()
+
+#################################
+# SCP Shared Dependencies Rules #
+#################################
+
+################################################################################
+# Download all http_archives and git_repositories: End
+################################################################################
+
+###################
+# Container rules #
+###################
+
+################################################################################
+# Download Containers: Begin
+################################################################################
+
+################################################################################
+# Download Containers: End
+################################################################################
+
+# LINT.ThenChange(MODULE.bazel)
+# copybara:strip_begin
+################################################################################
+# REMOVE FROM OPEN SOURCE: Begin
+################################################################################
+
+################################################################################
+# REMOVE FROM OPEN SOURCE: End
+################################################################################
+# copybara:strip_end

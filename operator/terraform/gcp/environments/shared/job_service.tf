@@ -161,10 +161,7 @@ module "job_service" {
   collector_domain_name              = var.collector_domain_name
   collector_dns_name                 = var.collector_dns_name
   collector_min_instance_ready_sec   = var.collector_min_instance_ready_sec
-  collector_send_batch_max_size      = var.collector_send_batch_max_size
-  collector_send_batch_size          = var.collector_send_batch_size
-  collector_send_batch_timeout       = var.collector_send_batch_timeout
-  collector_queue_size               = var.collector_queue_size
+  otel_collector_startup_config      = var.otel_collector_startup_config
 
   collector_exceed_cpu_usage_alarm         = var.collector_exceed_cpu_usage_alarm
   collector_exceed_memory_usage_alarm      = var.collector_exceed_memory_usage_alarm

@@ -74,33 +74,3 @@ resource "google_monitoring_alert_policy" "execution_times" {
     notification_prompts = ["OPENED"]
   }
 }
-
-resource "google_monitoring_alert_policy" "error_count" {
-  display_name = "${var.service_prefix} Cloud Function Execution Errors"
-  combiner     = "OR"
-  conditions {
-    display_name = "Execution Errors"
-    condition_threshold {
-      filter          = "metric.type=\"cloudfunctions.googleapis.com/function/execution_count\" AND resource.type=\"cloud_function\" AND resource.label.function_name=\"${var.function_name}\" AND metric.label.status!=\"ok\""
-      duration        = "${var.duration_sec}s"
-      comparison      = "COMPARISON_GT"
-      threshold_value = var.execution_error_threshold
-      trigger {
-        count = 1
-      }
-      aggregations {
-        alignment_period   = "${var.eval_period_sec}s"
-        per_series_aligner = "ALIGN_SUM"
-      }
-    }
-  }
-  notification_channels = [var.notification_channel_id]
-
-  user_labels = {
-    environment = var.environment
-  }
-  alert_strategy {
-    auto_close           = "604800s"
-    notification_prompts = ["OPENED"]
-  }
-}

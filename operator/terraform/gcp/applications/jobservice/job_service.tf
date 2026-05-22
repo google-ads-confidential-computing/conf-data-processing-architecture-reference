@@ -280,34 +280,28 @@ module "opentelemetry_collector_address" {
   var.environment, var.collector_domain_name, var.collector_dns_name, var.collector_service_port)
 }
 
-module "opentelemetry_collector" {
+module "otel_collector" {
   count = var.enable_opentelemetry_collector ? 1 : 0
 
-  source      = "../../modules/opentelemetry_collector"
+  source      = "../otel_collector"
   environment = var.environment
   project_id  = var.project_id
-  region      = var.region
-  subnet_id   = module.vpc.collector_subnet_ids[var.region]
   network     = module.vpc.network
+  region      = var.region
+  region_zone = var.region_zone
+
+  collector_subnet_id = module.vpc.collector_subnet_ids[var.region]
+  proxy_subnet_id     = module.vpc.proxy_subnet_ids[var.region]
 
   user_provided_collector_sa_email = var.user_provided_collector_sa_email
   collector_instance_type          = var.collector_instance_type
+  otel_collector_startup_config    = var.otel_collector_startup_config
   max_collector_instances          = var.max_collector_instances
   min_collector_instances          = var.min_collector_instances
   collector_service_port_name      = var.collector_service_port_name
   collector_service_port           = var.collector_service_port
   collector_min_instance_ready_sec = var.collector_min_instance_ready_sec
   collector_cpu_utilization_target = var.collector_cpu_utilization_target
-  collector_startup_script = templatefile("../../modules/opentelemetry_collector/collector_startup.tftpl", {
-    otel_collector_image_uri = "otel/opentelemetry-collector-contrib:0.122.1"
-
-    http_receiver_port   = var.collector_service_port
-    metric_prefix        = "custom.googleapis.com"
-    send_batch_max_size  = var.collector_send_batch_max_size
-    send_batch_size      = var.collector_send_batch_size
-    send_batch_timeout   = var.collector_send_batch_timeout
-    collector_queue_size = var.collector_queue_size
-  })
 
   collector_exceed_cpu_usage_alarm         = var.collector_exceed_cpu_usage_alarm
   collector_exceed_memory_usage_alarm      = var.collector_exceed_memory_usage_alarm
@@ -318,24 +312,10 @@ module "opentelemetry_collector" {
   collector_queue_size_alarm               = var.collector_queue_size_alarm
   collector_send_metric_failure_rate_alarm = var.collector_send_metric_failure_rate_alarm
   collector_refuse_metric_rate_alarm       = var.collector_refuse_metric_rate_alarm
-}
 
-module "opentelemetry_collector_load_balancer" {
-  count = var.enable_opentelemetry_collector ? 1 : 0
-
-  source            = "../../modules/otel_load_balancer"
-  environment       = var.environment
-  project_id        = var.project_id
-  network           = module.vpc.network
-  region            = var.region
-  subnet_id         = module.vpc.collector_subnet_ids[var.region]
-  proxy_subnet      = module.vpc.proxy_subnet_ids[var.region]
-  instance_group    = module.opentelemetry_collector[0].collector_instance_group
-  service_name      = "collector"
-  service_port_name = var.collector_service_port_name
-  service_port      = var.collector_service_port
-  dns_name          = var.collector_dns_name
-  domain_name       = var.collector_domain_name
+  collector_service_name = "collector"
+  collector_dns_name     = var.collector_dns_name
+  collector_domain_name  = var.collector_domain_name
 }
 
 module "frontend" {
@@ -478,7 +458,7 @@ module "worker" {
   new_worker_error_metric_type                        = var.alarms_enabled ? module.java_global_custom_monitoring[0].new_worker_error_metric_type : ""
 
   # Make sure the otel collector is running before creating the server instances.
-  depends_on = [module.opentelemetry_collector]
+  depends_on = [module.otel_collector]
 }
 
 module "autoscaling" {
@@ -677,5 +657,15 @@ module "workgroups" {
   autoscaling_cloudfunction_alarm_duration_sec    = each.value.autoscaling_cloudfunction_alarm_duration_sec
 
   # Make sure the otel collector is running before creating the server instances.
-  depends_on = [module.opentelemetry_collector]
+  depends_on = [module.otel_collector]
+}
+
+moved {
+  from = module.opentelemetry_collector[0]
+  to   = module.otel_collector[0].module.otel_collector
+}
+
+moved {
+  from = module.opentelemetry_collector_load_balancer[0]
+  to   = module.otel_collector[0].module.otel_collector_load_balancer
 }

@@ -38,12 +38,30 @@ variables {
   user_provided_collector_sa_email = ""
   collector_instance_type          = ""
   collector_startup_script         = "script"
-  collector_service_port_name      = ""
   collector_service_port           = 0
-  max_collector_instances          = 0
-  min_collector_instances          = 0
+  collector_service_port_name      = "port_name"
   collector_min_instance_ready_sec = 0
-  collector_cpu_utilization_target = 0
+  collector_regional_config = {
+    "us-central1" = {
+      zonal_config = {
+        "us-central1-c" = {
+        }
+      }
+    },
+    "us-east1" = {
+      zonal_config = {
+        "us-east1-c" = {
+          min_collector_count              = 2
+          max_collector_count              = 4
+          collector_cpu_utilization_target = 0.5
+        }
+      }
+    }
+  }
+  subnets_per_region = {
+    "us-central1" = "subnet_id1"
+    "us-east1"    = "subnet_id2"
+  }
   collector_exceed_cpu_usage_alarm = {
     alignment_period_sec = 0
     auto_close_sec       = 0
@@ -53,14 +71,6 @@ variables {
     threshold            = 0
   }
   collector_exceed_memory_usage_alarm = {
-    alignment_period_sec = 0
-    auto_close_sec       = 0
-    duration_sec         = 0
-    enable_alarm         = false
-    severity             = ""
-    threshold            = 0
-  }
-  collector_export_error_alarm = {
     alignment_period_sec = 0
     auto_close_sec       = 0
     duration_sec         = 0
@@ -132,10 +142,20 @@ run "creates_server_replace_trigger" {
 run "creates_template_mig_trigger_with_empty_string" {
   command = plan
 
+  variables {
+    network    = ""
+    project_id = ""
+    subnets_per_region = {
+      "us-east1"    = ""
+      "us-central1" = ""
+    }
+  }
+
   assert {
-    condition = null_resource.collector_template_mig_replace_trigger.triggers == tomap({
+    condition = null_resource.collector_template_mig_replace_trigger["us-east1-c"].triggers == tomap({
       network   = ""
       subnet_id = ""
+      zone      = "us-east1-c"
     })
     error_message = "Wrong trigger"
   }
@@ -146,14 +166,22 @@ run "creates_template_mig_trigger_with_network_and_subnet" {
 
   variables {
     network    = "network"
-    subnet_id  = "subnet_id"
     project_id = "project_id"
   }
 
   assert {
-    condition = null_resource.collector_template_mig_replace_trigger.triggers == tomap({
+    condition = null_resource.collector_template_mig_replace_trigger["us-east1-c"].triggers == tomap({
       network   = "network"
-      subnet_id = "subnet_id"
+      subnet_id = "subnet_id2"
+      zone      = "us-east1-c"
+    })
+    error_message = "Wrong trigger"
+  }
+  assert {
+    condition = null_resource.collector_template_mig_replace_trigger["us-central1-c"].triggers == tomap({
+      network   = "network"
+      subnet_id = "subnet_id1"
+      zone      = "us-central1-c"
     })
     error_message = "Wrong trigger"
   }
@@ -219,20 +247,53 @@ run "ig_manager_uses_proper_autohealing_and_template" {
   command = plan
 
   assert {
-    condition     = google_compute_region_instance_group_manager.collector_instance.auto_healing_policies[0].health_check == "health_check_id"
+    condition     = google_compute_instance_group_manager.collector_instance_groups["us-central1-c"].auto_healing_policies[0].health_check == "health_check_id"
     error_message = "Wrong auto healing"
   }
   assert {
-    condition     = google_compute_region_instance_group_manager.collector_instance.version[0].instance_template == "instance_template_id"
+    condition     = google_compute_instance_group_manager.collector_instance_groups["us-central1-c"].version[0].instance_template == "instance_template_id"
+    error_message = "Wrong template"
+  }
+  assert {
+    condition     = google_compute_instance_group_manager.collector_instance_groups["us-east1-c"].auto_healing_policies[0].health_check == "health_check_id"
+    error_message = "Wrong auto healing"
+  }
+  assert {
+    condition     = google_compute_instance_group_manager.collector_instance_groups["us-east1-c"].version[0].instance_template == "instance_template_id"
     error_message = "Wrong template"
   }
 }
 
-run "creates_collector_autoscaler_with_proper_target" {
+run "creates_collector_autoscaler_per_zone" {
   command = plan
 
   assert {
-    condition     = google_compute_region_autoscaler.collector_autoscaler.target == "region_instance_group_manager_id"
-    error_message = "Wrong autoscaling target"
+    condition     = length(google_compute_autoscaler.collector_autoscalers) == 2
+    error_message = "Wrong number of autoscaler created, expecting 1 per zone"
+  }
+
+  assert {
+    condition     = google_compute_autoscaler.collector_autoscalers["us-central1-c"].autoscaling_policy[0].min_replicas == 1
+    error_message = "Default min replicas for autoscaler not as expected"
+  }
+  assert {
+    condition     = google_compute_autoscaler.collector_autoscalers["us-central1-c"].autoscaling_policy[0].max_replicas == 3
+    error_message = "Default max replicas for autoscaler not as expected"
+  }
+  assert {
+    condition     = google_compute_autoscaler.collector_autoscalers["us-central1-c"].autoscaling_policy[0].cpu_utilization[0].target == 0.8
+    error_message = "Default cpu utilization target for autoscaler not as expected"
+  }
+  assert {
+    condition     = google_compute_autoscaler.collector_autoscalers["us-east1-c"].autoscaling_policy[0].min_replicas == 2
+    error_message = "Wrong min replicas for autoscaler"
+  }
+  assert {
+    condition     = google_compute_autoscaler.collector_autoscalers["us-east1-c"].autoscaling_policy[0].max_replicas == 4
+    error_message = "Wrong max replicas for autoscaler"
+  }
+  assert {
+    condition     = google_compute_autoscaler.collector_autoscalers["us-east1-c"].autoscaling_policy[0].cpu_utilization[0].target == 0.5
+    error_message = "Wrong cpu utilization target for autoscaler"
   }
 }

@@ -43,10 +43,31 @@ variables {
   collector_startup_script         = ""
   collector_service_port_name      = ""
   collector_service_port           = 0
-  max_collector_instances          = 0
-  min_collector_instances          = 0
   collector_min_instance_ready_sec = 0
-  collector_cpu_utilization_target = 0
+  collector_regional_config = {
+    "us-central1" = {
+      zonal_config = {
+        "us-central1-c" = {
+          min_collector_count              = 1
+          max_collector_count              = 2
+          collector_cpu_utilization_target = 0.8
+        }
+      }
+    },
+    "us-east1" = {
+      zonal_config = {
+        "us-east1-c" = {
+          min_collector_count              = 1
+          max_collector_count              = 2
+          collector_cpu_utilization_target = 0.8
+        }
+      }
+    }
+  }
+  subnets_per_region = {
+    "us-central1" = "subnet_id1"
+    "us-east1"    = "subnet_id2"
+  }
   collector_exceed_cpu_usage_alarm = {
     alignment_period_sec = 0
     auto_close_sec       = 0
@@ -56,14 +77,6 @@ variables {
     threshold            = 0
   }
   collector_exceed_memory_usage_alarm = {
-    alignment_period_sec = 0
-    auto_close_sec       = 0
-    duration_sec         = 0
-    enable_alarm         = false
-    severity             = ""
-    threshold            = 0
-  }
-  collector_export_error_alarm = {
     alignment_period_sec = 0
     auto_close_sec       = 0
     duration_sec         = 0
@@ -129,10 +142,6 @@ run "doesnt_create_alarms" {
     error_message = "Created alarm"
   }
   assert {
-    condition     = length(google_monitoring_alert_policy.collector_export_error_alert) == 0
-    error_message = "Created alarm"
-  }
-  assert {
     condition     = length(google_monitoring_alert_policy.collector_startup_error_alert) == 0
     error_message = "Created alarm"
   }
@@ -165,31 +174,7 @@ run "creates_cpu_exceed_alarm" {
     error_message = "Didn't create alarm"
   }
   assert {
-    condition     = strcontains(google_monitoring_alert_policy.collector_exceed_cpu_usage_alert[0].conditions[0].condition_threshold[0].filter, "environment-region-collector-mig")
-    error_message = "Doesn't alert on proper instance group"
-  }
-}
-
-run "creates_export_error_alarm" {
-  command = plan
-
-  variables {
-    collector_export_error_alarm = {
-      alignment_period_sec = 0
-      auto_close_sec       = 0
-      duration_sec         = 0
-      enable_alarm         = true
-      severity             = ""
-      threshold            = 0
-    }
-  }
-
-  assert {
-    condition     = length(google_monitoring_alert_policy.collector_export_error_alert) == 1
-    error_message = "Didn't create alarm"
-  }
-  assert {
-    condition     = strcontains(google_monitoring_alert_policy.collector_export_error_alert[0].conditions[0].condition_threshold[0].filter, "environment-collector-export-error-counter")
+    condition     = strcontains(google_monitoring_alert_policy.collector_exceed_cpu_usage_alert[0].conditions[0].condition_threshold[0].filter, ".*collector.*")
     error_message = "Doesn't alert on proper instance group"
   }
 }

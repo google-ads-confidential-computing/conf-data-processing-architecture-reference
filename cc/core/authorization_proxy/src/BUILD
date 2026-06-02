@@ -30,5 +30,6 @@ cc_library(
         "//cc/core/http2_client/src:http2_client_lib",
         "//cc/core/interface:interface_lib",
         "//cc/core/utils/src:core_utils",
+        "@boost//:system",
     ],
 )

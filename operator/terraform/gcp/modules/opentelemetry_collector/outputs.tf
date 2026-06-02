@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-output "collector_instance_group" {
-  value       = google_compute_region_instance_group_manager.collector_instance.instance_group
-  description = "The instance group of the OpenTelemetry Collector created by Region Instance Group Manager."
+output "collector_instance_groups" {
+  value       = [for mig in google_compute_instance_group_manager.collector_instance_groups : mig.instance_group]
+  description = "The instance groups of the OpenTelemetry Collector created by Instance Group Managers for each zone."
 }

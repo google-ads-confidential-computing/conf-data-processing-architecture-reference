@@ -842,6 +842,17 @@ variable "job_completion_notifications_service_account_email" {
 ################################################################################
 # OpenTelemetry Collector variables
 ################################################################################
+variable "collector_regional_config" {
+  description = "Region and zone level configurations."
+  type = map(object({
+    zonal_config = map(object({
+      min_collector_count              = optional(number, 1)
+      max_collector_count              = optional(number, 3)
+      collector_cpu_utilization_target = optional(number, 0.8)
+    }))
+  }))
+  default = {}
+}
 
 variable "enable_opentelemetry_collector" {
   description = "When true, install the collector module to operator_service"
@@ -897,6 +908,12 @@ variable "collector_dns_name" {
   default     = "scp.google"
 }
 
+variable "collector_dns_zone" {
+  description = "Google Cloud DNS zone name for collector."
+  type        = string
+  default     = ""
+}
+
 variable "otel_collector_startup_config" {
   description = "Startup configuration for the OpenTelemetry collector."
   type = object({
@@ -910,28 +927,10 @@ variable "otel_collector_startup_config" {
   default = {}
 }
 
-variable "max_collector_instances" {
-  description = "The maximum number of running instances for the managed instance group of collector."
-  type        = number
-  default     = 2
-}
-
-variable "min_collector_instances" {
-  description = "The minimum number of running instances for the managed instance group of collector."
-  type        = number
-  default     = 1
-}
-
 variable "collector_min_instance_ready_sec" {
   description = "Waiting time for the new instance to be ready."
   type        = number
   default     = 120
-}
-
-variable "collector_cpu_utilization_target" {
-  description = "Cpu utilization target for the collector."
-  type        = number
-  default     = 0.8
 }
 
 variable "collector_exceed_cpu_usage_alarm" {
@@ -969,26 +968,6 @@ variable "collector_exceed_memory_usage_alarm" {
     duration_sec : 300,
     alignment_period_sec : 600,
     threshold : 6442450944, # 6 GB
-    severity : "moderate",
-    auto_close_sec : 1800
-  }
-}
-
-variable "collector_export_error_alarm" {
-  description = "Configuration for the collector exporting error alarm."
-  type = object({
-    enable_alarm : bool,
-    duration_sec : number,
-    alignment_period_sec : number,
-    threshold : number,
-    severity : string,
-    auto_close_sec : number
-  })
-  default = {
-    enable_alarm : false,
-    duration_sec : 300,
-    alignment_period_sec : 600,
-    threshold : 50,
     severity : "moderate",
     auto_close_sec : 1800
   }

@@ -76,6 +76,20 @@ locals {
   })
 }
 
+# Check to make sure collector regions are the same with server regions.
+# This is to encourage users to create collector in the same region as server
+# to minimize cross-region traffic. The Cloud NAT will be created for each
+# collector region union the worker region. We use "null_resource" here because
+# "check" is not available in TF 1.2.3
+resource "null_resource" "check_collector_regions_subset_of_server_regions" {
+  lifecycle {
+    precondition {
+      condition     = !var.enable_opentelemetry_collector || contains(keys(var.collector_regional_config), var.region)
+      error_message = "Collector regions must include the server region."
+    }
+  }
+}
+
 module "bazel" {
   source = "../../modules/bazel"
 }
@@ -83,9 +97,10 @@ module "bazel" {
 module "vpc" {
   source = "../../modules/vpc"
 
-  environment = var.environment
-  project_id  = var.project_id
-  regions     = setunion([var.region], var.frontend_service_cloud_run_regions)
+  environment  = var.environment
+  project_id   = var.project_id
+  regions      = setunion([var.region], var.frontend_service_cloud_run_regions)
+  otel_regions = var.enable_opentelemetry_collector ? keys(var.collector_regional_config) : []
 
   auto_create_subnetworks = var.auto_create_subnetworks
   # These variables are only be used if auto_create_subnetworks is set to false.
@@ -287,25 +302,22 @@ module "otel_collector" {
   environment = var.environment
   project_id  = var.project_id
   network     = module.vpc.network
-  region      = var.region
   region_zone = var.region_zone
 
-  collector_subnet_id = module.vpc.collector_subnet_ids[var.region]
-  proxy_subnet_id     = module.vpc.proxy_subnet_ids[var.region]
+  subnets_per_region            = module.vpc.collector_subnet_ids
+  proxy_only_subnets_per_region = module.vpc.proxy_subnet_ids
+
+  collector_regional_config = var.collector_regional_config
 
   user_provided_collector_sa_email = var.user_provided_collector_sa_email
   collector_instance_type          = var.collector_instance_type
   otel_collector_startup_config    = var.otel_collector_startup_config
-  max_collector_instances          = var.max_collector_instances
-  min_collector_instances          = var.min_collector_instances
   collector_service_port_name      = var.collector_service_port_name
   collector_service_port           = var.collector_service_port
   collector_min_instance_ready_sec = var.collector_min_instance_ready_sec
-  collector_cpu_utilization_target = var.collector_cpu_utilization_target
 
   collector_exceed_cpu_usage_alarm         = var.collector_exceed_cpu_usage_alarm
   collector_exceed_memory_usage_alarm      = var.collector_exceed_memory_usage_alarm
-  collector_export_error_alarm             = var.collector_export_error_alarm
   collector_startup_error_alarm            = var.collector_startup_error_alarm
   collector_crash_error_alarm              = var.collector_crash_error_alarm
   export_metric_to_collector_error_alarm   = var.export_metric_to_collector_error_alarm
@@ -661,11 +673,11 @@ module "workgroups" {
 }
 
 moved {
-  from = module.opentelemetry_collector[0]
+  from = module.opentelemetry_collector
   to   = module.otel_collector[0].module.otel_collector
 }
 
 moved {
-  from = module.opentelemetry_collector_load_balancer[0]
+  from = module.opentelemetry_collector_load_balancer
   to   = module.otel_collector[0].module.otel_collector_load_balancer
 }

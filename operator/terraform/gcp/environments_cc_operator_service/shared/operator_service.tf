@@ -92,8 +92,7 @@ module "operator_service" {
   # OpenTelemetry Collector
   enable_opentelemetry_collector   = var.enable_opentelemetry_collector
   collector_instance_type          = var.collector_instance_type
-  max_collector_instances          = var.max_collector_instances
-  min_collector_instances          = var.min_collector_instances
+  collector_regional_config        = var.collector_regional_config
   user_provided_collector_sa_email = var.user_provided_collector_sa_email
   collector_service_port_name      = var.collector_service_port_name
   collector_service_port           = var.collector_service_port
@@ -104,7 +103,6 @@ module "operator_service" {
 
   collector_exceed_cpu_usage_alarm       = var.collector_exceed_cpu_usage_alarm
   collector_exceed_memory_usage_alarm    = var.collector_exceed_memory_usage_alarm
-  collector_export_error_alarm           = var.collector_export_error_alarm
   collector_startup_error_alarm          = var.collector_startup_error_alarm
   collector_crash_error_alarm            = var.collector_crash_error_alarm
   export_metric_to_collector_error_alarm = var.export_metric_to_collector_error_alarm

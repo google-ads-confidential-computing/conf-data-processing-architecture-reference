@@ -446,6 +446,309 @@ public abstract class CreateSplitKeyTaskBaseTest {
     assertThat(keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count);
   }
 
+  @Test
+  public void validate_overlapGreaterThanDaysInAdvance() throws Exception {
+    int count = 1;
+    int validity = 30;
+    int overlap = 20; // Next Activation = Day 10
+    int ttl = 365;
+    int maxDaysAhead = 5; // overlap > maxDaysAhead
+    Instant now = now();
+
+    // Day 0: Next Activation is on Day 10. Cutoff is (now + 5) = Day 5.
+    // 10 < 5 is FALSE. Should NOT generate next set of keys.
+    task.create(
+        SET_NAME + "_G",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_G")).hasSize(count);
+
+    // Day 5: Next Activation is on Day 10. Cutoff is (now + 5) = Day 10.
+    // 10 < 10 is FALSE. Should NOT generate next set of keys yet (strict <).
+    task.create(
+        SET_NAME + "_G",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(5, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_G")).hasSize(count);
+
+    // Day 6: Next Activation is on Day 10. Cutoff is (now + 5) = Day 11.
+    // 10 < 11 is TRUE. Generates next set of keys.
+    task.create(
+        SET_NAME + "_G",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(6, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_G")).hasSize(count * 2);
+  }
+
+  @Test
+  public void validate_overlapLessThanOrEqualToDaysInAdvance() throws Exception {
+    int count = 1;
+    int validity = 30;
+    int overlap = 20; // Next Activation = Day 10
+    int ttl = 365;
+    int maxDaysAhead = 20; // overlap <= maxDaysAhead
+    Instant now = now();
+
+    // Key 1 (Active 0-30) is generated. Key 2 activates on Day 10.
+    // Because overlap (20) + maxDaysAhead (20) >= validity (30),
+    // the deadline to create Key 2 is effectively in the past on Day 0
+    // (Expiration 30 - Overlap 20 - MaxDays 20 = -10 < 0).
+    // Both keys are generated together in the first run.
+    task.create(
+        SET_NAME + "_L",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_L")).hasSize(count * 2);
+  }
+
+  @Test
+  public void validate_overlapIsZero_daysInAdvanceIsNonZero() throws Exception {
+    int count = 1;
+    int validity = 30;
+    int ttl = 365;
+    int maxDaysAhead = 5;
+    int overlap = 0;
+    Instant now = now();
+
+    // Day 0: Next Activation is Day 30. Cutoff is Day 5.
+    // 30 < 5 is False. No generation.
+    task.create(
+        SET_NAME + "_Z_A",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_A")).hasSize(count);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_A", 10, now)).hasSize(1);
+
+    // Day 25: Next Activation is Day 30. Cutoff is Day 30.
+    // 30 < 30 is False. No generation yet (strict <).
+
+    task.create(
+        SET_NAME + "_Z_A",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(25, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_A")).hasSize(count);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_A", 10, now.plus(25, DAYS))).hasSize(1);
+
+    task.create(
+        SET_NAME + "_Z_A",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(26, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_A")).hasSize(count * 2);
+    // Key 2 is generated but pending until Day 30, so only 1 is active.
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_A", 10, now.plus(26, DAYS))).hasSize(1);
+  }
+
+  @Test
+  public void validate_overlapIsNonZero_daysInAdvanceIsZero() throws Exception {
+    int count = 1;
+    int validity = 30;
+    int ttl = 365;
+    int maxDaysAhead = 0;
+    int overlap = 20;
+    Instant now = now();
+
+    // Day 0: Next Activation is Day 10. Cutoff is Day 0.
+    // 10 < 0 is False. No generation.
+    task.create(
+        SET_NAME + "_Z_B",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now)).hasSize(1);
+
+    // Day 10: Next Activation is Day 10. Cutoff is Day 10.
+    // 10 < 10 is False. No generation yet (strict <).
+
+    task.create(
+        SET_NAME + "_Z_B",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(10, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(10, DAYS))).hasSize(1);
+
+    task.create(
+        SET_NAME + "_Z_B",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(11, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 2);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(11, DAYS))).hasSize(2);
+
+    // Day 20: Next Activation is Day 20. Cutoff is Day 20.
+    // 20 < 20 is False. No generation yet (strict <).
+    task.create(
+        SET_NAME + "_Z_B",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(20, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 2);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(20, DAYS))).hasSize(2);
+
+    // Day 21: Next Activation is Day 20. Cutoff is Day 21.
+    // 20 < 21 is True. Generates Key 3.
+    task.create(
+        SET_NAME + "_Z_B",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(21, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 3);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(21, DAYS))).hasSize(3);
+
+    // Day 30: Key 1 expires. Total stays 3. Active drops to 2 (Key 2, Key 3).
+    // Cutoff is Day 30. Next Activation is 30. 30 < 30 is False.
+    task.create(
+        SET_NAME + "_Z_B",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(30, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 3);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(30, DAYS))).hasSize(2);
+
+    // Day 31: Next Activation is 30. 30 < 31 is True. Generates Key 4.
+    // Total becomes 4. Active jumps back to 3 (Key 2, Key 3, Key 4).
+    task.create(
+        SET_NAME + "_Z_B",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(31, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 4);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(31, DAYS))).hasSize(3);
+  }
+
+  @Test
+  public void validate_overlapAndDaysInAdvanceAreZero() throws Exception {
+    int count = 1;
+    int validity = 30;
+    int ttl = 365;
+    int maxDaysAhead = 0;
+    int overlap = 0;
+    Instant now = now();
+
+    // Day 0: Next Activation is Day 30. Cutoff is Day 0.
+    // 30 < 0 is False. No generation.
+    task.create(
+        SET_NAME + "_Z_C",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_C")).hasSize(count);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_C", 10, now)).hasSize(1);
+
+    // Day 30: Key 1 expired. getActiveKeys returns 0.
+    // Generation kicks in to maintain desired count. New key (Key 2) is active.
+    task.create(
+        SET_NAME + "_Z_C",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(30, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_C")).hasSize(count * 2);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_C", 10, now.plus(30, DAYS))).hasSize(1);
+
+    // Day 31: Already generated. No pending generation needed.
+    // Size remains count * 2.
+    task.create(
+        SET_NAME + "_Z_C",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(31, DAYS));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_C")).hasSize(count * 2);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_C", 10, now.plus(31, DAYS))).hasSize(1);
+  }
+
   protected abstract KeyStorageClient getKeyStorageClient();
 
   protected abstract ImmutableList<byte[]> capturePeerSplits() throws Exception;

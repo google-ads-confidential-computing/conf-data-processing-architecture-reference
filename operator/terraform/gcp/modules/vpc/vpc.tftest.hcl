@@ -31,17 +31,32 @@ variables {
   environment                    = "environment"
   project_id                     = "project_id"
   regions                        = ["us"]
+  otel_regions                   = ["eu", "na"]
   network_name_suffix            = "network-name-suffix"
   auto_create_subnetworks        = false
-  worker_subnet_cidr             = { "us" : "0.0.0.0/0" }
-  collector_subnet_cidr          = {}
-  proxy_subnet_cidr              = {}
-  enable_opentelemetry_collector = false
+  worker_subnet_cidr             = { "us" : "0.0.0.1/0" }
+  collector_subnet_cidr          = { "eu" : "0.0.0.0/0", "na" : "0.0.0.0/0" }
+  proxy_subnet_cidr              = { "eu" : "0.0.0.0/0", "na" : "0.0.0.0/0" }
+  enable_opentelemetry_collector = true
   create_connectors              = false
   connector_machine_type         = "connector_machine_type"
 }
 
-# TODO: tests with different variables
+run "cidr_blocks_missing_region_fail_precondition" {
+  command = plan
+
+  variables {
+    collector_subnet_cidr = { "eu" : "0.0.0.1/0" }
+    proxy_subnet_cidr     = { "na" : "0.0.0.1/0" }
+    worker_subnet_cidr    = {}
+  }
+
+  expect_failures = [
+    google_compute_subnetwork.collector_subnet["na"],
+    google_compute_subnetwork.proxy_subnet["eu"],
+    google_compute_subnetwork.worker_subnet["us"],
+  ]
+}
 
 run "creates_route_without_auto_subnets" {
   command = plan
@@ -69,18 +84,17 @@ run "creates_route_with_auto_subnets" {
 
     error_message = "VPC network route names are not correct"
   }
+  assert {
+    condition     = length(output.worker_subnet_ids) == length(var.regions)
+    error_message = "# of worker_subnet_ids does not equal the # of regions"
+  }
 }
 
 run "creates_nat_for_each_region" {
   command = plan
 
-  variables {
-    regions            = ["us", "eu"]
-    worker_subnet_cidr = { "us" : "0.0.0.0/0", "eu" : "0.0.0.0/0" }
-  }
-
   assert {
-    condition = length(module.vpc_nat) == length(var.regions)
+    condition = length(module.vpc_nat) == length(var.regions) + length(var.otel_regions)
 
     error_message = "# of VPC NATs does not equal the # of regions"
   }
@@ -90,6 +104,10 @@ run "creates_nat_for_each_region" {
   }
   assert {
     condition     = module.vpc_nat["eu"].router_name == "environment-router"
+    error_message = "Router name for VPC NAT is not correct"
+  }
+  assert {
+    condition     = module.vpc_nat["na"].router_name == "environment-router"
     error_message = "Router name for VPC NAT is not correct"
   }
 }
@@ -119,12 +137,16 @@ run "generates_outputs_with_plan" {
     error_message = "US subnet ID is incorrect"
   }
   assert {
-    condition     = length(output.collector_subnet_ids) == 0
-    error_message = "collector_subnet_ids is not empty"
+    condition     = length(output.worker_subnet_ids) == length(var.regions)
+    error_message = "# of worker_subnet_ids does not equal the # of regions"
   }
   assert {
-    condition     = length(output.proxy_subnet_ids) == 0
-    error_message = "proxy_subnet_ids is not empty"
+    condition     = length(output.collector_subnet_ids) == length(var.otel_regions)
+    error_message = "# of collector_subnet_ids does not equal the # of regions"
+  }
+  assert {
+    condition     = length(output.proxy_subnet_ids) == length(var.otel_regions)
+    error_message = "# of proxy_subnet_ids does not equal the # of regions"
   }
   assert {
     condition     = output.network == "self_link"

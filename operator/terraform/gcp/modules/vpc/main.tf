@@ -75,8 +75,7 @@ module "vpc_nat" {
   source  = "terraform-google-modules/cloud-nat/google"
   version = "~> 6.0"
 
-  for_each = var.regions
-
+  for_each                            = setunion(var.regions, var.otel_regions)
   project_id                          = var.project_id
   network                             = module.vpc_network.network_self_link
   region                              = each.value
@@ -99,14 +98,14 @@ resource "google_compute_subnetwork" "worker_subnet" {
     create_before_destroy = true
 
     precondition {
-      condition     = length(var.worker_subnet_cidr) >= length(var.regions)
+      condition     = contains(keys(var.worker_subnet_cidr), each.value)
       error_message = "A worker subnet cidr range must be provided for all regions."
     }
   }
 }
 
 resource "google_compute_subnetwork" "collector_subnet" {
-  for_each = var.enable_opentelemetry_collector ? var.regions : []
+  for_each = var.enable_opentelemetry_collector ? var.otel_regions : []
 
   name    = "${var.environment}-backend-subnet"
   network = module.vpc_network.network_self_link
@@ -117,16 +116,15 @@ resource "google_compute_subnetwork" "collector_subnet" {
 
   lifecycle {
     create_before_destroy = true
-
     precondition {
-      condition     = length(var.collector_subnet_cidr) >= length(var.regions)
+      condition     = contains(keys(var.collector_subnet_cidr), each.value)
       error_message = "A collector subnet cidr range must be provided for all regions."
     }
   }
 }
 
 resource "google_compute_subnetwork" "proxy_subnet" {
-  for_each = var.enable_opentelemetry_collector ? var.regions : []
+  for_each = var.enable_opentelemetry_collector ? var.otel_regions : []
 
   name    = "${var.environment}-proxy-subnet"
   network = module.vpc_network.network_self_link
@@ -139,9 +137,8 @@ resource "google_compute_subnetwork" "proxy_subnet" {
   lifecycle {
     ignore_changes        = [ipv6_access_type]
     create_before_destroy = true
-
     precondition {
-      condition     = length(var.proxy_subnet_cidr) >= length(var.regions)
+      condition     = contains(keys(var.proxy_subnet_cidr), each.value)
       error_message = "A proxy subnet cidr range must be provided for all regions."
     }
   }

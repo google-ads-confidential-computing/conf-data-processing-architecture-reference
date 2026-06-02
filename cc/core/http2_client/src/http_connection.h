@@ -20,6 +20,7 @@
 #include <string>
 #include <thread>
 
+#include <boost/asio.hpp>
 #include <nghttp2/asio_http2_client.h>
 
 #include "cc/core/interface/async_context.h"

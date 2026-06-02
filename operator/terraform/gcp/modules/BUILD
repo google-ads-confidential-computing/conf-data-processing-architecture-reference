@@ -69,3 +69,12 @@ pkg_filegroup(
     ],
     prefix = "modules",
 )
+
+pkg_filegroup(
+    name = "otel_modules_pkg",
+    srcs = [
+        "//operator/terraform/gcp/modules/opentelemetry_collector",
+        "//operator/terraform/gcp/modules/otel_load_balancer",
+    ],
+    prefix = "modules",
+)

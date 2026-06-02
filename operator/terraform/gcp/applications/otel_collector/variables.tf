@@ -28,10 +28,6 @@ variable "environment" {
   type        = string
 }
 
-variable "region" {
-  description = "Region where all services will be created."
-  type        = string
-}
 
 variable "region_zone" {
   description = "Region zone where all services will be created."
@@ -47,15 +43,18 @@ variable "network" {
   type        = string
 }
 
-variable "collector_subnet_id" {
-  description = "Collector subnet id or self-link."
-  type        = string
+variable "subnets_per_region" {
+  description = "Subnet for server."
+  type        = map(string)
+  default     = {}
 }
 
-variable "proxy_subnet_id" {
-  description = "Proxy subnet id or self-link."
-  type        = string
+variable "proxy_only_subnets_per_region" {
+  description = "Proxy-only subnet for server."
+  type        = map(string)
+  default     = {}
 }
+
 
 ################################################################################
 # OpenTelemetry Collector variables
@@ -110,17 +109,7 @@ variable "otel_collector_startup_config" {
   default = {}
 }
 
-variable "max_collector_instances" {
-  description = "The maximum number of running instances for the managed instance group of collector."
-  type        = number
-  default     = 2
-}
 
-variable "min_collector_instances" {
-  description = "The minimum number of running instances for the managed instance group of collector."
-  type        = number
-  default     = 1
-}
 
 variable "collector_min_instance_ready_sec" {
   description = "Waiting time for the new instance to be ready."
@@ -128,11 +117,6 @@ variable "collector_min_instance_ready_sec" {
   default     = 120
 }
 
-variable "collector_cpu_utilization_target" {
-  description = "Cpu utilization target for the collector."
-  type        = number
-  default     = 0.8
-}
 
 variable "collector_exceed_cpu_usage_alarm" {
   description = "Configuration for the exceed CPU usage alarm."
@@ -169,26 +153,6 @@ variable "collector_exceed_memory_usage_alarm" {
     duration_sec : 300,
     alignment_period_sec : 600,
     threshold : 6442450944, # 6 GB
-    severity : "moderate",
-    auto_close_sec : 1800
-  }
-}
-
-variable "collector_export_error_alarm" {
-  description = "Configuration for the collector exporting error alarm."
-  type = object({
-    enable_alarm : bool,
-    duration_sec : number,
-    alignment_period_sec : number,
-    threshold : number,
-    severity : string,
-    auto_close_sec : number
-  })
-  default = {
-    enable_alarm : false,
-    duration_sec : 300,
-    alignment_period_sec : 600,
-    threshold : 50,
     severity : "moderate",
     auto_close_sec : 1800
   }
@@ -318,4 +282,16 @@ variable "collector_service_name" {
   description = "The name of the service for the load balancer."
   type        = string
   default     = "collector"
+}
+
+variable "collector_regional_config" {
+  description = "Region and zone level configurations."
+  type = map(object({
+    zonal_config = map(object({
+      min_collector_count              = optional(number, 1)
+      max_collector_count              = optional(number, 3)
+      collector_cpu_utilization_target = optional(number, 0.8)
+    }))
+  }))
+  default = {}
 }

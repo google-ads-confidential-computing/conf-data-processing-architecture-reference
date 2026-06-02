@@ -168,8 +168,7 @@ variables {
   public_key_service_cloud_armor_high_block_ratio_min_samples       = 10
   public_key_service_cloud_armor_rate_limit_denials_alert_threshold = 1000
 
-  private_key_service_load_balancer_allowed_paths       = ["/*"]
-  private_key_service_addon_load_balancer_allowed_paths = ["/*"]
+  private_key_service_load_balancer_allowed_paths = ["/*"]
 
   private_key_service_lb_outlier_detection_enabled                               = false
   private_key_service_lb_outlier_detection_consecutive_errors                    = 0

@@ -13,7 +13,11 @@ load("//build_defs/cc:sdk.bzl", "sdk_dependencies")
 # Please update both while upgrading to new versions.
 load("//build_defs/shared:protobuf.bzl", "DEFAULT_PROTOBUF_CORE_VERSION", "DEFAULT_PROTOBUF_SHA_256")
 
-sdk_dependencies(DEFAULT_PROTOBUF_CORE_VERSION, DEFAULT_PROTOBUF_SHA_256)
+sdk_dependencies(
+    DEFAULT_PROTOBUF_CORE_VERSION,
+    DEFAULT_PROTOBUF_SHA_256,
+    bzlmod = False,
+)
 
 #############################
 # CC hermetic toolchain setup

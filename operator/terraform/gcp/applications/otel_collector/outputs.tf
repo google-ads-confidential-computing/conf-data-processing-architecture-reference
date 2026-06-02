@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-output "collector_instance_group" {
-  value       = module.otel_collector.collector_instance_group
-  description = "The instance group of the OpenTelemetry Collector."
+output "collector_instance_groups" {
+  value       = module.otel_collector.collector_instance_groups
+  description = "The instance groups of the OpenTelemetry Collector."
 }
 
 output "loadbalancer_dns_address" {
@@ -24,9 +24,9 @@ output "loadbalancer_dns_address" {
   description = "The DNS address of the OpenTelemetry Collector load balancer."
 }
 
-output "forwarding_rule" {
-  value       = module.otel_collector_load_balancer.forwarding_rule
-  description = "The forwarding rule of the OpenTelemetry Collector load balancer."
+output "forwarding_rules" {
+  value       = module.otel_collector_load_balancer.forwarding_rules
+  description = "The forwarding rules of the OpenTelemetry Collector load balancer."
 }
 
 output "http_proxy" {

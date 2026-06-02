@@ -20,6 +20,8 @@
 #include <string>
 #include <utility>
 
+#include <boost/system/error_code.hpp>
+
 #include "core/authorization_proxy/src/error_codes.h"
 #include "core/common/uuid/src/uuid.h"
 #include "core/http2_client/src/http2_client.h"

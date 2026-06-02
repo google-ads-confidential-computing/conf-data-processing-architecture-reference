@@ -33,6 +33,8 @@ cc_library(
         "//cc/public/cpio/utils/metric_instance/interface:type_def",
         "//cc/public/cpio/utils/metric_instance/src:metric_instance",
         "@boost//:asio_ssl",
+        "@boost//:date_time",
+        "@boost//:exception",
         "@boost//:system",
         "@com_github_nghttp2_nghttp2//:nghttp2",
         "@com_google_absl//absl/strings",

@@ -17,10 +17,7 @@ load("@rules_cc//cc:cc_test.bzl", "cc_test")
 cc_test(
     name = "curl_wrapper_test",
     timeout = "short",
-    srcs =
-        [
-            "http1_curl_wrapper_test.cc",
-        ],
+    srcs = ["http1_curl_wrapper_test.cc"],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/curl_client/src:http1_curl_client_lib",
@@ -29,6 +26,7 @@ cc_test(
         "//cc/core/test/utils/http1_helper:test_http1_server",
         "//cc/core/utils/src:core_utils",
         "//cc/public/core/test/interface:execution_result_matchers",
+        "@boost//:beast",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],

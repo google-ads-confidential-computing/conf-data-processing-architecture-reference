@@ -23,6 +23,9 @@
 #include <utility>
 #include <vector>
 
+#include <boost/asio.hpp>
+#include <boost/date_time/posix_time/posix_time_duration.hpp>
+#include <boost/system/error_code.hpp>
 #include <nghttp2/asio_http2_server.h>
 
 #include "absl/strings/str_cat.h"

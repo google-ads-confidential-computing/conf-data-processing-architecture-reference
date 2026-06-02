@@ -28,6 +28,11 @@ variable "regions" {
   type        = set(string)
 }
 
+variable "otel_regions" {
+  description = "Regions where the OpenTelemetry collector is deployed. Recommended to be the same as the server regions."
+  type        = set(string)
+}
+
 variable "network_name_suffix" {
   description = "The suffix of the name of the VPC network of this module. The network name is a combination of environment name and this suffix. This is required if auto_create_subnetworks is disabled."
   type        = string

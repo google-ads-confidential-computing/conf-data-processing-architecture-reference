@@ -27,5 +27,6 @@ cc_library(
         "//cc/public/core/interface:execution_result",
         "@boost//:asio",
         "@boost//:beast",
+        "@boost//:system",
     ],
 )

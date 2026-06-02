@@ -31,16 +31,21 @@ mock_provider "google-beta" {
 variables {
   environment       = "environment"
   project_id        = ""
-  region            = ""
   network           = ""
-  subnet_id         = ""
-  proxy_subnet      = "any"
-  instance_group    = ""
+  instance_groups   = ["instance_group_1", "instance_group_2"]
   service_name      = "service"
   service_port_name = ""
   service_port      = 0
   domain_name       = "domain"
   dns_name          = "dns"
+  subnets_per_region = {
+    us-central1 = "test-collector-id",
+    us-east1    = "test-collector-id-2"
+  }
+  proxy_only_subnets_per_region = {
+    us-central1 = "test-proxy-id",
+    us-east1    = "test-proxy-id-2"
+  }
 }
 
 run "load_balancer_uses_proper_health_check" {
@@ -74,7 +79,12 @@ run "forwarding_rule_uses_proper_proxy" {
   command = plan
 
   assert {
-    condition     = google_compute_global_forwarding_rule.forwarding_rule.target == "http_proxy_id"
+    condition     = google_compute_global_forwarding_rule.forwarding_rules["us-central1"].target == "http_proxy_id"
+    error_message = "Wrong proxy"
+  }
+
+  assert {
+    condition     = google_compute_global_forwarding_rule.forwarding_rules["us-east1"].target == "http_proxy_id"
     error_message = "Wrong proxy"
   }
 }
@@ -96,7 +106,11 @@ run "generates_outputs_with_plan" {
   command = plan
 
   assert {
-    condition     = output.forwarding_rule.name == "environment-service-forwarding-rule"
+    condition     = output.forwarding_rules["us-central1"].name == "environment-service-us-central1-forwarding-rule"
+    error_message = "Wrong rule"
+  }
+  assert {
+    condition     = output.forwarding_rules["us-east1"].name == "environment-service-us-east1-forwarding-rule"
     error_message = "Wrong rule"
   }
   assert {

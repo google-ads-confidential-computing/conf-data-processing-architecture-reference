@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 locals {
-  collector_instance_group_name   = google_compute_region_instance_group_manager.collector_instance.name
-  collecotr_instance_group_filter = "resource.type=\"gce_instance\" AND metadata.system_labels.\"instance_group\"=\"${local.collector_instance_group_name}\""
+  collecotr_instance_group_filter = "resource.type=\"gce_instance\" AND metadata.user_labels.\"otel_collector\"=\"true\""
 }
 
 # Disable follwing alert policies using denominator.

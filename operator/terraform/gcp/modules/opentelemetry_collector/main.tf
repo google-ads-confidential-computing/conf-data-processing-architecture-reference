@@ -18,6 +18,15 @@ locals {
   collector_service_account_email = var.user_provided_collector_sa_email == "" ? google_service_account.collector_service_account[0].email : var.user_provided_collector_sa_email
   egress_internet_tag             = "egress-internet"
   startup_script_hash             = sha256(var.collector_startup_script)
+  zonal_config_list = flatten([
+    for key, config_per_region in var.collector_regional_config : [
+      for key2, value2 in config_per_region.zonal_config : {
+        region          = key
+        zone            = key2
+        config_per_zone = value2
+      }
+    ]
+  ])
 }
 
 resource "null_resource" "server_instance_replace_trigger" {
@@ -33,6 +42,8 @@ resource "null_resource" "server_instance_replace_trigger" {
 
 
 resource "null_resource" "collector_template_mig_replace_trigger" {
+  for_each = { for config in local.zonal_config_list : config.zone => config }
+
   triggers = {
     # To work around the google_compute_region_instance_group_manager update
     # error "Networks specified in new and old network interfaces must be the
@@ -43,11 +54,11 @@ resource "null_resource" "collector_template_mig_replace_trigger" {
     # not seem to work and always forces replacement, perhaps due to some non-
     # determinism of the list. Direct indexing into the first element works as
     # desired.
-    network   = length(google_compute_instance_template.collector.network_interface) > 0 ? google_compute_instance_template.collector.network_interface[0].network : ""
-    subnet_id = length(var.subnet_id) > 0 ? var.subnet_id : ""
+    network   = length(google_compute_instance_template.collector[each.value.region].network_interface) > 0 ? google_compute_instance_template.collector[each.value.region].network_interface[0].network : ""
+    subnet_id = length(var.subnets_per_region[each.value.region]) > 0 ? var.subnets_per_region[each.value.region] : ""
+    zone      = each.key
   }
 }
-
 resource "google_service_account" "collector_service_account" {
   count = var.user_provided_collector_sa_email == "" ? 1 : 0
   # Service account id has a 30 character limit
@@ -73,66 +84,26 @@ resource "google_project_iam_member" "collector_service_account_log_writer_iam" 
   member  = "serviceAccount:${local.collector_service_account_email}"
 }
 
-resource "google_compute_region_instance_group_manager" "collector_instance" {
-  provider           = google-beta
-  region             = var.region
-  project            = var.project_id
-  name               = "${var.environment}-${var.region}-collector-mig"
-  description        = "The managed instance group for SCP worker instances."
-  base_instance_name = "${var.environment}-${var.region}-collector"
-
-  named_port {
-    name = var.collector_service_port_name
-    port = var.collector_service_port
-  }
-
-  auto_healing_policies {
-    health_check      = google_compute_health_check.collector.id
-    initial_delay_sec = var.collector_min_instance_ready_sec
-  }
-
-  version {
-    instance_template = google_compute_instance_template.collector.id
-  }
-
-  update_policy {
-    minimal_action = "REPLACE"
-    type           = "PROACTIVE"
-    # Avoid collector downtime during update by setting max_unavailable_fixed
-    # to 0. The default value of this field is the number of the zone in the
-    # region.
-    max_unavailable_fixed = 0
-    # max_surge_fixed needs to be >= the number of zones in the region, so we
-    # set it to a relative large number.
-    max_surge_fixed = 10
-    # Waiting time for the new instance to be ready.
-    min_ready_sec = var.collector_min_instance_ready_sec
-  }
-
-  lifecycle {
-    create_before_destroy = true
-    replace_triggered_by = [
-      null_resource.collector_template_mig_replace_trigger
-    ]
-  }
-}
-
 resource "google_compute_instance_template" "collector" {
-  region      = var.region
-  project     = var.project_id
-  name_prefix = "${var.environment}-${var.region}-collector"
+  for_each = var.collector_regional_config
+
   provider    = google-beta
+  project     = var.project_id
+  region      = each.key
+  name_prefix = "${var.environment}-${each.key}-collector"
   description = "This is used to create an OpenTelemetry collector for the region."
 
   tags = compact([
     "environment",
     var.environment,
+    "otel-collector",
     "allow-otlp",
     local.egress_internet_tag,
   ])
 
   labels = {
-    environment = var.environment
+    environment    = var.environment
+    otel_collector = "true"
   }
 
   disk {
@@ -142,7 +113,7 @@ resource "google_compute_instance_template" "collector" {
 
   network_interface {
     network            = var.network
-    subnetwork         = var.subnet_id
+    subnetwork         = var.subnets_per_region[each.key]
     subnetwork_project = var.project_id
   }
 
@@ -173,31 +144,70 @@ resource "google_compute_instance_template" "collector" {
     create_before_destroy = true
     replace_triggered_by  = [null_resource.server_instance_replace_trigger]
   }
-
 }
 
-resource "google_compute_region_autoscaler" "collector_autoscaler" {
-  provider = google-beta
+resource "google_compute_instance_group_manager" "collector_instance_groups" {
+  for_each = { for config in local.zonal_config_list : config.zone => config }
 
-  name    = "${var.environment}-collector-autoscaler"
-  project = var.project_id
-  region  = var.region
-  target  = google_compute_region_instance_group_manager.collector_instance.id
+  name               = "${var.environment}-collector-${each.key}-mig"
+  description        = "The managed instance group for SCP collector instances."
+  base_instance_name = "${var.environment}-${each.key}-collector"
+  zone               = each.key
 
-  autoscaling_policy {
-    max_replicas    = var.max_collector_instances
-    min_replicas    = var.min_collector_instances
-    cooldown_period = var.collector_min_instance_ready_sec
-    # Only scale up to avoid collector flush metric data too often
-    mode = "ONLY_UP"
+  version {
+    instance_template = google_compute_instance_template.collector[each.value.region].id
+  }
 
-    cpu_utilization {
-      target = var.collector_cpu_utilization_target
-    }
+  named_port {
+    name = "otlp"
+    port = var.collector_service_port
+  }
+
+  auto_healing_policies {
+    health_check      = google_compute_health_check.collector.id
+    initial_delay_sec = var.collector_min_instance_ready_sec
+  }
+
+  update_policy {
+    minimal_action = "REPLACE"
+    type           = "PROACTIVE"
+    # Avoid collector downtime during update by setting max_unavailable_fixed to 0.
+    # max_surge_fixed needs to be >= the number of zones in the region, so we set it to a relative large number.
+    max_unavailable_fixed = 0
+    max_surge_fixed       = 10
   }
 
   lifecycle {
-    replace_triggered_by = [google_compute_region_instance_group_manager.collector_instance.id]
+    create_before_destroy = true
+    replace_triggered_by  = [null_resource.collector_template_mig_replace_trigger[each.key]]
+  }
+}
+
+resource "google_compute_autoscaler" "collector_autoscalers" {
+  for_each = { for config in local.zonal_config_list : config.zone => config }
+
+  provider = google-beta
+  project  = var.project_id
+
+  name   = "${var.environment}-${each.key}-collector-autoscaler"
+  zone   = each.key
+  target = google_compute_instance_group_manager.collector_instance_groups[each.key].id
+
+  autoscaling_policy {
+    max_replicas = each.value.config_per_zone.max_collector_count
+    min_replicas = each.value.config_per_zone.min_collector_count
+    # Wait for instance to be ready to start collecting metrics
+    cooldown_period = var.collector_min_instance_ready_sec
+    mode            = "ONLY_UP"
+
+    cpu_utilization {
+      target = each.value.config_per_zone.collector_cpu_utilization_target
+    }
+  }
+
+  # Required otherwise server_instance_group hits resourceInUseByAnotherResource error when replacing
+  lifecycle {
+    replace_triggered_by = [google_compute_instance_group_manager.collector_instance_groups[each.key].id]
   }
 }
 
@@ -209,9 +219,15 @@ resource "google_compute_health_check" "collector" {
     port      = var.collector_service_port
   }
 
-  timeout_sec         = 3
-  check_interval_sec  = 3
-  healthy_threshold   = 2
+  timeout_sec        = 3
+  check_interval_sec = 3
+
+  # A so-far unhealthy instance will be marked healthy
+  # after this many consecutive successes
+  healthy_threshold = 2
+
+  # A so-far healthy instance will be
+  # marked unhealthy after this many consecutive failures
   unhealthy_threshold = 4
 }
 

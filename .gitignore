@@ -32,6 +32,7 @@ tf_dev_test_env/
 #Ignore generated cache from depedency and licenses check
 /tools/opensource/__pycache__/
 /tools/opensource/deps.txt
+/tools/opensource/resolved.py
 
 #Ignore release notes file
 release_diff_*.txt

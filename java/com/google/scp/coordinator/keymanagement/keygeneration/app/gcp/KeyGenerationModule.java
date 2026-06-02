@@ -23,6 +23,7 @@ import static com.google.scp.coordinator.keymanagement.shared.model.KeyGeneratio
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_SERVICE_ACCOUNT;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PEER_COORDINATOR_WIP_PROVIDER;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.POPULATE_MIGRATION_KEY_DATA;
+import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.PROJECT_ID;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.SPANNER_INSTANCE;
 import static com.google.scp.coordinator.keymanagement.shared.model.KeyGenerationParameter.SUBSCRIPTION_ID;
 
@@ -184,12 +185,14 @@ public final class KeyGenerationModule extends AbstractModule {
       ParameterClient parameterClient, ParameterManagerClient parameterManagerClient)
       throws ParameterClientException {
     try {
+      var projectId = parameterClient.getParameter(PROJECT_ID).orElse(args.getProjectId());
       var paramName =
           String.format(
               "scp-%s-%s",
               parameterClient.getEnvironmentName().orElseThrow(), KEY_SETS_CONFIG_ENV_VAR);
       var parameterVersionName =
-          ParameterVersionName.of(args.getProjectId(), LOCATION_ID, paramName, VERSION_ID);
+          ParameterVersionName.of(projectId, LOCATION_ID, paramName, VERSION_ID);
+      logger.info("Parameter version is {}", parameterVersionName);
       var param = parameterManagerClient.getParameterVersion(parameterVersionName);
       return Optional.of(param.getPayload().getData().toStringUtf8());
     } catch (Exception e) {

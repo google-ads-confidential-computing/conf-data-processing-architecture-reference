@@ -25,6 +25,7 @@ public final class KeyGenerationParameter {
   public static final String MIGRATION_KMS_KEY_BASE_URI = "MIGRATION_KMS_KEY_BASE_URI";
 
   // GCP
+  public static final String PROJECT_ID = "PROJECT_ID";
   public static final String KEY_STORAGE_SERVICE_BASE_URL = "KEY_STORAGE_SERVICE_BASE_URL";
   public static final String SPANNER_INSTANCE = "SPANNER_INSTANCE";
   public static final String SUBSCRIPTION_ID = "SUBSCRIPTION_ID";

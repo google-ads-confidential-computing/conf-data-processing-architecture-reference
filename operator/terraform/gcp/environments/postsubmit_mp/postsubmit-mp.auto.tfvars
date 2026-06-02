@@ -77,6 +77,26 @@ proxy_subnet_cidr = {
   "us-central1" = "10.4.0.0/16",
   "us-east1"    = "10.14.0.0/16"
 }
+collector_regional_config = {
+  "us-central1" = {
+    zonal_config = {
+      "us-central1-c" = {
+        min_collector_count              = 1
+        max_collector_count              = 2
+        collector_cpu_utilization_target = 0.8
+      }
+    }
+  },
+  "us-east1" = {
+    zonal_config = {
+      "us-east1-c" = {
+        min_collector_count              = 1
+        max_collector_count              = 2
+        collector_cpu_utilization_target = 0.8
+      }
+    }
+  }
+}
 
 collector_exceed_cpu_usage_alarm = {
   enable_alarm : true,
@@ -91,14 +111,6 @@ collector_exceed_memory_usage_alarm = {
   duration_sec : 300,
   alignment_period_sec : 600,
   threshold : 6442450944, # 6 GB
-  severity : "moderate",
-  auto_close_sec : 1800
-}
-collector_export_error_alarm = {
-  enable_alarm : true,
-  duration_sec : 300,
-  alignment_period_sec : 600,
-  threshold : 50,
   severity : "moderate",
   auto_close_sec : 1800
 }

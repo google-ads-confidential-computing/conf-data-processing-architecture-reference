@@ -64,3 +64,13 @@ pkg_tar(
     extension = "tgz",
     strip_prefix = "/",
 )
+
+pkg_tar(
+    name = "otel_collector_tar",
+    srcs = [
+        "//operator/terraform/gcp/applications:otel_collector_pkg",
+        "//operator/terraform/gcp/modules:otel_modules_pkg",
+    ],
+    extension = "tgz",
+    strip_prefix = "/",
+)

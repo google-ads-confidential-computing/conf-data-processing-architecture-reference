@@ -26,7 +26,6 @@
 #include <vector>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
 #include <nghttp2/asio_http2.h>
 #include <nghttp2/asio_http2_client.h>

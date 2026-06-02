@@ -37,6 +37,34 @@ variables {
   network             = "test-network"
   collector_subnet_id = "test-collector-id"
   proxy_subnet_id     = "test-proxy-id"
+  subnets_per_region = {
+    us-central1 = "test-collector-id",
+    us-east1    = "test-collector-id-2"
+  }
+  proxy_only_subnets_per_region = {
+    us-central1 = "test-proxy-id",
+    us-east1    = "test-proxy-id-2"
+  }
+  collector_regional_config = {
+    us-central1 = {
+      zonal_config = {
+        us-central1-a = {
+          min_collector_count              = 1
+          max_collector_count              = 3
+          collector_cpu_utilization_target = 0.8
+        }
+      }
+    }
+    us-east1 = {
+      zonal_config = {
+        us-east1-a = {
+          min_collector_count              = 1
+          max_collector_count              = 3
+          collector_cpu_utilization_target = 0.8
+        }
+      }
+    }
+  }
 }
 
 run "creates_otel_collector" {
@@ -61,7 +89,7 @@ run "generates_outputs_with_plan" {
   command = plan
 
   assert {
-    condition     = output.forwarding_rule.name != ""
+    condition     = length(output.forwarding_rules) == length(var.subnets_per_region)
     error_message = "Wrong rule"
   }
   assert {

@@ -28,17 +28,15 @@ module "otel_collector" {
   environment = var.environment
   project_id  = var.project_id
   network     = var.network
-  region      = var.region
-  subnet_id   = var.collector_subnet_id
+
+  subnets_per_region        = var.subnets_per_region
+  collector_regional_config = var.collector_regional_config
 
   user_provided_collector_sa_email = var.user_provided_collector_sa_email
   collector_instance_type          = var.collector_instance_type
-  max_collector_instances          = var.max_collector_instances
-  min_collector_instances          = var.min_collector_instances
-  collector_service_port_name      = var.collector_service_port_name
   collector_service_port           = var.collector_service_port
+  collector_service_port_name      = var.collector_service_port_name
   collector_min_instance_ready_sec = var.collector_min_instance_ready_sec
-  collector_cpu_utilization_target = var.collector_cpu_utilization_target
   collector_startup_script = templatefile("../../modules/opentelemetry_collector/collector_startup.tftpl", {
     otel_collector_image_uri = var.otel_collector_startup_config.otel_collector_image_uri
     metric_prefix            = var.otel_collector_startup_config.metric_prefix
@@ -51,7 +49,6 @@ module "otel_collector" {
 
   collector_exceed_cpu_usage_alarm         = var.collector_exceed_cpu_usage_alarm
   collector_exceed_memory_usage_alarm      = var.collector_exceed_memory_usage_alarm
-  collector_export_error_alarm             = var.collector_export_error_alarm
   collector_startup_error_alarm            = var.collector_startup_error_alarm
   collector_crash_error_alarm              = var.collector_crash_error_alarm
   export_metric_to_collector_error_alarm   = var.export_metric_to_collector_error_alarm
@@ -61,17 +58,16 @@ module "otel_collector" {
 }
 
 module "otel_collector_load_balancer" {
-  source            = "../../modules/otel_load_balancer"
-  environment       = var.environment
-  project_id        = var.project_id
-  network           = var.network
-  region            = var.region
-  subnet_id         = var.collector_subnet_id
-  proxy_subnet      = var.proxy_subnet_id
-  instance_group    = module.otel_collector.collector_instance_group
-  service_name      = var.collector_service_name
-  service_port_name = var.collector_service_port_name
-  service_port      = var.collector_service_port
-  dns_name          = var.collector_dns_name
-  domain_name       = var.collector_domain_name
+  source                        = "../../modules/otel_load_balancer"
+  environment                   = var.environment
+  project_id                    = var.project_id
+  network                       = var.network
+  subnets_per_region            = var.subnets_per_region
+  proxy_only_subnets_per_region = var.proxy_only_subnets_per_region
+  instance_groups               = module.otel_collector.collector_instance_groups
+  service_name                  = var.collector_service_name
+  service_port_name             = var.collector_service_port_name
+  service_port                  = var.collector_service_port
+  dns_name                      = var.collector_dns_name
+  domain_name                   = var.collector_domain_name
 }

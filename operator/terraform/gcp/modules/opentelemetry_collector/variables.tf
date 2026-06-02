@@ -37,19 +37,21 @@ variable "network" {
   type        = string
 }
 
-variable "subnet_id" {
-  description = "Service subnet id."
-  type        = string
-}
-
-variable "region" {
-  description = "Region where resources will be created."
-  type        = string
-}
-
 ################################################################################
 # Collector Variables.
 ################################################################################
+variable "collector_regional_config" {
+  description = "Region and zone level configurations."
+  type = map(object({
+    zonal_config = map(object({
+      min_collector_count              = optional(number, 1)
+      max_collector_count              = optional(number, 3)
+      collector_cpu_utilization_target = optional(number, 0.8)
+    }))
+  }))
+  default = {}
+}
+
 variable "user_provided_collector_sa_email" {
   description = "User provided service account email for OpenTelemetry Collector."
   type        = string
@@ -60,9 +62,20 @@ variable "collector_instance_type" {
   type        = string
 }
 
+variable "collector_min_instance_ready_sec" {
+  description = "Waiting time for the new instance to be ready."
+  type        = number
+  default     = 240
+}
+
 variable "collector_startup_script" {
   description = "Script to configure and start the otel collector."
   type        = string
+}
+
+variable "collector_service_port" {
+  description = "The port that receives HTTP otlp traffic destined for the OpenTelemetry collector."
+  type        = number
 }
 
 variable "collector_service_port_name" {
@@ -70,31 +83,15 @@ variable "collector_service_port_name" {
   type        = string
 }
 
-variable "collector_service_port" {
-  description = "The value of the http port that receives traffic destined for the OpenTelemetry collector."
-  type        = number
-}
-
-variable "max_collector_instances" {
-  description = "The maximum number of running instances for the managed instance group of collector."
-  type        = number
-}
-
-variable "min_collector_instances" {
-  description = "The minimum number of running instances for the managed instance group of collector."
-  type        = number
-}
-
-variable "collector_min_instance_ready_sec" {
-  description = "Waiting time for the new instance to be ready."
-  type        = number
-}
-
-variable "collector_cpu_utilization_target" {
-  description = "Cpu utilization target for the collector."
-  type        = number
-}
 ################################################################################
+# Regional Variables.
+################################################################################
+
+variable "subnets_per_region" {
+  description = "Subnet for server."
+  type        = map(string)
+}
+
 # Alarm Variables.
 ################################################################################
 
@@ -112,18 +109,6 @@ variable "collector_exceed_cpu_usage_alarm" {
 
 variable "collector_exceed_memory_usage_alarm" {
   description = "Configuration for the exceed memory usage alarm."
-  type = object({
-    enable_alarm : bool,
-    duration_sec : number,
-    alignment_period_sec : number,
-    threshold : number,
-    severity : string,
-    auto_close_sec : number
-  })
-}
-
-variable "collector_export_error_alarm" {
-  description = "Configuration for the collector exporting error alarm."
   type = object({
     enable_alarm : bool,
     duration_sec : number,

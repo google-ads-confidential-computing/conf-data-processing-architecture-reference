@@ -21,6 +21,8 @@
 #include <utility>
 
 #include <boost/asio.hpp>
+#include <boost/beast.hpp>
+#include <boost/system/error_code.hpp>
 
 #include "core/test/utils/conditional_wait.h"
 #include "core/test/utils/http1_helper/errors.h"

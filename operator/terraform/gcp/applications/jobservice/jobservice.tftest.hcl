@@ -408,6 +408,17 @@ run "creates_otel_resources" {
   variables {
     enable_remote_metric_aggregation = true
     enable_opentelemetry_collector   = true
+    collector_regional_config = {
+      "us" = {
+        zonal_config = {
+          "us-central1-c" = {
+            min_collector_count              = 1
+            max_collector_count              = 2
+            collector_cpu_utilization_target = 0.8
+          }
+        }
+      }
+    }
   }
 
   assert {

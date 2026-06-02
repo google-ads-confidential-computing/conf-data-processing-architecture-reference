@@ -15,10 +15,10 @@
 """Common SDK build defs."""
 
 load("//build_defs/cc/shared:bazel_rules_cpp.bzl", "bazel_rules_cpp")
-load("//build_defs/cc/shared:bazelisk.bzl", "bazelisk")
 load("//build_defs/cc/shared:boost.bzl", "boost")
 load("//build_defs/cc/shared:boringssl.bzl", "boringssl")
 load("//build_defs/cc/shared:cc_utils.bzl", "cc_utils")
+load("//build_defs/cc/shared:curl.bzl", "curl")
 load("//build_defs/cc/shared:farmhash.bzl", "com_google_farmhash")
 load("//build_defs/cc/shared:google_cloud_cpp.bzl", "import_google_cloud_cpp")
 load("//build_defs/cc/shared:grpc_cpp.bzl", "import_grpc_cpp")
@@ -37,36 +37,40 @@ load("//build_defs/shared:protobuf.bzl", "protobuf")
 load("//build_defs/shared:terraform.bzl", "terraform")
 load("//build_defs/tink:tink_defs.bzl", "import_tink_git")
 
-def sdk_common(protobuf_version, protobuf_repo_hash, import_gcp):
+def sdk_common(import_gcp, protobuf_version = None, protobuf_repo_hash = None, bzlmod = True):
     """Common SDK build defs.
 
     Args:
+      import_gcp: set to True if importing GCP deps
       protobuf_version: the version of protobuf to import
       protobuf_repo_hash: the sha256 hash of the corresponding protobuf version
-      import_gcp: set to True if importing GCP deps
+      bzlmod: set to True if Bzlmod is enabled
     """
 
-    absl()
-    bazelisk()
-    bazel_rules_oci()
-    bazel_aspect_build()
-    bazel_rules_distroless()
-    bazel_rules_cpp()
-    bazel_rules_java()
-    bazel_rules_pkg()
-    bazel_rules_python()
-    bazel_build_tools()
     boost()
     boringssl()
-    cc_utils()
-
-    protobuf(protobuf_version, protobuf_repo_hash)
-    java_grpc()
     nghttp2()
+    curl()
     import_grpc_cpp()
     import_google_cloud_cpp()
     if import_gcp:
         google_cloud_sdk()
-    import_tink_git()
-    com_google_farmhash()
     terraform()
+
+    if not bzlmod:
+        absl()
+        bazel_rules_oci()
+        bazel_aspect_build()
+        bazel_rules_distroless()
+        bazel_rules_cpp()
+        bazel_rules_java()
+        bazel_rules_pkg()
+        bazel_rules_python()
+        bazel_build_tools()
+        cc_utils()
+
+        if protobuf_version and protobuf_repo_hash:
+            protobuf(protobuf_version, protobuf_repo_hash)
+        java_grpc()
+        import_tink_git()
+        com_google_farmhash()

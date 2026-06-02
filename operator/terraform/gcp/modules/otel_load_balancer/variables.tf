@@ -24,30 +24,14 @@ variable "project_id" {
   type        = string
 }
 
-variable "region" {
-  description = "Region where resources will be created."
-  type        = string
-}
 
 variable "network" {
   description = "VPC Network name or self-link to use for service."
   type        = string
 }
 
-variable "subnet_id" {
-  description = "Service subnet id."
-  type        = string
-}
 
-variable "proxy_subnet" {
-  description = "Envoy proxy subnet. Used to allow ingress into the service."
-  type        = any
-}
 
-variable "instance_group" {
-  description = "Instance group URL created by instance group managers."
-  type        = string
-}
 
 variable "service_name" {
   description = "value"
@@ -82,4 +66,19 @@ variable "dns_name" {
     condition     = length(var.dns_name) > 0
     error_message = "The dns name for the service can not be empty"
   }
+}
+
+variable "subnets_per_region" {
+  description = "Subnets per region for the forwarding rules."
+  type        = map(string)
+}
+
+variable "proxy_only_subnets_per_region" {
+  description = "Proxy-only subnets per region for internal managed load balancers."
+  type        = map(string)
+}
+
+variable "instance_groups" {
+  description = "List of Instance group URLs created by instance group managers."
+  type        = list(string)
 }

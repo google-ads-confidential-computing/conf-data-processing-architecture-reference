@@ -133,6 +133,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
       int backfillDays)
       throws ServiceException {
     LOGGER.info(logMetricHelper.format("create", ImmutableMap.of("setName", setName)));
+    var now = Instant.now();
     create(
         setName,
         tinkTemplate,
@@ -142,7 +143,11 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         createMaxDaysAhead,
         overlapPeriodDays,
         backfillDays,
-        Instant.now());
+        now);
+    checkFutureActiveKeys(
+        setName,
+        computeExpectedActiveKeyCount(numDesiredKeys, validityInDays, overlapPeriodDays),
+        now);
   }
 
   @VisibleForTesting
@@ -206,7 +211,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
               setName, activeKeys.size(), numDesiredKeys));
     }
 
-    // Only create in advance if expiration is before cutoff
+    // Only create in advance if next activation is before cutoff
     var createKeyCutoffEpochMilli = now.plus(createMaxDaysAhead, DAYS).toEpochMilli();
 
     // Check if there will be enough number of active keys when each active key expires, if not,
@@ -215,9 +220,12 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
         activeKeys.stream()
             .filter(EncryptionKey::hasExpirationTime)
             .map(EncryptionKey::getExpirationTime)
-            // Only create keys a certain amount of time ahead of schedule
-            .filter(epochMilli -> epochMilli < createKeyCutoffEpochMilli)
             .map(Instant::ofEpochMilli)
+            // Only create keys a certain amount of time ahead of schedule
+            .filter(
+                expirationInstant ->
+                    expirationInstant.minus(overlapPeriodDays, DAYS).toEpochMilli()
+                        < createKeyCutoffEpochMilli)
             .distinct()
             .sorted()
             .collect(toImmutableList());
@@ -255,6 +263,30 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
                 expiration, setName, actual, numDesiredKeys));
       }
     }
+  }
+
+  private void checkFutureActiveKeys(String setName, int expectedKeys, Instant now)
+      throws ServiceException {
+    var start = now.plus(6, DAYS);
+    var end = now.plus(6, DAYS);
+    var activeIn5 = keyDb.getActiveKeys(setName, expectedKeys, start, end);
+    if (activeIn5.size() < expectedKeys) {
+      LOGGER.error(format("precheck", setName, "future_lt_numDesiredKeys"));
+      LOGGER.error(
+          "[{}] Found {} of {} expected active keys (1 week in the future).",
+          setName,
+          activeIn5.size(),
+          expectedKeys);
+    }
+  }
+
+  private static int computeExpectedActiveKeyCount(
+      int numDesiredKeys, int validityInDays, int overlapPeriodDays) {
+    // When overlapPeriodDays > 0, validityInDays is guaranteed to be a multiple of
+    // (validityInDays - overlapPeriodDays) due to checks in create().
+    return overlapPeriodDays > 0
+        ? validityInDays / (validityInDays - overlapPeriodDays)
+        : numDesiredKeys;
   }
 
   /**
@@ -441,8 +473,12 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
   }
 
   private String format(String setName, String errorReason) {
+    return format("error", setName, errorReason);
+  }
+
+  private String format(String metricName, String setName, String errorReason) {
     return logMetricHelper.format(
-        "error", ImmutableMap.of("setName", setName, "errorReason", errorReason));
+        metricName, ImmutableMap.of("setName", setName, "errorReason", errorReason));
   }
 
   /**

@@ -25,6 +25,6 @@ cc_library(
         "//cc/core/interface:errors_lib",
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/interface:execution_result",
-        "@boost//:asio",
+        "@boost//:system",
     ],
 )

@@ -22,6 +22,7 @@
 #include <thread>
 #include <utility>
 
+#include <boost/asio/ssl.hpp>
 #include <nghttp2/asio_http2_server.h>
 
 #include "cc/core/interface/async_executor_interface.h"

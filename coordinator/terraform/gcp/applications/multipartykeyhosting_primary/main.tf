@@ -550,6 +550,13 @@ module "pubsub_id" {
   parameter_value = module.keygenerationservice.subscription_id
 }
 
+module "key_generation_project_id" {
+  source          = "../../modules/secret_manager"
+  environment     = var.environment
+  parameter_name  = "PROJECT_ID"
+  parameter_value = var.project_id
+}
+
 module "key_generation_count" {
   source          = "../../modules/secret_manager"
   environment     = var.environment

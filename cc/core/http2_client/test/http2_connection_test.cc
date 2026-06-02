@@ -25,7 +25,7 @@
 #include <thread>
 #include <vector>
 
-#include <boost/algorithm/string.hpp>
+#include <boost/system/error_code.hpp>
 #include <nghttp2/asio_http2_server.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>

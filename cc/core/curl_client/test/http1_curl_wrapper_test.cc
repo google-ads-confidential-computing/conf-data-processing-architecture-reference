@@ -17,6 +17,9 @@
 
 #include <gtest/gtest.h>
 
+#include <boost/beast/http/status.hpp>
+#include <boost/beast/http/verb.hpp>
+
 #include "core/curl_client/src/error_codes.h"
 #include "core/test/utils/http1_helper/test_http1_server.h"
 #include "core/test/utils/scp_test_base.h"

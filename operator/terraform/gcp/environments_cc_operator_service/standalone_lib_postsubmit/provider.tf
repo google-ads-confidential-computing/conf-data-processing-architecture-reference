@@ -1,5 +1,5 @@
-/*
- * Copyright 2025 Google LLC
+/**
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-output "forwarding_rules" {
-  value = google_compute_global_forwarding_rule.forwarding_rules
+provider "google" {
+  project = var.project_id
 }
 
-output "http_proxy" {
-  value = google_compute_target_http_proxy.proxy
-}
-
-output "loadbalancer_dns_address" {
-  value = format("%s.%s.%s:%s", var.environment, var.domain_name, trimsuffix(google_dns_managed_zone.collector_dns_zone.dns_name, "."), var.service_port)
+provider "google-beta" {
+  project = var.project_id
 }

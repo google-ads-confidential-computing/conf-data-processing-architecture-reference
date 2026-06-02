@@ -19,6 +19,7 @@
 
 #include <string>
 
+#include <boost/system/error_code.hpp>
 #include <nghttp2/asio_http2_server.h>
 
 #include "core/interface/type_def.h"

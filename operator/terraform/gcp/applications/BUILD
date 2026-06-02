@@ -33,3 +33,11 @@ pkg_filegroup(
     ],
     prefix = "applications",
 )
+
+pkg_filegroup(
+    name = "otel_collector_pkg",
+    srcs = [
+        "//operator/terraform/gcp/applications/otel_collector",
+    ],
+    prefix = "applications",
+)

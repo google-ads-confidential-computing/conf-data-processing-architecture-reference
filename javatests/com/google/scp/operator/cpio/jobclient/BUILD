@@ -39,6 +39,7 @@ java_test(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:guice-testlib",
+        "//java/external:javax_inject",
         "//java/external:mockito",
         "//java/external:protobuf_java_util",
         "//operator/protos/shared/backend:java_proto",
@@ -56,6 +57,7 @@ java_test(
         "//java/external:acai",
         "//java/external:google_truth",
         "//java/external:guice",
+        "//java/external:javax_inject",
         "//operator/protos/shared/backend:java_proto",
     ],
 )

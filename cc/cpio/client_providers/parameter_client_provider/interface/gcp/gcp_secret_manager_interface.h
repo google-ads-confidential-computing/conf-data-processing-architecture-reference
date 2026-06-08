@@ -21,7 +21,7 @@
 
 #include "core/interface/service_interface.h"
 #include "google/cloud/future.h"
-#include "google/cloud/secretmanager/secret_manager_client.h"
+#include "google/cloud/secretmanager/v1/secret_manager_client.h"
 
 namespace google::scp::cpio {
 /**

@@ -23,6 +23,7 @@ licenses(["notice"])  # Apache 2.0
 
 exports_files(["LICENSE"])
 
+# buildifier: disable=external-path
 cc_library(
     name = "aws_c_common",
     srcs = glob([

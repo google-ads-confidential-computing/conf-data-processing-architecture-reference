@@ -80,11 +80,11 @@ module "cloud_run" {
   canary_traffic_percentage = 0
 
   # Alert settings
-  alarms_enabled           = var.alarms_enabled
-  alert_name_suffix        = "Key Storage Service"
-  alarm_eval_period_sec    = var.alarm_eval_period_sec
-  alarm_duration_sec       = var.alarm_duration_sec
-  alert_severity_overrides = var.key_storage_severity_map
+  alert_urgent_severity_override = "important"
+  alert_name_suffix              = "Key Storage Service"
+  alarm_eval_period_sec          = var.alarm_eval_period_sec
+  alarm_duration_sec             = var.alarm_duration_sec
+  alert_severity_overrides       = var.key_storage_severity_map
 
   alert_5xx_threshold                       = var.cloud_run_5xx_threshold
   alert_on_memory_usage_important_threshold = 0.7
@@ -145,12 +145,13 @@ module "load_balancer" {
   managed_domain = var.key_storage_domain
 
   # Alert settings
-  alarm_eval_period_sec     = var.alarm_eval_period_sec
-  alarm_duration_sec        = var.alarm_duration_sec
-  alert_severity_overrides  = var.key_storage_severity_map
-  alert_5xx_error_ratio     = "0.2"
-  max_95_percent_latency_ms = var.load_balancer_max_95_percent_latency_ms
-  max_99_percent_latency_ms = var.load_balancer_max_99_percent_latency_ms
+  alert_urgent_severity_override = "important"
+  alarm_eval_period_sec          = var.alarm_eval_period_sec
+  alarm_duration_sec             = var.alarm_duration_sec
+  alert_severity_overrides       = var.key_storage_severity_map
+  alert_5xx_error_ratio          = "0.2"
+  max_95_percent_latency_ms      = var.load_balancer_max_95_percent_latency_ms
+  max_99_percent_latency_ms      = var.load_balancer_max_99_percent_latency_ms
 }
 
 module "service_monitoring_dashboard" {

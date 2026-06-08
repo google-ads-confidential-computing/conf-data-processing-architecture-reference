@@ -23,7 +23,7 @@
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "cpio/client_providers/kms_client_provider/mock/gcp/mock_gcp_key_management_service_client.h"
 #include "cpio/client_providers/kms_client_provider/src/gcp/gcp_kms_client_provider.h"
-#include "google/cloud/kms/key_management_client.h"
+#include "google/cloud/kms/v1/key_management_client.h"
 
 using google::cloud::kms::KeyManagementServiceClient;
 using google::cloud::kms::v1::DecryptResponse;

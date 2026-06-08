@@ -20,6 +20,7 @@
 #include "opentelemetry/common/key_value_iterable.h"
 #include "opentelemetry/context/context.h"
 #include "opentelemetry/sdk/metrics/meter.h"
+#include "opentelemetry/version.h"
 
 namespace google::scp::cpio::client_providers {
 
@@ -138,6 +139,20 @@ class MockMeter : public opentelemetry::metrics::Meter {
               CreateDoubleObservableUpDownCounter,
               (std::string_view, std::string_view, std::string_view),
               (noexcept, override));
+
+// (TODO: b/513617549): Remove once we deprecate the WORKSPACE build.
+#if OPENTELEMETRY_VERSION_MAJOR > 1 || \
+    (OPENTELEMETRY_VERSION_MAJOR == 1 && OPENTELEMETRY_VERSION_MINOR >= 22)
+  MOCK_METHOD(
+      uintptr_t, RegisterCallback,
+      (opentelemetry::metrics::MultiObservableCallbackPtr callback, void* state,
+       opentelemetry::nostd::span<opentelemetry::metrics::ObservableInstrument*>
+           instruments),
+      (noexcept, override));
+
+  MOCK_METHOD(void, DeregisterCallback, (uintptr_t callback_id),
+              (noexcept, override));
+#endif
 };
 
 }  // namespace google::scp::cpio::client_providers

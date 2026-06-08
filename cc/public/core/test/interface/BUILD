@@ -28,6 +28,7 @@ cc_library(
         "//cc/public/core/interface:execution_result_cc_proto",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest",
+        "@com_google_protobuf//:protobuf",
     ],
 )
 

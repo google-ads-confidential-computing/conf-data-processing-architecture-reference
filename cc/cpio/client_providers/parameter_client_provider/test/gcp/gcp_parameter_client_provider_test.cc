@@ -25,8 +25,14 @@
 #include "cpio/client_providers/instance_client_provider/mock/mock_instance_client_provider.h"
 #include "cpio/client_providers/parameter_client_provider/src/gcp/error_codes.h"
 #include "cpio/common/src/gcp/error_codes.h"
-#include "google/cloud/secretmanager/mocks/mock_secret_manager_connection.h"
-#include "google/cloud/secretmanager/secret_manager_client.h"
+#include "google/cloud/secretmanager/v1/mocks/mock_secret_manager_connection.h"
+#include "google/cloud/secretmanager/v1/secret_manager_client.h"
+
+namespace google::cloud::secretmanager_mocks {
+using ::google::cloud::secretmanager_v1_mocks::
+    MockSecretManagerServiceConnection;
+}
+
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/interface/parameter_client/type_def.h"

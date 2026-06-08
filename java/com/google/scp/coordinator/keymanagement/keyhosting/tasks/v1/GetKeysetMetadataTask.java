@@ -65,7 +65,8 @@ public class GetKeysetMetadataTask extends ApiTask {
 
   private static int computeExpectedActiveKeyCount(KeySetConfig config) {
     return config.overlapPeriodDays() > 0
-        ? config.validityInDays() / (config.validityInDays() - config.overlapPeriodDays())
+        ? config.count()
+            * (config.validityInDays() / (config.validityInDays() - config.overlapPeriodDays()))
         : config.count();
   }
 }

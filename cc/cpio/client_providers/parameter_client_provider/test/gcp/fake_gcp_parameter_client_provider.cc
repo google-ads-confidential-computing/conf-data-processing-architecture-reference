@@ -20,7 +20,12 @@
 #include <string>
 
 #include "cpio/client_providers/interface/parameter_client_provider_interface.h"
-#include "google/cloud/secretmanager/mocks/mock_secret_manager_connection.h"
+#include "google/cloud/secretmanager/v1/mocks/mock_secret_manager_connection.h"
+
+namespace google::cloud::secretmanager_mocks {
+using ::google::cloud::secretmanager_v1_mocks::
+    MockSecretManagerServiceConnection;
+}
 
 using google::cloud::secretmanager::SecretManagerServiceClient;
 using google::cloud::secretmanager::v1::AccessSecretVersionResponse;

@@ -285,7 +285,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
     // When overlapPeriodDays > 0, validityInDays is guaranteed to be a multiple of
     // (validityInDays - overlapPeriodDays) due to checks in create().
     return overlapPeriodDays > 0
-        ? validityInDays / (validityInDays - overlapPeriodDays)
+        ? numDesiredKeys * (validityInDays / (validityInDays - overlapPeriodDays))
         : numDesiredKeys;
   }
 

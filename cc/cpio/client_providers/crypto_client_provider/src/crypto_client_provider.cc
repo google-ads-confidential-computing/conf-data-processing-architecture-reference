@@ -1044,10 +1044,11 @@ ExecutionResultOr<AeadEncryptResponse> CryptoClientProvider::AeadEncryptSync(
     default:
       auto execution_result = FailureExecutionResult(
           SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_AEAD_KEY_TYPE);
-      SCP_ERROR(
-          kCryptoClientProvider, kZeroUuid, execution_result,
-          "The Aead key type requested is not supported %s.",
-          AeadKey::descriptor()->FindFieldByNumber(key_type)->name().c_str());
+      SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
+                "The Aead key type requested is not supported %s.",
+                std::string(
+                    AeadKey::descriptor()->FindFieldByNumber(key_type)->name())
+                    .c_str());
       return execution_result;
   }
 
@@ -1150,10 +1151,11 @@ ExecutionResultOr<AeadDecryptResponse> CryptoClientProvider::AeadDecryptSync(
     default:
       auto execution_result = FailureExecutionResult(
           SC_CRYPTO_CLIENT_PROVIDER_UNSUPPORTED_AEAD_KEY_TYPE);
-      SCP_ERROR(
-          kCryptoClientProvider, kZeroUuid, execution_result,
-          "The Aead key type requested is not supported %s.",
-          AeadKey::descriptor()->FindFieldByNumber(key_type)->name().c_str());
+      SCP_ERROR(kCryptoClientProvider, kZeroUuid, execution_result,
+                "The Aead key type requested is not supported %s.",
+                std::string(
+                    AeadKey::descriptor()->FindFieldByNumber(key_type)->name())
+                    .c_str());
       return execution_result;
   }
 

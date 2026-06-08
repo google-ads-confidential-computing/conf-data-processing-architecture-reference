@@ -96,6 +96,18 @@ public class GetKeysetMetadataTaskTest extends ApiTaskTestBase {
   }
 
   @Test
+  public void overlapBatchConfigTest() throws Exception {
+    doReturn("overlapBatch").when(matcher).group("name");
+    task.execute(matcher, request, response);
+
+    var metadata = verifyResponse(response);
+    assertThat(metadata.getActiveKeyCount()).isEqualTo(12);
+    assertThat(metadata.getActiveKeyCadenceDays()).isEqualTo(2);
+    assertThat(metadata.getBackfillDays())
+        .isEqualTo(keyConfigMap.get("overlapBatch").backfillDays());
+  }
+
+  @Test
   public void backfillConfigTest() throws Exception {
     doReturn("backfill").when(matcher).group("name");
     task.execute(matcher, request, response);

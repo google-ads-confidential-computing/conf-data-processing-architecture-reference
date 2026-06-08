@@ -30,6 +30,7 @@ java_test(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_databind",
+        "//java/external:javax_inject",
         "//java/external:jimfs",
         "//java/external:protobuf_java_util",
         "//operator/protos/shared/backend:java_proto",

@@ -248,7 +248,7 @@ resource "google_monitoring_dashboard" "opentelemetry_metrics_dashboard" {
                         "alignmentPeriod" : "60s",
                         "perSeriesAligner" : "ALIGN_MEAN"
                       },
-                      "filter" : "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" resource.type=\"gce_instance\"",
+                      "filter" : "metric.type=\"compute.googleapis.com/instance/cpu/utilization\" AND ${local.collector_instance_group_filter}",
                     }
                   }
                 }
@@ -281,7 +281,7 @@ resource "google_monitoring_dashboard" "opentelemetry_metrics_dashboard" {
                           "metric.label.\"Validator\""
                         ]
                       },
-                      "filter" : "metric.type=\"logging.googleapis.com/user/${google_logging_metric.collector_startup_error_metric.name}\" resource.type=\"gce_instance\"",
+                      "filter" : "metric.type=\"logging.googleapis.com/user/${google_logging_metric.collector_startup_error_metric.name}\"  AND ${local.collector_instance_group_filter}",
                       "secondaryAggregation" : {
                         "alignmentPeriod" : "60s",
                       }
@@ -314,7 +314,7 @@ resource "google_monitoring_dashboard" "opentelemetry_metrics_dashboard" {
                         "perSeriesAligner" : "ALIGN_SUM",
                         "crossSeriesReducer" : "REDUCE_SUM",
                       },
-                      "filter" : "metric.type=\"logging.googleapis.com/user/${google_logging_metric.collector_crash_error_metric.name}\" resource.type=\"gce_instance\"",
+                      "filter" : "metric.type=\"logging.googleapis.com/user/${google_logging_metric.collector_crash_error_metric.name}\"  AND ${local.collector_instance_group_filter}",
                       "secondaryAggregation" : {
                         "alignmentPeriod" : "60s",
                       }

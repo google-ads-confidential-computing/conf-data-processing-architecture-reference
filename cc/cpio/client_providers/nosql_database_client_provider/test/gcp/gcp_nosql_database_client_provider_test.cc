@@ -99,6 +99,7 @@ using google::scp::core::errors::SC_NO_SQL_DATABASE_PROVIDER_UNSET_KEY_TYPE;
 using google::scp::core::test::EqualsProto;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
+using google::scp::core::test::TextProtoString;
 using google::scp::core::test::WaitUntil;
 using google::scp::cpio::PartitionAndSortKey;
 using google::scp::cpio::client_providers::mock::MockGcpDatabaseFactory;
@@ -589,7 +590,7 @@ MATCHER_P2(IsStringAttribute, name, value, "") {
   if (arg.value_case() != ItemAttribute::kValueString) {
     *result_listener << "Expected arg to have value_string: " << value
                      << " but has:\n"
-                     << arg.DebugString();
+                     << TextProtoString(arg);
     return false;
   }
   return ExplainMatchResult(Eq(value), arg.value_string(), result_listener) &&

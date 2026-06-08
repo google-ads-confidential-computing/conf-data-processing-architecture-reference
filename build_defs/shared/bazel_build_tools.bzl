@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Build defs for Bazel build tools."""
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
@@ -25,5 +27,9 @@ def bazel_build_tools():
         strip_prefix = "buildtools-8.2.1",
         urls = [
             "https://github.com/bazelbuild/buildtools/archive/refs/tags/v8.2.1.tar.gz",
+        ],
+        patch_cmds = [
+            "echo 'load(\"//buildifier:def.bzl\", _buildifier = \"buildifier\")' > rules.bzl",
+            "echo 'buildifier = _buildifier' >> rules.bzl",
         ],
     )

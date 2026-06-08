@@ -327,6 +327,37 @@ public abstract class CreateSplitKeyTaskBaseTest {
   }
 
   @Test
+  public void validateOverlapDifferenceOverTime_highBatchTest() throws Exception {
+    var count = 3; // Batch size of 3
+    var validity = 30;
+    var overlap = 20;
+    var ttl = 365;
+    var template = DEFAULT_TINK_TEMPLATE;
+    var now = now();
+
+    // Day 0: Create Batch 1 (3 active keys) + Batch 2 (3 inactive keys) = 3 active, 6 total
+    task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now);
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 2);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now)).hasSize(3);
+
+    // Day 10: Activate Batch 2 + Create Batch 3 (3 inactive keys) = 6 active, 9 total
+    task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now.plus(10, DAYS));
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 3);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(10, DAYS))).hasSize(6);
+
+    // Day 20: Activate Batch 3 + Create Batch 4 (3 inactive keys) = 9 active, 12 total
+    task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now.plus(20, DAYS));
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 4);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(20, DAYS))).hasSize(9);
+
+    // Day 30: Deactivate Batch 1 + Activate Batch 4 + Create Batch 5 (3 inactive keys) = 9 active,
+    // 15 total
+    task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now.plus(30, DAYS));
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 5);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(30, DAYS))).hasSize(9);
+  }
+
+  @Test
   public void create_withBackfill_setsBackfillExpirationTime() throws Exception {
     int count = 1;
     int validity = 10;

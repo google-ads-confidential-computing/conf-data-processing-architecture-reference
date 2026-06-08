@@ -16,10 +16,13 @@
 
 #include "gcp_utils.h"
 
+#include <grpcpp/support/status.h>
+
 #include <nlohmann/json.hpp>
 
 #include "absl/strings/str_format.h"
 #include "core/common/global_logger/src/global_logger.h"
+#include "google/cloud/status.h"
 
 #include "error_codes.h"
 
@@ -45,139 +48,83 @@ using google::scp::core::errors::SC_GCP_UNIMPLEMENTED;
 using google::scp::core::errors::SC_GCP_UNKNOWN;
 using std::string;
 
+namespace {
 // Filename for logging errors
 static constexpr char kGcpErrorConverter[] = "GcpErrorConverter";
 constexpr char kAudience[] = "//iam.googleapis.com/%s";
 
+google::scp::core::StatusCode ToScpErrorCode(
+    google::cloud::StatusCode cloud_status_code) noexcept {
+  switch (cloud_status_code) {
+    case google::cloud::StatusCode::kOk:
+      return SC_OK;
+    case google::cloud::StatusCode::kNotFound:
+      return SC_GCP_NOT_FOUND;
+    case google::cloud::StatusCode::kInvalidArgument:
+      return SC_GCP_INVALID_ARGUMENT;
+    case google::cloud::StatusCode::kDeadlineExceeded:
+      return SC_GCP_DEADLINE_EXCEEDED;
+    case google::cloud::StatusCode::kAlreadyExists:
+      return SC_GCP_ALREADY_EXISTS;
+    case google::cloud::StatusCode::kUnimplemented:
+      return SC_GCP_UNIMPLEMENTED;
+    case google::cloud::StatusCode::kOutOfRange:
+      return SC_GCP_OUT_OF_RANGE;
+    case google::cloud::StatusCode::kCancelled:
+      return SC_GCP_CANCELLED;
+    case google::cloud::StatusCode::kAborted:
+      return SC_GCP_ABORTED;
+    case google::cloud::StatusCode::kUnavailable:
+      return SC_GCP_UNAVAILABLE;
+    case google::cloud::StatusCode::kUnauthenticated:
+      return SC_GCP_UNAUTHENTICATED;
+    case google::cloud::StatusCode::kPermissionDenied:
+      return SC_GCP_PERMISSION_DENIED;
+    case google::cloud::StatusCode::kDataLoss:
+      return SC_GCP_DATA_LOSS;
+    case google::cloud::StatusCode::kFailedPrecondition:
+      return SC_GCP_FAILED_PRECONDITION;
+    case google::cloud::StatusCode::kResourceExhausted:
+      return SC_GCP_RESOURCE_EXHAUSTED;
+    case google::cloud::StatusCode::kInternal:
+      return SC_GCP_INTERNAL_SERVICE_ERROR;
+    default:
+      return SC_GCP_UNKNOWN;
+  }
+}
+}  // namespace
+
 namespace google::scp::cpio::common {
 
 ExecutionResult GcpUtils::GcpErrorConverter(cloud::Status status) noexcept {
-  auto status_code = status.code();
-  ExecutionResult failure = FailureExecutionResult(SC_GCP_UNKNOWN);
-  switch (status_code) {
-    case cloud::StatusCode::kOk:
-      failure = SuccessExecutionResult();
-      break;
-    case cloud::StatusCode::kNotFound:
-      failure = FailureExecutionResult(SC_GCP_NOT_FOUND);
-      break;
-    case cloud::StatusCode::kInvalidArgument:
-      failure = FailureExecutionResult(SC_GCP_INVALID_ARGUMENT);
-      break;
-    case cloud::StatusCode::kDeadlineExceeded:
-      failure = FailureExecutionResult(SC_GCP_DEADLINE_EXCEEDED);
-      break;
-    case cloud::StatusCode::kAlreadyExists:
-      failure = FailureExecutionResult(SC_GCP_ALREADY_EXISTS);
-      break;
-    case cloud::StatusCode::kUnimplemented:
-      failure = FailureExecutionResult(SC_GCP_UNIMPLEMENTED);
-      break;
-    case cloud::StatusCode::kOutOfRange:
-      failure = FailureExecutionResult(SC_GCP_OUT_OF_RANGE);
-      break;
-    case cloud::StatusCode::kCancelled:
-      failure = FailureExecutionResult(SC_GCP_CANCELLED);
-      break;
-    case cloud::StatusCode::kAborted:
-      failure = FailureExecutionResult(SC_GCP_ABORTED);
-      break;
-    case cloud::StatusCode::kUnavailable:
-      failure = FailureExecutionResult(SC_GCP_UNAVAILABLE);
-      break;
-    case cloud::StatusCode::kUnauthenticated:
-      failure = FailureExecutionResult(SC_GCP_UNAUTHENTICATED);
-      break;
-    case cloud::StatusCode::kPermissionDenied:
-      failure = FailureExecutionResult(SC_GCP_PERMISSION_DENIED);
-      break;
-    case cloud::StatusCode::kDataLoss:
-      failure = FailureExecutionResult(SC_GCP_DATA_LOSS);
-      break;
-    case cloud::StatusCode::kFailedPrecondition:
-      failure = FailureExecutionResult(SC_GCP_FAILED_PRECONDITION);
-      break;
-    case cloud::StatusCode::kResourceExhausted:
-      failure = FailureExecutionResult(SC_GCP_RESOURCE_EXHAUSTED);
-      break;
-    case cloud::StatusCode::kInternal:
-      failure = FailureExecutionResult(SC_GCP_INTERNAL_SERVICE_ERROR);
-      break;
-    default:
-      failure = FailureExecutionResult(SC_GCP_UNKNOWN);
+  cloud::StatusCode cloud_status_code = status.code();
+  auto scp_status_code = ToScpErrorCode(cloud_status_code);
+  if (scp_status_code == SC_OK) {
+    return SuccessExecutionResult();
   }
+  ExecutionResult failure = FailureExecutionResult(scp_status_code);
 
-  if (!failure.Successful()) {
-    SCP_ERROR(kGcpErrorConverter, kZeroUuid, failure,
-              "GCP cloud service error: code is %d, and error message is %s.",
-              status_code, status.message().c_str());
-  }
-
+  SCP_ERROR(kGcpErrorConverter, kZeroUuid, failure,
+            "GCP cloud service error: code is %s (%d) and error message is %s.",
+            cloud::StatusCodeToString(cloud_status_code).c_str(),
+            cloud_status_code, status.message().c_str());
   return failure;
 }
 
 ExecutionResult GcpUtils::GcpErrorConverter(grpc::Status status) noexcept {
-  auto status_code = status.error_code();
-  ExecutionResult failure = FailureExecutionResult(SC_GCP_UNKNOWN);
-  switch (status_code) {
-    case grpc::StatusCode::OK:
-      failure = SuccessExecutionResult();
-      break;
-    case grpc::StatusCode::NOT_FOUND:
-      failure = FailureExecutionResult(SC_GCP_NOT_FOUND);
-      break;
-    case grpc::StatusCode::INVALID_ARGUMENT:
-      failure = FailureExecutionResult(SC_GCP_INVALID_ARGUMENT);
-      break;
-    case grpc::StatusCode::DEADLINE_EXCEEDED:
-      failure = FailureExecutionResult(SC_GCP_DEADLINE_EXCEEDED);
-      break;
-    case grpc::StatusCode::ALREADY_EXISTS:
-      failure = FailureExecutionResult(SC_GCP_ALREADY_EXISTS);
-      break;
-    case grpc::StatusCode::UNIMPLEMENTED:
-      failure = FailureExecutionResult(SC_GCP_UNIMPLEMENTED);
-      break;
-    case grpc::StatusCode::OUT_OF_RANGE:
-      failure = FailureExecutionResult(SC_GCP_OUT_OF_RANGE);
-      break;
-    case grpc::StatusCode::CANCELLED:
-      failure = FailureExecutionResult(SC_GCP_CANCELLED);
-      break;
-    case grpc::StatusCode::ABORTED:
-      failure = FailureExecutionResult(SC_GCP_ABORTED);
-      break;
-    case grpc::StatusCode::UNAVAILABLE:
-      failure = FailureExecutionResult(SC_GCP_UNAVAILABLE);
-      break;
-    case grpc::StatusCode::UNAUTHENTICATED:
-      failure = FailureExecutionResult(SC_GCP_UNAUTHENTICATED);
-      break;
-    case grpc::StatusCode::PERMISSION_DENIED:
-      failure = FailureExecutionResult(SC_GCP_PERMISSION_DENIED);
-      break;
-    case grpc::StatusCode::DATA_LOSS:
-      failure = FailureExecutionResult(SC_GCP_DATA_LOSS);
-      break;
-    case grpc::StatusCode::FAILED_PRECONDITION:
-      failure = FailureExecutionResult(SC_GCP_FAILED_PRECONDITION);
-      break;
-    case grpc::StatusCode::RESOURCE_EXHAUSTED:
-      failure = FailureExecutionResult(SC_GCP_RESOURCE_EXHAUSTED);
-      break;
-    case grpc::StatusCode::INTERNAL:
-      failure = FailureExecutionResult(SC_GCP_INTERNAL_SERVICE_ERROR);
-      break;
-    default:
-      failure = FailureExecutionResult(SC_GCP_UNKNOWN);
+  // grpc::StatusCode is a 1:1 mapping to google::cloud::StatusCode.
+  cloud::StatusCode cloud_status_code =
+      static_cast<cloud::StatusCode>(status.error_code());
+  auto scp_status_code = ToScpErrorCode(cloud_status_code);
+  if (scp_status_code == SC_OK) {
+    return SuccessExecutionResult();
   }
+  ExecutionResult failure = FailureExecutionResult(scp_status_code);
 
-  if (!failure.Successful()) {
-    SCP_ERROR(kGcpErrorConverter, kZeroUuid, failure,
-              "GCP gRPC service error: code is %d, and error message is %s.",
-              status_code, status.error_message().c_str());
-  }
-
+  SCP_ERROR(kGcpErrorConverter, kZeroUuid, failure,
+            "GCP gRPC service error: code is %s (%d) and error message is %s.",
+            cloud::StatusCodeToString(cloud_status_code).c_str(),
+            cloud_status_code, status.error_message().c_str());
   return failure;
 }
 

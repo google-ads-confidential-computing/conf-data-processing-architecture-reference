@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 locals {
-  collecotr_instance_group_filter = "resource.type=\"gce_instance\" AND metadata.user_labels.\"otel_collector\"=\"true\""
+  collector_instance_group_filter = "resource.type=\"gce_instance\" AND metadata.user_labels.\"otel_collector\"=\"true\""
 }
 
 # Disable follwing alert policies using denominator.
@@ -35,7 +35,7 @@ resource "google_monitoring_alert_policy" "collector_queue_size_too_high_alarm" 
       duration        = "${var.collector_queue_size_alarm.duration_sec}s"
       comparison      = "COMPARISON_GT"
       threshold_value = var.collector_queue_size_alarm.threshold
-      filter          = "metric.type=\"custom.googleapis.com/otelcol_exporter_queue_size\" AND ${local.collecotr_instance_group_filter}"
+      filter          = "metric.type=\"custom.googleapis.com/otelcol_exporter_queue_size\" AND ${local.collector_instance_group_filter}"
       aggregations {
         alignment_period   = "${var.collector_queue_size_alarm.alignment_period_sec}s"
         per_series_aligner = "ALIGN_MAX"
@@ -66,7 +66,7 @@ resource "google_monitoring_alert_policy" "collector_send_metric_points_failure_
       duration        = "${var.collector_send_metric_failure_rate_alarm.duration_sec}s"
       comparison      = "COMPARISON_GT"
       threshold_value = var.collector_send_metric_failure_rate_alarm.threshold
-      filter          = "metric.type=\"custom.googleapis.com/otelcol_exporter_send_failed_metric_points\" AND ${local.collecotr_instance_group_filter}"
+      filter          = "metric.type=\"custom.googleapis.com/otelcol_exporter_send_failed_metric_points\" AND ${local.collector_instance_group_filter}"
 
       aggregations {
         alignment_period   = "${var.collector_send_metric_failure_rate_alarm.alignment_period_sec}s"
@@ -100,7 +100,7 @@ resource "google_monitoring_alert_policy" "collector_refuse_metric_rate_too_high
 
       threshold_value = var.collector_refuse_metric_rate_alarm.threshold
 
-      filter = "metric.type=\"custom.googleapis.com/otelcol_receiver_refused_metric_points\" AND ${local.collecotr_instance_group_filter}"
+      filter = "metric.type=\"custom.googleapis.com/otelcol_receiver_refused_metric_points\" AND ${local.collector_instance_group_filter}"
       aggregations {
         alignment_period   = "${var.collector_refuse_metric_rate_alarm.alignment_period_sec}s"
         per_series_aligner = "ALIGN_RATE"
@@ -126,7 +126,7 @@ resource "google_monitoring_alert_policy" "collector_exceed_memory_usage_alarm" 
   conditions {
     display_name = "Memory Usage Too High"
     condition_threshold {
-      filter          = "metric.type=\"custom.googleapis.com/otelcol_process_memory_rss\" AND ${local.collecotr_instance_group_filter}"
+      filter          = "metric.type=\"custom.googleapis.com/otelcol_process_memory_rss\" AND ${local.collector_instance_group_filter}"
       duration        = "${var.collector_exceed_memory_usage_alarm.duration_sec}s"
       comparison      = "COMPARISON_GT"
       threshold_value = var.collector_exceed_memory_usage_alarm.threshold
@@ -180,7 +180,7 @@ resource "google_monitoring_dashboard" "opentelemetry_collector_internal_metrics
                         "perSeriesAligner" : "ALIGN_MEAN",
                         "crossSeriesReducer" : "REDUCE_MEAN"
                       },
-                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_exporter_queue_size\" AND ${local.collecotr_instance_group_filter}",
+                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_exporter_queue_size\" AND ${local.collector_instance_group_filter}",
                     }
                   }
                 },
@@ -199,7 +199,7 @@ resource "google_monitoring_dashboard" "opentelemetry_collector_internal_metrics
                         "perSeriesAligner" : "ALIGN_MEAN",
                         "crossSeriesReducer" : "REDUCE_MEAN"
                       },
-                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_exporter_queue_capacity\" AND ${local.collecotr_instance_group_filter}",
+                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_exporter_queue_capacity\" AND ${local.collector_instance_group_filter}",
                     }
                   }
                 },
@@ -233,7 +233,7 @@ resource "google_monitoring_dashboard" "opentelemetry_collector_internal_metrics
                         "perSeriesAligner" : "ALIGN_MAX",
                         "crossSeriesReducer" : "REDUCE_MAX"
                       },
-                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_exporter_sent_metric_points\" AND ${local.collecotr_instance_group_filter}",
+                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_exporter_sent_metric_points\" AND ${local.collector_instance_group_filter}",
                     }
                   }
                 },
@@ -252,7 +252,7 @@ resource "google_monitoring_dashboard" "opentelemetry_collector_internal_metrics
                         "perSeriesAligner" : "ALIGN_MAX",
                         "crossSeriesReducer" : "REDUCE_MAX"
                       },
-                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_exporter_send_failed_metric_points\" AND ${local.collecotr_instance_group_filter}",
+                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_exporter_send_failed_metric_points\" AND ${local.collector_instance_group_filter}",
                     }
                   }
                 }
@@ -286,7 +286,7 @@ resource "google_monitoring_dashboard" "opentelemetry_collector_internal_metrics
                         "perSeriesAligner" : "ALIGN_MAX",
                         "crossSeriesReducer" : "REDUCE_MAX"
                       },
-                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_receiver_accepted_metric_points\" AND ${local.collecotr_instance_group_filter}",
+                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_receiver_accepted_metric_points\" AND ${local.collector_instance_group_filter}",
                     }
                   }
                 },
@@ -305,7 +305,7 @@ resource "google_monitoring_dashboard" "opentelemetry_collector_internal_metrics
                         "perSeriesAligner" : "ALIGN_MAX",
                         "crossSeriesReducer" : "REDUCE_MAX"
                       },
-                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_receiver_refused_metric_points\" AND ${local.collecotr_instance_group_filter}",
+                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_receiver_refused_metric_points\" AND ${local.collector_instance_group_filter}",
                     }
                   }
                 }
@@ -339,7 +339,7 @@ resource "google_monitoring_dashboard" "opentelemetry_collector_internal_metrics
                         "perSeriesAligner" : "ALIGN_MEAN",
                         "crossSeriesReducer" : "REDUCE_MEAN"
                       },
-                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_process_memory_rss\" AND ${local.collecotr_instance_group_filter}",
+                      "filter" : "metric.type=\"custom.googleapis.com/otelcol_process_memory_rss\" AND ${local.collector_instance_group_filter}",
                     }
                   }
                 }

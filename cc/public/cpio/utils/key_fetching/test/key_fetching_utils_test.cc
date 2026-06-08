@@ -21,10 +21,9 @@
 #include <string>
 #include <vector>
 
-#include "google/protobuf/util/time_util.h"
-
 #include "core/test/utils/proto_test_utils.h"
 #include "core/test/utils/timestamp_test_utils.h"
+#include "google/protobuf/util/time_util.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/private_key_service/v1/private_key_service.pb.h"
 
@@ -33,6 +32,7 @@ using google::cmrt::sdk::private_key_service::v1::PrivateKey;
 using google::protobuf::util::TimeUtil;
 using google::scp::core::test::MakeProtoTimestamp;
 using google::scp::core::test::SubstituteAndParseTextToProto;
+using google::scp::core::test::TextProtoString;
 using std::string;
 using std::vector;
 using testing::FieldsAre;
@@ -75,9 +75,9 @@ TEST(KeyFetchingUtilsTest, ExtractKeysSuccessfully) {
             }
         }
       )-",
-      created_time_1.DebugString(), expiry_time_1.DebugString(),
-      created_time_2.DebugString(), expiry_time_2.DebugString(),
-      active_time_2.DebugString());
+      TextProtoString(created_time_1), TextProtoString(expiry_time_1),
+      TextProtoString(created_time_2), TextProtoString(expiry_time_2),
+      TextProtoString(active_time_2));
 
   auto keys = ExtractKeys(response.private_keys());
 

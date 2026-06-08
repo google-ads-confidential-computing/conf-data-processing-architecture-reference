@@ -31,7 +31,12 @@
 #include "cpio/client_providers/metric_client_provider/src/gcp/error_codes.h"
 #include "cpio/client_providers/metric_client_provider/src/gcp/gcp_metric_client_utils.h"
 #include "cpio/common/src/gcp/error_codes.h"
-#include "google/cloud/monitoring/mocks/mock_metric_connection.h"
+#include "google/cloud/monitoring/v3/mocks/mock_metric_connection.h"
+
+namespace google::cloud::monitoring_mocks {
+using ::google::cloud::monitoring_v3_mocks::MockMetricServiceConnection;
+}
+
 #include "public/core/interface/execution_result.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"

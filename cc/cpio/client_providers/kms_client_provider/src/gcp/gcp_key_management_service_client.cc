@@ -16,7 +16,7 @@
 
 #include "gcp_key_management_service_client.h"
 
-#include "google/cloud/kms/key_management_client.h"
+#include "google/cloud/kms/v1/key_management_client.h"
 
 using google::cloud::Options;
 using google::cloud::StatusOr;

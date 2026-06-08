@@ -24,7 +24,14 @@
 #include "core/interface/async_executor_interface.h"
 #include "cpio/client_providers/interface/instance_client_provider_interface.h"
 #include "cpio/client_providers/interface/parameter_client_provider_interface.h"
-#include "google/cloud/secretmanager/secret_manager_client.h"
+#include "google/cloud/secretmanager/v1/secret_manager_client.h"
+
+namespace google::cloud::secretmanager {
+using ::google::cloud::secretmanager_v1::MakeSecretManagerServiceConnection;
+using ::google::cloud::secretmanager_v1::SecretManagerServiceClient;
+using ::google::cloud::secretmanager_v1::SecretManagerServiceConnection;
+}  // namespace google::cloud::secretmanager
+
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/parameter_service/v1/parameter_service.pb.h"
 

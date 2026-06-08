@@ -16,7 +16,7 @@
 
 #include <memory>
 
-#include "google/cloud/kms/key_management_client.h"
+#include "google/cloud/kms/v1/key_management_client.h"
 
 #include "gcp_kms_client_provider.h"
 

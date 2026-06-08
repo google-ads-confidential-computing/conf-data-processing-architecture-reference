@@ -49,6 +49,7 @@ import java.net.http.HttpResponse;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -77,6 +78,7 @@ public class KeyStorageServiceIntegrationTest {
 
   @Inject @TestLocalKmsServerContainer private LocalKmsServerContainer localKmsServerContainer;
 
+  @After
   public void cleanUp() {
     dbClient.write(ImmutableList.of(Mutation.delete(SPANNER_KEY_TABLE_NAME, KeySet.all())));
   }

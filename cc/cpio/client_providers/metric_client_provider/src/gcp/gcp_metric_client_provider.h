@@ -25,7 +25,14 @@
 #include "cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_utils.h"
 #include "cpio/client_providers/metric_client_provider/src/metric_client_provider.h"
 #include "google/cloud/future.h"
-#include "google/cloud/monitoring/metric_client.h"
+#include "google/cloud/monitoring/v3/metric_client.h"
+
+namespace google::cloud::monitoring {
+using ::google::cloud::monitoring_v3::MakeMetricServiceConnection;
+using ::google::cloud::monitoring_v3::MetricServiceClient;
+using ::google::cloud::monitoring_v3::MetricServiceConnection;
+}  // namespace google::cloud::monitoring
+
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/metric_service/v1/metric_service.pb.h"
 

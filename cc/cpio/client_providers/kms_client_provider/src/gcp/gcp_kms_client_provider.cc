@@ -26,7 +26,7 @@
 #include "core/utils/src/base64.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "cpio/common/src/gcp/gcp_utils.h"
-#include "google/cloud/kms/key_management_client.h"
+#include "google/cloud/kms/v1/key_management_client.h"
 #include "google/cloud/status.h"
 #include "public/core/interface/execution_result_macros.h"
 #include "public/cpio/interface/kms_client/type_def.h"

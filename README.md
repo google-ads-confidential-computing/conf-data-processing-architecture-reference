@@ -6,21 +6,21 @@ CMRT (Common Multi-cloud RunTime) provides facilities to deploy and operate appl
 
 # Building
 
-This repo depends on Bazel version 7.7.1 with JDK 21 and a C++17 compiler (we use GCC9 and Clang13 to build and verify this project).  The following environment variables should be set in your local environment (the exact location will depend on your environment):
+This repo uses **Bazel 7.7.1** for building all components. By default, it uses a **hermetic LLVM 19.1.0** compiler for C++ (targeting C++17) and **hermetic JDK 21** for Java.
 
+> [!NOTE]
+> Bazel hermetic toolchains for C++ (LLVM 19.1.0) requires `libxml2`.
+>
+> ```bash
+> sudo apt-get install libxml2
+> ```
+
+Since these toolchains are hermetic and managed by Bazel, you do not need to pre-install or configure a local C++ compiler or JDK to build the project.
+
+To build the repo, run:
+```bash
+bazel build ...
 ```
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-# For GCC 9
-CXX=/usr/bin/g++-9
-CC=/usr/bin/gcc-9
-# For Clang 13
-CXX=/usr/bin/clang++-13
-CC=/usr/bin/clang-13
-```
-
-The `.bazelrc` file specifies the minimum JDK and GCC version.
-
-To build the repo, run `bazel build ...`.
 
 # Contribution
 

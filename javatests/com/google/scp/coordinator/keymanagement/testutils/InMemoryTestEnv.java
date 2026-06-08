@@ -78,7 +78,9 @@ public final class InMemoryTestEnv extends AbstractModule {
     var config1 = new KeySetConfig("noOverlap", 5, 10, 0, 0);
     var config2 = new KeySetConfig("overlap", 1, 8, 6, 0);
     var config3 = new KeySetConfig("backfill", 1, 8, 0, 3);
-    return ImmutableMap.of("noOverlap", config1, "overlap", config2, "backfill", config3);
+    var config4 = new KeySetConfig("overlapBatch", 3, 8, 6, 0);
+    return ImmutableMap.of(
+        "noOverlap", config1, "overlap", config2, "backfill", config3, "overlapBatch", config4);
   }
 
   @Override

@@ -21,6 +21,8 @@
 #include <string>
 #include <type_traits>
 
+#include <google/protobuf/text_format.h>
+
 #include "absl/strings/str_format.h"
 #include "public/core/interface/errors.h"
 #include "public/core/interface/execution_result.h"
@@ -101,13 +103,14 @@ MATCHER_P(ResultIs, expected_result, "") {
     // If arg is an ExecutionResult proto, convert and compare.
     google::scp::core::ExecutionResult non_proto_execution_result(arg);
     if (non_proto_execution_result != expected_result) {
+      std::string arg_str;
+      google::protobuf::TextFormat::PrintToString(arg, &arg_str);
       *result_listener << absl::StrFormat(
           "\nExpected result to have:\n\t%s"
           "Actual result has:\n\t%s"
           "Actual result as a proto:\n%s",
           execution_result_to_str(expected_result),
-          execution_result_to_str(non_proto_execution_result),
-          arg.DebugString());
+          execution_result_to_str(non_proto_execution_result), arg_str);
       return false;
     }
   } else {

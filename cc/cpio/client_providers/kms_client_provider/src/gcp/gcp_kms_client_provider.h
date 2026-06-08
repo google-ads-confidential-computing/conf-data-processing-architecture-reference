@@ -24,7 +24,14 @@
 #include "core/interface/async_context.h"
 #include "cpio/client_providers/interface/kms_client_provider_interface.h"
 #include "cpio/client_providers/kms_client_provider/interface/gcp/gcp_key_management_service_client_interface.h"
-#include "google/cloud/kms/key_management_client.h"
+#include "google/cloud/kms/v1/key_management_client.h"
+
+namespace google::cloud::kms {
+using ::google::cloud::kms_v1::KeyManagementServiceClient;
+using ::google::cloud::kms_v1::KeyManagementServiceConnection;
+using ::google::cloud::kms_v1::MakeKeyManagementServiceConnection;
+}  // namespace google::cloud::kms
+
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/interface/metric_client/metric_client_interface.h"
 

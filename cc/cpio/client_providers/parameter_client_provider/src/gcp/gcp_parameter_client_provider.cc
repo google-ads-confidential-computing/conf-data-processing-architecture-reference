@@ -25,8 +25,8 @@
 #include "core/interface/async_context.h"
 #include "cpio/client_providers/instance_client_provider/src/gcp/gcp_instance_client_utils.h"
 #include "cpio/common/src/gcp/gcp_utils.h"
-#include "google/cloud/secretmanager/secret_manager_client.h"
-#include "google/cloud/secretmanager/secret_manager_connection.h"
+#include "google/cloud/secretmanager/v1/secret_manager_client.h"
+#include "google/cloud/secretmanager/v1/secret_manager_connection.h"
 #include "public/core/interface/execution_result.h"
 #include "public/cpio/proto/parameter_service/v1/parameter_service.pb.h"
 

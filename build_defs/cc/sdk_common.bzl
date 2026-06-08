@@ -47,17 +47,13 @@ def sdk_common(import_gcp, protobuf_version = None, protobuf_repo_hash = None, b
       bzlmod: set to True if Bzlmod is enabled
     """
 
-    boost()
-    boringssl()
-    nghttp2()
-    curl()
-    import_grpc_cpp()
-    import_google_cloud_cpp()
     if import_gcp:
         google_cloud_sdk()
     terraform()
 
     if not bzlmod:
+        import_grpc_cpp()
+        import_google_cloud_cpp()
         absl()
         bazel_rules_oci()
         bazel_aspect_build()
@@ -74,3 +70,7 @@ def sdk_common(import_gcp, protobuf_version = None, protobuf_repo_hash = None, b
         java_grpc()
         import_tink_git()
         com_google_farmhash()
+        boringssl()
+        curl()
+        boost()
+        nghttp2()

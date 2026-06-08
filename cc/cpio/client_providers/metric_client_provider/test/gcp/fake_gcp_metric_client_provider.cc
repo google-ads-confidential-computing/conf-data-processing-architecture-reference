@@ -22,7 +22,11 @@
 #include "core/interface/async_executor_interface.h"
 #include "cpio/client_providers/interface/role_credentials_provider_interface.h"
 #include "cpio/client_providers/metric_client_provider/src/gcp/gcp_metric_client_provider.h"
-#include "google/cloud/monitoring/mocks/mock_metric_connection.h"
+#include "google/cloud/monitoring/v3/mocks/mock_metric_connection.h"
+
+namespace google::cloud::monitoring_mocks {
+using ::google::cloud::monitoring_v3_mocks::MockMetricServiceConnection;
+}
 
 using google::cloud::make_ready_future;
 using google::cloud::Status;

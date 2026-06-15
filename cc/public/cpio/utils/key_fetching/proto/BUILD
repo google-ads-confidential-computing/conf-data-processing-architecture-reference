@@ -29,6 +29,11 @@ proto_library(
     deps = ["//cc/public/cpio/proto/private_key_service/v1:private_key_service_proto"],
 )
 
+proto_library(
+    name = "cloud_wrapped_key_proto",
+    srcs = ["cloud_wrapped_key.proto"],
+)
+
 ##############################################################################
 # C++
 ##############################################################################
@@ -40,4 +45,9 @@ cc_proto_library(
 cc_proto_library(
     name = "key_coordinator_configuration_cc_proto",
     deps = [":key_coordinator_configuration_proto"],
+)
+
+cc_proto_library(
+    name = "cloud_wrapped_key_cc_proto",
+    deps = [":cloud_wrapped_key_proto"],
 )

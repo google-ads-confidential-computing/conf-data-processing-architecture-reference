@@ -21,6 +21,7 @@ import static com.google.scp.shared.util.KeySplitUtil.reconstructXorKeysetHandle
 import static java.lang.Integer.MAX_VALUE;
 import static java.time.Instant.now;
 import static java.time.temporal.ChronoUnit.DAYS;
+import static java.time.temporal.ChronoUnit.MINUTES;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -249,14 +250,33 @@ public abstract class CreateSplitKeyTaskBaseTest {
 
     assertThat(keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).isEmpty();
 
+    // Creat Batch 1 - key1 and key2 are active
     task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0);
-    assertThat(keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).hasSize(1);
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME)).hasSize(2);
+    // Create Batch 2 - key1, key2 and key3 are active
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0);
+    // Created Batch 3 - key1, key2 and key3 are active, key4 is inactive
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0);
+    assertThat(keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).hasSize(3);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME)).hasSize(4);
 
     // Assert another run does not create additional keys
     task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0);
-    assertThat(keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).hasSize(1);
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME)).hasSize(2);
+    assertThat(keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).hasSize(3);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME)).hasSize(4);
+  }
+
+  @Test
+  public void validateOverlap_activeKeysToStableAtNow() throws Exception {
+    int validity = 30;
+    int overlap = 20;
+
+    assertThat(keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).isEmpty();
+
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0);
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, 365, 365, overlap, 0);
+
+    assertThat(keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).hasSize(3);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME)).hasSize(3);
   }
 
   @Test
@@ -266,11 +286,15 @@ public abstract class CreateSplitKeyTaskBaseTest {
     int overlap = 20;
     int ttl = 365;
     var differenceMillis = Duration.ofDays(validity - overlap).toMillis();
+    Instant now = Instant.now();
 
-    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0);
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0, now);
 
     validateEncryptionKeyTimes(validity, ttl);
-    var keys = task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE);
+    // Query active keys at an instant when only the first set of keys (activated at now - 20) is
+    // active,
+    // before the second set of keys (activated at now - 10) becomes active.
+    var keys = task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.minus(15, DAYS));
     assertThat(keys).hasSize(count);
 
     var allKeys = task.keyDb.listAllKeysForSetName(SET_NAME);
@@ -283,6 +307,110 @@ public abstract class CreateSplitKeyTaskBaseTest {
   }
 
   @Test
+  public void create_newOverlapKeyset_shiftsActivationTimeToPast() throws Exception {
+    // Given
+    int count = 3;
+    int validity = 30;
+    int overlap = 20;
+    int ttl = 365;
+    Instant now = Instant.now();
+
+    // When
+    // Setting overlap = 20 > 0 and since it's a new keyset (activeKeys is empty),
+    // the activation time of the generated keys should be shifted back by 'overlap' days.
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0, now);
+
+    // Then
+    ImmutableList<EncryptionKey> keys =
+        task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.minus(15, DAYS));
+    assertThat(keys).hasSize(count);
+
+    long expectedActivationTime = now.minus(overlap, DAYS).toEpochMilli();
+    for (EncryptionKey key : keys) {
+      assertThat(key.getActivationTime()).isEqualTo(expectedActivationTime);
+    }
+  }
+
+  @Test
+  public void create_existingOverlapKeyset_doesNotShiftActivationTimeToPast() throws Exception {
+    // Given
+    int count = 3;
+    int validity = 30;
+    int overlap = 20;
+    int ttl = 365;
+    Instant now = Instant.now();
+
+    // Establish a pre-existing active key in the database so isNewKeyset is false
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, 1, validity, ttl, 365, 0, 0, now);
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).isNotEmpty();
+
+    // When
+    // With existing keys, isNewKeyset is false; 2 new keys should activate at 'now', not shifted.
+    // Database total: 6 keys (3 active at Day 0, 3 active at Day 10, 1 active at Day 30)
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0, now);
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(6);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).hasSize(3);
+
+    // Day 10 - Database total: 8 keys (3 active at Day 0, 2 active at Day 10, 2 active at Day 20, 1
+    // active at Day 30).
+    task.create(
+        SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0, now.plus(10, DAYS));
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(8);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(10, DAYS))).hasSize(5);
+
+    // Day 20 - Database total: 10 keys (3 active at Day 0, 2 active at Day 10, 2 active at Day 20,
+    // 2 active at Day 30).
+    task.create(
+        SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0, now.plus(20, DAYS));
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(10);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(20, DAYS))).hasSize(7);
+
+    // Day 30 - Database total: 13 keys (2 active at Day 10, 2 active at Day 20, 3 active at Day 30,
+    // 3 active at Day 40).
+    task.create(
+        SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0, now.plus(30, DAYS));
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(13);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(30, DAYS))).hasSize(7);
+
+    // Day 40 - Database total: 16 keys (2 active at Day 20, 3 active at Day 30, 3 active at Day 40,
+    // 3 active at Day 50).
+    task.create(
+        SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0, now.plus(40, DAYS));
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(16);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(40, DAYS))).hasSize(8);
+
+    // Day 50 - Database total: 19 keys (3 active at Day 30, 3 active at Day 40, 3 active at Day 50,
+    // 3 active at Day 60).
+    task.create(
+        SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0, now.plus(50, DAYS));
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(19);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(50, DAYS))).hasSize(9);
+  }
+
+  @Test
+  public void create_newKeysetNoOverlap_doesNotShiftActivationTimeToPast() throws Exception {
+    // Given
+    int count = 3;
+    int validity = 30;
+    int overlap = 0;
+    int ttl = 365;
+    Instant now = Instant.now();
+
+    // When
+    // overlap = 0, so no shifting should happen even though it is a new keyset.
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0, now);
+
+    // Then
+    ImmutableList<EncryptionKey> keys = task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now);
+    assertThat(keys).hasSize(count);
+
+    long expectedActivationTime = now.toEpochMilli();
+    for (EncryptionKey key : keys) {
+      assertThat(key.getActivationTime()).isEqualTo(expectedActivationTime);
+    }
+  }
+
+  @Test
   public void validateMultipleOverlap_noExtraKeysCreatedTest() throws Exception {
     int count = 3;
     int validity = 30;
@@ -292,9 +420,13 @@ public abstract class CreateSplitKeyTaskBaseTest {
     task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0);
     task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0);
     task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0);
+    // These runs should not create any additional keys as the keys from the first three runs(key1,
+    // key2, key3) are already active and key4 is inactive.
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0);
+    task.create(SET_NAME, DEFAULT_TINK_TEMPLATE, count, validity, ttl, 365, overlap, 0);
 
-    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).hasSize(count);
-    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 2);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).hasSize(count * 3);
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 4);
   }
 
   @Test
@@ -335,25 +467,26 @@ public abstract class CreateSplitKeyTaskBaseTest {
     var template = DEFAULT_TINK_TEMPLATE;
     var now = now();
 
-    // Day 0: Create Batch 1 (3 active keys) + Batch 2 (3 inactive keys) = 3 active, 6 total
+    // Day 0: Create Batch 1 (3 active keys) + Batch 2 (3 active keys) = 6 active, 6 total
     task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now);
-    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 2);
-    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now)).hasSize(3);
-
-    // Day 10: Activate Batch 2 + Create Batch 3 (3 inactive keys) = 6 active, 9 total
-    task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now.plus(10, DAYS));
+    // Day 0 + 5 minutes: Create Batch 3 (3 active keys) = 9 active, 9 total
+    task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now.plus(5, MINUTES));
     assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 3);
-    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(10, DAYS))).hasSize(6);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE)).hasSize(9);
 
-    // Day 20: Activate Batch 3 + Create Batch 4 (3 inactive keys) = 9 active, 12 total
-    task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now.plus(20, DAYS));
+    // Day 10: Deactivate Batch 1 + Create Batch 4 = 9 active, 12 total
+    task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now.plus(10, DAYS));
     assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 4);
+    assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(10, DAYS))).hasSize(9);
+
+    // Day 20: Deactivate Batch 2 + Create Batch 5 = 9 active, 15 total
+    task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now.plus(20, DAYS));
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 5);
     assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(20, DAYS))).hasSize(9);
 
-    // Day 30: Deactivate Batch 1 + Activate Batch 4 + Create Batch 5 (3 inactive keys) = 9 active,
-    // 15 total
+    // Day 30: Deactivate Batch 3 + Create Batch 6 = 9 active, 18 total
     task.create(SET_NAME, template, count, validity, ttl, 365, overlap, 0, now.plus(30, DAYS));
-    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 5);
+    assertThat(task.keyDb.listAllKeysForSetName(SET_NAME)).hasSize(count * 6);
     assertThat(task.keyDb.getActiveKeys(SET_NAME, MAX_VALUE, now.plus(30, DAYS))).hasSize(9);
   }
 
@@ -498,7 +631,17 @@ public abstract class CreateSplitKeyTaskBaseTest {
         overlap,
         0,
         now);
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_G")).hasSize(count);
+    task.create(
+        SET_NAME + "_G",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(5, MINUTES));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_G")).hasSize(count * 3);
 
     // Day 5: Next Activation is on Day 10. Cutoff is (now + 5) = Day 10.
     // 10 < 10 is FALSE. Should NOT generate next set of keys yet (strict <).
@@ -512,7 +655,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
         overlap,
         0,
         now.plus(5, DAYS));
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_G")).hasSize(count);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_G")).hasSize(count * 3);
 
     // Day 6: Next Activation is on Day 10. Cutoff is (now + 5) = Day 11.
     // 10 < 11 is TRUE. Generates next set of keys.
@@ -526,7 +669,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
         overlap,
         0,
         now.plus(6, DAYS));
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_G")).hasSize(count * 2);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_G")).hasSize(count * 4);
   }
 
   @Test
@@ -632,11 +775,22 @@ public abstract class CreateSplitKeyTaskBaseTest {
         overlap,
         0,
         now);
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count);
-    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now)).hasSize(1);
+    task.create(
+        SET_NAME + "_Z_B",
+        DEFAULT_TINK_TEMPLATE,
+        count,
+        validity,
+        ttl,
+        maxDaysAhead,
+        overlap,
+        0,
+        now.plus(5, MINUTES));
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 3);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now)).hasSize(3);
 
     // Day 10: Next Activation is Day 10. Cutoff is Day 10.
     // 10 < 10 is False. No generation yet (strict <).
+    // Key 1 expires. Total stays 3. Active drops to 2 (Key 2, Key 3).
 
     task.create(
         SET_NAME + "_Z_B",
@@ -648,8 +802,8 @@ public abstract class CreateSplitKeyTaskBaseTest {
         overlap,
         0,
         now.plus(10, DAYS));
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count);
-    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(10, DAYS))).hasSize(1);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 3);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(10, DAYS))).hasSize(2);
 
     task.create(
         SET_NAME + "_Z_B",
@@ -661,11 +815,13 @@ public abstract class CreateSplitKeyTaskBaseTest {
         overlap,
         0,
         now.plus(11, DAYS));
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 2);
-    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(11, DAYS))).hasSize(2);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 4);
+    assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(11, DAYS))).hasSize(3);
 
     // Day 20: Next Activation is Day 20. Cutoff is Day 20.
     // 20 < 20 is False. No generation yet (strict <).
+    // Key 1, 2 expires. Total stays 4. Active drops to 2 (Key 3, Key 4).
+
     task.create(
         SET_NAME + "_Z_B",
         DEFAULT_TINK_TEMPLATE,
@@ -676,11 +832,11 @@ public abstract class CreateSplitKeyTaskBaseTest {
         overlap,
         0,
         now.plus(20, DAYS));
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 2);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 4);
     assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(20, DAYS))).hasSize(2);
 
     // Day 21: Next Activation is Day 20. Cutoff is Day 21.
-    // 20 < 21 is True. Generates Key 3.
+    // 20 < 21 is True. Generates Key 5.
     task.create(
         SET_NAME + "_Z_B",
         DEFAULT_TINK_TEMPLATE,
@@ -691,10 +847,10 @@ public abstract class CreateSplitKeyTaskBaseTest {
         overlap,
         0,
         now.plus(21, DAYS));
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 3);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 5);
     assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(21, DAYS))).hasSize(3);
 
-    // Day 30: Key 1 expires. Total stays 3. Active drops to 2 (Key 2, Key 3).
+    // Day 30: Key 1, 2, 3 expires. Total stays 5. Active drops to 2 (Key 4, Key 5).
     // Cutoff is Day 30. Next Activation is 30. 30 < 30 is False.
     task.create(
         SET_NAME + "_Z_B",
@@ -706,11 +862,11 @@ public abstract class CreateSplitKeyTaskBaseTest {
         overlap,
         0,
         now.plus(30, DAYS));
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 3);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 5);
     assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(30, DAYS))).hasSize(2);
 
     // Day 31: Next Activation is 30. 30 < 31 is True. Generates Key 4.
-    // Total becomes 4. Active jumps back to 3 (Key 2, Key 3, Key 4).
+    // Total becomes 6. Active jumps back to 3 (Key 4, Key 5, Key 6).
     task.create(
         SET_NAME + "_Z_B",
         DEFAULT_TINK_TEMPLATE,
@@ -721,7 +877,7 @@ public abstract class CreateSplitKeyTaskBaseTest {
         overlap,
         0,
         now.plus(31, DAYS));
-    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 4);
+    assertThat(keyDb.listAllKeysForSetName(SET_NAME + "_Z_B")).hasSize(count * 6);
     assertThat(keyDb.getActiveKeys(SET_NAME + "_Z_B", 10, now.plus(31, DAYS))).hasSize(3);
   }
 

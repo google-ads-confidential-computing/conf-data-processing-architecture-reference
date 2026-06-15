@@ -94,6 +94,7 @@ variables {
   public_key_service_cdn_bypass_cache_header_enabled            = false
   public_key_service_alarm_eval_period_sec                      = 300
   public_key_service_alarm_duration_sec                         = 60
+  public_key_service_alarm_short_duration_sec                   = 60
   public_key_service_max_execution_time_max                     = 0
   public_key_service_5xx_threshold                              = 0
   public_key_service_cloud_run_memory_usage_important_threshold = 0.6
@@ -159,14 +160,17 @@ variables {
   public_key_service_lb_outlier_detection_consecutive_gateway_failure           = 0
   public_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure = 0
 
-  public_key_service_cloud_armor_enabled                            = false
-  public_key_service_cloud_armor_preview_mode                       = true
-  public_key_service_cloud_armor_rate_limit_count                   = 0
-  public_key_service_cloud_armor_rate_limit_interval_sec            = 60
-  public_key_service_cloud_armor_log_level                          = "VERBOSE"
-  public_key_service_cloud_armor_high_block_ratio_threshold         = 0.95
-  public_key_service_cloud_armor_high_block_ratio_min_samples       = 10
-  public_key_service_cloud_armor_rate_limit_denials_alert_threshold = 1000
+  public_key_service_cloud_armor_enabled                                = false
+  public_key_service_cloud_armor_preview_mode                           = true
+  public_key_service_cloud_armor_rate_limit_count                       = 0
+  public_key_service_cloud_armor_rate_limit_interval_sec                = 60
+  public_key_service_cloud_armor_log_level                              = "VERBOSE"
+  public_key_service_cloud_armor_emergency_allowlist_ips                = []
+  public_key_service_cloud_armor_high_block_ratio_threshold             = 0.95
+  public_key_service_cloud_armor_high_block_ratio_min_samples           = 10
+  public_key_service_cloud_armor_rate_limit_denials_alert_threshold     = 1000
+  public_key_service_cloud_armor_rate_limit_alert_eval_period_sec       = 60
+  public_key_service_cloud_armor_high_block_ratio_alert_eval_period_sec = 300
 
   private_key_service_load_balancer_allowed_paths = ["/*"]
 

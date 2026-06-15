@@ -81,44 +81,34 @@ ExecutionResult ParameterClient::CreateParameterClientProvider() noexcept {
 }
 
 ExecutionResult ParameterClient::Init() noexcept {
-  auto execution_result = CreateParameterClientProvider();
-  if (!execution_result.Successful()) {
-    SCP_ERROR(kParameterClient, kZeroUuid, execution_result,
-              "Failed to create ParameterClientProvider.");
-    return ConvertToPublicExecutionResult(execution_result);
-  }
+  RETURN_AND_LOG_IF_FAILURE(
+      ConvertToPublicExecutionResult(CreateParameterClientProvider()),
+      kParameterClient, kZeroUuid, "Failed to create ParameterClientProvider.");
 
-  execution_result = parameter_client_provider_->Init();
-  if (!execution_result.Successful()) {
-    SCP_ERROR(kParameterClient, kZeroUuid, execution_result,
-              "Failed to initialize ParameterClientProvider.");
-    return execution_result;
-  }
+  RETURN_AND_LOG_IF_FAILURE(
+      ConvertToPublicExecutionResult(parameter_client_provider_->Init()),
+      kParameterClient, kZeroUuid,
+      "Failed to initialize ParameterClientProvider.");
   return SuccessExecutionResult();
 }
 
 ExecutionResult ParameterClient::Run() noexcept {
-  auto execution_result = parameter_client_provider_->Run();
-  if (!execution_result.Successful()) {
-    SCP_ERROR(kParameterClient, kZeroUuid, execution_result,
-              "Failed to run ParameterClientProvider.");
-    return execution_result;
-  }
+  RETURN_AND_LOG_IF_FAILURE(
+      ConvertToPublicExecutionResult(parameter_client_provider_->Run()),
+      kParameterClient, kZeroUuid, "Failed to run ParameterClientProvider.");
   return SuccessExecutionResult();
 }
 
 ExecutionResult ParameterClient::Stop() noexcept {
-  auto execution_result = parameter_client_provider_->Stop();
-  if (!execution_result.Successful()) {
-    SCP_ERROR(kParameterClient, kZeroUuid, execution_result,
-              "Failed to stop ParameterClientProvider.");
-    return execution_result;
-  }
+  RETURN_AND_LOG_IF_FAILURE(
+      ConvertToPublicExecutionResult(parameter_client_provider_->Stop()),
+      kParameterClient, kZeroUuid, "Failed to stop ParameterClientProvider.");
   return SuccessExecutionResult();
 }
 
 void ParameterClient::GetParameter(
     AsyncContext<GetParameterRequest, GetParameterResponse>& context) noexcept {
+  context.setConvertToPublicError(true);
   parameter_client_provider_->GetParameter(context);
 }
 
@@ -129,7 +119,8 @@ ExecutionResultOr<GetParameterResponse> ParameterClient::GetParameterSync(
       SyncUtils::AsyncToSync2<GetParameterRequest, GetParameterResponse>(
           bind(&ParameterClient::GetParameter, this, _1), std::move(request),
           response);
-  RETURN_AND_LOG_IF_FAILURE(execution_result, kParameterClient, kZeroUuid,
+  RETURN_AND_LOG_IF_FAILURE(ConvertToPublicExecutionResult(execution_result),
+                            kParameterClient, kZeroUuid,
                             "Failed to GetParameter.");
   return response;
 }

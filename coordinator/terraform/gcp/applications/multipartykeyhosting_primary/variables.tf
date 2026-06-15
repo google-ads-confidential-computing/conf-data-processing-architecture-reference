@@ -557,6 +557,11 @@ variable "public_key_service_alarm_duration_sec" {
   type        = number
 }
 
+variable "public_key_service_alarm_short_duration_sec" {
+  description = "Amount of time (in seconds) after which to send alarm if conditions are met (for short-span alerts). Example: '60'."
+  type        = number
+}
+
 variable "public_key_service_max_execution_time_max" {
   description = "Max execution time in ms to send alarm. Example: 9999."
   type        = number
@@ -685,6 +690,11 @@ variable "public_key_service_cloud_armor_log_level" {
   type        = string
 }
 
+variable "public_key_service_cloud_armor_emergency_allowlist_ips" {
+  description = "List of Emergency IPs to be allowlisted to bypass all security mechanics for Public Key Service."
+  type        = list(string)
+}
+
 variable "public_key_service_cloud_armor_high_block_ratio_threshold" {
   description = "The threshold for the Public Key Service Cloud Armor high block ratio alert."
   type        = number
@@ -697,6 +707,16 @@ variable "public_key_service_cloud_armor_high_block_ratio_min_samples" {
 
 variable "public_key_service_cloud_armor_rate_limit_denials_alert_threshold" {
   description = "The threshold for the Public Key Service Cloud Armor rate limit denials alert."
+  type        = number
+}
+
+variable "public_key_service_cloud_armor_rate_limit_alert_eval_period_sec" {
+  description = "Amount of time (in seconds) for Public Key Service Cloud Armor rate limit alert evaluation. Example: '60'."
+  type        = number
+}
+
+variable "public_key_service_cloud_armor_high_block_ratio_alert_eval_period_sec" {
+  description = "Amount of time (in seconds) for Public Key Service Cloud Armor high block ratio alert evaluation. Example: '60'."
   type        = number
 }
 

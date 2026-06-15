@@ -104,6 +104,25 @@ TEST_F(ParameterClientTest, GetParameterSyncSuccess) {
   EXPECT_SUCCESS(client_->GetParameterSync(GetParameterRequest()).result());
 }
 
+TEST_F(ParameterClientTest, GetParameterFailure) {
+  EXPECT_CALL(*client_->GetParameterClientProvider(), GetParameter)
+      .WillOnce([=](auto& context) {
+        context.result = FailureExecutionResult(SC_UNKNOWN);
+        context.Finish();
+      });
+
+  atomic<bool> finished = false;
+  auto context = AsyncContext<GetParameterRequest, GetParameterResponse>(
+      make_shared<GetParameterRequest>(), [&](auto& context) {
+        EXPECT_THAT(context.result,
+                    ResultIs(FailureExecutionResult(SC_CPIO_UNKNOWN_ERROR)));
+        finished = true;
+      });
+
+  client_->GetParameter(context);
+  WaitUntil([&]() { return finished.load(); });
+}
+
 TEST_F(ParameterClientTest, FailureToCreateParameterClientProvider) {
   auto failure = FailureExecutionResult(SC_UNKNOWN);
   client_->create_parameter_client_provider_result = failure;

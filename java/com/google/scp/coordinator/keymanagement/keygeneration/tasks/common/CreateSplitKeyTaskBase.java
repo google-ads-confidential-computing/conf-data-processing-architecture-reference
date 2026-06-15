@@ -187,6 +187,16 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
     LOGGER.info(
         "[{}] Found {} of {} expected active keys.", setName, activeKeys.size(), numDesiredKeys);
+
+    Instant activationInstant = now;
+    boolean isNewKeyset = activeKeys.isEmpty() && keyDb.listAllKeysForSetName(setName).isEmpty();
+    if (isNewKeyset && overlapPeriodDays > 0) {
+      activationInstant = now.minus(overlapPeriodDays, DAYS);
+      LOGGER.info(
+          "[{}] New overlapping keyset detected. Shifting activation time to past: {}",
+          setName,
+          activationInstant);
+    }
     if (activeKeys.size() < numDesiredKeys) {
       LOGGER.info(
           "[{}] Generating {} immediately active keys.",
@@ -199,7 +209,7 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
           validityInDays,
           ttlInDays,
           backfillDays,
-          now);
+          activationInstant);
     }
     activeKeys = keyDb.getActiveKeys(setName, numDesiredKeys, now);
     if (activeKeys.size() < numDesiredKeys) {

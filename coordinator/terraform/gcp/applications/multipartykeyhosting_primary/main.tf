@@ -283,14 +283,17 @@ module "public_key_service" {
   lb_outlier_detection_enforcing_consecutive_gateway_failure = var.public_key_service_lb_outlier_detection_enforcing_consecutive_gateway_failure
 
   # Cloud Armor
-  cloud_armor_enabled                            = var.public_key_service_cloud_armor_enabled
-  cloud_armor_preview_mode                       = var.public_key_service_cloud_armor_preview_mode
-  cloud_armor_rate_limit_count                   = var.public_key_service_cloud_armor_rate_limit_count
-  cloud_armor_rate_limit_interval_sec            = var.public_key_service_cloud_armor_rate_limit_interval_sec
-  cloud_armor_log_level                          = var.public_key_service_cloud_armor_log_level
-  cloud_armor_high_block_ratio_threshold         = var.public_key_service_cloud_armor_high_block_ratio_threshold
-  cloud_armor_high_block_ratio_min_samples       = var.public_key_service_cloud_armor_high_block_ratio_min_samples
-  cloud_armor_rate_limit_denials_alert_threshold = var.public_key_service_cloud_armor_rate_limit_denials_alert_threshold
+  cloud_armor_enabled                                = var.public_key_service_cloud_armor_enabled
+  cloud_armor_preview_mode                           = var.public_key_service_cloud_armor_preview_mode
+  cloud_armor_rate_limit_count                       = var.public_key_service_cloud_armor_rate_limit_count
+  cloud_armor_rate_limit_interval_sec                = var.public_key_service_cloud_armor_rate_limit_interval_sec
+  cloud_armor_log_level                              = var.public_key_service_cloud_armor_log_level
+  cloud_armor_emergency_allowlist_ips                = var.public_key_service_cloud_armor_emergency_allowlist_ips
+  cloud_armor_high_block_ratio_threshold             = var.public_key_service_cloud_armor_high_block_ratio_threshold
+  cloud_armor_high_block_ratio_min_samples           = var.public_key_service_cloud_armor_high_block_ratio_min_samples
+  cloud_armor_rate_limit_denials_alert_threshold     = var.public_key_service_cloud_armor_rate_limit_denials_alert_threshold
+  cloud_armor_rate_limit_alert_eval_period_sec       = var.public_key_service_cloud_armor_rate_limit_alert_eval_period_sec
+  cloud_armor_high_block_ratio_alert_eval_period_sec = var.public_key_service_cloud_armor_high_block_ratio_alert_eval_period_sec
 
   # Cloud Run settings
   cpu_count             = var.public_key_service_cloud_run_cpu_count
@@ -316,6 +319,7 @@ module "public_key_service" {
   alarms_enabled                          = var.alarms_enabled
   alarm_eval_period_sec                   = var.public_key_service_alarm_eval_period_sec
   alarm_duration_sec                      = var.public_key_service_alarm_duration_sec
+  alarm_short_duration_sec                = var.public_key_service_alarm_short_duration_sec
   alert_severity_overrides                = var.alert_severity_overrides
   empty_key_set_error_threshold           = var.public_key_service_empty_key_set_error_threshold
   general_error_threshold                 = var.public_key_service_general_error_threshold

@@ -132,6 +132,8 @@ module "load_balancer" {
   cloud_armor_high_block_ratio_threshold         = 1
   cloud_armor_high_block_ratio_min_samples       = 10
   cloud_armor_rate_limit_denials_alert_threshold = 1000
+  rate_limit_alert_eval_period_sec               = 60
+  high_block_ratio_alert_eval_period_sec         = 300
 
   enable_cdn                      = false
   cdn_default_ttl_seconds         = 30
@@ -148,6 +150,7 @@ module "load_balancer" {
   alert_urgent_severity_override = "important"
   alarm_eval_period_sec          = var.alarm_eval_period_sec
   alarm_duration_sec             = var.alarm_duration_sec
+  alarm_short_duration_sec       = var.alarm_duration_sec
   alert_severity_overrides       = var.key_storage_severity_map
   alert_5xx_error_ratio          = "0.2"
   max_95_percent_latency_ms      = var.load_balancer_max_95_percent_latency_ms

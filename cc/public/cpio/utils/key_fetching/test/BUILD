@@ -40,6 +40,7 @@ cc_test(
     ],
     deps = [
         "//cc/core/test/utils:utils_lib",
+        "//cc/public/cpio/utils:proto_utils",
         "//cc/public/cpio/utils/key_fetching/src:key_fetching_utils",
         "@com_google_googletest//:gtest_main",
     ],
@@ -73,6 +74,7 @@ cc_test(
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/mock/private_key_client:private_key_client_mock",
+        "//cc/public/cpio/utils:proto_utils",
         "//cc/public/cpio/utils/dual_writing_metric_client/mock:dual_writing_metric_client_mock",
         "//cc/public/cpio/utils/key_fetching/src:auto_refresh_key_fetcher_with_cache",
         "//cc/public/cpio/utils/key_fetching/src:key_fetching_metric_utils",
@@ -85,8 +87,8 @@ cc_library(
     testonly = 1,
     srcs = [
         "key_fetching_metric_matcher.cc",
-        "key_fetching_metric_matcher.h",
     ],
+    hdrs = ["key_fetching_metric_matcher.h"],
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/test/utils:utils_lib",
@@ -94,5 +96,27 @@ cc_library(
         "//cc/public/cpio/utils/dual_writing_metric_client/mock:dual_writing_metric_client_mock",
         "//cc/public/cpio/utils/key_fetching/src:key_fetching_metric_utils",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "key_fetching_test",
+    testonly = True,
+    srcs = [
+        "wrapped_key_handler_with_cache_test.cc",
+    ],
+    deps = [
+        ":key_fetching_metric_matcher",
+        "//cc/core/async_executor/src:core_async_executor_lib",
+        "//cc/core/test/utils:utils_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "//cc/public/cpio/interface:cpio_errors",
+        "//cc/public/cpio/mock/kms_client:kms_client_mock",
+        "//cc/public/cpio/utils:proto_utils",
+        "//cc/public/cpio/utils/dual_writing_metric_client/mock:dual_writing_metric_client_mock",
+        "//cc/public/cpio/utils/key_fetching/src:key_fetching",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
     ],
 )

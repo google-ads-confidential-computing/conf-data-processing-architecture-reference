@@ -34,6 +34,7 @@
 #include "public/cpio/utils/metric_instance/mock/mock_metric_instance_factory.h"
 #include "public/cpio/utils/metric_instance/mock/mock_time_aggregate_metric.h"
 #include "public/cpio/utils/metric_instance/src/metric_utils.h"
+#include "public/cpio/utils/proto_utils.h"
 
 using google::cmrt::sdk::metric_service::v1::Metric;
 using google::cmrt::sdk::metric_service::v1::MetricType;
@@ -44,7 +45,6 @@ using google::scp::core::test::EqualsProto;
 using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ScpTestBase;
 using google::scp::core::test::SubstituteAndParseTextToProto;
-using google::scp::core::test::TextProtoString;
 using google::scp::cpio::MetricClientInterface;
 using google::scp::cpio::MetricDefinition;
 using google::scp::cpio::MetricInstanceFactoryInterface;
@@ -53,6 +53,7 @@ using google::scp::cpio::MockAggregateMetric;
 using google::scp::cpio::MockMetricClient;
 using google::scp::cpio::MockMetricInstanceFactory;
 using google::scp::cpio::MockTimeAggregateMetric;
+using google::scp::cpio::ProtoUtils;
 using std::make_unique;
 using std::nullopt;
 using std::optional;
@@ -423,13 +424,14 @@ TEST_F(DualWritingMetricClientTest, PutMetricWorksWithAggregateMetric) {
   expected_metric.set_value("5");
   EXPECT_CALL(*dual_write_metric_ptr, IncrementBy(5, string()))
       .WillOnce(Return(core::SuccessExecutionResult()));
-  EXPECT_CALL(mock_client_,
-              PutMetricsSync(
-                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-                      R"pb(
-                        metric_namespace: "$0" metrics { $1 }
-                      )pb",
-                      kOtelNamespace, TextProtoString(expected_metric)))))
+  EXPECT_CALL(
+      mock_client_,
+      PutMetricsSync(
+          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+              R"pb(
+                metric_namespace: "$0" metrics { $1 }
+              )pb",
+              kOtelNamespace, ProtoUtils::TextProtoString(expected_metric)))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(dual_write_client_.PutMetric(expected_metric));
 
@@ -439,13 +441,14 @@ TEST_F(DualWritingMetricClientTest, PutMetricWorksWithAggregateMetric) {
   EXPECT_SUCCESS(legacy_client_.PutMetric(expected_metric));
 
   // For otel client we expect just a call to PutMetricsSync
-  EXPECT_CALL(mock_client_,
-              PutMetricsSync(
-                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-                      R"pb(
-                        metric_namespace: "$0" metrics { $1 }
-                      )pb",
-                      kOtelNamespace, TextProtoString(expected_metric)))))
+  EXPECT_CALL(
+      mock_client_,
+      PutMetricsSync(
+          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+              R"pb(
+                metric_namespace: "$0" metrics { $1 }
+              )pb",
+              kOtelNamespace, ProtoUtils::TextProtoString(expected_metric)))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(otel_client_.PutMetric(expected_metric));
 }
@@ -488,13 +491,14 @@ TEST_F(DualWritingMetricClientTest,
   expected_metric.set_value("5");
   EXPECT_CALL(*dual_write_metric_ptr, IncrementBy(5, string()))
       .WillOnce(Return(core::SuccessExecutionResult()));
-  EXPECT_CALL(mock_client_,
-              PutMetricsSync(
-                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-                      R"pb(
-                        metric_namespace: "$0" metrics { $1 }
-                      )pb",
-                      kOtelNamespace, TextProtoString(expected_metric)))))
+  EXPECT_CALL(
+      mock_client_,
+      PutMetricsSync(
+          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+              R"pb(
+                metric_namespace: "$0" metrics { $1 }
+              )pb",
+              kOtelNamespace, ProtoUtils::TextProtoString(expected_metric)))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(dual_write_client_.PutMetric(expected_metric));
 
@@ -504,13 +508,14 @@ TEST_F(DualWritingMetricClientTest,
   EXPECT_SUCCESS(legacy_client_.PutMetric(expected_metric));
 
   // For otel client we expect just a call to PutMetricsSync
-  EXPECT_CALL(mock_client_,
-              PutMetricsSync(
-                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-                      R"pb(
-                        metric_namespace: "$0" metrics { $1 }
-                      )pb",
-                      kOtelNamespace, TextProtoString(expected_metric)))))
+  EXPECT_CALL(
+      mock_client_,
+      PutMetricsSync(
+          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+              R"pb(
+                metric_namespace: "$0" metrics { $1 }
+              )pb",
+              kOtelNamespace, ProtoUtils::TextProtoString(expected_metric)))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(otel_client_.PutMetric(expected_metric));
 }
@@ -556,29 +561,29 @@ TEST_F(DualWritingMetricClientTest,
   // call to PutMetric on the mock client.
   EXPECT_CALL(*dual_write_metric_ptr, IncrementBy(5, "event_1"))
       .WillOnce(Return(core::SuccessExecutionResult()));
-  EXPECT_CALL(
-      mock_client_,
-      PutMetricsSync(
-          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-              R"pb(
-                metric_namespace: "$0" metrics { $1 }
-              )pb",
-              kOtelNamespace,
-              TextProtoString(metric_wrapper.Increment(5, "event_1"))))))
+  EXPECT_CALL(mock_client_,
+              PutMetricsSync(
+                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+                      R"pb(
+                        metric_namespace: "$0" metrics { $1 }
+                      )pb",
+                      kOtelNamespace,
+                      ProtoUtils::TextProtoString(
+                          metric_wrapper.Increment(5, "event_1"))))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(
       dual_write_client_.PutMetric(metric_wrapper.Increment(5, "event_1")));
   EXPECT_CALL(*dual_write_metric_ptr, IncrementBy(10, "event_2"))
       .WillOnce(Return(core::SuccessExecutionResult()));
-  EXPECT_CALL(
-      mock_client_,
-      PutMetricsSync(
-          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-              R"pb(
-                metric_namespace: "$0" metrics { $1 }
-              )pb",
-              kOtelNamespace,
-              TextProtoString(metric_wrapper.Increment(10, "event_2"))))))
+  EXPECT_CALL(mock_client_,
+              PutMetricsSync(
+                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+                      R"pb(
+                        metric_namespace: "$0" metrics { $1 }
+                      )pb",
+                      kOtelNamespace,
+                      ProtoUtils::TextProtoString(
+                          metric_wrapper.Increment(10, "event_2"))))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(
       dual_write_client_.PutMetric(metric_wrapper.Increment(10, "event_2")));
@@ -594,27 +599,27 @@ TEST_F(DualWritingMetricClientTest,
       legacy_client_.PutMetric(metric_wrapper.Increment(10, "event_2")));
 
   // For otel client we expect just a call to PutMetricsSync
-  EXPECT_CALL(
-      mock_client_,
-      PutMetricsSync(
-          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-              R"pb(
-                metric_namespace: "$0" metrics { $1 }
-              )pb",
-              kOtelNamespace,
-              TextProtoString(metric_wrapper.Increment(5, "event_1"))))))
+  EXPECT_CALL(mock_client_,
+              PutMetricsSync(
+                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+                      R"pb(
+                        metric_namespace: "$0" metrics { $1 }
+                      )pb",
+                      kOtelNamespace,
+                      ProtoUtils::TextProtoString(
+                          metric_wrapper.Increment(5, "event_1"))))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(
       otel_client_.PutMetric(metric_wrapper.Increment(5, "event_1")));
-  EXPECT_CALL(
-      mock_client_,
-      PutMetricsSync(
-          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-              R"pb(
-                metric_namespace: "$0" metrics { $1 }
-              )pb",
-              kOtelNamespace,
-              TextProtoString(metric_wrapper.Increment(10, "event_2"))))))
+  EXPECT_CALL(mock_client_,
+              PutMetricsSync(
+                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+                      R"pb(
+                        metric_namespace: "$0" metrics { $1 }
+                      )pb",
+                      kOtelNamespace,
+                      ProtoUtils::TextProtoString(
+                          metric_wrapper.Increment(10, "event_2"))))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(
       otel_client_.PutMetric(metric_wrapper.Increment(10, "event_2")));
@@ -655,13 +660,14 @@ TEST_F(DualWritingMetricClientTest, PutMetricWorksWithTimeAggregateMetric) {
   expected_metric.set_value("5");
   EXPECT_CALL(*dual_write_metric_ptr, RecordDuration(5, string()))
       .WillOnce(Return(core::SuccessExecutionResult()));
-  EXPECT_CALL(mock_client_,
-              PutMetricsSync(
-                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-                      R"pb(
-                        metric_namespace: "$0" metrics { $1 }
-                      )pb",
-                      kOtelNamespace, TextProtoString(expected_metric)))))
+  EXPECT_CALL(
+      mock_client_,
+      PutMetricsSync(
+          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+              R"pb(
+                metric_namespace: "$0" metrics { $1 }
+              )pb",
+              kOtelNamespace, ProtoUtils::TextProtoString(expected_metric)))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(dual_write_client_.PutMetric(expected_metric));
 
@@ -671,13 +677,14 @@ TEST_F(DualWritingMetricClientTest, PutMetricWorksWithTimeAggregateMetric) {
   EXPECT_SUCCESS(legacy_client_.PutMetric(expected_metric));
 
   // For otel client we expect just a call to PutMetricsSync
-  EXPECT_CALL(mock_client_,
-              PutMetricsSync(
-                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-                      R"pb(
-                        metric_namespace: "$0" metrics { $1 }
-                      )pb",
-                      kOtelNamespace, TextProtoString(expected_metric)))))
+  EXPECT_CALL(
+      mock_client_,
+      PutMetricsSync(
+          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+              R"pb(
+                metric_namespace: "$0" metrics { $1 }
+              )pb",
+              kOtelNamespace, ProtoUtils::TextProtoString(expected_metric)))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(otel_client_.PutMetric(expected_metric));
 }
@@ -722,29 +729,29 @@ TEST_F(DualWritingMetricClientTest,
   // call to PutMetricsSync on the mock client.
   EXPECT_CALL(*dual_write_metric_ptr, RecordDuration(5, "event_1"))
       .WillOnce(Return(core::SuccessExecutionResult()));
-  EXPECT_CALL(
-      mock_client_,
-      PutMetricsSync(
-          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-              R"pb(
-                metric_namespace: "$0" metrics { $1 }
-              )pb",
-              kOtelNamespace,
-              TextProtoString(metric_wrapper.Increment(5, "event_1"))))))
+  EXPECT_CALL(mock_client_,
+              PutMetricsSync(
+                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+                      R"pb(
+                        metric_namespace: "$0" metrics { $1 }
+                      )pb",
+                      kOtelNamespace,
+                      ProtoUtils::TextProtoString(
+                          metric_wrapper.Increment(5, "event_1"))))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(
       dual_write_client_.PutMetric(metric_wrapper.Increment(5, "event_1")));
   EXPECT_CALL(*dual_write_metric_ptr, RecordDuration(10, "event_2"))
       .WillOnce(Return(core::SuccessExecutionResult()));
-  EXPECT_CALL(
-      mock_client_,
-      PutMetricsSync(
-          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-              R"pb(
-                metric_namespace: "$0" metrics { $1 }
-              )pb",
-              kOtelNamespace,
-              TextProtoString(metric_wrapper.Increment(10, "event_2"))))))
+  EXPECT_CALL(mock_client_,
+              PutMetricsSync(
+                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+                      R"pb(
+                        metric_namespace: "$0" metrics { $1 }
+                      )pb",
+                      kOtelNamespace,
+                      ProtoUtils::TextProtoString(
+                          metric_wrapper.Increment(10, "event_2"))))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(
       dual_write_client_.PutMetric(metric_wrapper.Increment(10, "event_2")));
@@ -760,27 +767,27 @@ TEST_F(DualWritingMetricClientTest,
       legacy_client_.PutMetric(metric_wrapper.Increment(10, "event_2")));
 
   // For otel client we expect just a call to PutMetricsSync
-  EXPECT_CALL(
-      mock_client_,
-      PutMetricsSync(
-          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-              R"pb(
-                metric_namespace: "$0" metrics { $1 }
-              )pb",
-              kOtelNamespace,
-              TextProtoString(metric_wrapper.Increment(5, "event_1"))))))
+  EXPECT_CALL(mock_client_,
+              PutMetricsSync(
+                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+                      R"pb(
+                        metric_namespace: "$0" metrics { $1 }
+                      )pb",
+                      kOtelNamespace,
+                      ProtoUtils::TextProtoString(
+                          metric_wrapper.Increment(5, "event_1"))))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(
       otel_client_.PutMetric(metric_wrapper.Increment(5, "event_1")));
-  EXPECT_CALL(
-      mock_client_,
-      PutMetricsSync(
-          EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
-              R"pb(
-                metric_namespace: "$0" metrics { $1 }
-              )pb",
-              kOtelNamespace,
-              TextProtoString(metric_wrapper.Increment(10, "event_2"))))))
+  EXPECT_CALL(mock_client_,
+              PutMetricsSync(
+                  EqualsProto(SubstituteAndParseTextToProto<PutMetricsRequest>(
+                      R"pb(
+                        metric_namespace: "$0" metrics { $1 }
+                      )pb",
+                      kOtelNamespace,
+                      ProtoUtils::TextProtoString(
+                          metric_wrapper.Increment(10, "event_2"))))))
       .WillOnce(Return(PutMetricsResponse()));
   EXPECT_SUCCESS(
       otel_client_.PutMetric(metric_wrapper.Increment(10, "event_2")));

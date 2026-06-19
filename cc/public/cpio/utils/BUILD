@@ -12,23 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 package(default_visibility = ["//visibility:public"])
 
-cc_test(
-    name = "dual_writing_metric_client_test",
-    size = "small",
-    srcs = ["dual_writing_metric_client_test.cc"],
+cc_library(
+    name = "proto_utils",
+    srcs = ["proto_utils.cc"],
+    hdrs = ["proto_utils.h"],
     deps = [
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_test(
+    name = "proto_utils_test",
+    srcs = ["proto_utils_test.cc"],
+    deps = [
+        ":proto_utils",
         "//cc:cc_base_include_dir",
-        "//cc/core/test/utils:utils_lib",
-        "//cc/public/core/test/interface:execution_result_matchers",
-        "//cc/public/cpio/mock/metric_client:metric_client_mock",
-        "//cc/public/cpio/utils:proto_utils",
-        "//cc/public/cpio/utils/dual_writing_metric_client/src:dual_writing_metric_client",
-        "//cc/public/cpio/utils/metric_instance/mock:metric_instance_mock",
-        "//cc/public/cpio/utils/metric_instance/src:metric_instance",
         "@com_google_googletest//:gtest_main",
+        "@com_google_protobuf//:protobuf",
     ],
 )

@@ -100,3 +100,44 @@ cc_library(
         "@com_google_protobuf//:protobuf",
     ],
 )
+
+cc_library(
+    name = "key_fetching",
+    srcs = [
+        "wrapped_key_handler_with_cache.cc",
+    ],
+    hdrs = [
+        "wrapped_key_handler_with_cache.h",
+        "wrapped_key_handler_with_cache_interface.h",
+    ],
+    deps = [
+        ":error_codes",
+        ":key_fetching_metric_utils",
+        "//cc/core/common/auto_expiry_concurrent_map/src:auto_expiry_concurrent_map_lib",
+        "//cc/core/common/global_logger/src:global_logger_lib",
+        "//cc/core/common/time_provider/src:time_provider_lib",
+        "//cc/public/core/interface:execution_result",
+        "//cc/public/cpio/interface:cpio_errors",
+        "//cc/public/cpio/interface/kms_client",
+        "//cc/public/cpio/utils:proto_utils",
+        "//cc/public/cpio/utils/dual_writing_metric_client/interface:dual_writing_metric_client_interface",
+        "//cc/public/cpio/utils/key_fetching/proto:cloud_wrapped_key_cc_proto",
+        "//cc/public/cpio/utils/metric_instance/src:metric_instance",
+        "@com_google_absl//absl/base:no_destructor",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "wrapped_key_handler_mock",
+    testonly = True,
+    hdrs = [
+        "wrapped_key_handler_with_cache_mock.h",
+    ],
+    deps = [
+        ":key_fetching",
+        "//cc/public/core/interface:execution_result",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

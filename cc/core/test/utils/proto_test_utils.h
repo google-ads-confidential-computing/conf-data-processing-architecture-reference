@@ -103,15 +103,4 @@ T SubstituteAndParseTextToProto(std::string_view format, Args... args) {
   return proto;
 }
 
-/**
- * @brief Helper to format proto to clean text-format string without DebugString
- * anti-parsing commentary. See:
- * https://protobuf.dev/programming-guides/deserialize-debug/
- */
-inline std::string TextProtoString(const google::protobuf::Message& message) {
-  std::string out;
-  google::protobuf::TextFormat::PrintToString(message, &out);
-  return out;
-}
-
 }  // namespace google::scp::core::test

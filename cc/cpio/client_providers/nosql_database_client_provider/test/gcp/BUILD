@@ -34,6 +34,7 @@ cc_test(
         "//cc/cpio/client_providers/nosql_database_client_provider/src/gcp:gcp_nosql_database_provider_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/interface/nosql_database_client:type_def",
+        "//cc/public/cpio/utils:proto_utils",
         "@com_github_googleapis_google_cloud_cpp//:spanner",
         "@com_github_googleapis_google_cloud_cpp//:spanner_mocks",
         "@com_google_googletest//:gtest_main",

@@ -43,6 +43,7 @@
 #include "google/spanner/v1/spanner.pb.h"
 #include "public/core/test/interface/execution_result_matchers.h"
 #include "public/cpio/interface/nosql_database_client/type_def.h"
+#include "public/cpio/utils/proto_utils.h"
 
 using google::cloud::make_ready_future;
 using google::cloud::Options;
@@ -99,9 +100,9 @@ using google::scp::core::errors::SC_NO_SQL_DATABASE_PROVIDER_UNSET_KEY_TYPE;
 using google::scp::core::test::EqualsProto;
 using google::scp::core::test::IsSuccessful;
 using google::scp::core::test::ResultIs;
-using google::scp::core::test::TextProtoString;
 using google::scp::core::test::WaitUntil;
 using google::scp::cpio::PartitionAndSortKey;
+using google::scp::cpio::ProtoUtils;
 using google::scp::cpio::client_providers::mock::MockGcpDatabaseFactory;
 using google::scp::cpio::client_providers::mock::MockInstanceClientProvider;
 using google::spanner::admin::database::v1::UpdateDatabaseDdlMetadata;
@@ -590,7 +591,7 @@ MATCHER_P2(IsStringAttribute, name, value, "") {
   if (arg.value_case() != ItemAttribute::kValueString) {
     *result_listener << "Expected arg to have value_string: " << value
                      << " but has:\n"
-                     << TextProtoString(arg);
+                     << ProtoUtils::TextProtoString(arg);
     return false;
   }
   return ExplainMatchResult(Eq(value), arg.value_string(), result_listener) &&

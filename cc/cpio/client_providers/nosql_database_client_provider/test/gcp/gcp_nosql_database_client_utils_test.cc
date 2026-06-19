@@ -25,6 +25,7 @@
 #include "cpio/client_providers/nosql_database_client_provider/src/common/error_codes.h"
 #include "google/cloud/spanner/value.h"
 #include "public/core/test/interface/execution_result_matchers.h"
+#include "public/cpio/utils/proto_utils.h"
 
 using google::cloud::spanner::Json;
 using google::cloud::spanner::Value;
@@ -38,7 +39,7 @@ using google::scp::core::errors::
     SC_NO_SQL_DATABASE_PROVIDER_INVALID_PARAMETER_TYPE;
 using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ResultIs;
-using google::scp::core::test::TextProtoString;
+using google::scp::cpio::ProtoUtils;
 using std::get;
 using std::shared_ptr;
 using std::string;
@@ -52,7 +53,7 @@ MATCHER_P(HasValueInt, value, "") {
   if (arg.value_case() != ItemAttribute::kValueInt) {
     *result_listener << "Expected arg to have value_int: " << value
                      << " but has:\n"
-                     << TextProtoString(arg);
+                     << ProtoUtils::TextProtoString(arg);
     return false;
   }
   return ExplainMatchResult(Eq(value), arg.value_int(), result_listener);
@@ -62,7 +63,7 @@ MATCHER_P(HasValueFloat, value, "") {
   if (arg.value_case() != ItemAttribute::kValueFloat) {
     *result_listener << "Expected arg to have value_float: " << value
                      << " but has:\n"
-                     << TextProtoString(arg);
+                     << ProtoUtils::TextProtoString(arg);
     return false;
   }
   return ExplainMatchResult(Eq(value), arg.value_float(), result_listener);
@@ -72,7 +73,7 @@ MATCHER_P(HasValueDouble, value, "") {
   if (arg.value_case() != ItemAttribute::kValueDouble) {
     *result_listener << "Expected arg to have value_double: " << value
                      << " but has:\n"
-                     << TextProtoString(arg);
+                     << ProtoUtils::TextProtoString(arg);
     return false;
   }
   return ExplainMatchResult(Eq(value), arg.value_double(), result_listener);
@@ -102,7 +103,7 @@ MATCHER_P(HasValueString, value, "") {
   if (arg.value_case() != ItemAttribute::kValueString) {
     *result_listener << "Expected arg to have value_string: " << value
                      << " but has:\n"
-                     << TextProtoString(arg);
+                     << ProtoUtils::TextProtoString(arg);
     return false;
   }
   return ExplainMatchResult(Eq(value), arg.value_string(), result_listener);
@@ -121,7 +122,7 @@ MATCHER_P(HasValueJsonString, value, "") {
   if (arg.value_case() != ItemAttribute::kValueJsonString) {
     *result_listener << "Expected arg to have value_json_string: " << value
                      << " but has:\n"
-                     << TextProtoString(arg);
+                     << ProtoUtils::TextProtoString(arg);
     return false;
   }
   return ExplainMatchResult(Eq(value), arg.value_json_string(),

@@ -36,6 +36,7 @@
 #include "public/cpio/utils/key_fetching/src/error_codes.h"
 #include "public/cpio/utils/key_fetching/src/key_fetching_metric_utils.h"
 #include "public/cpio/utils/key_fetching/test/key_fetching_metric_matcher.h"
+#include "public/cpio/utils/proto_utils.h"
 
 using google::cmrt::sdk::metric_service::v1::Metric;
 using google::cmrt::sdk::metric_service::v1::MetricType;
@@ -58,7 +59,6 @@ using google::scp::core::test::IsSuccessfulAndHolds;
 using google::scp::core::test::ResultIs;
 using google::scp::core::test::ScpTestBase;
 using google::scp::core::test::SubstituteAndParseTextToProto;
-using google::scp::core::test::TextProtoString;
 using google::scp::cpio::DualWritingMetricClientMock;
 using google::scp::cpio::ExpectOtelKeyCacheStatusMetricPush;
 using google::scp::cpio::ExpectOtelKeyFetchingErrorMetricPush;
@@ -68,6 +68,7 @@ using google::scp::cpio::KeyCacheStatus;
 using google::scp::cpio::KeyFetchingType;
 using google::scp::cpio::KeyType;
 using google::scp::cpio::MockPrivateKeyClient;
+using google::scp::cpio::ProtoUtils;
 using std::make_unique;
 using std::string;
 using std::unique_ptr;
@@ -360,11 +361,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest,
 
             }
           )pb",
-          TextProtoString(TimeUtil::NanosecondsToTimestamp(
+          ProtoUtils::TextProtoString(TimeUtil::NanosecondsToTimestamp(
               GetNowTimestampWithNegativeDiff().count())),
-          TextProtoString(TimeUtil::NanosecondsToTimestamp(
+          ProtoUtils::TextProtoString(TimeUtil::NanosecondsToTimestamp(
               GetNowTimestampWithNegativeDiff().count())),
-          TextProtoString(TimeUtil::NanosecondsToTimestamp(
+          ProtoUtils::TextProtoString(TimeUtil::NanosecondsToTimestamp(
               GetNowTimestampWithNegativeDiff().count())));
   absl::Notification notification;
   EXPECT_CALL(mock_key_client_,
@@ -499,11 +500,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest,
       }
     }
   )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())));
   GetKeysetMetadataResponse keyset_metadata_response;
   keyset_metadata_response.set_active_key_count(1);
@@ -602,11 +603,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest, GettingKeysetMetadata) {
       }
     }
   )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())));
   GetKeysetMetadataResponse keyset_metadata_response;
   keyset_metadata_response.set_active_key_count(1);
@@ -673,11 +674,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest,
       }
     }
   )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())));
 
   GetKeysetMetadataResponse keyset_metadata_response;
@@ -750,11 +751,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest,
       }
     }
   )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())));
 
   EXPECT_CALL(mock_key_client_,
@@ -819,11 +820,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest, OnDemandKeysFetchingTimeout) {
        }
      }
    )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())));
 
   EXPECT_CALL(mock_key_client_,
@@ -903,11 +904,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest, GettingKeysSuccessfulWithOndemand) {
       }
     }
   )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())));
 
   EXPECT_CALL(mock_key_client_,
@@ -973,11 +974,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest,
       }
     }
   )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())));
 
   EXPECT_CALL(mock_key_client_,
@@ -1043,11 +1044,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest, RefreshClearsOldKeys) {
       }
     }
   )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key0_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key0_expiry_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key0_active_ts.count())));
   auto key1_create_ts = GetNowTimestampWithNegativeDiff(hours(24));
   auto key1_active_ts = GetNowTimestampWithNegativeDiff(hours(23));
@@ -1070,11 +1071,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest, RefreshClearsOldKeys) {
       }
     }
   )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())));
 
   EXPECT_CALL(mock_key_client_,
@@ -1129,9 +1130,9 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest, GetValidKeysSuccessfully) {
   auto key3_active_ts = key2_expiry_ts;
   auto key3_expiry_ts = GetNowTimestampWithPositiveDiff(hours(48));
 
-  auto response = SubstituteAndParseTextToProto<
-      ListActiveEncryptionKeysResponse>(
-      R"-(
+  auto response =
+      SubstituteAndParseTextToProto<ListActiveEncryptionKeysResponse>(
+          R"-(
     private_keys {
       key_id: "key1"
       private_key: "data1"
@@ -1175,16 +1176,24 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest, GetValidKeysSuccessfully) {
       }
     }
   )-",
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key2_create_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key2_expiry_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key2_active_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key3_create_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key3_expiry_ts.count())),
-      TextProtoString(
-          TimeUtil::NanosecondsToTimestamp(key3_active_ts.count())));
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key2_create_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key2_expiry_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key2_active_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key3_create_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key3_expiry_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key3_active_ts.count())));
 
   EXPECT_CALL(mock_key_client_,
               ListActiveEncryptionKeysSync(
@@ -1248,11 +1257,11 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest,
       }
     }
   )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())));
 
   EXPECT_CALL(mock_key_client_,
@@ -1296,9 +1305,9 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest, GetMultipleActiveKey) {
   auto key2_active_ts = GetNowTimestampWithNegativeDiff(hours(30));
   auto key2_expiry_ts = GetNowTimestampWithPositiveDiff(hours(48));
 
-  auto response = SubstituteAndParseTextToProto<
-      ListActiveEncryptionKeysResponse>(
-      R"-(
+  auto response =
+      SubstituteAndParseTextToProto<ListActiveEncryptionKeysResponse>(
+          R"-(
     private_keys {
       key_id: "key1"
       private_key: "data1"
@@ -1328,13 +1337,18 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest, GetMultipleActiveKey) {
       }
     }
   )-",
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key2_create_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key2_expiry_ts.count())),
-      TextProtoString(
-          TimeUtil::NanosecondsToTimestamp(key2_active_ts.count())));
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key2_create_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key2_expiry_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key2_active_ts.count())));
 
   EXPECT_CALL(mock_key_client_,
               ListActiveEncryptionKeysSync(
@@ -1386,9 +1400,9 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest,
   auto key2_active_ts = GetNowTimestampWithNegativeDiff(hours(30));
   auto key2_expiry_ts = GetNowTimestampWithPositiveDiff(hours(24));
 
-  auto response = SubstituteAndParseTextToProto<
-      ListActiveEncryptionKeysResponse>(
-      R"-(
+  auto response =
+      SubstituteAndParseTextToProto<ListActiveEncryptionKeysResponse>(
+          R"-(
     private_keys {
       key_id: "key1"
       private_key: "data1"
@@ -1418,13 +1432,18 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest,
       }
     }
   )-",
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key2_create_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key2_expiry_ts.count())),
-      TextProtoString(
-          TimeUtil::NanosecondsToTimestamp(key2_active_ts.count())));
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key1_create_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key1_expiry_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key1_active_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key2_create_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key2_expiry_ts.count())),
+          ProtoUtils::TextProtoString(
+              TimeUtil::NanosecondsToTimestamp(key2_active_ts.count())));
 
   EXPECT_CALL(mock_key_client_,
               ListActiveEncryptionKeysSync(
@@ -1482,9 +1501,12 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest, GetValidKeysWithMultiThreads) {
         $2
       }
   )-",
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key_create_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key_expiry_ts.count())),
-      TextProtoString(TimeUtil::NanosecondsToTimestamp(key_active_ts.count())));
+      ProtoUtils::TextProtoString(
+          TimeUtil::NanosecondsToTimestamp(key_create_ts.count())),
+      ProtoUtils::TextProtoString(
+          TimeUtil::NanosecondsToTimestamp(key_expiry_ts.count())),
+      ProtoUtils::TextProtoString(
+          TimeUtil::NanosecondsToTimestamp(key_active_ts.count())));
 
   ListActiveEncryptionKeysResponse response;
   *response.add_private_keys() = key;
@@ -1552,9 +1574,9 @@ TEST_F(AutoRefreshKeyFetcherWithCacheTest,
         }
       }
     )-",
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key_create_ts.count())),
-          TextProtoString(
+          ProtoUtils::TextProtoString(
               TimeUtil::NanosecondsToTimestamp(key_expiry_ts.count())));
   EXPECT_CALL(mock_key_client_,
               ListActiveEncryptionKeysSync(

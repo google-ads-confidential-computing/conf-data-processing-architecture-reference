@@ -18,9 +18,8 @@ load("//build_defs/cc:sdk_common.bzl", "sdk_common")
 load("//build_defs/cc/aws:aws_c_common_source_code.bzl", "aws_c_common")
 load("//build_defs/cc/aws:aws_sdk_cpp_source_code_deps.bzl", "import_aws_sdk_cpp")
 
-def sdk_dependencies(protobuf_version = None, protobuf_repo_hash = None, import_aws = True, import_gcp = True, bzlmod = True):
+def sdk_dependencies(protobuf_version = None, protobuf_repo_hash = None, import_aws = True, bzlmod = True):
     sdk_common(
-        import_gcp = import_gcp,
         protobuf_version = protobuf_version,
         protobuf_repo_hash = protobuf_repo_hash,
         bzlmod = bzlmod,

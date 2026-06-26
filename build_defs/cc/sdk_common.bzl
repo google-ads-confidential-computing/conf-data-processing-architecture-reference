@@ -31,24 +31,19 @@ load("//build_defs/shared:bazel_rules_java.bzl", "bazel_rules_java")
 load("//build_defs/shared:bazel_rules_oci.bzl", "bazel_rules_oci")
 load("//build_defs/shared:bazel_rules_pkg.bzl", "bazel_rules_pkg")
 load("//build_defs/shared:bazel_rules_python.bzl", "bazel_rules_python")
-load("//build_defs/shared:google_cloud_sdk.bzl", "google_cloud_sdk")
 load("//build_defs/shared:java_grpc.bzl", "java_grpc")
 load("//build_defs/shared:protobuf.bzl", "protobuf")
 load("//build_defs/shared:terraform.bzl", "terraform")
 load("//build_defs/tink:tink_defs.bzl", "import_tink_git")
 
-def sdk_common(import_gcp, protobuf_version = None, protobuf_repo_hash = None, bzlmod = True):
+def sdk_common(protobuf_version = None, protobuf_repo_hash = None, bzlmod = True):
     """Common SDK build defs.
 
     Args:
-      import_gcp: set to True if importing GCP deps
       protobuf_version: the version of protobuf to import
       protobuf_repo_hash: the sha256 hash of the corresponding protobuf version
       bzlmod: set to True if Bzlmod is enabled
     """
-
-    if import_gcp:
-        google_cloud_sdk()
     terraform()
 
     if not bzlmod:

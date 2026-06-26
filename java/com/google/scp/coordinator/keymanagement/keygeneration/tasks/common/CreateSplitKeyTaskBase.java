@@ -277,15 +277,15 @@ public abstract class CreateSplitKeyTaskBase implements CreateSplitKeyTask {
 
   private void checkFutureActiveKeys(String setName, int expectedKeys, Instant now)
       throws ServiceException {
-    var start = now.plus(6, DAYS);
-    var end = now.plus(6, DAYS);
-    var activeIn5 = keyDb.getActiveKeys(setName, expectedKeys, start, end);
-    if (activeIn5.size() < expectedKeys) {
+    var start = now.plus(3, DAYS);
+    var end = now.plus(3, DAYS);
+    var activeIn3 = keyDb.getActiveKeys(setName, expectedKeys, start, end);
+    if (activeIn3.size() < expectedKeys) {
       LOGGER.error(format("precheck", setName, "future_lt_numDesiredKeys"));
       LOGGER.error(
-          "[{}] Found {} of {} expected active keys (1 week in the future).",
+          "[{}] Found {} of {} expected active keys (3 days in the future).",
           setName,
-          activeIn5.size(),
+          activeIn3.size(),
           expectedKeys);
     }
   }

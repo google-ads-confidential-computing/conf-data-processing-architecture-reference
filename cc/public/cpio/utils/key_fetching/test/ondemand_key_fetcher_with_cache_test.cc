@@ -622,6 +622,41 @@ TEST_F(OndemandKeyFetcherWithCacheTest, OndemandFetchingOnceWithMultiThreads) {
   EXPECT_SUCCESS(key_fetcher_with_cache.Stop());
 }
 
+TEST_F(OndemandKeyFetcherWithCacheTest,
+       GetKeyForValidationOnlySuccessfullyUpdatesMetrics) {
+  ExpectOtelEncryptionKeyFetchingRequestMetricPush(
+      1, KeyFetchingType::kOnDemand, kAllKeyNamespaces);
+  ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
+      1, KeyFetchingType::kOnDemand, kAllKeyNamespaces);
+  ExpectOtelEncryptionKeyCacheStatusMetricPush(
+      1, kAllKeyNamespaces, KeyCacheStatus::kValidKeyCacheMiss);
+  ExpectOtelEncryptionKeyCacheStatusMetricPush(
+      3, kAllKeyNamespaces, KeyCacheStatus::kValidKeyCacheHit);
+  ExpectOtelEncryptionKeyAgeInDaysMetricPush(1, kKeyNamespace1, 0);
+  ExpectOtelEncryptionKeyFetchingErrorMetricPush(0);
+
+  auto key_create_ts =
+      duration_cast<nanoseconds>((system_clock::now()).time_since_epoch());
+  ListPrivateKeysResponse response;
+  response.mutable_private_keys()->Add(CreatePrivateKey1(key_create_ts));
+  request_.add_key_ids(kInputKeyId1);
+  EXPECT_CALL(mock_key_client_, ListPrivateKeysSync(EqualsProto(request_)))
+      .WillOnce(Return(response));
+
+  auto key = key_fetcher_with_cache_->GetKey(kInputKeyId1);
+
+  EXPECT_THAT(key->creation_timestamp, key_create_ts.count());
+  EXPECT_THAT(key->private_key, kPrivateKey);
+  EXPECT_THAT(key->public_key, kPublicKey);
+
+  auto valid1 = key_fetcher_with_cache_->ValidateKey(kInputKeyId1);
+  EXPECT_THAT(valid1, core::test::IsSuccessfulAndHolds(true));
+  auto valid2 = key_fetcher_with_cache_->ValidateKey(kInputKeyId1);
+  EXPECT_THAT(valid2, core::test::IsSuccessfulAndHolds(true));
+  auto valid3 = key_fetcher_with_cache_->ValidateKey(kInputKeyId1);
+  EXPECT_THAT(valid3, core::test::IsSuccessfulAndHolds(true));
+}
+
 TEST_F(OndemandKeyFetcherWithCacheTest, OndemandFetchingTimeout) {
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kOnDemand, kAllKeyNamespaces);

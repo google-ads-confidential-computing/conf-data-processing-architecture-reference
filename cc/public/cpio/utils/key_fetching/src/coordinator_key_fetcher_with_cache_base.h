@@ -116,7 +116,8 @@ class CoordinatorKeyFetcherWithCacheBase {
 
   // Get the key from valid key cache or fetch it from remote.
   core::ExecutionResultOr<Key> GetKeyInternal(
-      const LookupKeyT& lookup_key) noexcept;
+      const LookupKeyT& lookup_key,
+      absl::string_view key_fetching_type) noexcept;
 
  private:
   // The input keyset_name is only used for metrics.
@@ -168,10 +169,12 @@ class CoordinatorKeyFetcherWithCacheBase {
    *
    * @param lookup_key key used to lookup in the cache, can be string for key id
    * or timestamp
+   * @param key_fetching_type the key fetching type
    * @return ExecutionResultOr<Key> fetch and validate result
    */
   core::ExecutionResultOr<Key> FetchValidateAndCacheKey(
-      const LookupKeyT& lookup_key) noexcept;
+      const LookupKeyT& lookup_key,
+      absl::string_view key_fetching_type) noexcept;
 
   /**
    * @brief Validate list keys result and cache the valid key or cache the

@@ -124,12 +124,13 @@ ExecutionResult OndemandKeyFetcherWithCache::Stop() noexcept {
 
 core::ExecutionResultOr<Key> OndemandKeyFetcherWithCache::GetKey(
     const std::string& key_id) noexcept {
-  return GetKeyInternal(key_id);
+  return GetKeyInternal(key_id, KeyFetchingType::kOnDemand);
 }
 
 core::ExecutionResultOr<bool> OndemandKeyFetcherWithCache::ValidateKey(
     const std::string& key_id) noexcept {
-  ASSIGN_OR_RETURN(auto key, GetKeyInternal(key_id));
+  ASSIGN_OR_RETURN(auto key,
+                   GetKeyInternal(key_id, KeyFetchingType::kValidateKey));
   if (!key.private_key.empty()) {
     return true;
   }

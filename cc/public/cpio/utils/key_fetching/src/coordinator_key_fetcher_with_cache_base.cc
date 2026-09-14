@@ -350,14 +350,15 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchWithListActiveKeys(
 template <typename LookupKeyT>
 core::ExecutionResultOr<Key>
 CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::FetchValidateAndCacheKey(
-    const LookupKeyT& lookup_key) noexcept {
+    const LookupKeyT& lookup_key,
+    absl::string_view key_fetching_type) noexcept {
   ListPrivateKeysRequest request =
       GetListPrivateKeysRequest(list_private_keys_request_base_, lookup_key);
 
   // We don't know the exact keyset yet for most cases, so use the
   // allowed_keysets_name which may be a list for metric recording.
-  auto response_or = FetchKeysFromRemote(request, KeyFetchingType::kOnDemand,
-                                         allowed_keysets_name_);
+  auto response_or =
+      FetchKeysFromRemote(request, key_fetching_type, allowed_keysets_name_);
 
   return ValidateAndCacheKey(lookup_key, response_or);
 }
@@ -434,7 +435,8 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::ValidateAndCacheKey(
 template <typename LookupKeyT>
 core::ExecutionResultOr<Key>
 CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::GetKeyInternal(
-    const LookupKeyT& lookup_key) noexcept {
+    const LookupKeyT& lookup_key,
+    absl::string_view key_fetching_type) noexcept {
   auto key = GetKeyFromValidKeyCache(lookup_key);
   if (key.has_value()) {
     // Use allowed_keysets_name_ which might be a list to represent the keyset
@@ -472,7 +474,8 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::GetKeyInternal(
     // Failing to mark IN_PROGRESS status means some other thread is already
     // fetching the key. So it will fall to the WaitForKeyReady() process.
     if (MarkFetchingInProgress(lookup_key)) {
-      auto fetched_key_or = FetchValidateAndCacheKey(lookup_key);
+      auto fetched_key_or =
+          FetchValidateAndCacheKey(lookup_key, key_fetching_type);
       MarkFetchingFinished(lookup_key);
       return fetched_key_or;
     }

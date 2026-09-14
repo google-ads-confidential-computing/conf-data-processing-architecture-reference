@@ -90,6 +90,7 @@ struct KeyFetchingType {
   static constexpr char kPrefetchRetry[] = "PrefetchRetry";
   static constexpr char kAutoRefresh[] = "AutoRefresh";
   static constexpr char kOnDemand[] = "OnDemand";
+  static constexpr char kValidateKey[] = "ValidateKey";
 };
 
 struct KeyCacheStatus {

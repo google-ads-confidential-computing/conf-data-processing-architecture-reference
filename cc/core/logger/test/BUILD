@@ -17,13 +17,14 @@ load("@rules_cc//cc:cc_test.bzl", "cc_test")
 cc_test(
     name = "logger_test",
     size = "small",
-    srcs = ["logger_test.cc"],
+    srcs = glob(["*.cc"]),
     deps = [
         "//cc:cc_base_include_dir",
         "//cc/core/interface:interface_lib",
         "//cc/core/logger/interface:logger_interface_lib",
         "//cc/core/logger/mock:logger_mock",
         "//cc/core/logger/src:logger_lib",
+        "//cc/core/logger/src/log_providers:log_providers_lib",
         "//cc/core/test:core_test_lib",
         "//cc/core/test/utils:utils_lib",
         "@com_google_googletest//:gtest_main",

@@ -20,11 +20,11 @@
 
 environment = "s-lib-postsubmit"
 project_id  = "admcloud-adtech1"
-region      = "us-central1"
-region_zone = "us-central1-c"
+region      = "us-west1"
+region_zone = "us-west1-b"
 
 operator_package_bucket_location = "US"
-spanner_instance_config          = "regional-us-central1"
+spanner_instance_config          = "regional-us-west1"
 spanner_processing_units         = 300
 
 worker_image                     = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:s-lib-postsubmit"
@@ -76,27 +76,27 @@ metric_exporter_interval_in_millis = 60000
 collector_domain_name              = "collector.metrics"
 collector_dns_name                 = "scp.testings.postsubmit"
 collector_subnet_cidr = {
-  "us-central1" = "10.3.0.0/16",
-  "us-east1"    = "10.13.0.0/16"
+  "us-west1"     = "10.43.0.0/16",
+  "europe-west1" = "10.53.0.0/16"
 }
 proxy_subnet_cidr = {
-  "us-central1" = "10.4.0.0/16",
-  "us-east1"    = "10.14.0.0/16"
+  "us-west1"     = "10.44.0.0/16",
+  "europe-west1" = "10.54.0.0/16"
 }
 
 collector_regional_config = {
-  "us-central1" = {
+  "us-west1" = {
     zonal_config = {
-      "us-central1-c" = {
+      "us-west1-b" = {
         min_collector_count              = 1
         max_collector_count              = 2
         collector_cpu_utilization_target = 0.8
       }
     }
   },
-  "us-east1" = {
+  "europe-west1" = {
     zonal_config = {
-      "us-east1-c" = {
+      "europe-west1-b" = {
         min_collector_count              = 1
         max_collector_count              = 2
         collector_cpu_utilization_target = 0.8

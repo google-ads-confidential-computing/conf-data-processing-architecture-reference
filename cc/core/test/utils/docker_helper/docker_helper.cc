@@ -36,7 +36,7 @@ using std::vector;
 static constexpr char kLocalstackImage[] = "localstack/localstack:1.0.3";
 // gcloud SDK tool version is pinned so that tests are repeatable
 static constexpr char kGcpImage[] =
-    "gcr.io/google.com/cloudsdktool/google-cloud-cli:416.0.0-emulators";
+    "gcr.io/google.com/cloudsdktool/google-cloud-cli:587.0.0-emulators";
 
 namespace google::scp::core::test {
 string PortMapToSelf(string port) {

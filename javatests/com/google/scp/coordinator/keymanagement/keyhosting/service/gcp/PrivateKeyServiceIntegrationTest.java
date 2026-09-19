@@ -49,6 +49,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -75,6 +80,11 @@ public final class PrivateKeyServiceIntegrationTest {
   // GetKeysetMetadata v1beta
   private static final String CORRECT_KEY_METADATA = "/v1beta/sets/%s/keysetMetadata";
   private static final String INCORRECT_KEY_METADATA = "/v1beta/sets/%s/keysetMeta";
+  private static final int WARMUP_REQUEST_COUNT = 100;
+  private static final int BURST_WAVES = 4;
+  private static final int REQUESTS_PER_WAVE = 500;
+  private static final int BURST_CONCURRENCY = 20;
+  private static final int MAX_ALLOWED_THREAD_GROWTH = 10;
 
   @Inject @KeyDbClient private DatabaseClient dbClient;
   @Inject private SpannerKeyDb keyDb;
@@ -140,6 +150,56 @@ public final class PrivateKeyServiceIntegrationTest {
             .build();
     HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
     verifyNotFoundResponse(httpResponse);
+  }
+
+  @Test(timeout = 120_000)
+  public void getEncryptionKeys_burstTraffic_returnsNoServerErrorsAndMaintainsStableThreadCount()
+      throws Exception {
+    HttpRequest getRequest =
+        HttpRequest.newBuilder().uri(getFunctionUri(correctPathBeta + "invalid")).GET().build();
+
+    // Ensure Guice injector and cache entry are initialized before concurrent warmup.
+    HttpResponse<String> initialResponse = executeRequestWithRetry(client, getRequest);
+    assertThat(initialResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
+
+    ExecutorService executor = Executors.newFixedThreadPool(BURST_CONCURRENCY);
+    try {
+      executeConcurrentWave(executor, getRequest, WARMUP_REQUEST_COUNT);
+
+      int baselineThreadCount = functionContainer.getLiveThreadCount();
+      int firstWaveThreadCount = baselineThreadCount;
+
+      for (int wave = 0; wave < BURST_WAVES; wave++) {
+        executeConcurrentWave(executor, getRequest, REQUESTS_PER_WAVE);
+        int currentThreadCount = functionContainer.getLiveThreadCount();
+        if (wave == 0) {
+          firstWaveThreadCount = currentThreadCount;
+        }
+        assertThat(currentThreadCount - baselineThreadCount).isAtMost(MAX_ALLOWED_THREAD_GROWTH);
+      }
+
+      int finalThreadCount = functionContainer.getLiveThreadCount();
+      assertThat(finalThreadCount - firstWaveThreadCount).isAtMost(MAX_ALLOWED_THREAD_GROWTH);
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  private static void executeConcurrentWave(
+      ExecutorService executor, HttpRequest getRequest, int requestCount) throws Exception {
+    List<Future<?>> futures = new ArrayList<>(requestCount);
+    for (int i = 0; i < requestCount; i++) {
+      futures.add(
+          executor.submit(
+              () -> {
+                HttpResponse<String> httpResponse = executeRequestWithRetry(client, getRequest);
+                assertThat(httpResponse.statusCode()).isEqualTo(NOT_FOUND.getHttpStatusCode());
+                return null;
+              }));
+    }
+    for (Future<?> future : futures) {
+      future.get();
+    }
   }
 
   // GetActiveEncryptionKeys v1beta

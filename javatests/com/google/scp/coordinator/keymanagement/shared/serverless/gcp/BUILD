@@ -19,6 +19,9 @@ java_test(
     srcs = [
         "GcpServerlessFunctionTest.java",
     ],
+    env = {
+        "CLOUD_RUN_TIMEOUT_SECONDS": "60",
+    },
     deps = [
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/common",
         "//java/com/google/scp/coordinator/keymanagement/shared/serverless/gcp",

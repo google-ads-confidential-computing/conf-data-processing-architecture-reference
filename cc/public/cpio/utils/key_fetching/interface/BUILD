@@ -28,3 +28,14 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
     ],
 )
+
+cc_library(
+    name = "valid_keys_cache_interface",
+    hdrs = ["valid_keys_cache_interface.h"],
+    deps = [
+        ":key_fetcher_with_cache_interface",
+        "//cc/core/common/time_provider/src:time_provider_lib",
+        "//cc/core/interface:service_interface_lib",
+        "//cc/public/core/interface:execution_result",
+    ],
+)

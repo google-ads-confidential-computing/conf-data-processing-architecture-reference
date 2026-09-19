@@ -26,9 +26,14 @@ import com.google.scp.coordinator.keymanagement.shared.serverless.common.ApiTask
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.RequestContext;
 import com.google.scp.coordinator.keymanagement.shared.serverless.common.ResponseContext;
 import com.google.scp.coordinator.keymanagement.shared.util.LogMetricHelper;
+import java.lang.management.ManagementFactory;
 import java.net.ServerSocket;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.http.HttpResponse;
@@ -47,6 +52,15 @@ public class GcpServerlessFunctionTest {
 
   private static final String TEST_RESPONSE = "test-response";
   private static final String TEST_REQUEST_HEADER = "test-header";
+  private static final int WARMUP_REQUEST_COUNT = 100;
+  private static final int BURST_WAVES = 4;
+  private static final int REQUESTS_PER_WAVE = 500;
+  private static final int BURST_CONCURRENCY = 20;
+  // After the warmup wave saturates the 20-thread client pool and Jetty's worker pool, observed
+  // thread growth is 0 (baseline, current, and peak all remain at ~62 threads). Allowing up to 10
+  // extra threads provides headroom for incidental JVM background threads while still catching
+  // per-request thread leaks (which spawn 500 threads per wave).
+  private static final int MAX_ALLOWED_THREAD_GROWTH = 10;
   private static int testPort;
   private static Invoker invoker;
 
@@ -121,6 +135,70 @@ public class GcpServerlessFunctionTest {
 
     // Then
     assertThat(body).isEqualTo(headerValue);
+  }
+
+  @Test
+  public void testService_burstTraffic_returnsNoServerErrorsAndMaintainsStableThreadCount()
+      throws Exception {
+    ExecutorService executor = Executors.newFixedThreadPool(BURST_CONCURRENCY);
+    try (CloseableHttpClient client =
+        HttpClients.custom()
+            .setMaxConnTotal(BURST_CONCURRENCY)
+            .setMaxConnPerRoute(BURST_CONCURRENCY)
+            .build()) {
+      // Ensure Guice injector is initialized before concurrent warmup.
+      executeAndVerifyOkRequest(client);
+
+      // Warm up server and client thread/connection pools under concurrent load.
+      executeConcurrentWave(executor, client, WARMUP_REQUEST_COUNT);
+      System.gc();
+
+      var threadBean = ManagementFactory.getThreadMXBean();
+      threadBean.resetPeakThreadCount();
+      int baselineThreadCount = threadBean.getThreadCount();
+      int firstWaveThreadCount = baselineThreadCount;
+
+      for (int wave = 0; wave < BURST_WAVES; wave++) {
+        executeConcurrentWave(executor, client, REQUESTS_PER_WAVE);
+        int currentThreadCount = threadBean.getThreadCount();
+        int peakThreadCount = threadBean.getPeakThreadCount();
+        if (wave == 0) {
+          firstWaveThreadCount = currentThreadCount;
+        }
+        assertThat(currentThreadCount - baselineThreadCount).isAtMost(MAX_ALLOWED_THREAD_GROWTH);
+        assertThat(peakThreadCount - baselineThreadCount).isAtMost(MAX_ALLOWED_THREAD_GROWTH);
+      }
+
+      int finalThreadCount = threadBean.getThreadCount();
+      assertThat(finalThreadCount - firstWaveThreadCount).isAtMost(MAX_ALLOWED_THREAD_GROWTH);
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  private static void executeConcurrentWave(
+      ExecutorService executor, CloseableHttpClient client, int requestCount) throws Exception {
+    List<Future<?>> futures = new ArrayList<>(requestCount);
+    for (int i = 0; i < requestCount; i++) {
+      futures.add(
+          executor.submit(
+              () -> {
+                executeAndVerifyOkRequest(client);
+                return null;
+              }));
+    }
+    for (Future<?> future : futures) {
+      future.get();
+    }
+  }
+
+  private static void executeAndVerifyOkRequest(CloseableHttpClient client) throws Exception {
+    HttpGet request = new HttpGet(String.format("http://localhost:%d/test-base/path", testPort));
+    HttpResponse response = client.execute(request);
+    int statusCode = response.getStatusLine().getStatusCode();
+    String body = EntityUtils.toString(response.getEntity());
+    assertThat(statusCode).isEqualTo(200);
+    assertThat(body).isEqualTo(TEST_RESPONSE);
   }
 
   public static final class TestService extends GcpServerlessFunction {

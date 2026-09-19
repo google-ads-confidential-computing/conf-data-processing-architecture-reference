@@ -220,25 +220,11 @@ class OndemandKeyFetcherWithCacheTest : public ScpTestBase {
 
   void ExpectOtelEncryptionKeyAgeInDaysMetricPush(
       int call_count, absl::string_view keyset_name = kKeyNamespace1,
-      int16_t key_age_in_days = 0) {
-    ExpectOtelKeyAgeInDaysMetricPush(
-        mock_metric_client_, call_count, KeyType::kEncryptionKey,
-        KeyFetchingType::kOnDemand, keyset_name, key_age_in_days);
-  }
-
-  ListPrivateKeysRequest CreateBasePrivateKeysRequest(
-      const std::string& keyset_name) {
-    ListPrivateKeysRequest request;
-    request.set_key_set_name(keyset_name);
-    auto* endpoint1 = request.add_key_endpoints();
-    endpoint1->set_endpoint(kEndpoint1);
-    endpoint1->set_gcp_cloud_function_url(kCloudFunctionUrl1);
-    endpoint1->set_gcp_wip_provider(kWipp1);
-    auto* endpoint2 = request.add_key_endpoints();
-    endpoint2->set_endpoint(kEndpoint2);
-    endpoint2->set_gcp_cloud_function_url(kCloudFunctionUrl2);
-    endpoint2->set_gcp_wip_provider(kWipp2);
-    return request;
+      int16_t key_age_in_days = 0,
+      absl::string_view key_fetching_type = KeyFetchingType::kOnDemand) {
+    ExpectOtelKeyAgeInDaysMetricPush(mock_metric_client_, call_count,
+                                     KeyType::kEncryptionKey, key_fetching_type,
+                                     keyset_name, key_age_in_days);
   }
 
   ListActiveEncryptionKeysRequest CreateBaseActiveKeysRequest(
@@ -1063,15 +1049,17 @@ TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchingFallbackOldListActiveKeys) {
 
 TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchingWithOldAndNewSystem) {
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
-      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
+      1, KeyFetchingType::kPrefetch, kAllKeyNamespaces);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
-      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
+      1, KeyFetchingType::kPrefetch, kAllKeyNamespaces);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace2);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace2);
   ExpectOtelEncryptionKeyCacheStatusMetricPush(
       1, kAllKeyNamespaces, KeyCacheStatus::kValidKeyCacheHit);
+  ExpectOtelEncryptionKeyAgeInDaysMetricPush(1, kKeyNamespace1, 0,
+                                             KeyFetchingType::kPrefetch);
   ExpectOtelEncryptionKeyFetchingErrorMetricPush(0);
 
   KeyFetcherOptions key_fetcher_options{
@@ -1090,8 +1078,8 @@ TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchingWithOldAndNewSystem) {
       async_executor_, mock_key_client_, mock_metric_client_,
       key_service_options, key_fetcher_options);
 
-  ListPrivateKeysRequest expected_request1 =
-      CreateBasePrivateKeysRequest(kKeyNamespace1);
+  // Prefetching by key ID does not restrict the request to the keyset.
+  ListPrivateKeysRequest expected_request1 = request_;
   expected_request1.add_key_ids(kInputKeyId1);
   auto key_create_ts =
       duration_cast<nanoseconds>((system_clock::now()).time_since_epoch());

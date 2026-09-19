@@ -162,7 +162,7 @@ maven.install(
         "com.google.cloud:google-cloud-compute:1.57.0",
         "com.google.cloud:google-cloudevent-types:0.14.0",
         "com.google.api.grpc:proto-google-cloud-compute-v1:1.58.0",
-        "com.google.cloud.functions.invoker:java-function-invoker:1.4.3",
+        "com.google.cloud.functions.invoker:java-function-invoker:2.0.2",
         "com.google.auth:google-auth-library-oauth2-http:1.24.1",
         "com.google.cloud.functions:functions-framework-api:1.1.4",
         "commons-logging:commons-logging:1.1.1",

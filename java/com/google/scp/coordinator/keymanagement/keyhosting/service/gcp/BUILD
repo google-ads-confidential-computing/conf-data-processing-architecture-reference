@@ -109,7 +109,7 @@ oci_image(
     name = "PublicKeyServiceRuntimeImage",
     base = "@java_base_21_oci",
     cmd = [
-        "./processed_java-function-invoker-1.4.3.jar",
+        "./processed_java-function-invoker-2.0.2.jar",
         "--classpath",
         "./PublicKeyServiceHttpCloudRun_deploy.jar",
         "--target",
@@ -187,7 +187,7 @@ oci_image(
     name = "PrivateKeyServiceRuntimeImage",
     base = "@java_base_21_oci",
     cmd = [
-        "./processed_java-function-invoker-1.4.3.jar",
+        "./processed_java-function-invoker-2.0.2.jar",
         "--classpath",
         "./PrivateKeyServiceHttpCloudRun_deploy.jar",
         "--target",

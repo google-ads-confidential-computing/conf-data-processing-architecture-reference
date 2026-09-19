@@ -266,7 +266,18 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchKeys() noexcept {
       const auto& keyset_config = prefetch_config_iterator->second;
 
       if (keyset_config.key_ids_size() > 0) {
-        PrefetchKeysByIds(keyset_name, keyset_config.key_ids());
+        SCP_INFO(component_name_, kZeroUuid,
+                 "Prefetching with ListPrivateKeys for keyset %s.",
+                 keyset_name.c_str());
+        // Fetch one key ID at a time so a failure for one key does not affect
+        // the others. Current use cases only have one key ID, so this doesn't
+        // make much difference.
+        for (const auto& key_id : keyset_config.key_ids()) {
+          auto key_or = FetchKeysById(key_id, KeyFetchingType::kPrefetch);
+          if (key_or.Successful()) {
+            CacheValidKey({*key_or});
+          }
+        }
       }
       if (keyset_config.has_prefetch_duration()) {
         // ListActiveKeys needs to specify its start and end time
@@ -298,46 +309,6 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchKeys() noexcept {
       FetchKeysInTimeRange(KeyFetchingType::kPrefetch, keyset_name, start_time,
                            end_time);
     }
-  }
-}
-
-template <typename LookupKeyT>
-void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchKeysByIds(
-    const std::string& keyset_name,
-    const std::optional<google::protobuf::RepeatedPtrField<std::string>>&
-        key_ids) noexcept {
-  // ListPrivateKeys accepts age as a duration based on its creation time,
-  // and the activation time is 1 week after the creation time.
-  ListPrivateKeysRequest prefetch_request = list_private_keys_request_base_;
-  prefetch_request.set_key_set_name(keyset_name);
-  if (key_ids.has_value()) {
-    for (const auto& key_id : *key_ids) {
-      prefetch_request.add_key_ids(key_id);
-    }
-  } else {
-    prefetch_request.set_max_age_seconds(
-        key_fetcher_options_.prefetch_keys_max_age.count());
-  }
-  SCP_INFO(component_name_, kZeroUuid,
-           "Prefetching with ListPrivateKeys for for keyset %s.",
-           keyset_name.c_str());
-  auto response_or = ListPrivateKeys(prefetch_request,
-                                     KeyFetchingType::kPrefetch, keyset_name);
-
-  if (!response_or.Successful() &&
-      key_fetcher_options_.enable_retry_in_prefetch_and_autorefresh) {
-    SleepRandomDuration();
-    SCP_INFO(component_name_, kZeroUuid, "Retrying prefetching for keyset %s",
-             keyset_name.c_str());
-    response_or = ListPrivateKeys(prefetch_request,
-                                  KeyFetchingType::kPrefetchRetry, keyset_name);
-  }
-  if (response_or.Successful()) {
-    CacheValidKey(ExtractKeys(response_or->private_keys()));
-  } else {
-    SCP_ERROR(component_name_, kZeroUuid, response_or.result(),
-              "ListPrivateKeys prefetching failed for keyset %s.",
-              keyset_name.c_str());
   }
 }
 
@@ -388,6 +359,18 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::FetchKeysById(
   // allowed_keysets_name which may be a list for metric recording.
   auto response_or =
       ListPrivateKeys(request, key_fetching_type, allowed_keysets_name_);
+
+  if (!response_or.Successful() &&
+      (key_fetching_type == KeyFetchingType::kPrefetch ||
+       key_fetching_type == KeyFetchingType::kAutoRefresh) &&
+      key_fetcher_options_.enable_retry_in_prefetch_and_autorefresh) {
+    SleepRandomDuration();
+    SCP_INFO(component_name_, kZeroUuid,
+             "Retrying fetching with ListPrivateKeys for key ID %s.",
+             key_id.c_str());
+    response_or = ListPrivateKeys(request, KeyFetchingType::kPrefetchRetry,
+                                  allowed_keysets_name_);
+  }
   auto fetching_result = response_or.result();
 
   // The error metric for failed ListPrivateKeysResponse is already pushed. Here
@@ -398,8 +381,7 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::FetchKeysById(
                           : FailureExecutionResult(SC_CPIO_KEY_COUNT_MISMATCH);
 
     PushKeyFetchingErrorMetric(
-        metric_client_, key_type_, KeyFetchingType::kOnDemand,
-        allowed_keysets_name_,
+        metric_client_, key_type_, key_fetching_type, allowed_keysets_name_,
         MapToKeyFetchingErrorString(fetching_result.status_code));
   }
 
@@ -422,8 +404,7 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::FetchKeysById(
               keyset_name.c_str());
     // Log new key fetching error metric using OpenTelemetry
     PushKeyFetchingErrorMetric(
-        metric_client_, key_type_, KeyFetchingType::kOnDemand,
-        allowed_keysets_name_,
+        metric_client_, key_type_, key_fetching_type, allowed_keysets_name_,
         MapToKeyFetchingErrorString(failure.status_code));
     return failure;
   }
@@ -435,7 +416,7 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::FetchKeysById(
           nanoseconds(current_time - keys[0].activation_timestamp))
           .count() /
       24;
-  PushKeyAgeInDaysMetric(metric_client_, key_type_, KeyFetchingType::kOnDemand,
+  PushKeyAgeInDaysMetric(metric_client_, key_type_, key_fetching_type,
                          keyset_name, key_age_in_days);
 
   SCP_INFO(component_name_, kZeroUuid,

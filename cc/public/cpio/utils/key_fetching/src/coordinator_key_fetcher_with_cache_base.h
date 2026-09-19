@@ -153,7 +153,8 @@ class CoordinatorKeyFetcherWithCacheBase {
   /**
    * @brief Fetch the key with the given key ID using the ListPrivateKeys API
    * and validate it: exactly one key must be returned, and it must belong to an
-   * allowed keyset. Does not cache the result.
+   * allowed keyset. For prefetch and auto-refresh, retries once on failure if
+   * enable_retry_in_prefetch_and_autorefresh is set. Does not cache the result.
    *
    * @param key_id the key ID to fetch
    * @param key_fetching_type the key fetching type
@@ -199,14 +200,6 @@ class CoordinatorKeyFetcherWithCacheBase {
       absl::string_view key_fetching_type, const std::string& keyset_name,
       const google::protobuf::Timestamp& start_time,
       const google::protobuf::Timestamp& end_time) noexcept;
-
-  // Prefetches keys with the given key IDs for the keyset using the
-  // ListPrivateKeys API and caches them. Retries once on failure if
-  // enable_retry_in_prefetch_and_autorefresh is set.
-  void PrefetchKeysByIds(
-      const std::string& keyset_name,
-      const std::optional<google::protobuf::RepeatedPtrField<std::string>>&
-          key_ids) noexcept;
 
   /// Wait for the key fetching finishing.
   void WaitForKeyReady(const LookupKeyT& lookup_key) noexcept;

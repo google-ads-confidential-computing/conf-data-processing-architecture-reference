@@ -30,7 +30,7 @@ mock_provider "google-beta" {
 # All run blocks should have "command = plan".
 # Take great care when writing tests with "command = apply".
 variables {
-  worker_subnet_cidr = { "us-central1" : "0.0.0.0/0" }
+  worker_subnet_cidr = { "us-west1" : "0.0.0.0/0" }
 }
 
 run "generates_outputs_with_plan" {

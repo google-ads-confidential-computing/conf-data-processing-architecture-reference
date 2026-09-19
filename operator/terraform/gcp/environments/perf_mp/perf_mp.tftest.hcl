@@ -42,7 +42,7 @@ variables {
   project_id                       = "project_id"
   environment                      = "environment"
   region                           = "us"
-  region_zone                      = "us-central1"
+  region_zone                      = "us-west1"
   operator_package_bucket_location = ""
   spanner_instance_config          = ""
 

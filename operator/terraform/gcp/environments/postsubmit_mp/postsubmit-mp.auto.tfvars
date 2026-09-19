@@ -1,13 +1,13 @@
 environment = "postsubmit-mp"
 project_id  = "admcloud-adtech1"
-region      = "us-central1"
-region_zone = "us-central1-c"
+region      = "us-west1"
+region_zone = "us-west1-c"
 
 # Multi region location
 # https://cloud.google.com/storage/docs/locations
 operator_package_bucket_location = "US"
 
-spanner_instance_config              = "regional-us-central1"
+spanner_instance_config              = "regional-us-west1"
 spanner_processing_units             = 100
 spanner_database_deletion_protection = false
 
@@ -60,8 +60,8 @@ frontend_service_jar = "/tmp/postsubmit_mp/jars/FrontendServiceHttpCloudFunction
 auto_create_subnetworks = false
 network_name_suffix     = "network-with-custom-subnet"
 worker_subnet_cidr = {
-  "us-central1" = "10.2.0.0/16",
-  "us-east1"    = "10.12.0.0/16"
+  "us-west1"     = "10.72.0.0/16",
+  "europe-west1" = "10.82.0.0/16"
 }
 
 enable_remote_metric_aggregation   = true
@@ -70,26 +70,26 @@ metric_exporter_interval_in_millis = 60000
 collector_domain_name              = "collector.metrics"
 collector_dns_name                 = "scp.testings.postsubmit"
 collector_subnet_cidr = {
-  "us-central1" = "10.3.0.0/16",
-  "us-east1"    = "10.13.0.0/16"
+  "us-west1"     = "10.73.0.0/16",
+  "europe-west1" = "10.83.0.0/16"
 }
 proxy_subnet_cidr = {
-  "us-central1" = "10.4.0.0/16",
-  "us-east1"    = "10.14.0.0/16"
+  "us-west1"     = "10.74.0.0/16",
+  "europe-west1" = "10.84.0.0/16"
 }
 collector_regional_config = {
-  "us-central1" = {
+  "us-west1" = {
     zonal_config = {
-      "us-central1-c" = {
+      "us-west1-c" = {
         min_collector_count              = 1
         max_collector_count              = 2
         collector_cpu_utilization_target = 0.8
       }
     }
   },
-  "us-east1" = {
+  "europe-west1" = {
     zonal_config = {
-      "us-east1-c" = {
+      "europe-west1-b" = {
         min_collector_count              = 1
         max_collector_count              = 2
         collector_cpu_utilization_target = 0.8
@@ -180,7 +180,7 @@ instance_disk_image = "projects/confidential-space-images/global/images/confiden
 vpcsc_compatible = true
 
 frontend_service_cloudfunction_num_cpus                = 1
-frontend_service_cloud_run_regions                     = ["us-central1", "us-east1"]
+frontend_service_cloud_run_regions                     = ["us-west1", "europe-west1"]
 frontend_service_cloud_run_source_container_image_url  = "us-docker.pkg.dev/admcloud-adtech1/docker-repo-dev/operator-fe-service:postsubmit-mp"
 frontend_service_lb_domain                             = "wrkr-fe-postsubmit-test.gcp.admcstesting.dev"
 frontend_service_parent_domain_name                    = "gcp.admcstesting.dev"

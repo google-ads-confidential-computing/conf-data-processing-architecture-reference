@@ -212,6 +212,30 @@ variables {
   }
   private_key_service_enable_revision_pinning = false
   private_key_service_stable_revisions        = {}
+
+  public_key_service_cloud_run_5xx_error_alarm                 = null
+  public_key_service_cloud_run_5xx_error_alarm_by_region       = {}
+  public_key_service_cloud_run_execution_time_alarm            = null
+  public_key_service_cloud_run_execution_time_alarm_by_region  = {}
+  public_key_service_empty_key_set_error_alarm                 = null
+  public_key_service_general_error_alarm                       = null
+  public_key_service_load_balancer_5xx_error_ratio_alarm       = null
+  public_key_service_load_balancer_95_percent_latency_alarm    = null
+  public_key_service_load_balancer_99_percent_latency_alarm    = null
+  public_key_service_cloud_armor_high_block_ratio_alarm        = null
+  public_key_service_cloud_armor_rate_limit_denials_alarm      = null
+  private_key_service_cloud_run_5xx_error_alarm                = null
+  private_key_service_cloud_run_5xx_error_alarm_by_region      = {}
+  private_key_service_cloud_run_execution_time_alarm           = null
+  private_key_service_cloud_run_execution_time_alarm_by_region = {}
+  private_key_service_config_read_error_alarm                  = null
+  private_key_service_get_encrypted_private_key_error_alarm    = null
+  private_key_service_exception_alarm                          = null
+  private_key_service_load_balancer_5xx_error_ratio_alarm      = null
+  private_key_service_load_balancer_95_percent_latency_alarm   = null
+  private_key_service_load_balancer_99_percent_latency_alarm   = null
+  private_key_service_cloud_armor_high_block_ratio_alarm       = null
+  private_key_service_cloud_armor_rate_limit_denials_alarm     = null
 }
 
 # All run blocks should have "command = plan".
@@ -499,5 +523,79 @@ run "generates_outputs_with_plan" {
   assert {
     condition     = output.migration_peer_coordinator_kms_key_base_uri == "peer_coordinator_base_uri"
     error_message = "Wrong URL"
+  }
+}
+
+run "propagates_structured_alarm_configs_to_public_and_private_key_services" {
+  command = plan
+
+  variables {
+    alarms_enabled = true
+    public_key_service_cloud_run_execution_time_alarm_by_region = {
+      "us-central1" = {
+        threshold    = 1800
+        duration_sec = 240
+      }
+    }
+    public_key_service_empty_key_set_error_alarm = {
+      threshold    = 4
+      duration_sec = 180
+    }
+    public_key_service_load_balancer_95_percent_latency_alarm = {
+      threshold    = 350
+      duration_sec = 300
+    }
+    private_key_service_cloud_run_5xx_error_alarm_by_region = {
+      "us-central1" = {
+        threshold    = 10
+        duration_sec = 120
+      }
+    }
+    private_key_service_config_read_error_alarm = {
+      threshold    = 3
+      duration_sec = 600
+    }
+    private_key_service_load_balancer_99_percent_latency_alarm = {
+      threshold    = 750
+      duration_sec = 900
+    }
+  }
+
+  override_module {
+    target = module.key_management_service
+    outputs = {
+      kms_key_ring_id = "ring_id"
+      kms_key_ids     = {}
+    }
+  }
+
+  assert {
+    condition     = module.public_key_service.cloud_run_execution_time_alarms_by_region["us-central1"].threshold == 1800
+    error_message = "Expected public_key_service per-region Cloud Run execution time threshold override (1800) to propagate."
+  }
+
+  assert {
+    condition     = module.public_key_service.empty_key_set_error_alarm.threshold == 4
+    error_message = "Expected public_key_service_empty_key_set_error_alarm threshold override (4) to propagate."
+  }
+
+  assert {
+    condition     = module.public_key_service.load_balancer_95_percent_latency_alarm.threshold == 350
+    error_message = "Expected public_key_service_load_balancer_95_percent_latency_alarm threshold override (350) to propagate."
+  }
+
+  assert {
+    condition     = module.private_key_service.cloud_run_5xx_error_alarms_by_region["us-central1"].threshold == 10
+    error_message = "Expected private_key_service per-region Cloud Run 5xx error threshold override (10) to propagate."
+  }
+
+  assert {
+    condition     = module.private_key_service.config_read_error_alarm.threshold == 3
+    error_message = "Expected private_key_service_config_read_error_alarm threshold override (3) to propagate."
+  }
+
+  assert {
+    condition     = module.private_key_service.load_balancer_99_percent_latency_alarm.threshold == 750
+    error_message = "Expected private_key_service_load_balancer_99_percent_latency_alarm threshold override (750) to propagate."
   }
 }

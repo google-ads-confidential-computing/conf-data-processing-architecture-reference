@@ -20,11 +20,11 @@
 
 environment = "mc-postsubmit"
 project_id  = "admcloud-adtech1"
-region      = "us-central1"
-region_zone = "us-central1-c"
+region      = "us-west1"
+region_zone = "us-west1-c"
 
 operator_package_bucket_location = "US"
-spanner_instance_config          = "regional-us-central1"
+spanner_instance_config          = "regional-us-west1"
 spanner_processing_units         = 300
 
 worker_image                     = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:mc-postsubmit"
@@ -62,7 +62,7 @@ metric_client_parameter_values = {
 
 auto_create_subnetworks = false
 network_name_suffix     = "network-with-custom-subnet"
-worker_subnet_cidr      = { "us-central1" = "10.2.0.0/16" }
+worker_subnet_cidr      = { "us-west1" = "10.62.0.0/16" }
 
 # TODO: uncomment them when switch to use build and deploy script.
 # worker_scale_in_jar  = "/tmp/mc_postsubmit/oper_tar/jars/WorkerScaleInCloudFunction_deploy.jar"

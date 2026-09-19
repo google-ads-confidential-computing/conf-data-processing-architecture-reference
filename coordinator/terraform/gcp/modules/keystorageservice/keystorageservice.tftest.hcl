@@ -60,6 +60,12 @@ variables {
   lb_outlier_detection_enforcing_consecutive_errors          = 0
   lb_outlier_detection_consecutive_gateway_failure           = 0
   lb_outlier_detection_enforcing_consecutive_gateway_failure = 0
+
+  cloud_run_5xx_error_alarm              = null
+  cloud_run_execution_time_alarm         = null
+  load_balancer_5xx_error_ratio_alarm    = null
+  load_balancer_95_percent_latency_alarm = null
+  load_balancer_99_percent_latency_alarm = null
 }
 
 # All run blocks should have "command = plan".
@@ -79,5 +85,68 @@ run "generates_outputs_with_plan" {
   assert {
     condition     = output.key_storage_cloud_run_url == "mock_cloud_run_v2_uri"
     error_message = "Wrong URL"
+  }
+}
+
+run "structured_alarm_objects_propagate_to_cloud_run_and_load_balancer" {
+  command = plan
+
+  variables {
+    alarms_enabled = true
+    cloud_run_5xx_error_alarm = {
+      threshold               = 5
+      duration_sec            = 120
+      alignment_period_sec    = 300
+      evaluation_interval_sec = 60
+    }
+    cloud_run_execution_time_alarm = {
+      threshold               = 1500
+      duration_sec            = 180
+      alignment_period_sec    = 300
+      evaluation_interval_sec = 60
+    }
+    load_balancer_5xx_error_ratio_alarm = {
+      threshold               = 0.05
+      duration_sec            = 240
+      alignment_period_sec    = 300
+      evaluation_interval_sec = 60
+    }
+    load_balancer_95_percent_latency_alarm = {
+      threshold               = 400
+      duration_sec            = 300
+      alignment_period_sec    = 300
+      evaluation_interval_sec = 60
+    }
+    load_balancer_99_percent_latency_alarm = {
+      threshold               = 800
+      duration_sec            = 600
+      alignment_period_sec    = 300
+      evaluation_interval_sec = 60
+    }
+  }
+
+  assert {
+    condition     = module.cloud_run.error_5xx_alarm.threshold == 5 && module.cloud_run.error_5xx_alarm.duration_sec == 120
+    error_message = "Expected cloud_run_5xx_error_alarm overrides to propagate to module.cloud_run."
+  }
+
+  assert {
+    condition     = module.cloud_run.execution_time_alarm.threshold == 1500 && module.cloud_run.execution_time_alarm.duration_sec == 180
+    error_message = "Expected cloud_run_execution_time_alarm overrides to propagate to module.cloud_run."
+  }
+
+  assert {
+    condition     = module.load_balancer.load_balancer_5xx_error_ratio_alarm.threshold == 0.05 && module.load_balancer.load_balancer_5xx_error_ratio_alarm.duration_sec == 240
+    error_message = "Expected load_balancer_5xx_error_ratio_alarm overrides to propagate to module.load_balancer."
+  }
+
+  assert {
+    condition     = module.load_balancer.load_balancer_95_percent_latency_alarm.threshold == 400 && module.load_balancer.load_balancer_95_percent_latency_alarm.duration_sec == 300
+    error_message = "Expected load_balancer_95_percent_latency_alarm overrides to propagate to module.load_balancer."
+  }
+
+  assert {
+    condition     = module.load_balancer.load_balancer_99_percent_latency_alarm.threshold == 800 && module.load_balancer.load_balancer_99_percent_latency_alarm.duration_sec == 600
+    error_message = "Expected load_balancer_99_percent_latency_alarm overrides to propagate to module.load_balancer."
   }
 }

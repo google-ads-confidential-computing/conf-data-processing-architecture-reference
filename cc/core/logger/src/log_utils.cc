@@ -16,6 +16,8 @@
 #include "cc/core/logger/src/log_utils.h"
 
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include "core/logger/interface/log_provider_interface.h"
 
@@ -67,6 +69,21 @@ LogLevel FromString(const std::string& level) {
   }
 
   return LogLevel::kNone;
+}
+
+std::string FormatMessage(std::string_view message, va_list args) {
+  const std::string str_msg(message);
+  va_list size_args;
+  va_copy(size_args, args);
+  const int size = std::vsnprintf(nullptr, 0U, str_msg.data(), size_args);
+  va_end(size_args);
+  std::string formatted_message;
+  if (size > 0) {
+    std::vector<char> buf(size + 1);
+    std::vsnprintf(buf.data(), buf.size(), str_msg.data(), args);
+    formatted_message.assign(buf.data(), size);
+  }
+  return formatted_message;
 }
 
 std::string operator+(const LogLevel& level, const std::string& text) {

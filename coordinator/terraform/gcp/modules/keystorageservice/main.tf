@@ -92,6 +92,8 @@ module "cloud_run" {
   alert_on_cpu_usage_important_threshold    = 0.7
   alert_on_cpu_usage_urgent_threshold       = 1.1 # never page
   max_execution_time_max                    = var.cloud_run_max_execution_time_max
+  cloud_run_5xx_error_alarm                 = var.cloud_run_5xx_error_alarm
+  cloud_run_execution_time_alarm            = var.cloud_run_execution_time_alarm
 }
 
 locals {
@@ -147,14 +149,19 @@ module "load_balancer" {
   managed_domain = var.key_storage_domain
 
   # Alert settings
-  alert_urgent_severity_override = "important"
-  alarm_eval_period_sec          = var.alarm_eval_period_sec
-  alarm_duration_sec             = var.alarm_duration_sec
-  alarm_short_duration_sec       = var.alarm_duration_sec
-  alert_severity_overrides       = var.key_storage_severity_map
-  alert_5xx_error_ratio          = "0.2"
-  max_95_percent_latency_ms      = var.load_balancer_max_95_percent_latency_ms
-  max_99_percent_latency_ms      = var.load_balancer_max_99_percent_latency_ms
+  alert_urgent_severity_override         = "important"
+  alarm_eval_period_sec                  = var.alarm_eval_period_sec
+  alarm_duration_sec                     = var.alarm_duration_sec
+  alarm_short_duration_sec               = var.alarm_duration_sec
+  alert_severity_overrides               = var.key_storage_severity_map
+  alert_5xx_error_ratio                  = "0.2"
+  max_95_percent_latency_ms              = var.load_balancer_max_95_percent_latency_ms
+  max_99_percent_latency_ms              = var.load_balancer_max_99_percent_latency_ms
+  load_balancer_5xx_error_ratio_alarm    = var.load_balancer_5xx_error_ratio_alarm
+  load_balancer_95_percent_latency_alarm = var.load_balancer_95_percent_latency_alarm
+  load_balancer_99_percent_latency_alarm = var.load_balancer_99_percent_latency_alarm
+  cloud_armor_high_block_ratio_alarm     = null
+  cloud_armor_rate_limit_denials_alarm   = null
 }
 
 module "service_monitoring_dashboard" {

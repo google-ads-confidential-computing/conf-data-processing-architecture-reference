@@ -17,6 +17,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 #include "core/logger/interface/log_provider_interface.h"
 
@@ -26,6 +27,8 @@ namespace google::scp::core::logger {
 std::string ToString(const LogLevel& level);
 
 LogLevel FromString(const std::string& level);
+
+std::string FormatMessage(std::string_view message, va_list args);
 
 std::string operator+(const LogLevel& level, const std::string& text);
 

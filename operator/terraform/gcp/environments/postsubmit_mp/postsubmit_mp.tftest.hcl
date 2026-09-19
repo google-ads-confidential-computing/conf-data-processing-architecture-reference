@@ -41,7 +41,7 @@ variables {
   # Must set this to pass job_service module validation
   project_id                       = "project_id"
   environment                      = "environment"
-  region_zone                      = "us-central1"
+  region_zone                      = "us-west1"
   operator_package_bucket_location = ""
   spanner_instance_config          = ""
 

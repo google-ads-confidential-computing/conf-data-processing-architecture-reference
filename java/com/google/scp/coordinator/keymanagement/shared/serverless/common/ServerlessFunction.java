@@ -33,7 +33,7 @@ import java.util.Map;
 /** Abstract serverless function class to service HTTP requests. */
 public abstract class ServerlessFunction extends AbstractModule {
 
-  private static Injector INJECTOR;
+  private static volatile Injector INJECTOR;
 
   /** Locates the {@link ApiTask} that can service the request. */
   protected void invoke(RequestContext request, ResponseContext response) {
@@ -47,24 +47,35 @@ public abstract class ServerlessFunction extends AbstractModule {
 
   @VisibleForTesting
   static void clearInjector() {
-    INJECTOR = null;
+    synchronized (ServerlessFunction.class) {
+      INJECTOR = null;
+    }
   }
 
   private Injector injector() {
-    if (INJECTOR == null) {
-      INJECTOR =
-          Guice.createInjector(
-              new AbstractModule() {
-                @Override
-                protected void configure() {
-                  // Binder that maps base URLs to API tasks that each services an endpoint.
-                  MapBinder.newMapBinder(
-                      binder(), new TypeLiteral<String>() {}, new TypeLiteral<List<ApiTask>>() {});
-                  install(ServerlessFunction.this);
-                }
-              });
+    Injector currentInjector = INJECTOR;
+    if (currentInjector == null) {
+      synchronized (ServerlessFunction.class) {
+        currentInjector = INJECTOR;
+        if (currentInjector == null) {
+          currentInjector =
+              Guice.createInjector(
+                  new AbstractModule() {
+                    @Override
+                    protected void configure() {
+                      // Binder that maps base URLs to API tasks that each services an endpoint.
+                      MapBinder.newMapBinder(
+                          binder(),
+                          new TypeLiteral<String>() {},
+                          new TypeLiteral<List<ApiTask>>() {});
+                      install(ServerlessFunction.this);
+                    }
+                  });
+          INJECTOR = currentInjector;
+        }
+      }
     }
-    return INJECTOR;
+    return currentInjector;
   }
 
   private static void dispatch(

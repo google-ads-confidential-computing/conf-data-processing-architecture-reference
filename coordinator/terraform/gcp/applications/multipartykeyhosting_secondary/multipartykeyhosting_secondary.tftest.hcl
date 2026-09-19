@@ -167,6 +167,25 @@ variables {
   }
   private_key_service_enable_revision_pinning = false
   private_key_service_stable_revisions        = {}
+
+  private_key_service_cloud_run_5xx_error_alarm                = null
+  private_key_service_cloud_run_5xx_error_alarm_by_region      = {}
+  private_key_service_cloud_run_execution_time_alarm           = null
+  private_key_service_cloud_run_execution_time_alarm_by_region = {}
+  private_key_service_config_read_error_alarm                  = null
+  private_key_service_get_encrypted_private_key_error_alarm    = null
+  private_key_service_exception_alarm                          = null
+  private_key_service_load_balancer_5xx_error_ratio_alarm      = null
+  private_key_service_load_balancer_95_percent_latency_alarm   = null
+  private_key_service_load_balancer_99_percent_latency_alarm   = null
+  private_key_service_cloud_armor_high_block_ratio_alarm       = null
+  private_key_service_cloud_armor_rate_limit_denials_alarm     = null
+
+  key_storage_service_cloud_run_5xx_error_alarm              = null
+  key_storage_service_cloud_run_execution_time_alarm         = null
+  key_storage_service_load_balancer_5xx_error_ratio_alarm    = null
+  key_storage_service_load_balancer_95_percent_latency_alarm = null
+  key_storage_service_load_balancer_99_percent_latency_alarm = null
 }
 
 # All run blocks should have "command = plan".
@@ -450,5 +469,68 @@ run "generates_outputs_with_plan" {
   assert {
     condition     = output.migration_kms_key_base_uri == "gcp-kms://ring_id/cryptoKeys/env_$setName$_kms_key"
     error_message = "Wrong URL"
+  }
+}
+
+run "propagates_structured_alarm_configs_to_private_ks_and_key_storage_service" {
+  command = plan
+
+  variables {
+    alarms_enabled = true
+    private_key_service_cloud_run_execution_time_alarm_by_region = {
+      "us-central1" = {
+        threshold    = 1600
+        duration_sec = 240
+      }
+    }
+    private_key_service_config_read_error_alarm = {
+      threshold    = 6
+      duration_sec = 300
+    }
+    private_key_service_load_balancer_95_percent_latency_alarm = {
+      threshold    = 450
+      duration_sec = 600
+    }
+    key_storage_service_cloud_run_execution_time_alarm = {
+      threshold    = 2500
+      duration_sec = 180
+    }
+    key_storage_service_load_balancer_99_percent_latency_alarm = {
+      threshold    = 950
+      duration_sec = 300
+    }
+  }
+
+  override_module {
+    target = module.key_management_service
+    outputs = {
+      kms_key_ring_id = "ring_id"
+      kms_key_ids     = {}
+    }
+  }
+
+  assert {
+    condition     = module.private_key_service.cloud_run_execution_time_alarms_by_region["us-central1"].threshold == 1600
+    error_message = "Expected private_key_service per-region Cloud Run execution time threshold override (1600) to propagate."
+  }
+
+  assert {
+    condition     = module.private_key_service.config_read_error_alarm.threshold == 6
+    error_message = "Expected private_key_service_config_read_error_alarm threshold override (6) to propagate."
+  }
+
+  assert {
+    condition     = module.private_key_service.load_balancer_95_percent_latency_alarm.threshold == 450
+    error_message = "Expected private_key_service_load_balancer_95_percent_latency_alarm threshold override (450) to propagate."
+  }
+
+  assert {
+    condition     = module.keystorageservice.cloud_run_execution_time_alarm.threshold == 2500
+    error_message = "Expected key_storage_service_cloud_run_execution_time_alarm threshold override (2500) to propagate."
+  }
+
+  assert {
+    condition     = module.keystorageservice.load_balancer_99_percent_latency_alarm.threshold == 950
+    error_message = "Expected key_storage_service_load_balancer_99_percent_latency_alarm threshold override (950) to propagate."
   }
 }

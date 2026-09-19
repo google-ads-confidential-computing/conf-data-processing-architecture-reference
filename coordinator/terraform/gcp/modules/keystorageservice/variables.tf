@@ -137,6 +137,66 @@ variable "key_storage_severity_map" {
   type        = map(string)
 }
 
+variable "cloud_run_5xx_error_alarm" {
+  description = "Configuration for Key Storage Service Cloud Run 5xx server error alarm. Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "cloud_run_execution_time_alarm" {
+  description = "Configuration for Key Storage Service Cloud Run execution latency alarm (threshold in milliseconds). Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "load_balancer_5xx_error_ratio_alarm" {
+  description = "Configuration for Key Storage Service Load Balancer 5xx error ratio alarm. Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "load_balancer_95_percent_latency_alarm" {
+  description = "Configuration for Key Storage Service Load Balancer 95% total request latency alarm (threshold in ms). Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "load_balancer_99_percent_latency_alarm" {
+  description = "Configuration for Key Storage Service Load Balancer 99% total request latency alarm (threshold in ms). Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
 variable "populate_migration_key_data" {
   description = <<EOT
   Controls whether to populate the migration columns when generating keys.

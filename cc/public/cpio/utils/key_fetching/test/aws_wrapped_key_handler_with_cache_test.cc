@@ -81,7 +81,7 @@ constexpr absl::string_view kRoleArn =
     "arn:aws:iam::123456789012:role/test-role";
 constexpr absl::string_view kContainerImageSignatureKeyId =
     "aws_kms_default_signatures";
-constexpr absl::string_view kAudience = "aws_kms_default_audience";
+constexpr absl::string_view kAudience = "cfm-awsresource";
 
 CloudWrappedKey BuildCloudWrappedKey(const AwsWrappedKey& aws_wrapped_key) {
   CloudWrappedKey cloud_wrapped_key;

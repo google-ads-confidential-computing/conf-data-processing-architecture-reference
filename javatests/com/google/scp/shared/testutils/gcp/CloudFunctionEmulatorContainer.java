@@ -18,6 +18,7 @@ package com.google.scp.shared.testutils.gcp;
 
 import static com.google.scp.shared.testutils.common.TestConstants.JAVA_21_IMAGE_NAME;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import org.testcontainers.containers.GenericContainer;
@@ -28,16 +29,17 @@ import org.testcontainers.utility.MountableFile;
 public final class CloudFunctionEmulatorContainer
     extends GenericContainer<CloudFunctionEmulatorContainer> {
 
-  private static final String invokerJarFilename = "processed_java-function-invoker-1.4.3.jar";
+  private static final String invokerJarFilename = "processed_java-function-invoker-2.0.2.jar";
   // Location of function jar file with bzlmod disabled.
   private static final String invokerJarPath =
-      "external/maven/v1/https/repo1.maven.org/maven2/com/google/cloud/functions/invoker/java-function-invoker/1.4.3/"
+      "external/maven/v1/https/repo1.maven.org/maven2/com/google/cloud/functions/invoker/java-function-invoker/2.0.2/"
           + invokerJarFilename;
   // With bzlmod enabled, runfiles from rules_jvm_external are put in this subdirectory.
   private static final String invokerJarPathBzlmod =
-      "external/rules_jvm_external~~maven~maven/com/google/cloud/functions/invoker/java-function-invoker/1.4.3/"
+      "external/rules_jvm_external~~maven~maven/com/google/cloud/functions/invoker/java-function-invoker/2.0.2/"
           + invokerJarFilename;
   private static final int invokerPort = 8080; // default internal port for the invoker jar process
+  private static final String DEFAULT_CLOUD_RUN_TIMEOUT_SECONDS = "60";
 
   private final String functionFilename;
   private final String functionJarPath;
@@ -53,6 +55,7 @@ public final class CloudFunctionEmulatorContainer
     this.functionJarPath = functionJarPath;
     this.functionClassTarget = functionClassTarget;
     withExposedPorts(invokerPort);
+    withEnv("CLOUD_RUN_TIMEOUT_SECONDS", DEFAULT_CLOUD_RUN_TIMEOUT_SECONDS);
     // For the invokerJarPath, only 1 of the below files should exist on the host system,
     // depending on if bazel is run with bzlmod on or off. In either case, the file is copied onto
     // the Docker image.
@@ -220,6 +223,21 @@ public final class CloudFunctionEmulatorContainer
     return getHost() + ":" + getMappedPort(invokerPort);
   }
 
+  /** Returns the total number of live native OS threads in the invoker JVM process (PID 1). */
+  public int getLiveThreadCount() throws IOException, InterruptedException {
+    ExecResult result =
+        execInContainer("/bin/sh", "-c", "awk '/^Threads:/ {print $2}' /proc/1/status");
+    if (result.getExitCode() != 0) {
+      throw new IOException(result.getStderr());
+    }
+    int threadCount = Integer.parseInt(result.getStdout().trim());
+    if (threadCount <= 1) {
+      throw new IllegalStateException(
+          "Expected JVM process (PID 1) to have > 1 threads, but got: " + threadCount);
+    }
+    return threadCount;
+  }
+
   /** Filename for the cloud function jar (must contain all dependencies). */
   private String getFunctionFilename() {
     return functionFilename;
@@ -239,7 +257,7 @@ public final class CloudFunctionEmulatorContainer
   }
 
   private String getContainerStartupCommand() {
-    return "java -jar "
+    return "exec java -jar "
         + "./"
         + invokerJarFilename
         + " --classpath "

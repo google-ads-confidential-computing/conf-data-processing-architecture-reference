@@ -636,6 +636,139 @@ variable "public_key_service_general_error_threshold" {
   type        = number
 }
 
+variable "public_key_service_cloud_run_5xx_error_alarm" {
+  description = "Default structured configuration for Public Key Service Cloud Run 5xx error alarm."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "public_key_service_cloud_run_5xx_error_alarm_by_region" {
+  description = "Per-region overrides for Public Key Service Cloud Run 5xx error alarm configuration."
+  type = map(object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  }))
+}
+
+variable "public_key_service_cloud_run_execution_time_alarm" {
+  description = "Default structured configuration for Public Key Service Cloud Run max execution time alarm."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "public_key_service_cloud_run_execution_time_alarm_by_region" {
+  description = "Per-region overrides for Public Key Service Cloud Run max execution time alarm configuration."
+  type = map(object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  }))
+}
+
+variable "public_key_service_empty_key_set_error_alarm" {
+  description = "Structured configuration for Public Key Service Empty Key Set error alarm."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "public_key_service_general_error_alarm" {
+  description = "Structured configuration for Public Key Service General error alarm."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "public_key_service_load_balancer_5xx_error_ratio_alarm" {
+  description = "Structured configuration for Public Key Service Load Balancer 5xx error ratio alarm."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "public_key_service_load_balancer_95_percent_latency_alarm" {
+  description = "Structured configuration for Public Key Service Load Balancer 95% latency alarm."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "public_key_service_load_balancer_99_percent_latency_alarm" {
+  description = "Structured configuration for Public Key Service Load Balancer 99% latency alarm."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "public_key_service_cloud_armor_high_block_ratio_alarm" {
+  description = "Structured configuration for Public Key Service Cloud Armor high block ratio alarm."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    min_samples             = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "public_key_service_cloud_armor_rate_limit_denials_alarm" {
+  description = "Structured configuration for Public Key Service Cloud Armor rate limit denials alarm."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
 ################################################################################
 # Public Key Service Load Balancer Outlier Detection Variables.
 ################################################################################
@@ -802,6 +935,153 @@ variable "private_key_service_alarm_duration_sec" {
   description = "Amount of time (in seconds) after which to send alarm if conditions are met. Must be in minute intervals. Example: '60','120'."
   type        = number
 }
+
+variable "private_key_service_cloud_run_5xx_error_alarm" {
+  description = "Configuration for Private Key Service Cloud Run 5xx server error alarm across all regions. Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "private_key_service_cloud_run_5xx_error_alarm_by_region" {
+  description = "Map of region to Private Key Service Cloud Run 5xx server error alarm configuration. Overrides private_key_service_cloud_run_5xx_error_alarm for specific regions."
+  type = map(object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  }))
+}
+
+variable "private_key_service_cloud_run_execution_time_alarm" {
+  description = "Configuration for Private Key Service Cloud Run execution latency alarm across all regions (threshold in milliseconds). Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "private_key_service_cloud_run_execution_time_alarm_by_region" {
+  description = "Map of region to Private Key Service Cloud Run execution latency alarm configuration. Overrides private_key_service_cloud_run_execution_time_alarm for specific regions."
+  type = map(object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  }))
+}
+
+variable "private_key_service_config_read_error_alarm" {
+  description = "Configuration for Private Key Service config read error alarm. Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "private_key_service_get_encrypted_private_key_error_alarm" {
+  description = "Configuration for Get Encrypted Private Key general error alarm. Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "private_key_service_exception_alarm" {
+  description = "Configuration for Private Key Service exception alarm. Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "private_key_service_load_balancer_5xx_error_ratio_alarm" {
+  description = "Configuration for Private Key Service Load Balancer 5xx error ratio alarm. Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "private_key_service_load_balancer_95_percent_latency_alarm" {
+  description = "Configuration for Private Key Service Load Balancer 95% total request latency alarm (threshold in ms). Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "private_key_service_load_balancer_99_percent_latency_alarm" {
+  description = "Configuration for Private Key Service Load Balancer 99% total request latency alarm (threshold in ms). Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "private_key_service_cloud_armor_high_block_ratio_alarm" {
+  description = "Configuration for Private Key Service Cloud Armor high blocking ratio alarm. Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    min_samples             = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+variable "private_key_service_cloud_armor_rate_limit_denials_alarm" {
+  description = "Configuration for Private Key Service Cloud Armor rate limit denials alarm. Overrides flat alarm variables if set."
+  type = object({
+    enable_alarm            = optional(bool)
+    duration_sec            = optional(number)
+    alignment_period_sec    = optional(number)
+    evaluation_interval_sec = optional(number)
+    threshold               = optional(number)
+    auto_close_sec          = optional(number)
+  })
+}
+
+
 
 variable "key_sets_config" {
   description = <<EOT

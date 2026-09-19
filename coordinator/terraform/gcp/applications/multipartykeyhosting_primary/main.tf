@@ -337,6 +337,18 @@ module "public_key_service" {
   cloud_run_alert_on_memory_usage_urgent_threshold    = var.public_key_service_cloud_run_memory_usage_urgent_threshold
   cloud_run_alert_on_cpu_usage_important_threshold    = var.public_key_service_cloud_run_cpu_usage_important_threshold
   cloud_run_alert_on_cpu_usage_urgent_threshold       = var.public_key_service_cloud_run_cpu_usage_urgent_threshold
+
+  cloud_run_5xx_error_alarm                = var.public_key_service_cloud_run_5xx_error_alarm
+  cloud_run_5xx_error_alarm_by_region      = var.public_key_service_cloud_run_5xx_error_alarm_by_region
+  cloud_run_execution_time_alarm           = var.public_key_service_cloud_run_execution_time_alarm
+  cloud_run_execution_time_alarm_by_region = var.public_key_service_cloud_run_execution_time_alarm_by_region
+  empty_key_set_error_alarm                = var.public_key_service_empty_key_set_error_alarm
+  general_error_alarm                      = var.public_key_service_general_error_alarm
+  load_balancer_5xx_error_ratio_alarm      = var.public_key_service_load_balancer_5xx_error_ratio_alarm
+  load_balancer_95_percent_latency_alarm   = var.public_key_service_load_balancer_95_percent_latency_alarm
+  load_balancer_99_percent_latency_alarm   = var.public_key_service_load_balancer_99_percent_latency_alarm
+  cloud_armor_high_block_ratio_alarm       = var.public_key_service_cloud_armor_high_block_ratio_alarm
+  cloud_armor_rate_limit_denials_alarm     = var.public_key_service_cloud_armor_rate_limit_denials_alarm
 }
 
 module "private_key_service" {
@@ -411,6 +423,19 @@ module "private_key_service" {
   load_balancer_alert_5xx_error_ratio     = var.private_key_service_lb_alert_5xx_error_ratio
   load_balancer_max_95_percent_latency_ms = var.private_key_service_lb_max_95_percent_latency_ms
   load_balancer_max_99_percent_latency_ms = var.private_key_service_lb_max_99_percent_latency_ms
+
+  cloud_run_5xx_error_alarm                = var.private_key_service_cloud_run_5xx_error_alarm
+  cloud_run_5xx_error_alarm_by_region      = var.private_key_service_cloud_run_5xx_error_alarm_by_region
+  cloud_run_execution_time_alarm           = var.private_key_service_cloud_run_execution_time_alarm
+  cloud_run_execution_time_alarm_by_region = var.private_key_service_cloud_run_execution_time_alarm_by_region
+  config_read_error_alarm                  = var.private_key_service_config_read_error_alarm
+  get_encrypted_private_key_error_alarm    = var.private_key_service_get_encrypted_private_key_error_alarm
+  exception_alarm                          = var.private_key_service_exception_alarm
+  load_balancer_5xx_error_ratio_alarm      = var.private_key_service_load_balancer_5xx_error_ratio_alarm
+  load_balancer_95_percent_latency_alarm   = var.private_key_service_load_balancer_95_percent_latency_alarm
+  load_balancer_99_percent_latency_alarm   = var.private_key_service_load_balancer_99_percent_latency_alarm
+  cloud_armor_high_block_ratio_alarm       = var.private_key_service_cloud_armor_high_block_ratio_alarm
+  cloud_armor_rate_limit_denials_alarm     = var.private_key_service_cloud_armor_rate_limit_denials_alarm
 }
 
 module "private_key_service_addon" {
@@ -489,6 +514,19 @@ module "private_key_service_addon" {
   load_balancer_alert_5xx_error_ratio     = var.private_key_service_lb_alert_5xx_error_ratio
   load_balancer_max_95_percent_latency_ms = var.private_key_service_lb_max_95_percent_latency_ms
   load_balancer_max_99_percent_latency_ms = var.private_key_service_lb_max_99_percent_latency_ms
+
+  cloud_run_5xx_error_alarm                = var.private_key_service_cloud_run_5xx_error_alarm
+  cloud_run_5xx_error_alarm_by_region      = var.private_key_service_cloud_run_5xx_error_alarm_by_region
+  cloud_run_execution_time_alarm           = var.private_key_service_cloud_run_execution_time_alarm
+  cloud_run_execution_time_alarm_by_region = var.private_key_service_cloud_run_execution_time_alarm_by_region
+  config_read_error_alarm                  = var.private_key_service_config_read_error_alarm
+  get_encrypted_private_key_error_alarm    = var.private_key_service_get_encrypted_private_key_error_alarm
+  exception_alarm                          = var.private_key_service_exception_alarm
+  load_balancer_5xx_error_ratio_alarm      = var.private_key_service_load_balancer_5xx_error_ratio_alarm
+  load_balancer_95_percent_latency_alarm   = var.private_key_service_load_balancer_95_percent_latency_alarm
+  load_balancer_99_percent_latency_alarm   = var.private_key_service_load_balancer_99_percent_latency_alarm
+  cloud_armor_high_block_ratio_alarm       = var.private_key_service_cloud_armor_high_block_ratio_alarm
+  cloud_armor_rate_limit_denials_alarm     = var.private_key_service_cloud_armor_rate_limit_denials_alarm
 }
 
 module "key_migration_tool" {

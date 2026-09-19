@@ -46,6 +46,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,6 +65,11 @@ public final class PublicKeyHostingIntegrationTest {
   private static final String SET_NAME = "ec";
   private static final String correctBetaPath = "/v1beta/sets/ec/publicKeys";
   private static final String incorrectPath = "/v1beta/sets/ec/wrongPath";
+  private static final int WARMUP_REQUEST_COUNT = 100;
+  private static final int BURST_WAVES = 4;
+  private static final int REQUESTS_PER_WAVE = 500;
+  private static final int BURST_CONCURRENCY = 20;
+  private static final int MAX_ALLOWED_THREAD_GROWTH = 10;
 
   private static final HttpClient client = HttpClient.newHttpClient();
   @Inject @KeyDbClient private DatabaseClient dbClient;
@@ -112,6 +122,50 @@ public final class PublicKeyHostingIntegrationTest {
             .uri(getFunctionUri(correctBetaPath))
             .POST(BodyPublishers.noBody())
             .build());
+  }
+
+  @Test(timeout = 120_000)
+  public void getPublicKeys_burstTraffic_returnsNoServerErrorsAndMaintainsStableThreadCount()
+      throws Exception {
+    // Ensure Guice injector is initialized before concurrent warmup.
+    makeOkRequest();
+
+    ExecutorService executor = Executors.newFixedThreadPool(BURST_CONCURRENCY);
+    try {
+      executeConcurrentWave(executor, WARMUP_REQUEST_COUNT);
+
+      int baselineThreadCount = functionContainer.getLiveThreadCount();
+      int firstWaveThreadCount = baselineThreadCount;
+
+      for (int wave = 0; wave < BURST_WAVES; wave++) {
+        executeConcurrentWave(executor, REQUESTS_PER_WAVE);
+        int currentThreadCount = functionContainer.getLiveThreadCount();
+        if (wave == 0) {
+          firstWaveThreadCount = currentThreadCount;
+        }
+        assertThat(currentThreadCount - baselineThreadCount).isAtMost(MAX_ALLOWED_THREAD_GROWTH);
+      }
+
+      int finalThreadCount = functionContainer.getLiveThreadCount();
+      assertThat(finalThreadCount - firstWaveThreadCount).isAtMost(MAX_ALLOWED_THREAD_GROWTH);
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  private void executeConcurrentWave(ExecutorService executor, int requestCount) throws Exception {
+    List<Future<?>> futures = new ArrayList<>(requestCount);
+    for (int i = 0; i < requestCount; i++) {
+      futures.add(
+          executor.submit(
+              () -> {
+                makeOkRequest();
+                return null;
+              }));
+    }
+    for (Future<?> future : futures) {
+      future.get();
+    }
   }
 
   private HttpResponse<String> makeOkRequest() {

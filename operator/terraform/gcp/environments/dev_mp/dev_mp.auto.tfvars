@@ -16,14 +16,14 @@
 
 environment = "dev-mp"
 project_id  = "admcloud-adtech1"
-region      = "us-central1"
-region_zone = "us-central1-c"
+region      = "us-west1"
+region_zone = "us-west1-c"
 
 # Multi region location
 # https://cloud.google.com/storage/docs/locations
 operator_package_bucket_location = "US"
 
-spanner_instance_config              = "regional-us-central1"
+spanner_instance_config              = "regional-us-west1"
 spanner_processing_units             = 100
 spanner_database_deletion_protection = false
 

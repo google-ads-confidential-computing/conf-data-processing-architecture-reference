@@ -53,6 +53,10 @@ class WrappedKeyHandlerWithCacheMock
   MOCK_METHOD(google::scp::core::ExecutionResultOr<std::string>, GetKey,
               (const google::cmrt::sdk::v1::CloudWrappedKey&),
               (noexcept, override));
+
+  MOCK_METHOD(google::scp::core::ExecutionResultOr<bool>, ValidateKey,
+              (const google::cmrt::sdk::v1::CloudWrappedKey&),
+              (noexcept, override));
 };
 
 }  // namespace google::scp::cpio

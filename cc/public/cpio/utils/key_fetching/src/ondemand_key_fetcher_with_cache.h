@@ -39,6 +39,8 @@ class OndemandKeyFetcherWithCache
       KeyFetcherOptions key_fetcher_options,
       const std::string& metric_namespace = {});
 
+  ~OndemandKeyFetcherWithCache() override { StopAutoRefreshThread(); }
+
   core::ExecutionResult Init() noexcept override;
 
   core::ExecutionResult Run() noexcept override;
@@ -95,12 +97,14 @@ class OndemandKeyFetcherWithCache
   /// Check if the key_id is in the in progress cache.
   bool FetchingInProgress(const std::string& key_id) noexcept override;
 
-  /// Construct ListPrivateKeysRequest with key_id added to request_base.
-  google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest
-  GetListPrivateKeysRequest(
-      const google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest&
-          request_base,
-      const std::string& key_id) const noexcept override;
+  /// Fetch and validate the key with the given key ID from remote.
+  core::ExecutionResultOr<Key> FetchKeys(
+      const std::string& key_id,
+      absl::string_view key_fetching_type) noexcept override;
+
+  /// Determine if the auto refresh for a given keyset should be performed.
+  bool ShouldPerformAutoRefresh(
+      absl::string_view keyset_name) noexcept override;
 
   core::common::AutoExpiryConcurrentMap<std::string, Key> key_cache_;
   // A cache of key IDs and key fetching failures.

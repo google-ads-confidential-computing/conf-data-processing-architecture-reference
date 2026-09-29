@@ -19,6 +19,7 @@
 
 #include <utility>
 
+#include "absl/synchronization/notification.h"
 #include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/test/utils/proto_test_utils.h"
 #include "cc/core/test/utils/scp_test_base.h"
@@ -1209,5 +1210,103 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
   EXPECT_SUCCESS(prefetching_key_fetcher_with_cache.Init());
   EXPECT_SUCCESS(prefetching_key_fetcher_with_cache.Run());
   prefetching_key_fetcher_with_cache.Stop();
+}
+
+TEST_F(OndemandKeyFetcherWithCacheTest,
+       AutoRefreshKeysSuccessfullyWhenFlagEnabled) {
+  ExpectOtelEncryptionKeyFetchingRequestMetricPush(
+      -1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
+      -1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingErrorMetricPush(0);
+  ExpectOtelEncryptionKeyCacheStatusMetricPush(
+      1, kKeyNamespace1, KeyCacheStatus::kValidKeyCacheHit);
+
+  auto key_service_options = CreateKeyServiceOptions();
+  key_service_options.mutable_key_namespace()->Clear();
+  key_service_options.add_key_namespace(kKeyNamespace1);
+
+  KeyFetcherOptions key_fetcher_options{
+      .encryption_key_enable_auto_refresh = true,
+      .encryption_key_auto_refresh_time_duration = std::chrono::seconds(1),
+  };
+  OndemandKeyFetcherWithCache key_fetcher_with_auto_refresh(
+      async_executor_, mock_key_client_, mock_metric_client_,
+      key_service_options, key_fetcher_options, /*metric_namespace=*/"");
+
+  absl::Notification notification;
+  auto key_create_ts =
+      duration_cast<nanoseconds>((system_clock::now()).time_since_epoch());
+  ListActiveEncryptionKeysResponse response;
+  response.mutable_private_keys()->Add(CreatePrivateKey1(key_create_ts));
+  ListActiveEncryptionKeysRequest expected_request =
+      CreateBaseActiveKeysRequest(kKeyNamespace1);
+  EXPECT_CALL(mock_key_client_,
+              ListActiveEncryptionKeysSync(
+                  EqualsProtoIgnoringTimeRange(expected_request)))
+      .WillRepeatedly([response, &notification](const auto&) {
+        if (!notification.HasBeenNotified()) {
+          notification.Notify();
+        }
+        return response;
+      });
+
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Init());
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Run());
+
+  EXPECT_TRUE(notification.WaitForNotificationWithTimeout(absl::Seconds(5)));
+  // Allow the background thread to finish CacheValidKey() after RPC returns.
+  sleep_for(std::chrono::milliseconds(500));
+
+  auto key = key_fetcher_with_auto_refresh.GetKey(kInputKeyId1);
+  ASSERT_TRUE(key.Successful());
+  EXPECT_THAT(key->creation_timestamp, key_create_ts.count());
+  EXPECT_THAT(key->private_key, kPrivateKey);
+  EXPECT_THAT(key->public_key, kPublicKey);
+
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Stop());
+}
+
+TEST_F(OndemandKeyFetcherWithCacheTest,
+       AutoRefreshKeysHandlesFailureGracefully) {
+  ExpectOtelEncryptionKeyFetchingRequestMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingErrorMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1,
+      KeyFetchingErrorType::kGenericError);
+
+  auto key_service_options = CreateKeyServiceOptions();
+  key_service_options.mutable_key_namespace()->Clear();
+  key_service_options.add_key_namespace(kKeyNamespace1);
+
+  KeyFetcherOptions key_fetcher_options{
+      .encryption_key_enable_auto_refresh = true,
+      .encryption_key_auto_refresh_time_duration = std::chrono::seconds(1),
+  };
+  OndemandKeyFetcherWithCache key_fetcher_with_auto_refresh(
+      async_executor_, mock_key_client_, mock_metric_client_,
+      key_service_options, key_fetcher_options, /*metric_namespace=*/"");
+
+  absl::Notification notification;
+  ListActiveEncryptionKeysRequest expected_request =
+      CreateBaseActiveKeysRequest(kKeyNamespace1);
+  EXPECT_CALL(mock_key_client_,
+              ListActiveEncryptionKeysSync(
+                  EqualsProtoIgnoringTimeRange(expected_request)))
+      .WillOnce([&notification](const auto&) {
+        if (!notification.HasBeenNotified()) {
+          notification.Notify();
+        }
+        return FailureExecutionResult(SC_UNKNOWN);
+      });
+
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Init());
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Run());
+
+  EXPECT_TRUE(notification.WaitForNotificationWithTimeout(absl::Seconds(5)));
+
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Stop());
 }
 }  // namespace google::scp::cpio

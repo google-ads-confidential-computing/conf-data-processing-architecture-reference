@@ -80,6 +80,14 @@ const absl::flat_hash_set<StatusCode> kUnretryableKeyFetchingErrors = {
     SC_CPIO_KEY_NOT_FOUND, SC_CPIO_KEY_COUNT_MISMATCH, SC_CPIO_ENTITY_NOT_FOUND,
     SC_CPIO_INVALID_ARGUMENT};
 
+// Fetching keys during auto-refresh that were active 12 hours earlier and
+// caching them helps prevent latency issues between the client and server.
+constexpr size_t kAutoRefreshFetchActiveKeysStartTimeSubDiffInHours = 12;
+
+// To prevent a gap in key rotation, fetch active keys seven days in advance
+// during auto-refresh.
+constexpr size_t kAutoRefreshFetchActiveKeysEndTimeAddedDiffInHours = 7 * 24;
+
 ListPrivateKeysRequest GetListPrivateKeysRequestBase(
     const KeyCoordinatorConfiguration& key_service_options) {
   ListPrivateKeysRequest request;
@@ -107,7 +115,6 @@ ListActiveEncryptionKeysRequest GetListActiveKeysRequestBase(
   }
   return request;
 }
-
 }  // namespace
 
 template <typename LookupKeyT>
@@ -116,8 +123,9 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::
         PrivateKeyClientInterface& key_client,
         DualWritingMetricClientInterface& metric_client,
         const KeyCoordinatorConfiguration& key_service_options,
-        KeyFetcherOptions key_fetcher_options, absl::string_view component_name,
-        absl::string_view key_type, const std::string& metric_namespace)
+        BaseKeyFetcherOptions key_fetcher_options,
+        absl::string_view component_name, absl::string_view key_type,
+        const std::string& metric_namespace)
     : key_client_(key_client),
       list_private_keys_request_base_(
           GetListPrivateKeysRequestBase(key_service_options)),
@@ -140,22 +148,42 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::Init() noexcept {
 
 template <typename LookupKeyT>
 ExecutionResult CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::Run() noexcept {
-  if (key_fetcher_options_.prefetch_keys) {
+  if (key_fetcher_options_.enable_prefetch) {
     PrefetchKeys();
   }
 
+  if (key_fetcher_options_.enable_auto_refresh_keys) {
+    auto_refresh_thread_ =
+        std::thread(&CoordinatorKeyFetcherWithCacheBase<
+                        LookupKeyT>::AutoRefreshThreadLoopFunction,
+                    this);
+  }
   return SuccessExecutionResult();
 }
 
 template <typename LookupKeyT>
 ExecutionResult
 CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::Stop() noexcept {
+  StopAutoRefreshThread();
   return SuccessExecutionResult();
 }
 
 template <typename LookupKeyT>
+void CoordinatorKeyFetcherWithCacheBase<
+    LookupKeyT>::StopAutoRefreshThread() noexcept {
+  if (key_fetcher_options_.enable_auto_refresh_keys) {
+    if (!stop_notification_.HasBeenNotified()) {
+      stop_notification_.Notify();
+      if (auto_refresh_thread_.joinable()) {
+        auto_refresh_thread_.join();
+      }
+    }
+  }
+}
+
+template <typename LookupKeyT>
 core::ExecutionResultOr<ListPrivateKeysResponse>
-CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::FetchKeysFromRemote(
+CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::ListPrivateKeys(
     const ListPrivateKeysRequest& request, absl::string_view key_fetching_type,
     absl::string_view keyset_name) {
   PushKeyFetchingRequestMetric(metric_client_, key_type_, key_fetching_type,
@@ -184,10 +212,9 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::FetchKeysFromRemote(
 
 template <typename LookupKeyT>
 core::ExecutionResultOr<ListActiveEncryptionKeysResponse>
-CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::
-    FetchKeysFromRemoteWithActiveKeysApi(
-        const ListActiveEncryptionKeysRequest& request,
-        absl::string_view key_fetching_type, absl::string_view keyset_name) {
+CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::ListActiveKeys(
+    const ListActiveEncryptionKeysRequest& request,
+    absl::string_view key_fetching_type, absl::string_view keyset_name) {
   PushKeyFetchingRequestMetric(metric_client_, key_type_, key_fetching_type,
                                keyset_name);
   auto fetching_start_time_in_ns =
@@ -218,7 +245,7 @@ void CoordinatorKeyFetcherWithCacheBase<
   static random_device random_device_local;
   static mt19937 random_generator(random_device_local());
   uniform_int_distribution<uint64_t> distribution;
-  auto max_delay_ms = key_fetcher_options_.max_prefetch_wait_time_millis;
+  auto max_delay_ms = key_fetcher_options_.max_prefetch_wait_time.count();
   sleep_for(milliseconds(distribution(random_generator) % max_delay_ms));
 }
 
@@ -231,16 +258,15 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchKeys() noexcept {
   for (const auto& keyset_name : allowed_keysets_list_) {
     auto now = TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
     auto prefetch_config_iterator =
-        key_fetcher_options_.encryption_key_prefetch_config_map.find(
-            keyset_name);
+        key_fetcher_options_.prefetch_config_map.find(keyset_name);
 
     // New Encryption Key Prefetching Configuration
     if (prefetch_config_iterator !=
-        key_fetcher_options_.encryption_key_prefetch_config_map.end()) {
+        key_fetcher_options_.prefetch_config_map.end()) {
       const auto& keyset_config = prefetch_config_iterator->second;
 
       if (keyset_config.key_ids_size() > 0) {
-        PrefetchWithListPrivateKeys(keyset_name, keyset_config.key_ids());
+        PrefetchKeysByIds(keyset_name, keyset_config.key_ids());
       }
       if (keyset_config.has_prefetch_duration()) {
         // ListActiveKeys needs to specify its start and end time
@@ -256,7 +282,8 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchKeys() noexcept {
                 .count();
         auto start_time = TimeUtil::NanosecondsToTimestamp(now - duration);
         auto end_time = TimeUtil::NanosecondsToTimestamp(now + one_week);
-        PrefetchWithListActiveKeys(keyset_name, start_time, end_time);
+        FetchKeysInTimeRange(KeyFetchingType::kPrefetch, keyset_name,
+                             start_time, end_time);
       }
     } else {
       // ListActiveKeys needs to specify its start and end time to ensure the
@@ -268,17 +295,17 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchKeys() noexcept {
               .count();
       auto start_time = TimeUtil::NanosecondsToTimestamp(now - age + one_week);
       auto end_time = TimeUtil::NanosecondsToTimestamp(now + one_week);
-      PrefetchWithListActiveKeys(keyset_name, start_time, end_time);
+      FetchKeysInTimeRange(KeyFetchingType::kPrefetch, keyset_name, start_time,
+                           end_time);
     }
   }
 }
 
 template <typename LookupKeyT>
-void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::
-    PrefetchWithListPrivateKeys(
-        const std::string& keyset_name,
-        const std::optional<google::protobuf::RepeatedPtrField<std::string>>&
-            key_ids) noexcept {
+void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchKeysByIds(
+    const std::string& keyset_name,
+    const std::optional<google::protobuf::RepeatedPtrField<std::string>>&
+        key_ids) noexcept {
   // ListPrivateKeys accepts age as a duration based on its creation time,
   // and the activation time is 1 week after the creation time.
   ListPrivateKeysRequest prefetch_request = list_private_keys_request_base_;
@@ -294,15 +321,16 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::
   SCP_INFO(component_name_, kZeroUuid,
            "Prefetching with ListPrivateKeys for for keyset %s.",
            keyset_name.c_str());
-  auto response_or = FetchKeysFromRemote(
-      prefetch_request, KeyFetchingType::kPrefetch, keyset_name);
+  auto response_or = ListPrivateKeys(prefetch_request,
+                                     KeyFetchingType::kPrefetch, keyset_name);
 
-  if (!response_or.Successful() && key_fetcher_options_.prefetch_retry) {
+  if (!response_or.Successful() &&
+      key_fetcher_options_.enable_retry_in_prefetch_and_autorefresh) {
     SleepRandomDuration();
     SCP_INFO(component_name_, kZeroUuid, "Retrying prefetching for keyset %s",
              keyset_name.c_str());
-    response_or = FetchKeysFromRemote(
-        prefetch_request, KeyFetchingType::kPrefetchRetry, keyset_name);
+    response_or = ListPrivateKeys(prefetch_request,
+                                  KeyFetchingType::kPrefetchRetry, keyset_name);
   }
   if (response_or.Successful()) {
     CacheValidKey(ExtractKeys(response_or->private_keys()));
@@ -314,68 +342,58 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::
 }
 
 template <typename LookupKeyT>
-void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchWithListActiveKeys(
-    const std::string& keyset_name,
+void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::FetchKeysInTimeRange(
+    absl::string_view key_fetching_type, const std::string& keyset_name,
     const google::protobuf::Timestamp& start_time,
     const google::protobuf::Timestamp& end_time) noexcept {
-  ListActiveEncryptionKeysRequest prefetch_request =
+  ListActiveEncryptionKeysRequest fetch_request =
       list_active_keys_request_base_;
-  prefetch_request.set_key_set_name(keyset_name);
-  *prefetch_request.mutable_query_time_range()->mutable_start_time() =
-      start_time;
-  *prefetch_request.mutable_query_time_range()->mutable_end_time() = end_time;
+  fetch_request.set_key_set_name(keyset_name);
+  *fetch_request.mutable_query_time_range()->mutable_start_time() = start_time;
+  *fetch_request.mutable_query_time_range()->mutable_end_time() = end_time;
   SCP_INFO(component_name_, kZeroUuid,
-           "Prefetching with ListActiveKeys for keyset %s.",
-           keyset_name.c_str());
+           "Fetching with ListActiveKeys for keyset %s.", keyset_name.c_str());
 
-  auto response_or = FetchKeysFromRemoteWithActiveKeysApi(
-      prefetch_request, KeyFetchingType::kPrefetch, keyset_name);
+  auto response_or =
+      ListActiveKeys(fetch_request, key_fetching_type, keyset_name);
 
-  if (!response_or.Successful() && key_fetcher_options_.prefetch_retry) {
+  if (!response_or.Successful() &&
+      (key_fetching_type == KeyFetchingType::kPrefetch ||
+       key_fetching_type == KeyFetchingType::kAutoRefresh) &&
+      key_fetcher_options_.enable_retry_in_prefetch_and_autorefresh) {
     SleepRandomDuration();
-    SCP_INFO(component_name_, kZeroUuid, "Retrying prefetching for keyset %s",
+    SCP_INFO(component_name_, kZeroUuid,
+             "Retrying fetching with ListActiveKeys for keyset %s.",
              keyset_name.c_str());
-    response_or = FetchKeysFromRemoteWithActiveKeysApi(
-        prefetch_request, KeyFetchingType::kPrefetchRetry, keyset_name);
+    response_or = ListActiveKeys(fetch_request, KeyFetchingType::kPrefetchRetry,
+                                 keyset_name);
   }
   if (response_or.Successful()) {
     CacheValidKey(ExtractKeys(response_or->private_keys()));
   } else {
     SCP_ERROR(component_name_, kZeroUuid, response_or.result(),
-              "Active keys prefetching failed for keyset %s.",
+              "Fetching with ListActiveKeys failed for keyset %s.",
               keyset_name.c_str());
   }
 }
 
 template <typename LookupKeyT>
 core::ExecutionResultOr<Key>
-CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::FetchValidateAndCacheKey(
-    const LookupKeyT& lookup_key,
-    absl::string_view key_fetching_type) noexcept {
-  ListPrivateKeysRequest request =
-      GetListPrivateKeysRequest(list_private_keys_request_base_, lookup_key);
+CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::FetchKeysById(
+    const std::string& key_id, absl::string_view key_fetching_type) noexcept {
+  ListPrivateKeysRequest request = list_private_keys_request_base_;
+  request.add_key_ids(key_id);
 
   // We don't know the exact keyset yet for most cases, so use the
   // allowed_keysets_name which may be a list for metric recording.
   auto response_or =
-      FetchKeysFromRemote(request, key_fetching_type, allowed_keysets_name_);
-
-  return ValidateAndCacheKey(lookup_key, response_or);
-}
-
-template <typename LookupKeyT>
-core::ExecutionResultOr<Key>
-CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::ValidateAndCacheKey(
-    const LookupKeyT lookup_key,
-    const core::ExecutionResultOr<ListPrivateKeysResponse>&
-        list_keys_response_or) noexcept {
-  auto fetching_result = list_keys_response_or.result();
+      ListPrivateKeys(request, key_fetching_type, allowed_keysets_name_);
+  auto fetching_result = response_or.result();
 
   // The error metric for failed ListPrivateKeysResponse is already pushed. Here
   // we only push for validation failure.
-  if (fetching_result.Successful() &&
-      list_keys_response_or->private_keys().size() != 1) {
-    fetching_result = list_keys_response_or->private_keys().size() == 0
+  if (fetching_result.Successful() && response_or->private_keys().size() != 1) {
+    fetching_result = response_or->private_keys().size() == 0
                           ? FailureExecutionResult(SC_CPIO_KEY_NOT_FOUND)
                           : FailureExecutionResult(SC_CPIO_KEY_COUNT_MISMATCH);
 
@@ -387,13 +405,11 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::ValidateAndCacheKey(
 
   if (!fetching_result.Successful()) {
     SCP_ERROR(component_name_, kZeroUuid, fetching_result,
-              "The key fetching failed for key ID %s",
-              absl::StrCat(lookup_key).c_str());
-    CacheFailureResult(lookup_key, fetching_result);
+              "The key fetching failed for key ID %s", key_id.c_str());
     return fetching_result;
   }
 
-  auto& fetched_key = list_keys_response_or->private_keys(0);
+  auto& fetched_key = response_or->private_keys(0);
   const auto& keyset_name = fetched_key.key_set_name();
 
   // Checks that the key belongs to the allowed key sets configured by the
@@ -409,11 +425,10 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::ValidateAndCacheKey(
         metric_client_, key_type_, KeyFetchingType::kOnDemand,
         allowed_keysets_name_,
         MapToKeyFetchingErrorString(failure.status_code));
-    CacheFailureResult(lookup_key, failure);
     return failure;
   }
 
-  auto keys = ExtractKeys(list_keys_response_or->private_keys());
+  auto keys = ExtractKeys(response_or->private_keys());
   auto current_time = TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
   auto key_age_in_days =
       duration_cast<hours>(
@@ -425,9 +440,7 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::ValidateAndCacheKey(
 
   SCP_INFO(component_name_, kZeroUuid,
            "OndemandFetchingKeyId: %s | KeysetName: %s | KeyAge: %d",
-           absl::StrCat(lookup_key).c_str(), keyset_name.c_str(),
-           key_age_in_days);
-  CacheValidKey(keys);
+           key_id.c_str(), keyset_name.c_str(), key_age_in_days);
   // Already checked the size is 1.
   return keys[0];
 }
@@ -474,8 +487,14 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::GetKeyInternal(
     // Failing to mark IN_PROGRESS status means some other thread is already
     // fetching the key. So it will fall to the WaitForKeyReady() process.
     if (MarkFetchingInProgress(lookup_key)) {
-      auto fetched_key_or =
-          FetchValidateAndCacheKey(lookup_key, key_fetching_type);
+      auto fetched_key_or = FetchKeys(lookup_key, key_fetching_type);
+      // Cache the result before marking the fetching finished so that threads
+      // waiting in WaitForKeyReady() can see it.
+      if (fetched_key_or.Successful()) {
+        CacheValidKey({*fetched_key_or});
+      } else {
+        CacheFailureResult(lookup_key, fetched_key_or.result());
+      }
       MarkFetchingFinished(lookup_key);
       return fetched_key_or;
     }
@@ -526,6 +545,41 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::MapToKeyFetchingErrorString(
     return KeyFetchingErrorType::kInvalidKeyId;
   }
   return KeyFetchingErrorType::kGenericError;
+}
+
+template <typename LookupKeyT>
+void CoordinatorKeyFetcherWithCacheBase<
+    LookupKeyT>::AutoRefreshThreadLoopFunction() noexcept {
+  while (!stop_notification_.WaitForNotificationWithTimeout(
+      absl::Seconds(key_fetcher_options_.auto_refresh_time_duration.count()))) {
+    for (const auto& keyset_name : allowed_keysets_list_) {
+      AutoRefreshKeys(keyset_name);
+    }
+  }
+}
+
+template <typename LookupKeyT>
+void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::AutoRefreshKeys(
+    std::string keyset_name) noexcept {
+  if (!ShouldPerformAutoRefresh(keyset_name)) {
+    return;
+  }
+  SCP_DEBUG(component_name_, kZeroUuid, "Refreshing keys for keyset %s",
+            keyset_name.c_str());
+
+  auto now = TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
+  auto key_fetching_query_start_time = TimeUtil::NanosecondsToTimestamp(
+      now - duration_cast<nanoseconds>(
+                hours(kAutoRefreshFetchActiveKeysStartTimeSubDiffInHours))
+                .count());
+  auto key_fetching_query_end_time = TimeUtil::NanosecondsToTimestamp(
+      now + duration_cast<nanoseconds>(
+                hours(kAutoRefreshFetchActiveKeysEndTimeAddedDiffInHours))
+                .count());
+
+  FetchKeysInTimeRange(KeyFetchingType::kAutoRefresh, keyset_name,
+                       key_fetching_query_start_time,
+                       key_fetching_query_end_time);
 }
 
 template class CoordinatorKeyFetcherWithCacheBase<std::string>;

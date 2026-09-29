@@ -44,6 +44,10 @@ class AwsWrappedKeyHandlerWithCache
       const google::cmrt::sdk::v1::CloudWrappedKey& wrapped_key) noexcept
       override;
 
+  google::scp::core::ExecutionResultOr<bool> ValidateKey(
+      const google::cmrt::sdk::v1::CloudWrappedKey& wrapped_key) noexcept
+      override;
+
  protected:
   std::string GetKeyType() noexcept override;
   std::string GetKekPrefix() noexcept override;

@@ -141,6 +141,11 @@ AwsWrappedKeyHandlerWithCache::CreateDecryptRequest(
   return decrypt_request;
 }
 
+ExecutionResultOr<bool> AwsWrappedKeyHandlerWithCache::ValidateKey(
+    const CloudWrappedKey& wrapped_key) noexcept {
+  return true;
+}
+
 string AwsWrappedKeyHandlerWithCache::MapToWrappedKeyFetchingErrorString(
     google::scp::core::ExecutionResult error_result) noexcept {
   auto public_error_code = GetPublicErrorCode(error_result.status_code);

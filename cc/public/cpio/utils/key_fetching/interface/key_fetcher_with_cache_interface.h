@@ -67,6 +67,13 @@ struct KeyFetcherOptions {
 
   // Enable the validation of key selection timestamp.
   bool enable_key_selection_timestamp_validation = true;
+
+  // Enable auto-refresh key fetching for encryption keys.
+  bool encryption_key_enable_auto_refresh = false;
+
+  // The time duration for encryption keys auto-refresh.
+  std::chrono::seconds encryption_key_auto_refresh_time_duration =
+      std::chrono::seconds(24 * 60 * 60);  // 24h
 };
 
 /// @brief Key returned by KeyFetcherWithCacheInterface

@@ -62,6 +62,27 @@ uint64_t GetFetchingFailureCacheLifetimeSeconds(
   return key_fetcher_options.fetching_failure_cache_lifetime.count();
 }
 
+BaseKeyFetcherOptions GetBaseKeyFetcherOptions(
+    const KeyFetcherOptions& key_fetcher_options) {
+  BaseKeyFetcherOptions base_options;
+  base_options.enable_prefetch = key_fetcher_options.prefetch_keys;
+  base_options.enable_retry_in_prefetch_and_autorefresh =
+      key_fetcher_options.prefetch_retry;
+  base_options.max_prefetch_wait_time = std::chrono::milliseconds(
+      key_fetcher_options.max_prefetch_wait_time_millis);
+  base_options.prefetch_keys_max_age =
+      key_fetcher_options.prefetch_keys_max_age;
+  base_options.on_demand_fetching_waiting_timeout =
+      key_fetcher_options.on_demand_fetching_waiting_timeout;
+  base_options.prefetch_config_map =
+      key_fetcher_options.encryption_key_prefetch_config_map;
+  base_options.enable_auto_refresh_keys =
+      key_fetcher_options.encryption_key_enable_auto_refresh;
+  base_options.auto_refresh_time_duration =
+      key_fetcher_options.encryption_key_auto_refresh_time_duration;
+  return base_options;
+}
+
 }  // namespace
 
 OndemandKeyFetcherWithCache::OndemandKeyFetcherWithCache(
@@ -71,7 +92,8 @@ OndemandKeyFetcherWithCache::OndemandKeyFetcherWithCache(
     const KeyCoordinatorConfiguration& key_service_options,
     KeyFetcherOptions key_fetcher_options, const std::string& metric_namespace)
     : CoordinatorKeyFetcherWithCacheBase<std::string>(
-          key_client, metric_client, key_service_options, key_fetcher_options,
+          key_client, metric_client, key_service_options,
+          GetBaseKeyFetcherOptions(key_fetcher_options),
           kOndemandKeyFetcherWithCacheComponentName, KeyType::kEncryptionKey,
           metric_namespace),
       key_cache_(
@@ -218,14 +240,13 @@ bool OndemandKeyFetcherWithCache::FetchingInProgress(
   return in_progress;
 }
 
-google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest
-OndemandKeyFetcherWithCache::GetListPrivateKeysRequest(
-    const google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest&
-        request_base,
-    const std::string& key_id) const noexcept {
-  google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest request;
-  request.CopyFrom(request_base);
-  request.add_key_ids(key_id);
-  return request;
+core::ExecutionResultOr<Key> OndemandKeyFetcherWithCache::FetchKeys(
+    const std::string& key_id, absl::string_view key_fetching_type) noexcept {
+  return FetchKeysById(key_id, key_fetching_type);
+}
+
+bool OndemandKeyFetcherWithCache::ShouldPerformAutoRefresh(
+    absl::string_view keyset_name) noexcept {
+  return true;
 }
 }  // namespace google::scp::cpio

@@ -52,6 +52,12 @@ class WrappedKeyHandlerWithCacheInterface
   /// @return decrypted DEK as string or error.
   virtual google::scp::core::ExecutionResultOr<std::string> GetKey(
       const google::cmrt::sdk::v1::CloudWrappedKey& wrapped_key) noexcept = 0;
+
+  /// @brief Validate a key is allowed for this application type.
+  virtual google::scp::core::ExecutionResultOr<bool> ValidateKey(
+      const google::cmrt::sdk::v1::CloudWrappedKey& wrapped_key) noexcept {
+    return core::FailureExecutionResult(SC_UNKNOWN);
+  }
 };
 
 }  // namespace google::scp::cpio

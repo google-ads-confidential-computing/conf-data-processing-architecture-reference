@@ -102,6 +102,11 @@ ExecutionResultOr<string> GcpWrappedKeyHandlerWithCache::GetKey(
   return GetKeyInternal(gcp_wrapped_key);
 }
 
+ExecutionResultOr<bool> GcpWrappedKeyHandlerWithCache::ValidateKey(
+    const CloudWrappedKey& wrapped_key) noexcept {
+  return true;
+}
+
 ExecutionResultOr<DecryptRequest>
 GcpWrappedKeyHandlerWithCache::CreateDecryptRequest(
     const GcpWrappedKey& gcp_wrapped_key) noexcept {

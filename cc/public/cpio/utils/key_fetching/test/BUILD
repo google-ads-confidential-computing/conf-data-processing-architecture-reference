@@ -60,6 +60,7 @@ cc_test(
         "//cc/public/cpio/mock/private_key_client:private_key_client_mock",
         "//cc/public/cpio/utils/dual_writing_metric_client/mock:dual_writing_metric_client_mock",
         "//cc/public/cpio/utils/key_fetching/src:ondemand_key_fetcher_with_cache",
+        "@com_google_absl//absl/synchronization",
         "@com_google_googletest//:gtest_main",
     ],
 )

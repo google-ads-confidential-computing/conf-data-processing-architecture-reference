@@ -510,27 +510,57 @@ run "propagates_structured_alarm_configs_to_private_ks_and_key_storage_service" 
   }
 
   assert {
-    condition     = module.private_key_service.cloud_run_execution_time_alarms_by_region["us-central1"].threshold == 1600
-    error_message = "Expected private_key_service per-region Cloud Run execution time threshold override (1600) to propagate."
+    condition = (
+      module.private_key_service.cloud_run_execution_time_alarms_by_region["us-central1"].threshold == 1600 &&
+      module.private_key_service.cloud_run_execution_time_alarms_by_region["us-central1"].auto_close_sec == 1800
+    )
+    error_message = <<-EOT
+      Expected private_key_service per-region Cloud Run execution time threshold
+      override (1600) and resolved defaults to propagate.
+    EOT
   }
 
   assert {
-    condition     = module.private_key_service.config_read_error_alarm.threshold == 6
-    error_message = "Expected private_key_service_config_read_error_alarm threshold override (6) to propagate."
+    condition = (
+      module.private_key_service.config_read_error_alarm.threshold == 6 &&
+      module.private_key_service.config_read_error_alarm.auto_close_sec == 1800
+    )
+    error_message = <<-EOT
+      Expected private_key_service_config_read_error_alarm threshold override (6)
+      and resolved defaults to propagate.
+    EOT
   }
 
   assert {
-    condition     = module.private_key_service.load_balancer_95_percent_latency_alarm.threshold == 450
-    error_message = "Expected private_key_service_load_balancer_95_percent_latency_alarm threshold override (450) to propagate."
+    condition = (
+      module.private_key_service.load_balancer_95_percent_latency_alarm.threshold == 450 &&
+      module.private_key_service.load_balancer_95_percent_latency_alarm.auto_close_sec == 1800
+    )
+    error_message = <<-EOT
+      Expected private_key_service_load_balancer_95_percent_latency_alarm
+      threshold override (450) and resolved defaults to propagate.
+    EOT
   }
 
   assert {
-    condition     = module.keystorageservice.cloud_run_execution_time_alarm.threshold == 2500
-    error_message = "Expected key_storage_service_cloud_run_execution_time_alarm threshold override (2500) to propagate."
+    condition = (
+      module.keystorageservice.cloud_run_execution_time_alarm.threshold == 2500 &&
+      module.keystorageservice.cloud_run_execution_time_alarm.auto_close_sec == 1800
+    )
+    error_message = <<-EOT
+      Expected key_storage_service_cloud_run_execution_time_alarm threshold
+      override (2500) and resolved defaults to propagate.
+    EOT
   }
 
   assert {
-    condition     = module.keystorageservice.load_balancer_99_percent_latency_alarm.threshold == 950
-    error_message = "Expected key_storage_service_load_balancer_99_percent_latency_alarm threshold override (950) to propagate."
+    condition = (
+      module.keystorageservice.load_balancer_99_percent_latency_alarm.threshold == 950 &&
+      module.keystorageservice.load_balancer_99_percent_latency_alarm.auto_close_sec == 1800
+    )
+    error_message = <<-EOT
+      Expected key_storage_service_load_balancer_99_percent_latency_alarm
+      threshold override (950) and resolved defaults to propagate.
+    EOT
   }
 }

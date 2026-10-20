@@ -38,14 +38,10 @@ struct KeyFetcherOptions {
       std::chrono::seconds(14 * 24 * 60 * 60);
   std::chrono::seconds fetching_failure_cache_lifetime =
       std::chrono::seconds(5 * 60);
-  bool enable_key_fetching_metrics = true;
-  bool enable_active_keys_api_for_encryption_keys = true;
 
   std::chrono::seconds auto_refresh_time_duration =
       std::chrono::seconds(24 * 60 * 60);
 
-  bool enable_on_demand_fetching_for_hmac_key = true;
-  bool enable_on_demand_fetching_lock_for_encryption_key = true;
   std::chrono::milliseconds on_demand_fetching_waiting_timeout =
       std::chrono::milliseconds(2000);  // 2s
   bool use_read_lock_for_cache_read = false;
@@ -65,15 +61,19 @@ struct KeyFetcherOptions {
       google::cmrt::sdk::v1::EncryptionKeyPrefetchConfig::KeysetPrefetchConfig>
       encryption_key_prefetch_config_map;
 
-  // Enable the validation of key selection timestamp.
-  bool enable_key_selection_timestamp_validation = true;
-
   // Enable auto-refresh key fetching for encryption keys.
   bool encryption_key_enable_auto_refresh = false;
 
   // The time duration for encryption keys auto-refresh.
   std::chrono::seconds encryption_key_auto_refresh_time_duration =
       std::chrono::seconds(24 * 60 * 60);  // 24h
+
+  // Enable incremental key prefetch for encryption keys.
+  bool encryption_key_enable_incremental_prefetch = false;
+
+  // The time duration of incremental prefetch for encryption keys.
+  std::chrono::seconds encryption_key_incremental_prefetch_time_duration =
+      std::chrono::seconds(5 * 60);  // 5m
 };
 
 /// @brief Key returned by KeyFetcherWithCacheInterface

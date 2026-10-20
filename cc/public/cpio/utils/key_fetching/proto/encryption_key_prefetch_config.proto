@@ -22,7 +22,7 @@ option java_multiple_files = true;
 
 // Next ID: 2
 message EncryptionKeyPrefetchConfig {
-  // Next ID: 4
+  // Next ID: 6
   message KeysetPrefetchConfig {
     string key_namespace = 1;
     // The prefetch config accepts the union of
@@ -31,6 +31,10 @@ message EncryptionKeyPrefetchConfig {
     // prefetch_duration represents the past duration,
     // it prefetches one week in the future.
     google.protobuf.Duration prefetch_duration = 3;
+    // The step duration for incremental prefetch.
+    google.protobuf.Duration incremental_prefetch_step_duration = 4;
+    // The total prefetch duration for incremental prefetch.
+    google.protobuf.Duration incremental_prefetch_total_duration = 5;
   }
 
   repeated KeysetPrefetchConfig keyset_prefetch_configs = 1;

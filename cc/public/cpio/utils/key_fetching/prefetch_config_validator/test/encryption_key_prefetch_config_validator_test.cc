@@ -286,5 +286,34 @@ TEST_F(EncryptionKeyPrefetchConfigValidatorTest, InvalidDuplicateNamespace) {
                   SC_CPIO_PREFETCH_CONFIG_DUPLICATE_NAMESPACE)));
 }
 
+TEST_F(EncryptionKeyPrefetchConfigValidatorTest,
+       ValidWithIncrementalPrefetchConfigs) {
+  string_view text_proto = R"pb(
+    keyset_prefetch_configs {
+      key_namespace: "namespace1"
+      prefetch_duration { seconds: 60 }
+      incremental_prefetch_step_duration { seconds: 3600 }
+      incremental_prefetch_total_duration { seconds: 86400 }
+    }
+  )pb";
+  EXPECT_CALL(mock_metric_client_, PutOtelMetric(_)).Times(0);
+
+  auto result = validator_.ParseValidateAndBuildMap(text_proto);
+  EXPECT_SUCCESS(result.result());
+
+  auto config_map = *result;
+
+  auto expected_config = SubstituteAndParseTextToProto<
+      EncryptionKeyPrefetchConfig::KeysetPrefetchConfig>(R"pb(
+    key_namespace: "namespace1"
+    prefetch_duration { seconds: 60 }
+    incremental_prefetch_step_duration { seconds: 3600 }
+    incremental_prefetch_total_duration { seconds: 86400 }
+  )pb");
+
+  EXPECT_THAT(config_map, UnorderedElementsAre(Pair(
+                              "namespace1", EqualsProto(expected_config))));
+}
+
 }  // namespace
 }  // namespace google::scp::cpio::test

@@ -28,7 +28,7 @@ default_workgroup_configs = {
   worker_image                  = "us-docker.pkg.dev/admcloud-scp/docker-repo-dev/worker_app_mp_gcp:postsubmit"
   max_job_num_attempts          = 2
   max_job_processing_time       = 600
-  instance_disk_image           = "projects/confidential-space-images/global/images/confidential-space-251000"
+  instance_disk_image           = "projects/confidential-space-images/global/images/confidential-space-260900"
   worker_logging_enabled        = true
   worker_container_log_redirect = true
   worker_instance_force_replace = false
@@ -175,7 +175,7 @@ instance_disk_image_family = {
   image_family  = "confidential-space"
 }
 # Needs to be a stable image for proper coordinator attestation
-instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-260300"
+instance_disk_image = "projects/confidential-space-images/global/images/confidential-space-260900"
 
 vpcsc_compatible = true
 

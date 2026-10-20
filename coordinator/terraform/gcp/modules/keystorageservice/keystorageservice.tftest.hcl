@@ -126,27 +126,65 @@ run "structured_alarm_objects_propagate_to_cloud_run_and_load_balancer" {
   }
 
   assert {
-    condition     = module.cloud_run.error_5xx_alarm.threshold == 5 && module.cloud_run.error_5xx_alarm.duration_sec == 120
-    error_message = "Expected cloud_run_5xx_error_alarm overrides to propagate to module.cloud_run."
+    condition = (
+      module.cloud_run.error_5xx_alarm.threshold == 5 &&
+      module.cloud_run.error_5xx_alarm.duration_sec == 120 &&
+      module.cloud_run.error_5xx_alarm.enable_alarm == true &&
+      module.cloud_run.error_5xx_alarm.auto_close_sec == 1800
+    )
+    error_message = <<-EOT
+      Expected cloud_run_5xx_error_alarm overrides and resolved defaults to
+      propagate to module.cloud_run.
+    EOT
   }
 
   assert {
-    condition     = module.cloud_run.execution_time_alarm.threshold == 1500 && module.cloud_run.execution_time_alarm.duration_sec == 180
-    error_message = "Expected cloud_run_execution_time_alarm overrides to propagate to module.cloud_run."
+    condition = (
+      module.cloud_run.execution_time_alarm.threshold == 1500 &&
+      module.cloud_run.execution_time_alarm.duration_sec == 180 &&
+      module.cloud_run.execution_time_alarm.enable_alarm == true &&
+      module.cloud_run.execution_time_alarm.auto_close_sec == 1800
+    )
+    error_message = <<-EOT
+      Expected cloud_run_execution_time_alarm overrides and resolved defaults to
+      propagate to module.cloud_run.
+    EOT
   }
 
   assert {
-    condition     = module.load_balancer.load_balancer_5xx_error_ratio_alarm.threshold == 0.05 && module.load_balancer.load_balancer_5xx_error_ratio_alarm.duration_sec == 240
-    error_message = "Expected load_balancer_5xx_error_ratio_alarm overrides to propagate to module.load_balancer."
+    condition = (
+      module.load_balancer.load_balancer_5xx_error_ratio_alarm.threshold == 0.05 &&
+      module.load_balancer.load_balancer_5xx_error_ratio_alarm.duration_sec == 240 &&
+      module.load_balancer.load_balancer_5xx_error_ratio_alarm.min_samples == 0 &&
+      module.load_balancer.load_balancer_5xx_error_ratio_alarm.auto_close_sec == 1800
+    )
+    error_message = <<-EOT
+      Expected load_balancer_5xx_error_ratio_alarm overrides and resolved defaults
+      to propagate to module.load_balancer.
+    EOT
   }
 
   assert {
-    condition     = module.load_balancer.load_balancer_95_percent_latency_alarm.threshold == 400 && module.load_balancer.load_balancer_95_percent_latency_alarm.duration_sec == 300
-    error_message = "Expected load_balancer_95_percent_latency_alarm overrides to propagate to module.load_balancer."
+    condition = (
+      module.load_balancer.load_balancer_95_percent_latency_alarm.threshold == 400 &&
+      module.load_balancer.load_balancer_95_percent_latency_alarm.duration_sec == 300 &&
+      module.load_balancer.load_balancer_95_percent_latency_alarm.auto_close_sec == 1800
+    )
+    error_message = <<-EOT
+      Expected load_balancer_95_percent_latency_alarm overrides and resolved
+      defaults to propagate to module.load_balancer.
+    EOT
   }
 
   assert {
-    condition     = module.load_balancer.load_balancer_99_percent_latency_alarm.threshold == 800 && module.load_balancer.load_balancer_99_percent_latency_alarm.duration_sec == 600
-    error_message = "Expected load_balancer_99_percent_latency_alarm overrides to propagate to module.load_balancer."
+    condition = (
+      module.load_balancer.load_balancer_99_percent_latency_alarm.threshold == 800 &&
+      module.load_balancer.load_balancer_99_percent_latency_alarm.duration_sec == 600 &&
+      module.load_balancer.load_balancer_99_percent_latency_alarm.auto_close_sec == 1800
+    )
+    error_message = <<-EOT
+      Expected load_balancer_99_percent_latency_alarm overrides and resolved
+      defaults to propagate to module.load_balancer.
+    EOT
   }
 }

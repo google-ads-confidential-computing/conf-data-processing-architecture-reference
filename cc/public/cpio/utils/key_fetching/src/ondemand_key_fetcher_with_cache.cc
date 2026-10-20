@@ -21,19 +21,29 @@
 #include <string>
 #include <utility>
 
+#include "absl/container/flat_hash_set.h"
 #include "core/common/global_logger/src/global_logger.h"
 #include "public/core/interface/execution_result_macros.h"
 #include "public/core/interface/execution_result_or_macros.h"
+#include "public/cpio/interface/error_codes.h"
 #include "public/cpio/utils/key_fetching/proto/key_coordinator_configuration.pb.h"
 #include "public/cpio/utils/key_fetching/src/key_fetching_metric_utils.h"
 
+#include "error_codes.h"
 #include "key_fetching_utils.h"
 
 using google::cmrt::sdk::v1::KeyCoordinatorConfiguration;
 using google::scp::core::AsyncExecutorInterface;
 using google::scp::core::ExecutionResult;
+using google::scp::core::FailureExecutionResult;
+using google::scp::core::StatusCode;
 using google::scp::core::SuccessExecutionResult;
 using google::scp::core::common::kZeroUuid;
+using google::scp::core::errors::SC_CPIO_ENTITY_NOT_FOUND;
+using google::scp::core::errors::SC_CPIO_INVALID_ARGUMENT;
+using google::scp::core::errors::SC_CPIO_KEY_COUNT_MISMATCH;
+using google::scp::core::errors::SC_CPIO_KEY_FETCHER_FETCHING_TIMEOUT;
+using google::scp::core::errors::SC_CPIO_KEY_NOT_FOUND;
 using google::scp::cpio::KeyType;
 using std::nullopt;
 using std::optional;
@@ -51,6 +61,11 @@ namespace {
 constexpr char kOndemandKeyFetcherWithCacheComponentName[] =
     "EncryptionKeyFetcherWithCache";
 constexpr milliseconds kLogPeriod = milliseconds(1000);
+
+// Non-retryable key fetching errors
+const absl::flat_hash_set<StatusCode> kUnretryableKeyFetchingErrors = {
+    SC_CPIO_KEY_NOT_FOUND, SC_CPIO_KEY_COUNT_MISMATCH, SC_CPIO_ENTITY_NOT_FOUND,
+    SC_CPIO_INVALID_ARGUMENT};
 
 uint64_t GetKeyCacheLifetimeSeconds(
     const KeyFetcherOptions& key_fetcher_options) {
@@ -80,6 +95,10 @@ BaseKeyFetcherOptions GetBaseKeyFetcherOptions(
       key_fetcher_options.encryption_key_enable_auto_refresh;
   base_options.auto_refresh_time_duration =
       key_fetcher_options.encryption_key_auto_refresh_time_duration;
+  base_options.enable_incremental_prefetch =
+      key_fetcher_options.encryption_key_enable_incremental_prefetch;
+  base_options.incremental_prefetch_time_duration =
+      key_fetcher_options.encryption_key_incremental_prefetch_time_duration;
   return base_options;
 }
 
@@ -191,6 +210,80 @@ optional<Key> OndemandKeyFetcherWithCache::GetKeyFromValidKeyCache(
     return key;
   }
   return nullopt;
+}
+
+core::ExecutionResultOr<Key> OndemandKeyFetcherWithCache::GetKeyInternal(
+    const std::string& key_id, absl::string_view key_fetching_type) noexcept {
+  auto key = GetKeyFromValidKeyCache(key_id);
+  if (key.has_value()) {
+    // Use allowed_keysets_name_ which might be a list to represent the keyset
+    // because we don't have exact keyset_name available in the cache.
+    PushKeyCacheStatusMetric(metric_client_, key_type_, allowed_keysets_name_,
+                             KeyCacheStatus::kValidKeyCacheHit);
+    return key.value();
+  }
+  auto failure_result = GetFetchingFailureFromCache(key_id);
+  // Only return directly when the failure is not retryable.
+  if (failure_result.has_value() &&
+      kUnretryableKeyFetchingErrors.contains(failure_result->status_code)) {
+    PushKeyCacheStatusMetric(metric_client_, key_type_, allowed_keysets_name_,
+                             KeyCacheStatus::kInvalidKeyCacheHit);
+    return failure_result.value();
+  }
+
+  PushKeyCacheStatusMetric(metric_client_, key_type_, allowed_keysets_name_,
+                           KeyCacheStatus::kValidKeyCacheMiss);
+
+  if (!FetchingInProgress(key_id)) {
+    // This is to double confirm there is no thread finished key fetching
+    // and key caching but the in progress status is not updated yet.
+    key = GetKeyFromValidKeyCache(key_id);
+    if (key.has_value()) {
+      return key.value();
+    }
+    failure_result = GetFetchingFailureFromCache(key_id);
+    // Only return directly when the failure is not retryable.
+    if (failure_result.has_value() &&
+        kUnretryableKeyFetchingErrors.contains(failure_result->status_code)) {
+      return failure_result.value();
+    }
+
+    // Failing to mark IN_PROGRESS status means some other thread is already
+    // fetching the key. So it will fall to the WaitForKeyReady() process.
+    if (MarkFetchingInProgress(key_id)) {
+      auto fetched_key_or = FetchKeys(key_id, key_fetching_type);
+      // Cache the result before marking the fetching finished so that threads
+      // waiting in WaitForKeyReady() can see it.
+      if (fetched_key_or.Successful()) {
+        CacheValidKey({*fetched_key_or});
+      } else {
+        CacheFailureResult(key_id, fetched_key_or.result());
+      }
+      MarkFetchingFinished(key_id);
+      return fetched_key_or;
+    }
+  }
+
+  WaitForKeyReady(key_id);
+
+  key = GetKeyFromValidKeyCache(key_id);
+  if (key.has_value()) {
+    return key.value();
+  }
+  failure_result = GetFetchingFailureFromCache(key_id);
+  // Another thread just finished key fetching and it is useless to retry
+  // immediately, so we return directly.
+  if (failure_result.has_value()) {
+    return failure_result.value();
+  }
+
+  // It means the waiting timeout When this happens.
+  auto timeout_failure =
+      FailureExecutionResult(SC_CPIO_KEY_FETCHER_FETCHING_TIMEOUT);
+  SCP_ERROR(kOndemandKeyFetcherWithCacheComponentName, kZeroUuid,
+            timeout_failure, "The key fetching failed for key %s.",
+            key_id.c_str());
+  return timeout_failure;
 }
 
 optional<ExecutionResult>

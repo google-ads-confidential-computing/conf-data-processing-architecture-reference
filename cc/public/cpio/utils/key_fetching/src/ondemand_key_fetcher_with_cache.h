@@ -39,7 +39,7 @@ class OndemandKeyFetcherWithCache
       KeyFetcherOptions key_fetcher_options,
       const std::string& metric_namespace = {});
 
-  ~OndemandKeyFetcherWithCache() override { StopAutoRefreshThread(); }
+  ~OndemandKeyFetcherWithCache() override { StopBackgroundThreads(); }
 
   core::ExecutionResult Init() noexcept override;
 
@@ -64,7 +64,11 @@ class OndemandKeyFetcherWithCache
    * @return std::optional<Key> found key
    */
   std::optional<Key> GetKeyFromValidKeyCache(
-      const std::string& key_id) noexcept override;
+      const std::string& key_id) noexcept;
+
+  // Get the key from valid key cache or fetch it from remote.
+  core::ExecutionResultOr<Key> GetKeyInternal(
+      const std::string& key_id, absl::string_view key_fetching_type) noexcept;
 
   /**
    * @brief Get the Key Fetching Failure from Cache for the Given Key ID
@@ -73,7 +77,7 @@ class OndemandKeyFetcherWithCache
    * @return std::optional<ExecutionResult> found failure result
    */
   std::optional<core::ExecutionResult> GetFetchingFailureFromCache(
-      const std::string& key_id) noexcept override;
+      const std::string& key_id) noexcept;
 
   /**
    * @brief Cache failure result and key IDs for fetching failures
@@ -81,9 +85,8 @@ class OndemandKeyFetcherWithCache
    * @param key_id key ID
    * @param failure_result failure result
    */
-  void CacheFailureResult(
-      std::string key_id,
-      core::ExecutionResult failure_result) noexcept override;
+  void CacheFailureResult(std::string key_id,
+                          core::ExecutionResult failure_result) noexcept;
 
   /// Remove key_id from in_progress cache.
   void MarkFetchingFinished(const std::string& key_id) noexcept override;
@@ -99,8 +102,7 @@ class OndemandKeyFetcherWithCache
 
   /// Fetch and validate the key with the given key ID from remote.
   core::ExecutionResultOr<Key> FetchKeys(
-      const std::string& key_id,
-      absl::string_view key_fetching_type) noexcept override;
+      const std::string& key_id, absl::string_view key_fetching_type) noexcept;
 
   /// Determine if the auto refresh for a given keyset should be performed.
   bool ShouldPerformAutoRefresh(

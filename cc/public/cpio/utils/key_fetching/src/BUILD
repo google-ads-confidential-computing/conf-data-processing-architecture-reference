@@ -68,7 +68,6 @@ cc_library(
         "//cc/public/cpio/utils/key_fetching/interface:key_fetcher_with_cache_interface",
         "//cc/public/cpio/utils/key_fetching/proto:encryption_key_prefetch_config_cc_proto",
         "//cc/public/cpio/utils/key_fetching/proto:key_coordinator_configuration_cc_proto",
-        "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
     ],
@@ -82,7 +81,10 @@ cc_library(
     ],
     deps = [
         ":coordinator_key_fetcher_with_cache_base",
+        ":error_codes",
         "//cc/core/common/auto_expiry_concurrent_map/src:auto_expiry_concurrent_map_lib",
+        "//cc/public/cpio/interface:cpio_errors",
+        "@com_google_absl//absl/container:flat_hash_set",
     ],
 )
 

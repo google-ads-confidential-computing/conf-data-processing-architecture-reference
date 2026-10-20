@@ -56,6 +56,9 @@ struct BaseKeyFetcherOptions {
   bool enable_auto_refresh_keys = true;
   std::chrono::seconds auto_refresh_time_duration =
       std::chrono::seconds(24 * 60 * 60);  // 24 hours
+  bool enable_incremental_prefetch = false;
+  std::chrono::seconds incremental_prefetch_time_duration =
+      std::chrono::seconds(5 * 60);  // 5m
 };
 
 /**
@@ -77,7 +80,7 @@ class CoordinatorKeyFetcherWithCacheBase {
       absl::string_view component_name, absl::string_view key_type,
       const std::string& metric_namespace = {});
 
-  virtual ~CoordinatorKeyFetcherWithCacheBase() { StopAutoRefreshThread(); }
+  virtual ~CoordinatorKeyFetcherWithCacheBase() { StopBackgroundThreads(); }
 
   core::ExecutionResult Init() noexcept;
 
@@ -88,36 +91,6 @@ class CoordinatorKeyFetcherWithCacheBase {
  protected:
   /// Cache valid keys.
   virtual void CacheValidKey(const std::vector<Key>& valid_keys) noexcept = 0;
-
-  /**
-   * @brief Get the Key From Valid Key Cache
-   *
-   * @param lookup_key key used to lookup in the cache, can be string for key id
-   * or timestamp
-   * @return std::optional<Key> found key
-   */
-  virtual std::optional<Key> GetKeyFromValidKeyCache(
-      const LookupKeyT& lookup_key) noexcept = 0;
-
-  /**
-   * @brief Get the Key Fetching Failure from Cache for the Given Lookup Key
-   *
-   * @param lookup_key key used to lookup in the cache, can be string for key id
-   * or timestamp
-   * @return std::optional<ExecutionResult> found failure result
-   */
-  virtual std::optional<core::ExecutionResult> GetFetchingFailureFromCache(
-      const LookupKeyT& lookup_key) noexcept = 0;
-
-  /**
-   * @brief Cache failure result and lookup key for fetching failures
-   *
-   * @param lookup_key key used to lookup in the cache, can be string for key id
-   * or timestamp
-   * @param failure_result failure result
-   */
-  virtual void CacheFailureResult(
-      LookupKeyT lookup_key, core::ExecutionResult failure_result) noexcept = 0;
 
   /// Mark key fetching status as finished.
   virtual void MarkFetchingFinished(const LookupKeyT& lookup_key) noexcept = 0;
@@ -137,20 +110,6 @@ class CoordinatorKeyFetcherWithCacheBase {
       absl::string_view keyset_name) noexcept = 0;
 
   /**
-   * @brief Fetch and validate the key for the given lookup key from remote.
-   * Called by GetKeyInternal() on a cache miss. Implementations must not cache
-   * the result: GetKeyInternal() caches the returned key or failure.
-   *
-   * @param lookup_key key used to lookup in the cache, can be string for key id
-   * or timestamp
-   * @param key_fetching_type the key fetching type
-   * @return ExecutionResultOr<Key> fetched key or failure
-   */
-  virtual core::ExecutionResultOr<Key> FetchKeys(
-      const LookupKeyT& lookup_key,
-      absl::string_view key_fetching_type) noexcept = 0;
-
-  /**
    * @brief Fetch the key with the given key ID using the ListPrivateKeys API
    * and validate it: exactly one key must be returned, and it must belong to an
    * allowed keyset. For prefetch and auto-refresh, retries once on failure if
@@ -163,15 +122,29 @@ class CoordinatorKeyFetcherWithCacheBase {
   core::ExecutionResultOr<Key> FetchKeysById(
       const std::string& key_id, absl::string_view key_fetching_type) noexcept;
 
-  // Get the key from valid key cache or fetch it from remote.
-  core::ExecutionResultOr<Key> GetKeyInternal(
-      const LookupKeyT& lookup_key,
-      absl::string_view key_fetching_type) noexcept;
+  /// Stop background threads (auto refresh and incremental prefetch) if
+  /// running.
+  void StopBackgroundThreads() noexcept;
 
-  /// Stop the auto refresh background thread if running.
-  void StopAutoRefreshThread() noexcept;
+  /// Wait for the key fetching finishing.
+  void WaitForKeyReady(const LookupKeyT& lookup_key) noexcept;
+
+  DualWritingMetricClientInterface& metric_client_;
+  std::string key_type_;
+  std::string allowed_keysets_name_;
 
  private:
+  struct IncrementalPrefetchCursor {
+    // The earliest timestamp to prefetch back to (thread start time -
+    // prefetch_total_duration).
+    core::Timestamp earliest_prefetch_start_time;
+    // The end time for the next incremental prefetch window, updated as we
+    // step backward toward `cutoff`.
+    core::Timestamp end_time;
+    // The step duration in nanoseconds for each incremental prefetch step.
+    int64_t step_duration_in_ns;
+  };
+
   // The input keyset_name is only used for metrics.
   core::ExecutionResultOr<
       google::cmrt::sdk::private_key_service::v1::ListPrivateKeysResponse>
@@ -194,15 +167,12 @@ class CoordinatorKeyFetcherWithCacheBase {
   void PrefetchKeys() noexcept;
 
   // Fetches active keys in [start_time, end_time] for the keyset using the
-  // ListActiveKeys API and caches them. For prefetch and auto-refresh, retries
-  // once on failure if enable_retry_in_prefetch_and_autorefresh is set.
-  void FetchKeysInTimeRange(
+  // ListActiveKeys API. For prefetch and auto-refresh, retries once on failure
+  // if enable_retry_in_prefetch_and_autorefresh is set.
+  core::ExecutionResultOr<std::vector<Key>> FetchKeysInTimeRange(
       absl::string_view key_fetching_type, const std::string& keyset_name,
       const google::protobuf::Timestamp& start_time,
       const google::protobuf::Timestamp& end_time) noexcept;
-
-  /// Wait for the key fetching finishing.
-  void WaitForKeyReady(const LookupKeyT& lookup_key) noexcept;
 
   // Function to convert an error during key fetching to a string
   // for metric recording.
@@ -216,6 +186,16 @@ class CoordinatorKeyFetcherWithCacheBase {
   /// Fetches active keys for a single keyset and updates the cache.
   void AutoRefreshKeys(std::string keyset_name) noexcept;
 
+  /// Background worker loop that periodically triggers IncrementalPrefetchKeys
+  /// for all configured keysets until stopped.
+  void IncrementalPrefetchThreadLoopFunction() noexcept;
+
+  /// Fetches historical keys for a single keyset stepping backward into the
+  /// past. Returns true if a fetch was performed, or false if the lookback
+  /// cutoff has already been reached.
+  bool IncrementalPrefetchKeys(const std::string& keyset_name,
+                               IncrementalPrefetchCursor& cursor) noexcept;
+
   PrivateKeyClientInterface& key_client_;
 
   const google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest
@@ -225,13 +205,11 @@ class CoordinatorKeyFetcherWithCacheBase {
   const std::set<std::string> allowed_keysets_list_;
 
   BaseKeyFetcherOptions key_fetcher_options_;
-
-  DualWritingMetricClientInterface& metric_client_;
-  std::string allowed_keysets_name_;
   std::string component_name_;
-  std::string key_type_;
 
   std::thread auto_refresh_thread_;
   absl::Notification stop_notification_;
+
+  std::thread incremental_prefetch_thread_;
 };
 }  // namespace google::scp::cpio

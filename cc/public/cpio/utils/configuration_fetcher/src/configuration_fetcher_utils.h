@@ -114,8 +114,11 @@ class ConfigurationFetcherUtils {
   template <typename EnumT>
   static core::ExecutionResultOr<std::unordered_set<EnumT>> StringToEnumSet(
       const std::string& value, const std::map<std::string, EnumT>& enum_map) {
-    std::vector<std::string> enum_str_list = absl::StrSplit(value, ",");
     std::unordered_set<EnumT> enum_set;
+
+    if (value.empty()) return enum_set;
+
+    std::vector<std::string> enum_str_list = absl::StrSplit(value, ",");
     for (auto& enum_str : enum_str_list) {
       auto enum_value_or = StringToEnum<EnumT>(enum_str, enum_map);
       if (!enum_value_or.Successful()) {

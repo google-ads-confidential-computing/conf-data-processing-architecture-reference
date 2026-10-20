@@ -447,6 +447,7 @@ variable "key_storage_service_load_balancer_5xx_error_ratio_alarm" {
     alignment_period_sec    = optional(number)
     evaluation_interval_sec = optional(number)
     threshold               = optional(number)
+    min_samples             = optional(number)
     auto_close_sec          = optional(number)
   })
 }
@@ -694,6 +695,7 @@ variable "private_key_service_load_balancer_5xx_error_ratio_alarm" {
     alignment_period_sec    = optional(number)
     evaluation_interval_sec = optional(number)
     threshold               = optional(number)
+    min_samples             = optional(number)
     auto_close_sec          = optional(number)
   })
 }

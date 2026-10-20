@@ -96,6 +96,9 @@ TEST(ConfigurationFetcherUtilsTest, StringToEnumTest) {
 }
 
 TEST(ConfigurationFetcherUtilsTest, StringToEnumSetTest) {
+  EXPECT_THAT(
+      *ConfigurationFetcherUtils::StringToEnumSet("", kLogLevelConfigMap),
+      IsEmpty());
   EXPECT_THAT(*ConfigurationFetcherUtils::StringToEnumSet("Alert,Debug",
                                                           kLogLevelConfigMap),
               UnorderedElementsAre(LogLevel::kAlert, LogLevel::kDebug));
@@ -103,6 +106,10 @@ TEST(ConfigurationFetcherUtilsTest, StringToEnumSetTest) {
       ConfigurationFetcherUtils::StringToEnumSet("Invalid", kLogLevelConfigMap),
       ResultIs(
           FailureExecutionResult(SC_CONFIGURATION_FETCHER_CONVERSION_FAILED)));
+  EXPECT_THAT(ConfigurationFetcherUtils::StringToEnumSet("Alert,Invalid",
+                                                         kLogLevelConfigMap),
+              ResultIs(FailureExecutionResult(
+                  SC_CONFIGURATION_FETCHER_CONVERSION_FAILED)));
 }
 
 TEST(ConfigurationFetcherUtilsTest, StringToListTest) {

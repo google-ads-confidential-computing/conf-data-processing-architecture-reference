@@ -80,6 +80,7 @@ module "cloud_run" {
   canary_traffic_percentage = 0
 
   # Alert settings
+  alarms_enabled                 = var.alarms_enabled
   alert_urgent_severity_override = "important"
   alert_name_suffix              = "Key Storage Service"
   alarm_eval_period_sec          = var.alarm_eval_period_sec
@@ -149,6 +150,7 @@ module "load_balancer" {
   managed_domain = var.key_storage_domain
 
   # Alert settings
+  alarms_enabled                         = var.alarms_enabled
   alert_urgent_severity_override         = "important"
   alarm_eval_period_sec                  = var.alarm_eval_period_sec
   alarm_duration_sec                     = var.alarm_duration_sec
@@ -169,6 +171,6 @@ module "service_monitoring_dashboard" {
   environment                   = var.environment
   service_name                  = "Key Storage Service"
   load_balancer_url_map_name    = "${var.environment}-${local.service_id}-loadbalancer"
-  service_name_regex            = ".*${local.service_name_suffix}"
+  service_name_regex            = "^${var.environment}-.*-${local.service_name_suffix}"
   log_based_metric_service_name = "key_storage_service"
 }

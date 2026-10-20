@@ -1297,4 +1297,266 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
 
   EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Stop());
 }
+
+TEST_F(OndemandKeyFetcherWithCacheTest,
+       IncrementalPrefetchKeysSuccessfullyWhenFlagEnabled) {
+  ExpectOtelEncryptionKeyFetchingRequestMetricPush(
+      -1, KeyFetchingType::kIncrementalPrefetch, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
+      -1, KeyFetchingType::kIncrementalPrefetch, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingErrorMetricPush(0);
+  ExpectOtelEncryptionKeyCacheStatusMetricPush(
+      1, kKeyNamespace1, KeyCacheStatus::kValidKeyCacheHit);
+
+  auto key_service_options = CreateKeyServiceOptions();
+  key_service_options.mutable_key_namespace()->Clear();
+  key_service_options.add_key_namespace(kKeyNamespace1);
+
+  EncryptionKeyPrefetchConfig::KeysetPrefetchConfig config;
+  *config.mutable_incremental_prefetch_step_duration() =
+      TimeUtil::SecondsToDuration(7 * 24 * 60 * 60);
+  *config.mutable_incremental_prefetch_total_duration() =
+      TimeUtil::SecondsToDuration(30 * 24 * 60 * 60);
+  KeyFetcherOptions key_fetcher_options{
+      .encryption_key_prefetch_config_map = {{kKeyNamespace1, config}},
+      .encryption_key_enable_incremental_prefetch = true,
+      .encryption_key_incremental_prefetch_time_duration =
+          std::chrono::seconds(1),
+  };
+  OndemandKeyFetcherWithCache key_fetcher_with_incremental_prefetch(
+      async_executor_, mock_key_client_, mock_metric_client_,
+      key_service_options, key_fetcher_options, /*metric_namespace=*/"");
+
+  absl::Notification notification;
+  auto key_create_ts =
+      duration_cast<nanoseconds>((system_clock::now()).time_since_epoch());
+  ListActiveEncryptionKeysResponse response;
+  response.mutable_private_keys()->Add(CreatePrivateKey1(key_create_ts));
+  ListActiveEncryptionKeysRequest expected_request =
+      CreateBaseActiveKeysRequest(kKeyNamespace1);
+  EXPECT_CALL(mock_key_client_,
+              ListActiveEncryptionKeysSync(
+                  EqualsProtoIgnoringTimeRange(expected_request)))
+      .WillRepeatedly([response, &notification](const auto&) {
+        if (!notification.HasBeenNotified()) {
+          notification.Notify();
+        }
+        return response;
+      });
+
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Init());
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Run());
+
+  EXPECT_TRUE(notification.WaitForNotificationWithTimeout(absl::Seconds(5)));
+  // Allow the background thread to finish CacheValidKey() after RPC returns.
+  sleep_for(std::chrono::milliseconds(1000));
+
+  auto key = key_fetcher_with_incremental_prefetch.GetKey(kInputKeyId1);
+  ASSERT_TRUE(key.Successful());
+  EXPECT_THAT(key->creation_timestamp, key_create_ts.count());
+  EXPECT_THAT(key->private_key, kPrivateKey);
+  EXPECT_THAT(key->public_key, kPublicKey);
+
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Stop());
+}
+
+TEST_F(OndemandKeyFetcherWithCacheTest,
+       IncrementalPrefetchKeysSkipsUnconfiguredKeyset) {
+  auto key_service_options = CreateKeyServiceOptions();
+  key_service_options.mutable_key_namespace()->Clear();
+  key_service_options.add_key_namespace(kKeyNamespace1);
+  key_service_options.add_key_namespace(kKeyNamespace2);
+
+  EncryptionKeyPrefetchConfig::KeysetPrefetchConfig config2;
+  *config2.mutable_incremental_prefetch_step_duration() =
+      TimeUtil::SecondsToDuration(7 * 24 * 60 * 60);
+  *config2.mutable_incremental_prefetch_total_duration() =
+      TimeUtil::SecondsToDuration(30 * 24 * 60 * 60);
+
+  KeyFetcherOptions key_fetcher_options{
+      .encryption_key_prefetch_config_map =
+          {
+              {kKeyNamespace2, config2},
+          },
+      .encryption_key_enable_incremental_prefetch = true,
+      .encryption_key_incremental_prefetch_time_duration =
+          std::chrono::seconds(1),
+  };
+  OndemandKeyFetcherWithCache key_fetcher_with_incremental_prefetch(
+      async_executor_, mock_key_client_, mock_metric_client_,
+      key_service_options, key_fetcher_options, /*metric_namespace=*/"");
+
+  absl::Notification notification;
+  ListActiveEncryptionKeysResponse response;
+  EXPECT_CALL(mock_key_client_,
+              ListActiveEncryptionKeysSync(EqualsProtoIgnoringTimeRange(
+                  CreateBaseActiveKeysRequest(kKeyNamespace1))))
+      .Times(0);
+  EXPECT_CALL(mock_key_client_,
+              ListActiveEncryptionKeysSync(EqualsProtoIgnoringTimeRange(
+                  CreateBaseActiveKeysRequest(kKeyNamespace2))))
+      .WillRepeatedly([response, &notification](const auto&) {
+        if (!notification.HasBeenNotified()) {
+          notification.Notify();
+        }
+        return response;
+      });
+
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Init());
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Run());
+
+  EXPECT_TRUE(notification.WaitForNotificationWithTimeout(absl::Seconds(5)));
+
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Stop());
+}
+
+TEST_F(OndemandKeyFetcherWithCacheTest,
+       IncrementalPrefetchKeysUsesKeysetIncrementalPrefetchConfig) {
+  ExpectOtelEncryptionKeyFetchingRequestMetricPush(
+      -1, KeyFetchingType::kIncrementalPrefetch, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
+      -1, KeyFetchingType::kIncrementalPrefetch, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingErrorMetricPush(0);
+
+  auto key_service_options = CreateKeyServiceOptions();
+  key_service_options.mutable_key_namespace()->Clear();
+  key_service_options.add_key_namespace(kKeyNamespace1);
+
+  std::chrono::seconds custom_lookback =
+      std::chrono::seconds(7 * 24 * 60 * 60);  // 7 days
+  std::chrono::seconds custom_max_lookback =
+      std::chrono::seconds(30 * 24 * 60 * 60);  // 30 days
+
+  EncryptionKeyPrefetchConfig::KeysetPrefetchConfig config;
+  *config.mutable_incremental_prefetch_step_duration() =
+      TimeUtil::SecondsToDuration(custom_lookback.count());
+  *config.mutable_incremental_prefetch_total_duration() =
+      TimeUtil::SecondsToDuration(custom_max_lookback.count());
+
+  KeyFetcherOptions key_fetcher_options{
+      .encryption_key_prefetch_config_map =
+          {
+              {kKeyNamespace1, config},
+          },
+      .encryption_key_enable_incremental_prefetch = true,
+      .encryption_key_incremental_prefetch_time_duration =
+          std::chrono::seconds(1),
+  };
+  OndemandKeyFetcherWithCache key_fetcher_with_incremental_prefetch(
+      async_executor_, mock_key_client_, mock_metric_client_,
+      key_service_options, key_fetcher_options, /*metric_namespace=*/"");
+
+  absl::Notification notification;
+  ListActiveEncryptionKeysResponse response;
+  ListActiveEncryptionKeysRequest captured_request;
+  EXPECT_CALL(mock_key_client_,
+              ListActiveEncryptionKeysSync(EqualsProtoIgnoringTimeRange(
+                  CreateBaseActiveKeysRequest(kKeyNamespace1))))
+      .WillRepeatedly(
+          [response, &notification, &captured_request](const auto& request) {
+            if (!notification.HasBeenNotified()) {
+              captured_request = request;
+              notification.Notify();
+            }
+            return response;
+          });
+
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Init());
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Run());
+
+  EXPECT_TRUE(notification.WaitForNotificationWithTimeout(absl::Seconds(5)));
+
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Stop());
+
+  ASSERT_TRUE(captured_request.has_query_time_range());
+  auto start_time_ns = TimeUtil::TimestampToNanoseconds(
+      captured_request.query_time_range().start_time());
+  auto end_time_ns = TimeUtil::TimestampToNanoseconds(
+      captured_request.query_time_range().end_time());
+  auto diff = end_time_ns - start_time_ns;
+  EXPECT_EQ(diff, duration_cast<nanoseconds>(custom_lookback).count());
+}
+
+TEST_F(OndemandKeyFetcherWithCacheTest,
+       IncrementalPrefetchKeysExcludesPrefetchDuration) {
+  ExpectOtelEncryptionKeyFetchingRequestMetricPush(
+      -1, KeyFetchingType::kIncrementalPrefetch, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
+      -1, KeyFetchingType::kIncrementalPrefetch, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingErrorMetricPush(0);
+
+  auto key_service_options = CreateKeyServiceOptions();
+  key_service_options.mutable_key_namespace()->Clear();
+  key_service_options.add_key_namespace(kKeyNamespace1);
+
+  std::chrono::seconds prefetch_duration =
+      std::chrono::seconds(14 * 24 * 60 * 60);  // 14 days
+  std::chrono::seconds custom_lookback =
+      std::chrono::seconds(7 * 24 * 60 * 60);  // 7 days
+  std::chrono::seconds custom_max_lookback =
+      std::chrono::seconds(18 * 24 * 60 * 60);  // 18 days
+
+  EncryptionKeyPrefetchConfig::KeysetPrefetchConfig config;
+  *config.mutable_prefetch_duration() =
+      TimeUtil::SecondsToDuration(prefetch_duration.count());
+  *config.mutable_incremental_prefetch_step_duration() =
+      TimeUtil::SecondsToDuration(custom_lookback.count());
+  *config.mutable_incremental_prefetch_total_duration() =
+      TimeUtil::SecondsToDuration(custom_max_lookback.count());
+
+  KeyFetcherOptions key_fetcher_options{
+      .encryption_key_prefetch_config_map =
+          {
+              {kKeyNamespace1, config},
+          },
+      .encryption_key_enable_incremental_prefetch = true,
+      .encryption_key_incremental_prefetch_time_duration =
+          std::chrono::seconds(1),
+  };
+  OndemandKeyFetcherWithCache key_fetcher_with_incremental_prefetch(
+      async_executor_, mock_key_client_, mock_metric_client_,
+      key_service_options, key_fetcher_options, /*metric_namespace=*/"");
+
+  absl::Notification notification;
+  ListActiveEncryptionKeysResponse response;
+  ListActiveEncryptionKeysRequest captured_request;
+  EXPECT_CALL(mock_key_client_,
+              ListActiveEncryptionKeysSync(EqualsProtoIgnoringTimeRange(
+                  CreateBaseActiveKeysRequest(kKeyNamespace1))))
+      .WillRepeatedly(
+          [response, &notification, &captured_request](const auto& request) {
+            if (!notification.HasBeenNotified()) {
+              captured_request = request;
+              notification.Notify();
+            }
+            return response;
+          });
+
+  int64_t before_run_ns =
+      core::common::TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Init());
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Run());
+
+  EXPECT_TRUE(notification.WaitForNotificationWithTimeout(absl::Seconds(5)));
+  int64_t after_run_ns =
+      core::common::TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
+
+  EXPECT_SUCCESS(key_fetcher_with_incremental_prefetch.Stop());
+
+  ASSERT_TRUE(captured_request.has_query_time_range());
+  auto start_time_ns = TimeUtil::TimestampToNanoseconds(
+      captured_request.query_time_range().start_time());
+  auto end_time_ns = TimeUtil::TimestampToNanoseconds(
+      captured_request.query_time_range().end_time());
+  auto prefetch_duration_ns =
+      duration_cast<nanoseconds>(prefetch_duration).count();
+  EXPECT_GE(end_time_ns, before_run_ns - prefetch_duration_ns);
+  EXPECT_LE(end_time_ns, after_run_ns - prefetch_duration_ns);
+  // Since end_time is (now - 14d) and cutoff is (now - 18d), the remaining
+  // range [cutoff, end_time] is 4 days (clamped by cutoff).
+  auto expected_diff =
+      duration_cast<nanoseconds>(custom_max_lookback - prefetch_duration)
+          .count();
+  EXPECT_EQ(end_time_ns - start_time_ns, expected_diff);
+}
 }  // namespace google::scp::cpio

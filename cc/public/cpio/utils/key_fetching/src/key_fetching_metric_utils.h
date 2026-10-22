@@ -81,6 +81,7 @@ struct KeyType {
   static constexpr char kEncryptionKey[] = "EncryptionKey";
   static constexpr char kGcpWrappedKey[] = "GcpWrappedKey";
   static constexpr char kAwsWrappedKey[] = "AwsWrappedKey";
+  static constexpr char kCoordinatorWrappedKey[] = "CoordinatorWrappedKey";
   static constexpr char kSidKey[] = "SidKey";
   static constexpr char kKeysetMetadata[] = "KeysetMetadata";
 };

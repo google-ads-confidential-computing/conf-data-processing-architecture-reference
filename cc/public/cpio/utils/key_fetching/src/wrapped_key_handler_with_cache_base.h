@@ -26,7 +26,6 @@
 #include "core/common/auto_expiry_concurrent_map/src/auto_expiry_concurrent_map.h"
 #include "core/interface/async_executor_interface.h"
 #include "public/core/interface/execution_result.h"
-#include "public/cpio/interface/kms_client/kms_client_interface.h"
 #include "public/cpio/utils/dual_writing_metric_client/interface/dual_writing_metric_client_interface.h"
 
 #include "wrapped_key_handler_with_cache_interface.h"
@@ -40,7 +39,6 @@ class WrappedKeyHandlerWithCacheBase
   WrappedKeyHandlerWithCacheBase(
       std::shared_ptr<google::scp::core::AsyncExecutorInterface>&
           async_executor,
-      KmsClientInterface& kms_client,
       WrappedKeyHandlerOptions wrapped_key_handler_options,
       DualWritingMetricClientInterface& metric_client);
 
@@ -60,15 +58,20 @@ class WrappedKeyHandlerWithCacheBase
       const WrappedKeyType& wrapped_key) noexcept;
 
   virtual std::string GetKeyType() noexcept = 0;
-  virtual std::string GetKekPrefix() noexcept = 0;
-
-  virtual google::scp::core::ExecutionResultOr<
-      google::cmrt::sdk::kms_service::v1::DecryptRequest>
-  CreateDecryptRequest(const WrappedKeyType& wrapped_key) noexcept = 0;
 
   /**
-   * @brief Decrypt DEK by calling KMS client, validate the decrypted DEK, and
-   * cache it in either valid key or failed key caches.
+   * @brief Decrypt DEK for the given wrapped key and record decryption latency
+   * metric when decryption is invoked.
+   *
+   * @param wrapped_key WrappedKeyType proto
+   * @return decrypted_dek or failure
+   */
+  virtual google::scp::core::ExecutionResultOr<std::string> DecryptDek(
+      const WrappedKeyType& wrapped_key) noexcept = 0;
+
+  /**
+   * @brief Decrypt DEK, validate the decrypted DEK, and cache it in either
+   * valid key or failed key caches.
    *
    * @param wrapped_key WrappedKeyType proto
    * @return decrypted_dek or failure
@@ -78,19 +81,18 @@ class WrappedKeyHandlerWithCacheBase
       const WrappedKeyType& wrapped_key) noexcept;
 
   /**
-   * @brief Validate KMS decrypt response and cache the valid decrypted_dek or
+   * @brief Validate decrypted DEK result and cache the valid decrypted_dek or
    * cache the failure.
    *
    * @param wrapped_key WrappedKeyType proto
-   * @param decrypt_response_or KMS decrypt response contained decrypted_dek
+   * @param decrypted_dek_or Decrypted DEK or failure result
    * @return valid decrypted_dek or failure
    */
   google::scp::core::ExecutionResultOr<std::string>
   ValidateAndCacheDecryptedDek(
       const WrappedKeyType& wrapped_key,
-      const google::scp::core::ExecutionResultOr<
-          google::cmrt::sdk::kms_service::v1::DecryptResponse>&
-          decrypt_dek_response_or) noexcept;
+      const google::scp::core::ExecutionResultOr<std::string>&
+          decrypted_dek_or) noexcept;
 
   /// Cache wrapped keys and their decrypted_deks in key_cache_
   void CacheValidKey(const std::string& serialized_wrapped_key,
@@ -150,8 +152,6 @@ class WrappedKeyHandlerWithCacheBase
   std::unordered_set<std::string> in_progress_key_cache_;
 
   std::shared_mutex in_progress_key_cache_mutex_;  // NOLINT(build/c++14)
-
-  KmsClientInterface& kms_client_;
 
   WrappedKeyHandlerOptions wrapped_key_handler_options_;
 

@@ -71,9 +71,9 @@ AwsWrappedKeyHandlerWithCache::AwsWrappedKeyHandlerWithCache(
     KmsClientInterface& kms_client,
     WrappedKeyHandlerOptions wrapped_key_handler_options,
     DualWritingMetricClientInterface& metric_client)
-    : WrappedKeyHandlerWithCacheBase(async_executor, kms_client,
-                                     wrapped_key_handler_options,
-                                     metric_client) {}
+    : KmsWrappedKeyHandlerWithCacheBase(async_executor, kms_client,
+                                        wrapped_key_handler_options,
+                                        metric_client) {}
 
 string AwsWrappedKeyHandlerWithCache::GetKeyType() noexcept {
   return KeyType::kAwsWrappedKey;

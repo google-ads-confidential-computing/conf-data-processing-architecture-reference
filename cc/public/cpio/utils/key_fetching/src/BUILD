@@ -118,11 +118,13 @@ cc_library(
     srcs = [
         "aws_wrapped_key_handler_with_cache.cc",
         "gcp_wrapped_key_handler_with_cache.cc",
+        "kms_wrapped_key_handler_with_cache_base.cc",
         "wrapped_key_handler_with_cache_base.cc",
     ],
     hdrs = [
         "aws_wrapped_key_handler_with_cache.h",
         "gcp_wrapped_key_handler_with_cache.h",
+        "kms_wrapped_key_handler_with_cache_base.h",
         "wrapped_key_handler_with_cache_base.h",
         "wrapped_key_handler_with_cache_interface.h",
     ],

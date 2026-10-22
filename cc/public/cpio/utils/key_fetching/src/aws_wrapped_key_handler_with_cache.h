@@ -25,12 +25,12 @@
 #include "public/cpio/interface/kms_client/kms_client_interface.h"
 #include "public/cpio/utils/dual_writing_metric_client/interface/dual_writing_metric_client_interface.h"
 
-#include "wrapped_key_handler_with_cache_base.h"
+#include "kms_wrapped_key_handler_with_cache_base.h"
 
 namespace google::scp::cpio {
 
 class AwsWrappedKeyHandlerWithCache
-    : public WrappedKeyHandlerWithCacheBase<
+    : public KmsWrappedKeyHandlerWithCacheBase<
           google::cmrt::sdk::v1::AwsWrappedKey> {
  public:
   explicit AwsWrappedKeyHandlerWithCache(

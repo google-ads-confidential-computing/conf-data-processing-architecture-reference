@@ -51,7 +51,10 @@ resource "google_logging_metric" "collector_startup_error_metric" {
   name        = "${var.environment}-collector-startup-error-counter"
   filter      = <<-EOT
   resource.type="gce_instance" AND
-  (jsonPayload.message=~".*collector server run finished with error.*" OR jsonPayload.message=~".*Failed to start otelcol-contrib.service.*")
+  (jsonPayload.message=~".*collector server run finished with error.*" OR
+   jsonPayload.message=~".*Failed to start otelcol-contrib.service.*" OR
+   jsonPayload.MESSAGE=~".*collector server run finished with error.*" OR
+   jsonPayload.MESSAGE=~".*Failed to start otelcol-contrib.service.*")
   EOT
   description = "Error counter of failed to startup collector"
 
@@ -110,7 +113,8 @@ resource "google_logging_metric" "collector_crash_error_metric" {
   name        = "${var.environment}-collector-crash-error-counter"
   filter      = <<-EOT
   resource.type="gce_instance" AND
-  jsonPayload.MESSAGE=~".*otelcol-contrib.service: Failed with result 'exit-code'.*"
+  (jsonPayload.message=~".*otelcol-contrib.service: Failed with result 'exit-code'.*" OR
+   jsonPayload.MESSAGE=~".*otelcol-contrib.service: Failed with result 'exit-code'.*")
   EOT
   description = "Error counter of collector server crash"
 
@@ -169,7 +173,12 @@ resource "google_logging_metric" "server_export_metric_error_metric" {
   name        = "${var.environment}-server-export-metric-error-counter"
   filter      = <<-EOT
   resource.type="gce_instance" AND
-  (jsonPayload.MESSAGE=~".*Failed to export metrics.*" OR jsonPayload.MESSAGE=~".*Export() failed.*" OR jsonPayload.MESSAGE=~".*[OTLP HTTP Client] Export failed.*")
+  (jsonPayload.message=~".*Failed to export metrics.*" OR
+   jsonPayload.message=~".*Export() failed.*" OR
+   jsonPayload.message=~".*[OTLP HTTP Client] Export failed.*" OR
+   jsonPayload.MESSAGE=~".*Failed to export metrics.*" OR
+   jsonPayload.MESSAGE=~".*Export() failed.*" OR
+   jsonPayload.MESSAGE=~".*[OTLP HTTP Client] Export failed.*")
   EOT
   description = "Error counter of exporting metric data from worker to collector container"
 

@@ -44,11 +44,22 @@ message AwsWrappedKey {
   string role_arn = 3;
 }
 
-// A wrapper for cloud-specific wrapped keys.
+// Data encryption key wrapped by a Coordinator key.
 // Next ID: 3
+message CoordinatorWrappedKey {
+  // The ID of the Coordinator key used to wrap the DEK.
+  string key_id = 1;
+
+  // The encrypted data encryption key (DEK).
+  bytes encrypted_dek = 2;
+}
+
+// A wrapper for cloud-specific wrapped keys.
+// Next ID: 4
 message CloudWrappedKey {
   oneof key {
     GcpWrappedKey gcp_wrapped_key = 1;
     AwsWrappedKey aws_wrapped_key = 2;
+    CoordinatorWrappedKey coordinator_wrapped_key = 3;
   }
 }

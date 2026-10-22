@@ -203,6 +203,16 @@ run "creates_run_error_alarm" {
     condition     = strcontains(google_monitoring_alert_policy.collector_startup_error_alert[0].conditions[0].condition_threshold[0].filter, "environment-collector-startup-error-counter")
     error_message = "Doesn't alert on proper instance group"
   }
+  assert {
+    condition     = google_logging_metric.collector_startup_error_metric.filter == <<-EOT
+      resource.type="gce_instance" AND
+      (jsonPayload.message=~".*collector server run finished with error.*" OR
+       jsonPayload.message=~".*Failed to start otelcol-contrib.service.*" OR
+       jsonPayload.MESSAGE=~".*collector server run finished with error.*" OR
+       jsonPayload.MESSAGE=~".*Failed to start otelcol-contrib.service.*")
+    EOT
+    error_message = "Collector startup error metric filter is incorrect"
+  }
 }
 
 run "creates_crash_error_alarm" {
@@ -227,6 +237,14 @@ run "creates_crash_error_alarm" {
     condition     = strcontains(google_monitoring_alert_policy.collector_crash_error_alert[0].conditions[0].condition_threshold[0].filter, "environment-collector-crash-error-counter")
     error_message = "Doesn't alert on proper instance group"
   }
+  assert {
+    condition     = google_logging_metric.collector_crash_error_metric.filter == <<-EOT
+      resource.type="gce_instance" AND
+      (jsonPayload.message=~".*otelcol-contrib.service: Failed with result 'exit-code'.*" OR
+       jsonPayload.MESSAGE=~".*otelcol-contrib.service: Failed with result 'exit-code'.*")
+    EOT
+    error_message = "Collector crash error metric filter is incorrect"
+  }
 }
 
 run "creates_export_metric_alarm" {
@@ -250,6 +268,18 @@ run "creates_export_metric_alarm" {
   assert {
     condition     = strcontains(google_monitoring_alert_policy.export_metric_to_collector_error_alert[0].conditions[0].condition_threshold[0].filter, "environment-server-export-metric-error-counter")
     error_message = "Doesn't alert on proper instance group"
+  }
+  assert {
+    condition     = google_logging_metric.server_export_metric_error_metric.filter == <<-EOT
+      resource.type="gce_instance" AND
+      (jsonPayload.message=~".*Failed to export metrics.*" OR
+       jsonPayload.message=~".*Export() failed.*" OR
+       jsonPayload.message=~".*[OTLP HTTP Client] Export failed.*" OR
+       jsonPayload.MESSAGE=~".*Failed to export metrics.*" OR
+       jsonPayload.MESSAGE=~".*Export() failed.*" OR
+       jsonPayload.MESSAGE=~".*[OTLP HTTP Client] Export failed.*")
+    EOT
+    error_message = "Server export metric error metric filter is incorrect"
   }
 }
 

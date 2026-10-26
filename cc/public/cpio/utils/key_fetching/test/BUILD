@@ -106,6 +106,7 @@ cc_test(
     testonly = True,
     srcs = [
         "aws_wrapped_key_handler_with_cache_test.cc",
+        "coordinator_wrapped_key_handler_with_cache_test.cc",
         "gcp_wrapped_key_handler_with_cache_test.cc",
     ],
     deps = [
@@ -115,9 +116,11 @@ cc_test(
         "//cc/core/test/utils:utils_lib",
         "//cc/public/core/test/interface:execution_result_matchers",
         "//cc/public/cpio/interface:cpio_errors",
+        "//cc/public/cpio/mock/crypto_client:crypto_client_mock",
         "//cc/public/cpio/mock/kms_client:kms_client_mock",
         "//cc/public/cpio/utils:proto_utils",
         "//cc/public/cpio/utils/dual_writing_metric_client/mock:dual_writing_metric_client_mock",
+        "//cc/public/cpio/utils/key_fetching/interface:key_fetcher_with_cache_interface",
         "//cc/public/cpio/utils/key_fetching/src:error_codes",
         "//cc/public/cpio/utils/key_fetching/src:key_fetching",
         "@com_google_absl//absl/synchronization",

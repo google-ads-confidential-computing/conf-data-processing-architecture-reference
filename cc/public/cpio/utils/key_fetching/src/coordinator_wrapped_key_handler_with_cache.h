@@ -1,0 +1,70 @@
+/*
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include <memory>
+#include <string>
+
+#include "core/interface/async_executor_interface.h"
+#include "public/core/interface/execution_result.h"
+#include "public/cpio/interface/crypto_client/crypto_client_interface.h"
+#include "public/cpio/utils/dual_writing_metric_client/interface/dual_writing_metric_client_interface.h"
+#include "public/cpio/utils/key_fetching/interface/key_fetcher_with_cache_interface.h"
+
+#include "wrapped_key_handler_with_cache_base.h"
+
+namespace google::scp::cpio {
+
+class CoordinatorWrappedKeyHandlerWithCache
+    : public WrappedKeyHandlerWithCacheBase<
+          google::cmrt::sdk::v1::CoordinatorWrappedKey> {
+ public:
+  explicit CoordinatorWrappedKeyHandlerWithCache(
+      std::shared_ptr<google::scp::core::AsyncExecutorInterface>&
+          async_executor,
+      CryptoClientInterface& crypto_client,
+      KeyFetcherWithCacheInterface& coordinator_key_cache,
+      WrappedKeyHandlerOptions wrapped_key_handler_options,
+      DualWritingMetricClientInterface& metric_client);
+
+  google::scp::core::ExecutionResultOr<std::string> GetKey(
+      const google::cmrt::sdk::v1::CloudWrappedKey& wrapped_key) noexcept
+      override;
+
+  google::scp::core::ExecutionResultOr<bool> ValidateKey(
+      const google::cmrt::sdk::v1::CloudWrappedKey& wrapped_key) noexcept
+      override;
+
+ protected:
+  std::string GetKeyType() noexcept override;
+
+  google::scp::core::ExecutionResultOr<std::string> DecryptDek(
+      const google::cmrt::sdk::v1::CoordinatorWrappedKey& wrapped_key) noexcept
+      override;
+
+  std::string MapToWrappedKeyFetchingErrorString(
+      google::scp::core::ExecutionResult error_result) noexcept override;
+
+  bool IsRetryableDecryptionError(
+      google::scp::core::StatusCode error_code) noexcept override;
+
+ private:
+  CryptoClientInterface& crypto_client_;
+  KeyFetcherWithCacheInterface& coordinator_key_cache_;
+};
+
+}  // namespace google::scp::cpio

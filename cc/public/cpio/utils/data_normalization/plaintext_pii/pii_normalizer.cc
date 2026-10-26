@@ -175,4 +175,13 @@ ExecutionResultOr<std::string> NormalizeAlphaNumeric(const std::string& input) {
   return result;
 }
 
+ExecutionResultOr<std::string> NormalizeZipCode(
+    const std::string& zip_code,
+    bool should_only_trim_surrounding_whitespaces) {
+  if (should_only_trim_surrounding_whitespaces) {
+    return std::string(absl::StripAsciiWhitespace(zip_code));
+  }
+  return NormalizeAlphaNumeric(zip_code);
+}
+
 }  // namespace google::scp::cpio

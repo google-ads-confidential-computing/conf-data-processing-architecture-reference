@@ -59,4 +59,10 @@ core::ExecutionResultOr<std::string> NormalizeCountryCode(
 core::ExecutionResultOr<std::string> NormalizeAlphaNumeric(
     const std::string& input);
 
+// Normalize a zip code. If `should_only_trim_surrounding_whitespaces` is true,
+// only the leading and trailing ASCII whitespaces are trimmed. Otherwise, the
+// zip code is normalized to only contain alphanumeric characters.
+core::ExecutionResultOr<std::string> NormalizeZipCode(
+    const std::string& zip_code, bool should_only_trim_surrounding_whitespaces);
+
 }  // namespace google::scp::cpio

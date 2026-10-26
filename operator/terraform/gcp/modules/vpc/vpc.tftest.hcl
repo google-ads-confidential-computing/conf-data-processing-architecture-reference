@@ -42,6 +42,18 @@ variables {
   connector_machine_type         = "connector_machine_type"
 }
 
+run "creates_connectors" {
+  command = plan
+
+  variables {
+    create_connectors = true
+  }
+  assert {
+    condition     = output.connectors != null
+    error_message = "Connectors not created"
+  }
+}
+
 run "cidr_blocks_missing_region_fail_precondition" {
   command = plan
 

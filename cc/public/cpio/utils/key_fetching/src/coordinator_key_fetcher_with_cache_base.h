@@ -24,6 +24,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/notification.h"
 #include "public/core/interface/execution_result.h"
@@ -134,6 +135,12 @@ class CoordinatorKeyFetcherWithCacheBase {
   std::string allowed_keysets_name_;
 
  private:
+  struct KeysetMetadata {
+    int active_key_count = 0;
+    // The backfill days for the keyset, -1 means unfetched value.
+    int backfill_days = -1;
+  };
+
   struct IncrementalPrefetchCursor {
     // The earliest timestamp to prefetch back to (thread start time -
     // prefetch_total_duration).
@@ -196,12 +203,39 @@ class CoordinatorKeyFetcherWithCacheBase {
   bool IncrementalPrefetchKeys(const std::string& keyset_name,
                                IncrementalPrefetchCursor& cursor) noexcept;
 
+  /// Fetches the keyset metadata for the given keyset and caches it.
+  ///
+  /// @param key_fetching_type The type of key fetching.
+  /// @param keyset_name The name of the keyset.
+  void FetchAndCacheKeysetMetadata(absl::string_view key_fetching_type,
+                                   const std::string& keyset_name) noexcept;
+
+  /// Returns the active key count for the given keyset fetched from Key Service
+  /// GetKeysetMetadata API.
+  ///
+  /// @param keyset_name The name of the keyset.
+  /// @return The active key count for the given keyset fetched from Key Service
+  /// GetKeysetMetadata API.
+  int GetExpectedActiveKeyCount(absl::string_view keyset_name) noexcept;
+
+  /// Checks if the number of fetched active keys matches the expected active
+  /// key count for the given keyset, and records an error metric if not.
+  ///
+  /// @param key_fetching_type The type of key fetching.
+  /// @param keyset_name The name of the keyset.
+  /// @param fetched_keys The fetched keys.
+  void CheckEnoughActiveKeys(absl::string_view key_fetching_type,
+                             const std::string& keyset_name,
+                             const std::vector<Key>& fetched_keys) noexcept;
+
   PrivateKeyClientInterface& key_client_;
 
   const google::cmrt::sdk::private_key_service::v1::ListPrivateKeysRequest
       list_private_keys_request_base_;
   const google::cmrt::sdk::private_key_service::v1::
       ListActiveEncryptionKeysRequest list_active_keys_request_base_;
+  const google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest
+      get_keyset_metadata_request_base_;
   const std::set<std::string> allowed_keysets_list_;
 
   BaseKeyFetcherOptions key_fetcher_options_;
@@ -211,5 +245,8 @@ class CoordinatorKeyFetcherWithCacheBase {
   absl::Notification stop_notification_;
 
   std::thread incremental_prefetch_thread_;
+
+  absl::flat_hash_map<std::string, KeysetMetadata> keyset_metadata_map_;
+  std::shared_mutex keyset_metadata_mutex_;  // NOLINT(build/c++14)
 };
 }  // namespace google::scp::cpio

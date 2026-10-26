@@ -60,6 +60,7 @@ struct KeyFetchingErrorType {
   static constexpr char kCustomerQuotaExceeded[] = "CustomerQuotaExceeded";
   static constexpr char kCustomerKeyPermissionDenied[] =
       "CustomerKeyPermissionDenied";
+  static constexpr char kActiveKeyCountMismatch[] = "ActiveKeyCountMismatch";
 };
 
 /////// Constants for KeyFetching metrics ///////

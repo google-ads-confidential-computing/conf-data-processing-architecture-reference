@@ -35,4 +35,26 @@ std::vector<Key> ExtractKeys(
         google::cmrt::sdk::private_key_service::v1::PrivateKey>&
         private_keys) noexcept;
 
+/**
+ * @brief Filters and returns keys from `keys` that are active at
+ * `timestamp_ns`.
+ *
+ * @param keys The keys to filter.
+ * @param timestamp_ns The timestamp in nanoseconds to check against activation
+ * and expiration times.
+ * @return The keys active at the given timestamp.
+ */
+std::vector<Key> GetActiveKeysAt(const std::vector<Key>& keys,
+                                 core::Timestamp timestamp_ns) noexcept;
+
+/**
+ * @brief Checks if a key is active at a given timestamp.
+ *
+ * @param key The key to check.
+ * @param timestamp_ns The timestamp in nanoseconds to check against activation
+ * and expiration times.
+ * @return true if the key is active at the given timestamp, false otherwise.
+ */
+bool IsKeyActiveAt(const Key& key, core::Timestamp timestamp_ns) noexcept;
+
 }  // namespace google::scp::cpio

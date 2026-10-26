@@ -94,6 +94,16 @@ TEST(MetricUtilsTest, PushKeyFetchingErrorMetricTest) {
 
   PushKeyFetchingErrorMetric(mock_metric_client, key_type, key_fetching_type,
                              keyset_name, KeyFetchingErrorType::kGenericError);
+
+  EXPECT_CALL(mock_metric_client,
+              PutOtelMetric(KeyFetchingErrorMetricEqual(
+                  key_type, key_fetching_type, keyset_name,
+                  KeyFetchingErrorType::kActiveKeyCountMismatch)))
+      .WillOnce(Return(SuccessExecutionResult()));
+
+  PushKeyFetchingErrorMetric(mock_metric_client, key_type, key_fetching_type,
+                             keyset_name,
+                             KeyFetchingErrorType::kActiveKeyCountMismatch);
 }
 
 TEST(MetricUtilsTest, PushKeyFetchingRequestMetricTest) {

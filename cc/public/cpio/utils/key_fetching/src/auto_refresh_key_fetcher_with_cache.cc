@@ -309,8 +309,7 @@ AutoRefreshKeyFetcherWithCache::GetKeysFromCache(
   // `timestamp_ns`
   auto key_it = key_cache_map_.lower_bound(timestamp_ns);
   while (key_it != key_cache_map_.end()) {
-    if (key_it->second.expiration_timestamp > timestamp_ns &&
-        key_it->second.activation_timestamp <= timestamp_ns) {
+    if (IsKeyActiveAt(key_it->second, timestamp_ns)) {
       keys_to_return.push_back(key_it->second);
     }
     key_it++;

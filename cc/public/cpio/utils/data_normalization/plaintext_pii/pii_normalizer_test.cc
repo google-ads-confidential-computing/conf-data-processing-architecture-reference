@@ -168,5 +168,35 @@ TEST_F(PiiNormalizerTest, NormalizeAlphanumericSuccess) {
   EXPECT_EQ(result.value(), "helloworld123");
 }
 
+TEST_F(PiiNormalizerTest, NormalizeZipCodeAlphanumericSuccess) {
+  auto result = NormalizeZipCode(
+      " 12345-6789 ", /*should_only_trim_surrounding_whitespaces=*/false);
+  EXPECT_EQ(result.value(), "123456789");
+
+  result = NormalizeZipCode("SW1A 1AA",
+                            /*should_only_trim_surrounding_whitespaces=*/false);
+  EXPECT_EQ(result.value(), "SW1A1AA");
+}
+
+TEST_F(PiiNormalizerTest,
+       NormalizeZipCodeOnlyTrimSurroundingWhitespacesSuccess) {
+  auto result = NormalizeZipCode(
+      " \t12345-6789\r\n", /*should_only_trim_surrounding_whitespaces=*/true);
+  EXPECT_EQ(result.value(), "12345-6789");
+
+  // Whitespaces in the middle are preserved.
+  result = NormalizeZipCode(" SW1A 1AA ",
+                            /*should_only_trim_surrounding_whitespaces=*/true);
+  EXPECT_EQ(result.value(), "SW1A 1AA");
+
+  result = NormalizeZipCode("12345+6789",
+                            /*should_only_trim_surrounding_whitespaces=*/true);
+  EXPECT_EQ(result.value(), "12345+6789");
+
+  result = NormalizeZipCode("   ",
+                            /*should_only_trim_surrounding_whitespaces=*/true);
+  EXPECT_EQ(result.value(), "");
+}
+
 }  // namespace
 }  // namespace google::scp::cpio::test

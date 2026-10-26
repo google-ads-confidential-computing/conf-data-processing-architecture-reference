@@ -99,4 +99,33 @@ TEST(KeyFetchingUtilsTest, ExtractEmptyKeyList) {
   EXPECT_TRUE(keys.empty());
 }
 
+TEST(KeyFetchingUtilsTest, GetActiveKeysAtReturnsMatchingKeys) {
+  vector<Key> keys = {
+      Key{.creation_timestamp = 100,
+          .expiration_timestamp = 300,
+          .activation_timestamp = 100,
+          .key_id = "active_key"},
+      Key{.creation_timestamp = 100,
+          .expiration_timestamp = 200,
+          .activation_timestamp = 100,
+          .key_id = "expired_at_boundary"},
+      Key{.creation_timestamp = 200,
+          .expiration_timestamp = 400,
+          .activation_timestamp = 200,
+          .key_id = "activated_at_boundary"},
+      Key{.creation_timestamp = 250,
+          .expiration_timestamp = 400,
+          .activation_timestamp = 250,
+          .key_id = "not_yet_active"},
+  };
+
+  auto active_keys = GetActiveKeysAt(keys, /*timestamp_ns=*/200);
+
+  EXPECT_THAT(
+      active_keys,
+      UnorderedElementsAre(FieldsAre(100, 300, 100, "", "", "active_key"),
+                           FieldsAre(200, 400, 200, "", "",
+                                     "activated_at_boundary")));
+}
+
 }  // namespace google::scp::cpio::test

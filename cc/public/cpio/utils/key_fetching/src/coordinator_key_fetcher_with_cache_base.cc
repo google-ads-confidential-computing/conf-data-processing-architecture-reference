@@ -19,6 +19,7 @@
 #include <memory>
 #include <optional>
 #include <random>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <utility>
@@ -34,6 +35,7 @@
 #include "error_codes.h"
 #include "key_fetching_utils.h"
 
+using google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataRequest;
 using google::cmrt::sdk::private_key_service::v1::
     ListActiveEncryptionKeysRequest;
 using google::cmrt::sdk::private_key_service::v1::
@@ -80,6 +82,10 @@ constexpr size_t kAutoRefreshFetchActiveKeysStartTimeSubDiffInHours = 12;
 // during auto-refresh.
 constexpr size_t kAutoRefreshFetchActiveKeysEndTimeAddedDiffInHours = 7 * 24;
 
+// Check active key count 1 day in the future to ensure key service has enough
+// active keys.
+constexpr size_t kCheckActiveKeysCountAddedDiffInHours = 24;
+
 ListPrivateKeysRequest GetListPrivateKeysRequestBase(
     const KeyCoordinatorConfiguration& key_service_options) {
   ListPrivateKeysRequest request;
@@ -107,6 +113,19 @@ ListActiveEncryptionKeysRequest GetListActiveKeysRequestBase(
   }
   return request;
 }
+
+GetKeysetMetadataRequest GetKeysetMetadataRequestBase(
+    const KeyCoordinatorConfiguration& key_service_options) {
+  GetKeysetMetadataRequest get_keyset_metadata_request;
+  for (const auto& coordinator_info :
+       key_service_options.private_key_endpoints()) {
+    // Any coordinator info can be used to fetch the keyset metadata.
+    get_keyset_metadata_request.set_private_key_endpoint(
+        coordinator_info.endpoint());
+    return get_keyset_metadata_request;
+  }
+  return get_keyset_metadata_request;
+}
 }  // namespace
 
 template <typename LookupKeyT>
@@ -125,6 +144,8 @@ CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::
           GetListPrivateKeysRequestBase(key_service_options)),
       list_active_keys_request_base_(
           GetListActiveKeysRequestBase(key_service_options)),
+      get_keyset_metadata_request_base_(
+          GetKeysetMetadataRequestBase(key_service_options)),
       allowed_keysets_list_(key_service_options.key_namespace().begin(),
                             key_service_options.key_namespace().end()),
       key_fetcher_options_(std::move(key_fetcher_options)),
@@ -261,6 +282,7 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchKeys() noexcept {
   SleepRandomDuration();
   auto one_week = duration_cast<nanoseconds>(hours(24 * 7)).count();
   for (const auto& keyset_name : allowed_keysets_list_) {
+    FetchAndCacheKeysetMetadata(KeyFetchingType::kPrefetch, keyset_name);
     auto now = TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
     auto prefetch_config_iterator =
         key_fetcher_options_.prefetch_config_map.find(keyset_name);
@@ -469,6 +491,11 @@ void CoordinatorKeyFetcherWithCacheBase<
   while (!stop_notification_.WaitForNotificationWithTimeout(
       absl::Seconds(key_fetcher_options_.auto_refresh_time_duration.count()))) {
     for (const auto& keyset_name : allowed_keysets_list_) {
+      // Try to fetch the keyset metadata when active_key_count isn't
+      // being cached.
+      if (GetExpectedActiveKeyCount(keyset_name) == 0) {
+        FetchAndCacheKeysetMetadata(KeyFetchingType::kAutoRefresh, keyset_name);
+      }
       AutoRefreshKeys(keyset_name);
     }
   }
@@ -497,6 +524,7 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::AutoRefreshKeys(
       KeyFetchingType::kAutoRefresh, keyset_name, key_fetching_query_start_time,
       key_fetching_query_end_time);
   if (keys_or.Successful()) {
+    CheckEnoughActiveKeys(KeyFetchingType::kAutoRefresh, keyset_name, *keys_or);
     CacheValidKey(*keys_or);
   }
 }
@@ -570,6 +598,72 @@ bool CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::IncrementalPrefetchKeys(
   }
   cursor.end_time = start_time;
   return true;
+}
+
+template <typename LookupKeyT>
+void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::
+    FetchAndCacheKeysetMetadata(absl::string_view key_fetching_type,
+                                const std::string& keyset_name) noexcept {
+  GetKeysetMetadataRequest get_keyset_metadata_request =
+      get_keyset_metadata_request_base_;
+  get_keyset_metadata_request.set_keyset_name(keyset_name);
+  // Log keyset fetching request metric using OpenTelemetry
+  PushKeyFetchingRequestMetric(metric_client_, KeyType::kKeysetMetadata,
+                               key_fetching_type, keyset_name);
+
+  if (auto response_or =
+          key_client_.GetKeysetMetadataSync(get_keyset_metadata_request);
+      response_or.Successful()) {
+    std::unique_lock lock(keyset_metadata_mutex_);
+    auto& metadata = keyset_metadata_map_[keyset_name];
+    metadata.active_key_count = response_or->active_key_count();
+    metadata.backfill_days = response_or->backfill_days();
+  } else {
+    // Log keyset fetching error metric using OpenTelemetry
+    PushKeyFetchingErrorMetric(
+        metric_client_, KeyType::kKeysetMetadata, key_fetching_type,
+        keyset_name,
+        MapToKeyFetchingErrorString(response_or.result().status_code));
+    SCP_ERROR(component_name_, kZeroUuid, response_or.result(),
+              "keyset metadata fetching failed for keyset %s",
+              keyset_name.c_str());
+  }
+}
+
+template <typename LookupKeyT>
+int CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::GetExpectedActiveKeyCount(
+    absl::string_view keyset_name) noexcept {
+  std::shared_lock lock(keyset_metadata_mutex_);
+  auto it = keyset_metadata_map_.find(keyset_name);
+  return it != keyset_metadata_map_.end() ? it->second.active_key_count : 0;
+}
+
+template <typename LookupKeyT>
+void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::CheckEnoughActiveKeys(
+    absl::string_view key_fetching_type, const std::string& keyset_name,
+    const std::vector<Key>& fetched_keys) noexcept {
+  int expected_active_key_count = GetExpectedActiveKeyCount(keyset_name);
+  if (expected_active_key_count <= 0) {
+    return;
+  }
+  auto active_key_check_time_ns =
+      TimeProvider::GetWallTimestampInNanosecondsAsClockTicks() +
+      duration_cast<nanoseconds>(hours(kCheckActiveKeysCountAddedDiffInHours))
+          .count();
+  int fetched_active_key_count =
+      GetActiveKeysAt(fetched_keys, active_key_check_time_ns).size();
+  if (fetched_active_key_count != expected_active_key_count) {
+    PushKeyFetchingErrorMetric(metric_client_, key_type_, key_fetching_type,
+                               keyset_name,
+                               KeyFetchingErrorType::kActiveKeyCountMismatch);
+    SCP_ERROR_WITHOUT_RESULT(
+        component_name_, kZeroUuid,
+        "The number of fetched active keys in keyset %s does not match the "
+        "expected active key count at one time point. Fetched active key "
+        "count: %d, expected active key count: %d.",
+        keyset_name.c_str(), fetched_active_key_count,
+        expected_active_key_count);
+  }
 }
 
 template class CoordinatorKeyFetcherWithCacheBase<std::string>;

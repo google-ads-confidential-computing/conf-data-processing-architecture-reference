@@ -14,7 +14,7 @@
 
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
-package(default_visibility = ["//cc:scp_cc_internal_pkg"])
+package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "configuration_fetcher_mock",

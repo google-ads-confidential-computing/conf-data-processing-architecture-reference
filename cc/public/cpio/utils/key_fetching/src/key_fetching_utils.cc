@@ -62,4 +62,20 @@ vector<Key> ExtractKeys(const google::protobuf::RepeatedPtrField<
   return output_keys;
 }
 
+vector<Key> GetActiveKeysAt(const vector<Key>& keys,
+                            core::Timestamp timestamp_ns) noexcept {
+  vector<Key> active_keys;
+  for (const auto& key : keys) {
+    if (IsKeyActiveAt(key, timestamp_ns)) {
+      active_keys.push_back(key);
+    }
+  }
+  return active_keys;
+}
+
+bool IsKeyActiveAt(const Key& key, core::Timestamp timestamp_ns) noexcept {
+  return key.activation_timestamp <= timestamp_ns &&
+         key.expiration_timestamp > timestamp_ns;
+}
+
 }  // namespace google::scp::cpio

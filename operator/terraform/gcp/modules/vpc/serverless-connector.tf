@@ -19,7 +19,8 @@ module "serverless-connector" {
   project_id = var.project_id
   vpc_connectors = [
     for index, region in tolist(var.regions) : {
-      name    = "${var.environment}-${region}"
+      # Name is limited to 25 characters, so we truncate region to a 5-char hash
+      name    = "${var.environment}-${substr(md5(region), 0, 5)}"
       region  = region
       network = module.vpc_network.network_name
       # 16 IPs since max number of connectors is limited to 16 by the VPC

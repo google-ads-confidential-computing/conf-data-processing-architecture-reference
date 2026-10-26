@@ -35,6 +35,7 @@
 #include "public/cpio/utils/key_fetching/src/key_fetching_metric_utils.h"
 #include "public/cpio/utils/key_fetching/test/key_fetching_metric_matcher.h"
 
+using google::cmrt::sdk::private_key_service::v1::GetKeysetMetadataResponse;
 using google::cmrt::sdk::private_key_service::v1::
     ListActiveEncryptionKeysRequest;
 using google::cmrt::sdk::private_key_service::v1::
@@ -225,6 +226,24 @@ class OndemandKeyFetcherWithCacheTest : public ScpTestBase {
     ExpectOtelKeyAgeInDaysMetricPush(mock_metric_client_, call_count,
                                      KeyType::kEncryptionKey, key_fetching_type,
                                      keyset_name, key_age_in_days);
+  }
+
+  void ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      int call_count, absl::string_view key_fetching_type,
+      absl::string_view keyset_name = kKeyNamespace1) {
+    ExpectOtelKeyFetchingRequestMetricPush(mock_metric_client_, call_count,
+                                           KeyType::kKeysetMetadata,
+                                           key_fetching_type, keyset_name);
+  }
+
+  void ExpectOtelKeysetMetadataFetchingErrorMetricPush(
+      int call_count,
+      absl::string_view key_fetching_type = KeyFetchingType::kAutoRefresh,
+      absl::string_view keyset_name = kKeyNamespace1,
+      absl::string_view error_code = KeyFetchingErrorType::kGenericError) {
+    ExpectOtelKeyFetchingErrorMetricPush(
+        mock_metric_client_, call_count, KeyType::kKeysetMetadata,
+        key_fetching_type, keyset_name, error_code);
   }
 
   ListActiveEncryptionKeysRequest CreateBaseActiveKeysRequest(
@@ -509,6 +528,10 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
 
 TEST_F(OndemandKeyFetcherWithCacheTest,
        PrefetchingKeysWorksAndFurtherCallsUseCachedResult) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace2);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
@@ -529,6 +552,12 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
       CreateKeyServiceOptions(),
       KeyFetcherOptions{.prefetch_keys = true,
                         .prefetch_keys_max_age = max_age_seconds});
+
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .Times(2)
+      .WillRepeatedly(Return(keyset_metadata_response));
 
   auto key_create_ts =
       duration_cast<nanoseconds>((system_clock::now()).time_since_epoch());
@@ -784,6 +813,10 @@ class OndemandKeyFetcherWithCacheActiveTest
 
 TEST_F(OndemandKeyFetcherWithCacheActiveTest,
        PrefetchingActiveKeysSuccessfully) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace2);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
@@ -796,6 +829,12 @@ TEST_F(OndemandKeyFetcherWithCacheActiveTest,
 
   ExpectOtelEncryptionKeyCacheStatusMetricPush(
       1, kAllKeyNamespaces, KeyCacheStatus::kValidKeyCacheHit);
+
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .Times(2)
+      .WillRepeatedly(Return(keyset_metadata_response));
 
   auto key_create_ts =
       duration_cast<nanoseconds>((system_clock::now()).time_since_epoch());
@@ -820,6 +859,10 @@ TEST_F(OndemandKeyFetcherWithCacheActiveTest,
 }
 
 TEST_F(OndemandKeyFetcherWithCacheActiveTest, PrefetchingActiveKeysFails) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace2);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
@@ -835,6 +878,12 @@ TEST_F(OndemandKeyFetcherWithCacheActiveTest, PrefetchingActiveKeysFails) {
   ExpectOtelEncryptionKeyFetchingErrorMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace2,
       KeyFetchingErrorType::kGenericError);
+
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .Times(2)
+      .WillRepeatedly(Return(keyset_metadata_response));
 
   EXPECT_CALL(mock_key_client_,
               ListActiveEncryptionKeysSync(EqualsProtoIgnoringTimeRange(
@@ -887,6 +936,10 @@ TEST_F(OndemandKeyFetcherWithCacheActiveTest, PrefetchingActiveKeysFails) {
 
 TEST_F(OndemandKeyFetcherWithCacheActiveTest,
        PrefetchingActiveKeysPartialSuccess) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace2);
   // Namespace1 Success
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace1);
@@ -901,6 +954,12 @@ TEST_F(OndemandKeyFetcherWithCacheActiveTest,
   ExpectOtelEncryptionKeyFetchingErrorMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace2,
       KeyFetchingErrorType::kGenericError);
+
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .Times(2)
+      .WillRepeatedly(Return(keyset_metadata_response));
 
   auto key_create_ts =
       duration_cast<nanoseconds>((system_clock::now()).time_since_epoch());
@@ -955,6 +1014,10 @@ TEST_F(OndemandKeyFetcherWithCacheActiveTest,
 // API Succeeds with Empty Key List
 TEST_F(OndemandKeyFetcherWithCacheActiveTest,
        PrefetchingActiveKeysEmptyResponse) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace2);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
@@ -964,6 +1027,12 @@ TEST_F(OndemandKeyFetcherWithCacheActiveTest,
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace2);
   ExpectOtelEncryptionKeyFetchingErrorMetricPush(0);  // No errors
+
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .Times(2)
+      .WillRepeatedly(Return(keyset_metadata_response));
 
   EXPECT_CALL(mock_key_client_,
               ListActiveEncryptionKeysSync(EqualsProtoIgnoringTimeRange(
@@ -1003,6 +1072,8 @@ TEST_F(OndemandKeyFetcherWithCacheActiveTest,
 }
 
 TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchingFallbackOldListActiveKeys) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
@@ -1027,6 +1098,11 @@ TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchingFallbackOldListActiveKeys) {
       async_executor_, mock_key_client_, mock_metric_client_,
       key_service_options, key_fetcher_options);
 
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .WillOnce(Return(keyset_metadata_response));
+
   ListActiveEncryptionKeysRequest expected_request =
       CreateBaseActiveKeysRequest(kKeyNamespace1);
   auto key_create_ts =
@@ -1048,6 +1124,10 @@ TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchingFallbackOldListActiveKeys) {
 }
 
 TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchingWithOldAndNewSystem) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace2);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kPrefetch, kAllKeyNamespaces);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
@@ -1078,6 +1158,12 @@ TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchingWithOldAndNewSystem) {
       async_executor_, mock_key_client_, mock_metric_client_,
       key_service_options, key_fetcher_options);
 
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .Times(2)
+      .WillRepeatedly(Return(keyset_metadata_response));
+
   // Prefetching by key ID does not restrict the request to the keyset.
   ListPrivateKeysRequest expected_request1 = request_;
   expected_request1.add_key_ids(kInputKeyId1);
@@ -1107,6 +1193,8 @@ TEST_F(OndemandKeyFetcherWithCacheTest, PrefetchingWithOldAndNewSystem) {
 
 TEST_F(OndemandKeyFetcherWithCacheTest,
        PrefetchListingKeysFailsNoRetryNewConfig) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
@@ -1137,6 +1225,11 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
       async_executor_, mock_key_client_, mock_metric_client_,
       key_service_options, key_fetcher_options);
 
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .WillOnce(Return(keyset_metadata_response));
+
   ListActiveEncryptionKeysRequest expected_request =
       CreateBaseActiveKeysRequest(kKeyNamespace1);
   EXPECT_CALL(mock_key_client_,
@@ -1151,6 +1244,8 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
 
 TEST_F(OndemandKeyFetcherWithCacheTest,
        PrefetchListingKeysFailsWithRetryNewConfig) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kPrefetch, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kPrefetch, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
@@ -1187,6 +1282,11 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
       async_executor_, mock_key_client_, mock_metric_client_,
       key_service_options, key_fetcher_options);
 
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .WillOnce(Return(keyset_metadata_response));
+
   ListActiveEncryptionKeysRequest expected_request =
       CreateBaseActiveKeysRequest(kKeyNamespace1);
   EXPECT_CALL(mock_key_client_,
@@ -1202,6 +1302,8 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
 
 TEST_F(OndemandKeyFetcherWithCacheTest,
        AutoRefreshKeysSuccessfullyWhenFlagEnabled) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       -1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
@@ -1222,9 +1324,15 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
       async_executor_, mock_key_client_, mock_metric_client_,
       key_service_options, key_fetcher_options, /*metric_namespace=*/"");
 
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .WillOnce(Return(keyset_metadata_response));
+
   absl::Notification notification;
   auto key_create_ts =
-      duration_cast<nanoseconds>((system_clock::now()).time_since_epoch());
+      duration_cast<nanoseconds>((system_clock::now()).time_since_epoch()) -
+      hours(24);
   ListActiveEncryptionKeysResponse response;
   response.mutable_private_keys()->Add(CreatePrivateKey1(key_create_ts));
   ListActiveEncryptionKeysRequest expected_request =
@@ -1257,6 +1365,8 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
 
 TEST_F(OndemandKeyFetcherWithCacheTest,
        AutoRefreshKeysHandlesFailureGracefully) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingRequestMetricPush(
       1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
   ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
@@ -1277,6 +1387,11 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
       async_executor_, mock_key_client_, mock_metric_client_,
       key_service_options, key_fetcher_options, /*metric_namespace=*/"");
 
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .WillOnce(Return(keyset_metadata_response));
+
   absl::Notification notification;
   ListActiveEncryptionKeysRequest expected_request =
       CreateBaseActiveKeysRequest(kKeyNamespace1);
@@ -1288,6 +1403,166 @@ TEST_F(OndemandKeyFetcherWithCacheTest,
           notification.Notify();
         }
         return FailureExecutionResult(SC_UNKNOWN);
+      });
+
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Init());
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Run());
+
+  EXPECT_TRUE(notification.WaitForNotificationWithTimeout(absl::Seconds(5)));
+
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Stop());
+}
+
+TEST_F(OndemandKeyFetcherWithCacheTest,
+       AutoRefreshKeysetMetadataFailurePushesErrorMetric) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelKeysetMetadataFetchingErrorMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1,
+      KeyFetchingErrorType::kGenericError);
+  ExpectOtelEncryptionKeyFetchingRequestMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+
+  auto key_service_options = CreateKeyServiceOptions();
+  key_service_options.mutable_key_namespace()->Clear();
+  key_service_options.add_key_namespace(kKeyNamespace1);
+
+  KeyFetcherOptions key_fetcher_options{
+      .encryption_key_enable_auto_refresh = true,
+      .encryption_key_auto_refresh_time_duration = std::chrono::seconds(1),
+  };
+  OndemandKeyFetcherWithCache key_fetcher_with_auto_refresh(
+      async_executor_, mock_key_client_, mock_metric_client_,
+      key_service_options, key_fetcher_options, /*metric_namespace=*/"");
+
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .WillOnce(Return(FailureExecutionResult(SC_UNKNOWN)));
+
+  absl::Notification notification;
+  ListActiveEncryptionKeysRequest expected_request =
+      CreateBaseActiveKeysRequest(kKeyNamespace1);
+  EXPECT_CALL(mock_key_client_,
+              ListActiveEncryptionKeysSync(
+                  EqualsProtoIgnoringTimeRange(expected_request)))
+      .WillOnce([&notification](const auto&) {
+        if (!notification.HasBeenNotified()) {
+          notification.Notify();
+        }
+        return ListActiveEncryptionKeysResponse();
+      });
+
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Init());
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Run());
+
+  EXPECT_TRUE(notification.WaitForNotificationWithTimeout(absl::Seconds(5)));
+
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Stop());
+}
+
+TEST_F(OndemandKeyFetcherWithCacheTest,
+       AutoRefreshKeysPushesErrorMetricOnActiveKeyCountMismatch) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingRequestMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingErrorMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1,
+      KeyFetchingErrorType::kActiveKeyCountMismatch);
+
+  auto key_service_options = CreateKeyServiceOptions();
+  key_service_options.mutable_key_namespace()->Clear();
+  key_service_options.add_key_namespace(kKeyNamespace1);
+
+  KeyFetcherOptions key_fetcher_options{
+      .encryption_key_enable_auto_refresh = true,
+      .encryption_key_auto_refresh_time_duration = std::chrono::seconds(1),
+  };
+  OndemandKeyFetcherWithCache key_fetcher_with_auto_refresh(
+      async_executor_, mock_key_client_, mock_metric_client_,
+      key_service_options, key_fetcher_options, /*metric_namespace=*/"");
+
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(2);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .WillOnce(Return(keyset_metadata_response));
+
+  absl::Notification notification;
+  auto key_create_ts =
+      duration_cast<nanoseconds>((system_clock::now()).time_since_epoch()) -
+      hours(24);
+  ListActiveEncryptionKeysResponse response;
+  response.mutable_private_keys()->Add(CreatePrivateKey1(key_create_ts));
+  ListActiveEncryptionKeysRequest expected_request =
+      CreateBaseActiveKeysRequest(kKeyNamespace1);
+  EXPECT_CALL(mock_key_client_,
+              ListActiveEncryptionKeysSync(
+                  EqualsProtoIgnoringTimeRange(expected_request)))
+      .WillOnce([response, &notification](const auto&) {
+        if (!notification.HasBeenNotified()) {
+          notification.Notify();
+        }
+        return response;
+      });
+
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Init());
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Run());
+
+  EXPECT_TRUE(notification.WaitForNotificationWithTimeout(absl::Seconds(5)));
+
+  EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Stop());
+}
+
+TEST_F(OndemandKeyFetcherWithCacheTest,
+       AutoRefreshKeysPushesErrorMetricWhenKeyNotActiveAtCheckTime) {
+  ExpectOtelKeysetMetadataFetchingRequestMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingRequestMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingLatencyMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1);
+  ExpectOtelEncryptionKeyFetchingErrorMetricPush(
+      1, KeyFetchingType::kAutoRefresh, kKeyNamespace1,
+      KeyFetchingErrorType::kActiveKeyCountMismatch);
+
+  auto key_service_options = CreateKeyServiceOptions();
+  key_service_options.mutable_key_namespace()->Clear();
+  key_service_options.add_key_namespace(kKeyNamespace1);
+
+  KeyFetcherOptions key_fetcher_options{
+      .encryption_key_enable_auto_refresh = true,
+      .encryption_key_auto_refresh_time_duration = std::chrono::seconds(1),
+  };
+  OndemandKeyFetcherWithCache key_fetcher_with_auto_refresh(
+      async_executor_, mock_key_client_, mock_metric_client_,
+      key_service_options, key_fetcher_options, /*metric_namespace=*/"");
+
+  GetKeysetMetadataResponse keyset_metadata_response;
+  keyset_metadata_response.set_active_key_count(1);
+  EXPECT_CALL(mock_key_client_, GetKeysetMetadataSync)
+      .WillOnce(Return(keyset_metadata_response));
+
+  absl::Notification notification;
+  // Key activated at `now + 48h` is after `active_key_check_time` (now + 24h),
+  // so it is not active at `active_key_check_time`.
+  auto key_create_ts =
+      duration_cast<nanoseconds>((system_clock::now()).time_since_epoch()) +
+      hours(48);
+  ListActiveEncryptionKeysResponse response;
+  response.mutable_private_keys()->Add(CreatePrivateKey1(key_create_ts));
+  ListActiveEncryptionKeysRequest expected_request =
+      CreateBaseActiveKeysRequest(kKeyNamespace1);
+  EXPECT_CALL(mock_key_client_,
+              ListActiveEncryptionKeysSync(
+                  EqualsProtoIgnoringTimeRange(expected_request)))
+      .WillOnce([response, &notification](const auto&) {
+        if (!notification.HasBeenNotified()) {
+          notification.Notify();
+        }
+        return response;
       });
 
   EXPECT_SUCCESS(key_fetcher_with_auto_refresh.Init());

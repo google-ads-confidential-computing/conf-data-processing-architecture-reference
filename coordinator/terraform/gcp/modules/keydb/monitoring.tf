@@ -14,7 +14,7 @@
 
 
 resource "google_monitoring_alert_policy" "key_db_spanner_alert" {
-  display_name = "${var.environment} Key DB Cpu Utiliziation Too High Alert "
+  display_name = "${var.environment} Key DB CPU Utilization Too High Alert"
   project      = var.project_id
 
   # Required but not relevant since there is only 1 condition
@@ -26,7 +26,7 @@ resource "google_monitoring_alert_policy" "key_db_spanner_alert" {
   }
 
   conditions {
-    display_name = "Alert on key db using too much memory"
+    display_name = "Alert on Key DB using too much CPU"
 
     condition_threshold {
       # The amount of time that a time series must violate the threshold to be considered failing.

@@ -19,9 +19,11 @@
 #include <chrono>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "absl/base/no_destructor.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/strings/escaping.h"
 #include "core/common/global_logger/src/global_logger.h"
 #include "core/common/time_provider/src/time_provider.h"
 #include "core/interface/async_executor_interface.h"
@@ -126,6 +128,18 @@ ExecutionResultOr<string> CoordinatorWrappedKeyHandlerWithCache::DecryptDek(
   auto decryption_start_time_in_ns =
       TimeProvider::GetSteadyTimestampInNanosecondsAsClockTicks();
 
+  string decoded_encrypted_dek;
+  if (!absl::Base64Unescape(wrapped_key.encrypted_dek(),
+                            &decoded_encrypted_dek)) {
+    auto result = FailureExecutionResult(SC_CPIO_INVALID_ARGUMENT);
+    SCP_ERROR_EVERY_PERIOD(
+        kLogPeriod, kCoordinatorWrappedKeyHandlerWithCacheComponentName,
+        kZeroUuid, result,
+        "Failed to base64 decode encrypted_dek for key_id (%s).",
+        wrapped_key.key_id().c_str());
+    return result;
+  }
+
   auto key_or = coordinator_key_cache_.GetKey(wrapped_key.key_id());
   if (!key_or.Successful()) {
     SCP_ERROR_EVERY_PERIOD(kLogPeriod,
@@ -148,7 +162,7 @@ ExecutionResultOr<string> CoordinatorWrappedKeyHandlerWithCache::DecryptDek(
   HpkeDecryptRequest decrypt_request;
   *decrypt_request.mutable_tink_key_binary() = key_or->private_key;
   decrypt_request.mutable_encrypted_data()->set_ciphertext(
-      wrapped_key.encrypted_dek());
+      std::move(decoded_encrypted_dek));
 
   auto response_or = crypto_client_.HpkeDecryptSync(decrypt_request);
 

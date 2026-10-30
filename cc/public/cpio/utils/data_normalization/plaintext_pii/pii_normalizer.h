@@ -26,12 +26,18 @@
 
 namespace google::scp::cpio {
 
-// Normalize an email address by perform lowercasing all ASCII characters,
-// and, if configured, canonicalize Google-owned email addresses so that
-// they can be used for equivalent-comparison.
+struct NormalizeEmailOptions {
+  bool should_strip_parts_after_plus_sign = false;
+  bool should_strip_periods_in_facebookmail = false;
+  bool should_replace_googlemail_with_gmail = true;
+};
+
+// Normalize an email address by stripping surrounding ASCII whitespaces,
+// lowercasing all ASCII characters, and, if configured, canonicalize
+// Google-owned email addresses so that they can be used for
+// equivalent-comparison.
 core::ExecutionResultOr<std::string> NormalizeEmail(
-    const std::string& email, bool should_strip_parts_after_plus_sign,
-    bool should_strip_periods_in_facebookmail);
+    const std::string& email, const NormalizeEmailOptions& options = {});
 
 // Normalize a phone number to ITU-T E.164 standard (i.e. "+16502530000".)
 // With an optional country code as a hint, numbers without +<countrycode>

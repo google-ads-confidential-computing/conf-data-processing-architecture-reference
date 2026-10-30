@@ -134,8 +134,6 @@ void GcpKmsClientProvider::Decrypt(
       bind(&GcpKmsClientProvider::AeadDecrypt, this, decrypt_context);
 
   AsyncOperation decrypt_call_with_retries = [this, decrypt_context]() mutable {
-    SCP_INFO(kGcpKmsClientProvider, kZeroUuid,
-             kGcpKmsClientAeadDecryptRetryLogTemplate, "CALL");
     io_operation_dispatcher_
         .Dispatch<AsyncContext<DecryptRequest, DecryptResponse>>(
             decrypt_context,

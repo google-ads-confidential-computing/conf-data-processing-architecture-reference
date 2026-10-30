@@ -51,13 +51,15 @@ const auto& canonical_country_code_map = GetCanonicalCountriesMap();
 }  // namespace
 
 ExecutionResultOr<std::string> NormalizeEmail(
-    const std::string& email, bool should_strip_parts_after_plus_sign,
-    bool should_strip_periods_in_facebookmail) {
-  std::string lowercase_email = absl::AsciiStrToLower(email);
+    const std::string& email, const NormalizeEmailOptions& options) {
+  std::string lowercase_email =
+      absl::AsciiStrToLower(absl::StripAsciiWhitespace(email));
 
   // Replace googlemail.com with canoncialized gmail.com
-  lowercase_email =
-      absl::StrReplaceAll(lowercase_email, {{kGoogleMailDomain, kGmailDomain}});
+  if (options.should_replace_googlemail_with_gmail) {
+    lowercase_email = absl::StrReplaceAll(lowercase_email,
+                                          {{kGoogleMailDomain, kGmailDomain}});
+  }
 
   // Split username and domain parts of email
   std::vector<std::string> parts = absl::StrSplit(lowercase_email, '@');
@@ -68,19 +70,19 @@ ExecutionResultOr<std::string> NormalizeEmail(
   std::string local_part = parts.front();
   std::string domain_part = parts.back();
 
-  // For gmail domains, we always strip periods. Parts after plus sign
-  // can also be stripped if configured.
-  if (domain_part == kGmailDomain) {
+  // For gmail and googlemail domains, we always strip periods. Parts after plus
+  // sign can also be stripped if configured.
+  if (domain_part == kGmailDomain || domain_part == kGoogleMailDomain) {
     local_part = absl::StrReplaceAll(local_part, {{".", ""}});
 
-    if (should_strip_parts_after_plus_sign) {
+    if (options.should_strip_parts_after_plus_sign) {
       auto plus_pos = local_part.find('+');
       if (plus_pos != std::string::npos) {
         local_part = local_part.substr(0, plus_pos);
       }
     }
   } else if (domain_part == kFacebookmailDomain &&
-             should_strip_periods_in_facebookmail) {
+             options.should_strip_periods_in_facebookmail) {
     // For facebookmail.com emails, we strip periods if configured.
     local_part = absl::StrReplaceAll(local_part, {{".", ""}});
   }

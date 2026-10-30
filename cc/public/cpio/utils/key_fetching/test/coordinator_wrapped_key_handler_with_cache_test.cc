@@ -24,6 +24,7 @@
 #include <thread>
 #include <vector>
 
+#include "absl/strings/escaping.h"
 #include "cc/core/async_executor/src/async_executor.h"
 #include "cc/core/test/utils/proto_test_utils.h"
 #include "cc/core/test/utils/scp_test_base.h"
@@ -145,7 +146,8 @@ class CoordinatorWrappedKeyHandlerWithCacheTest : public ScpTestBase {
  protected:
   void SetUp() override {
     coordinator_wrapped_key_.set_key_id(string(kKeyId));
-    coordinator_wrapped_key_.set_encrypted_dek(string(kEncryptedDek));
+    coordinator_wrapped_key_.set_encrypted_dek(
+        absl::Base64Escape(kEncryptedDek));
 
     coordinator_key_.key_id = string(kKeyId);
     coordinator_key_.private_key = string(kPrivateKey);
@@ -274,6 +276,30 @@ TEST_F(CoordinatorWrappedKeyHandlerWithCacheTest,
   auto decrypted_dek_or = wrapped_key_handler_.GetKey(
       BuildCloudWrappedKey(coordinator_wrapped_key_));
   EXPECT_THAT(decrypted_dek_or, IsSuccessfulAndHolds(string(kDecryptedDek)));
+}
+
+TEST_F(CoordinatorWrappedKeyHandlerWithCacheTest,
+       GetKeyFailedWhenEncryptedDekIsInvalidBase64) {
+  ExpectOtelEncryptionKeyFetchingRequestMetricPush(1);
+  ExpectOtelEncryptionKeyFetchingLatencyMetricPush(0);
+  ExpectOtelEncryptionKeyCacheStatusMetricPush(
+      1, KeyCacheStatus::kValidKeyCacheMiss);
+  ExpectOtelEncryptionKeyCacheStatusMetricPush(
+      1, KeyCacheStatus::kInvalidKeyCacheHit);
+  ExpectOtelEncryptionKeyFetchingErrorMetricPush(
+      1, KeyFetchingErrorType::kInvalidKeyId);
+
+  EXPECT_CALL(mock_key_fetcher_with_cache_, GetKey).Times(0);
+  EXPECT_CALL(mock_crypto_client_, HpkeDecryptSync).Times(0);
+
+  coordinator_wrapped_key_.set_encrypted_dek("invalid_base64!");
+  auto cloud_wrapped_key = BuildCloudWrappedKey(coordinator_wrapped_key_);
+  EXPECT_THAT(wrapped_key_handler_.GetKey(cloud_wrapped_key),
+              ResultIs(FailureExecutionResult(SC_CPIO_INVALID_ARGUMENT)));
+
+  // Subsequent call hits the failure cache without attempting decryption again.
+  EXPECT_THAT(wrapped_key_handler_.GetKey(cloud_wrapped_key),
+              ResultIs(FailureExecutionResult(SC_CPIO_INVALID_ARGUMENT)));
 }
 
 TEST_F(CoordinatorWrappedKeyHandlerWithCacheTest,

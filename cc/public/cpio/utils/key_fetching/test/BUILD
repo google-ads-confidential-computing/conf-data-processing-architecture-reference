@@ -123,6 +123,7 @@ cc_test(
         "//cc/public/cpio/utils/key_fetching/interface:key_fetcher_with_cache_interface",
         "//cc/public/cpio/utils/key_fetching/src:error_codes",
         "//cc/public/cpio/utils/key_fetching/src:key_fetching",
+        "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",

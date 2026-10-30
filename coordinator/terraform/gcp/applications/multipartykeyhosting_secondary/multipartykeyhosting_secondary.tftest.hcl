@@ -73,6 +73,7 @@ variables {
   private_key_service_cloud_run_min_instances          = 0
   private_key_service_cloud_run_max_instances          = 0
   private_key_service_execution_environment            = ""
+  private_key_service_addon_cloud_run_config           = {}
   enable_private_key_service_cache                     = false
   private_key_service_cache_refresh_in_minutes         = 0
   private_key_service_enable_canary_feature            = false
@@ -112,6 +113,7 @@ variables {
   private_key_service_lb_max_99_percent_latency_ms               = 100
   private_key_service_alarm_duration_sec                         = 0
   get_encrypted_private_key_general_error_threshold              = 0
+  get_encrypted_private_key_missing_key_threshold                = 0
   private_key_service_exception_alert_threshold                  = 0
   private_key_service_config_read_alert_threshold                = 0
   alert_severity_overrides                                       = {}
@@ -168,24 +170,9 @@ variables {
   private_key_service_enable_revision_pinning = false
   private_key_service_stable_revisions        = {}
 
-  private_key_service_cloud_run_5xx_error_alarm                = null
-  private_key_service_cloud_run_5xx_error_alarm_by_region      = {}
-  private_key_service_cloud_run_execution_time_alarm           = null
-  private_key_service_cloud_run_execution_time_alarm_by_region = {}
-  private_key_service_config_read_error_alarm                  = null
-  private_key_service_get_encrypted_private_key_error_alarm    = null
-  private_key_service_exception_alarm                          = null
-  private_key_service_load_balancer_5xx_error_ratio_alarm      = null
-  private_key_service_load_balancer_95_percent_latency_alarm   = null
-  private_key_service_load_balancer_99_percent_latency_alarm   = null
-  private_key_service_cloud_armor_high_block_ratio_alarm       = null
-  private_key_service_cloud_armor_rate_limit_denials_alarm     = null
-
-  key_storage_service_cloud_run_5xx_error_alarm              = null
-  key_storage_service_cloud_run_execution_time_alarm         = null
-  key_storage_service_load_balancer_5xx_error_ratio_alarm    = null
-  key_storage_service_load_balancer_95_percent_latency_alarm = null
-  key_storage_service_load_balancer_99_percent_latency_alarm = null
+  key_storage_service_alarms       = {}
+  private_key_service_alarms       = {}
+  private_key_service_addon_alarms = {}
 }
 
 # All run blocks should have "command = plan".
@@ -477,27 +464,31 @@ run "propagates_structured_alarm_configs_to_private_ks_and_key_storage_service" 
 
   variables {
     alarms_enabled = true
-    private_key_service_cloud_run_execution_time_alarm_by_region = {
-      "us-central1" = {
-        threshold    = 1600
-        duration_sec = 240
+    private_key_service_alarms = {
+      cloud_run_execution_time_alarm_by_region = {
+        "us-central1" = {
+          threshold    = 1600
+          duration_sec = 240
+        }
+      }
+      config_read_error_alarm = {
+        threshold    = 6
+        duration_sec = 300
+      }
+      load_balancer_95_percent_latency_alarm = {
+        threshold    = 450
+        duration_sec = 600
       }
     }
-    private_key_service_config_read_error_alarm = {
-      threshold    = 6
-      duration_sec = 300
-    }
-    private_key_service_load_balancer_95_percent_latency_alarm = {
-      threshold    = 450
-      duration_sec = 600
-    }
-    key_storage_service_cloud_run_execution_time_alarm = {
-      threshold    = 2500
-      duration_sec = 180
-    }
-    key_storage_service_load_balancer_99_percent_latency_alarm = {
-      threshold    = 950
-      duration_sec = 300
+    key_storage_service_alarms = {
+      cloud_run_execution_time_alarm = {
+        threshold    = 2500
+        duration_sec = 180
+      }
+      load_balancer_99_percent_latency_alarm = {
+        threshold    = 950
+        duration_sec = 300
+      }
     }
   }
 
@@ -526,8 +517,8 @@ run "propagates_structured_alarm_configs_to_private_ks_and_key_storage_service" 
       module.private_key_service.config_read_error_alarm.auto_close_sec == 1800
     )
     error_message = <<-EOT
-      Expected private_key_service_config_read_error_alarm threshold override (6)
-      and resolved defaults to propagate.
+      Expected private_key_service_alarms.config_read_error_alarm threshold
+      override (6) and resolved defaults to propagate.
     EOT
   }
 
@@ -537,7 +528,7 @@ run "propagates_structured_alarm_configs_to_private_ks_and_key_storage_service" 
       module.private_key_service.load_balancer_95_percent_latency_alarm.auto_close_sec == 1800
     )
     error_message = <<-EOT
-      Expected private_key_service_load_balancer_95_percent_latency_alarm
+      Expected private_key_service_alarms.load_balancer_95_percent_latency_alarm
       threshold override (450) and resolved defaults to propagate.
     EOT
   }
@@ -548,7 +539,7 @@ run "propagates_structured_alarm_configs_to_private_ks_and_key_storage_service" 
       module.keystorageservice.cloud_run_execution_time_alarm.auto_close_sec == 1800
     )
     error_message = <<-EOT
-      Expected key_storage_service_cloud_run_execution_time_alarm threshold
+      Expected key_storage_service_alarms.cloud_run_execution_time_alarm threshold
       override (2500) and resolved defaults to propagate.
     EOT
   }
@@ -559,8 +550,256 @@ run "propagates_structured_alarm_configs_to_private_ks_and_key_storage_service" 
       module.keystorageservice.load_balancer_99_percent_latency_alarm.auto_close_sec == 1800
     )
     error_message = <<-EOT
-      Expected key_storage_service_load_balancer_99_percent_latency_alarm
+      Expected key_storage_service_alarms.load_balancer_99_percent_latency_alarm
       threshold override (950) and resolved defaults to propagate.
+    EOT
+  }
+}
+
+run "overrides_private_key_service_addon_alarms_independently_of_primary" {
+  command = plan
+
+  variables {
+    alarms_enabled                                   = true
+    secondary_region                                 = "us-east1"
+    secondary_region_zone                            = "us-east1-b"
+    private_key_service_addon_container_image_url    = "url"
+    private_key_service_alarm_duration_sec           = 600
+    private_key_service_lb_max_95_percent_latency_ms = 450
+
+    private_key_service_alarms = {
+      cloud_run_execution_time_alarm_by_region = {
+        "us-central1" = {
+          threshold    = 1600
+          duration_sec = 240
+        }
+      }
+      config_read_error_alarm = {
+        threshold    = 6
+        duration_sec = 300
+      }
+      get_encrypted_private_key_error_alarm = {
+        threshold = 2
+      }
+      get_encrypted_private_key_missing_key_alarm = {
+        threshold    = 50
+        duration_sec = 240
+      }
+      load_balancer_95_percent_latency_alarm = {
+        threshold = 200
+      }
+    }
+
+    private_key_service_addon_alarms = {
+      cloud_run_execution_time_alarm = {
+        threshold    = 2000
+        duration_sec = 180
+      }
+      cloud_run_execution_time_alarm_by_region = {
+        "us-central1" = {
+          threshold = 2500
+        }
+      }
+      config_read_error_alarm = {
+        threshold = 9
+      }
+      get_encrypted_private_key_missing_key_alarm = {
+        enable_alarm = false
+        threshold    = 100
+      }
+      load_balancer_99_percent_latency_alarm = {
+        enable_alarm = false
+      }
+    }
+  }
+
+  override_module {
+    target = module.key_management_service
+    outputs = {
+      kms_key_ring_id = "ring_id"
+      kms_key_ids     = {}
+    }
+  }
+
+  assert {
+    condition = (
+      module.private_key_service.cloud_run_execution_time_alarms_by_region["us-central1"].threshold == 1600 &&
+      module.private_key_service.cloud_run_execution_time_alarms_by_region["us-central1"].duration_sec == 240 &&
+      module.private_key_service_addon[0].cloud_run_execution_time_alarms_by_region["us-central1"].threshold == 2500 &&
+      module.private_key_service_addon[0].cloud_run_execution_time_alarms_by_region["us-central1"].duration_sec == 180 &&
+      module.private_key_service_addon[0].cloud_run_execution_time_alarms_by_region["us-east1"].threshold == 2000 &&
+      module.private_key_service_addon[0].cloud_run_execution_time_alarms_by_region["us-east1"].duration_sec == 180
+    )
+    error_message = <<-EOT
+      Expected addon regional Cloud Run execution time override (2500) to take
+      precedence over addon non-regional override (2000, 180s) in us-central1,
+      while us-east1 uses the addon non-regional override independently of
+      primary.
+    EOT
+  }
+
+  assert {
+    condition = (
+      module.private_key_service.config_read_error_alarm.threshold == 6 &&
+      module.private_key_service.config_read_error_alarm.duration_sec == 300 &&
+      module.private_key_service_addon[0].config_read_error_alarm.threshold == 9 &&
+      module.private_key_service_addon[0].config_read_error_alarm.duration_sec == 600
+    )
+    error_message = <<-EOT
+      Expected addon config_read_error_alarm threshold override (9) to apply
+      while falling back to flat baseline duration_sec (600) rather than primary
+      alarm duration_sec (300).
+    EOT
+  }
+
+  assert {
+    condition = (
+      module.private_key_service.get_encrypted_private_key_error_alarm.threshold == 2 &&
+      module.private_key_service.get_encrypted_private_key_missing_key_alarm.threshold == 50 &&
+      module.private_key_service.get_encrypted_private_key_missing_key_alarm.duration_sec == 240 &&
+      module.private_key_service.get_encrypted_private_key_missing_key_alarm.enable_alarm == true &&
+      module.private_key_service_addon[0].get_encrypted_private_key_error_alarm.threshold == 0 &&
+      module.private_key_service_addon[0].get_encrypted_private_key_missing_key_alarm.enable_alarm == false &&
+      module.private_key_service_addon[0].get_encrypted_private_key_missing_key_alarm.threshold == 100 &&
+      module.private_key_service_addon[0].get_encrypted_private_key_missing_key_alarm.duration_sec == 600
+    )
+    error_message = <<-EOT
+      Expected get_encrypted_private_key_missing_key_alarm and
+      get_encrypted_private_key_error_alarm to resolve independently across
+      primary and addon Private Key Service modules.
+    EOT
+  }
+
+  assert {
+    condition = (
+      module.private_key_service.load_balancer_99_percent_latency_alarm.enable_alarm == true &&
+      module.private_key_service_addon[0].load_balancer_99_percent_latency_alarm.enable_alarm == false
+    )
+    error_message = <<-EOT
+      Expected private_key_service_addon load_balancer_99_percent_latency_alarm
+      override (enable_alarm = false) to apply independently of primary.
+    EOT
+  }
+
+  assert {
+    condition = (
+      module.private_key_service.load_balancer_95_percent_latency_alarm.threshold == 200 &&
+      module.private_key_service_addon[0].load_balancer_95_percent_latency_alarm.threshold == 450
+    )
+    error_message = <<-EOT
+      Expected unset addon load_balancer_95_percent_latency_alarm to fall back
+      to flat baseline private_key_service_lb_max_95_percent_latency_ms (450)
+      independently of primary override (200).
+    EOT
+  }
+}
+
+run "disables_private_key_service_addon_alarms_when_addon_alarms_enabled_is_false" {
+  command = plan
+
+  variables {
+    alarms_enabled                                = true
+    private_key_service_addon_container_image_url = "url"
+
+    private_key_service_alarms = {
+      config_read_error_alarm = {
+        enable_alarm = true
+        threshold    = 5
+      }
+      cloud_run_execution_time_alarm_by_region = {
+        "us-central1" = {
+          enable_alarm = true
+          threshold    = 1500
+        }
+      }
+      load_balancer_95_percent_latency_alarm = {
+        enable_alarm = true
+        threshold    = 400
+      }
+    }
+
+    private_key_service_addon_alarms = {
+      alarms_enabled = false
+    }
+  }
+
+  override_module {
+    target = module.key_management_service
+    outputs = {
+      kms_key_ring_id = "ring_id"
+      kms_key_ids     = {}
+    }
+  }
+
+  assert {
+    condition = (
+      module.private_key_service.config_read_error_alarm.enable_alarm == true &&
+      module.private_key_service.cloud_run_execution_time_alarms_by_region["us-central1"].enable_alarm == true &&
+      module.private_key_service.load_balancer_95_percent_latency_alarm.enable_alarm == true &&
+      module.private_key_service_addon[0].config_read_error_alarm.enable_alarm == false &&
+      module.private_key_service_addon[0].cloud_run_execution_time_alarms_by_region["us-central1"].enable_alarm == false &&
+      module.private_key_service_addon[0].load_balancer_95_percent_latency_alarm.enable_alarm == false
+    )
+    error_message = <<-EOT
+      Expected private_key_service_addon_alarms.alarms_enabled = false to disable
+      addon alarms across log-based, regional Cloud Run, and Load Balancer alerts
+      even when primary_alarm.enable_alarm is true.
+    EOT
+  }
+}
+
+run "overrides_private_key_service_addon_cloud_run_config_independently_of_primary" {
+  command = plan
+
+  variables {
+    private_key_service_addon_container_image_url = "addon_image"
+    private_key_service_cloud_run_cpu_count       = 8
+    private_key_service_cloud_run_memory_mb       = 8192
+    private_key_service_cloud_run_concurrency     = 50
+    private_key_service_cloud_run_min_instances   = 5
+    private_key_service_cloud_run_max_instances   = 100
+    private_key_service_cloud_run_timeout_sec     = 120
+
+    private_key_service_addon_cloud_run_config = {
+      concurrency        = 250
+      min_instance_count = 2
+      max_instance_count = 20
+      cpu_count          = 4
+    }
+  }
+
+  override_module {
+    target = module.key_management_service
+    outputs = {
+      kms_key_ring_id = "ring_id"
+      kms_key_ids     = {}
+    }
+  }
+
+  assert {
+    condition = module.private_key_service.cloud_run_configs_by_region["us-central1"] == {
+      concurrency        = 50
+      max_instance_count = 100
+      min_instance_count = 5
+      cpu_count          = 8
+      memory_mb          = 8192
+      timeout_sec        = 120
+    }
+    error_message = "Primary private_key_service should retain its original Cloud Run configuration."
+  }
+
+  assert {
+    condition = module.private_key_service_addon[0].cloud_run_configs_by_region["us-central1"] == {
+      concurrency        = 250
+      max_instance_count = 20
+      min_instance_count = 2
+      cpu_count          = 4
+      memory_mb          = 8192
+      timeout_sec        = 120
+    }
+    error_message = <<-EOT
+      Addon private_key_service_addon should apply overridden Cloud Run settings
+      and inherit unset fields from primary.
     EOT
   }
 }

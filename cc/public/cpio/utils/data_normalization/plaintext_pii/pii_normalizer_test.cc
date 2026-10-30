@@ -38,34 +38,45 @@ using google::scp::core::test::ScpTestBase;
 class PiiNormalizerTest : public ScpTestBase {};
 
 TEST_F(PiiNormalizerTest, NormalizeEmailSuccess) {
-  auto result = NormalizeEmail("TEST@gmail.com",
-                               /*should_strip_parts_after_plus_sign=*/false,
-                               /*should_strip_periods_in_facebookmail=*/false);
+  auto result = NormalizeEmail("TEST@gmail.com");
   EXPECT_THAT(result, ResultIs(SuccessExecutionResult()));
   EXPECT_EQ(result.value(), "test@gmail.com");
 }
 
 TEST_F(PiiNormalizerTest, NormalizeEmailWithGoogleMailDomain) {
-  auto result = NormalizeEmail("TEST@googlemail.com",
-                               /*should_strip_parts_after_plus_sign=*/false,
-                               /*should_strip_periods_in_facebookmail=*/false);
+  auto result = NormalizeEmail("TEST@googlemail.com");
   EXPECT_THAT(result, ResultIs(SuccessExecutionResult()));
   EXPECT_EQ(result.value(), "test@gmail.com");
 }
 
+TEST_F(PiiNormalizerTest,
+       NormalizeEmailWithGoogleMailDomainReplacementDisabled) {
+  auto result = NormalizeEmail("TEST@googlemail.com",
+                               {.should_replace_googlemail_with_gmail = false});
+  EXPECT_THAT(result, ResultIs(SuccessExecutionResult()));
+  EXPECT_EQ(result.value(), "test@googlemail.com");
+
+  result = NormalizeEmail("user.name+user@GOOGLEMAIL.com",
+                          {.should_replace_googlemail_with_gmail = false});
+  EXPECT_THAT(result, ResultIs(SuccessExecutionResult()));
+  EXPECT_EQ(result.value(), "username+user@googlemail.com");
+
+  result = NormalizeEmail("user.name+user@GOOGLEMAIL.com",
+                          {.should_strip_parts_after_plus_sign = true,
+                           .should_replace_googlemail_with_gmail = false});
+  EXPECT_THAT(result, ResultIs(SuccessExecutionResult()));
+  EXPECT_EQ(result.value(), "username@googlemail.com");
+}
+
 TEST_F(PiiNormalizerTest, NormalizeEmailMalformed) {
-  auto result = NormalizeEmail("TESTgmail.com",
-                               /*should_strip_parts_after_plus_sign=*/false,
-                               /*should_strip_periods_in_facebookmail=*/false);
+  auto result = NormalizeEmail("TESTgmail.com");
   EXPECT_THAT(result,
               ResultIs(FailureExecutionResult(
                   SC_CPIO_PLAINTEXT_PII_NORMALIZER_MALFORMED_EMAIL_FAILURE)));
 }
 
 TEST_F(PiiNormalizerTest, NormalizeEmailStripPeriods) {
-  auto result = NormalizeEmail("test.user@GMAIL.com",
-                               /*should_strip_parts_after_plus_sign=*/false,
-                               /*should_strip_periods_in_facebookmail=*/false);
+  auto result = NormalizeEmail("test.user@GMAIL.com");
   EXPECT_THAT(
       result,
       ResultIs(SuccessExecutionResult()));  // test.user@GMAIL.com, false, false
@@ -74,24 +85,37 @@ TEST_F(PiiNormalizerTest, NormalizeEmailStripPeriods) {
 
 TEST_F(PiiNormalizerTest, NormalizeEmailStripPlusSign) {
   auto result = NormalizeEmail("test+user@gmail.com",
-                               /*should_strip_parts_after_plus_sign=*/true,
-                               /*should_strip_periods_in_facebookmail=*/false);
+                               {.should_strip_parts_after_plus_sign = true});
   EXPECT_THAT(result, ResultIs(SuccessExecutionResult()));
   EXPECT_EQ(result.value(), "test@gmail.com");
 
   result = NormalizeEmail("user.name+user@gmail.com",
-                          /*should_strip_parts_after_plus_sign=*/true,
-                          /*should_strip_periods_in_facebookmail=*/false);
+                          {.should_strip_parts_after_plus_sign = true});
   EXPECT_THAT(result, ResultIs(SuccessExecutionResult()));
   EXPECT_EQ(result.value(), "username@gmail.com");
 }
 
 TEST_F(PiiNormalizerTest, NormalizeEmailStripPeriodsInFacebookmail) {
   auto result = NormalizeEmail("test.user@facebookmail.com",
-                               /*should_strip_parts_after_plus_sign=*/false,
-                               /*should_strip_periods_in_facebookmail=*/true);
+                               {.should_strip_periods_in_facebookmail = true});
   EXPECT_THAT(result, ResultIs(SuccessExecutionResult()));
   EXPECT_EQ(result.value(), "testuser@facebookmail.com");
+}
+
+TEST_F(PiiNormalizerTest, NormalizeEmailStripSurroundingWhitespaces) {
+  auto result = NormalizeEmail(" \tTEST@gmail.com\r\n ");
+  EXPECT_THAT(result, ResultIs(SuccessExecutionResult()));
+  EXPECT_EQ(result.value(), "test@gmail.com");
+
+  result = NormalizeEmail("  user.name+user@GOOGLEMAIL.com\n",
+                          {.should_strip_parts_after_plus_sign = true});
+  EXPECT_THAT(result, ResultIs(SuccessExecutionResult()));
+  EXPECT_EQ(result.value(), "username@gmail.com");
+
+  result = NormalizeEmail("   ");
+  EXPECT_THAT(result,
+              ResultIs(FailureExecutionResult(
+                  SC_CPIO_PLAINTEXT_PII_NORMALIZER_MALFORMED_EMAIL_FAILURE)));
 }
 
 TEST_F(PiiNormalizerTest, NormalizePhoneNumberSuccessWithPlusSign) {

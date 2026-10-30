@@ -81,3 +81,16 @@ run "generates_outputs_with_plan" {
     error_message = "Wrong instance"
   }
 }
+
+run "creates_key_db_spanner_alert" {
+  command = plan
+
+  assert {
+    condition     = google_monitoring_alert_policy.key_db_spanner_alert.display_name == "environment Key DB CPU Utilization Too High Alert"
+    error_message = "Wrong Key DB alert display_name"
+  }
+  assert {
+    condition     = google_monitoring_alert_policy.key_db_spanner_alert.conditions[0].display_name == "Alert on Key DB using too much CPU"
+    error_message = "Wrong Key DB alert condition display_name"
+  }
+}

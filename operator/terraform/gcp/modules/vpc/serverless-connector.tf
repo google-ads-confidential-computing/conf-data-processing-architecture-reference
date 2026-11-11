@@ -12,6 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  vpc_connector_names = {
+    for region in var.regions :
+    region => (
+      length("${var.environment}-${region}") > 25
+      ? "${var.environment}-${substr(md5(region), 0, 5)}"
+      : "${var.environment}-${region}"
+    )
+  }
+}
+
 module "serverless-connector" {
   count      = var.create_connectors ? 1 : 0
   version    = "~> 15.2.0"
@@ -19,8 +30,9 @@ module "serverless-connector" {
   project_id = var.project_id
   vpc_connectors = [
     for index, region in tolist(var.regions) : {
-      # Name is limited to 25 characters, so we truncate region to a 5-char hash
-      name    = "${var.environment}-${substr(md5(region), 0, 5)}"
+      # Name is limited to 25 characters, so truncate region to a 5-char hash
+      # when "<environment>-<region>" exceeds 25 characters.
+      name    = local.vpc_connector_names[region]
       region  = region
       network = module.vpc_network.network_name
       # 16 IPs since max number of connectors is limited to 16 by the VPC

@@ -36,4 +36,10 @@ DEFINE_ERROR_CODE(
     "not start with plus sign.",
     HttpStatusCode::BAD_REQUEST)
 
+DEFINE_ERROR_CODE(
+    SC_CPIO_PLAINTEXT_PII_NORMALIZER_INVALID_ZIP_CODE_FAILURE,
+    SC_CPIO_PLAINTEXT_PII_NORMALIZER, 0x0005,
+    "Failed to normalize zip code as it contains no alphanumeric characters.",
+    HttpStatusCode::BAD_REQUEST)
+
 }  // namespace google::scp::core::errors

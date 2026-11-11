@@ -52,6 +52,25 @@ run "creates_connectors" {
     condition     = output.connectors != null
     error_message = "Connectors not created"
   }
+  assert {
+    condition     = local.vpc_connector_names["us"] == "environment-us"
+    error_message = "Expected unhashed connector name environment-us when <= 25 chars"
+  }
+}
+
+run "hashes_connector_name_when_exceeding_25_chars" {
+  command = plan
+
+  variables {
+    environment        = "postsubmit-mp"
+    regions            = ["europe-west1"]
+    worker_subnet_cidr = { "europe-west1" : "0.0.0.1/0" }
+    create_connectors  = true
+  }
+  assert {
+    condition     = local.vpc_connector_names["europe-west1"] == "postsubmit-mp-6138f"
+    error_message = "Expected hashed connector name postsubmit-mp-6138f when > 25 chars"
+  }
 }
 
 run "cidr_blocks_missing_region_fail_precondition" {

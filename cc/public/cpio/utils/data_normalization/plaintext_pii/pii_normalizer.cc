@@ -22,6 +22,7 @@
 
 #include "absl/base/no_destructor.h"
 #include "absl/strings/ascii.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/strip.h"
@@ -38,11 +39,14 @@ using google::scp::core::FailureExecutionResult;
 using google::scp::core::errors::
     SC_CPIO_PLAINTEXT_PII_NORMALIZER_INVALID_PHONE_NUMBER_COUNTRY_CODE_FAILURE;
 using google::scp::core::errors::
+    SC_CPIO_PLAINTEXT_PII_NORMALIZER_INVALID_ZIP_CODE_FAILURE;
+using google::scp::core::errors::
     SC_CPIO_PLAINTEXT_PII_NORMALIZER_MALFORMED_EMAIL_FAILURE;
 
 constexpr char kGmailDomain[] = "gmail.com";
 constexpr char kGoogleMailDomain[] = "googlemail.com";
 constexpr char kFacebookmailDomain[] = "facebookmail.com";
+constexpr char kUsCountryCode[] = "us";
 constexpr const char* kNameTitlesToStrip[] = {"mr.", "mrs.", "ms.", "dr."};
 
 const auto& phone_country_code_map = GetPhoneCountryCodesMap();
@@ -157,9 +161,9 @@ ExecutionResultOr<std::string> NormalizeName(
   return normalized_name;
 }
 
-ExecutionResultOr<std::string> NormalizeCountryCode(
-    const std::string& country) {
-  std::string normalized_country = absl::AsciiStrToLower(country);
+std::string NormalizeCountryCode(const std::string& country) {
+  std::string normalized_country =
+      absl::AsciiStrToLower(absl::StripAsciiWhitespace(country));
   auto it = canonical_country_code_map.find(normalized_country);
   if (it != canonical_country_code_map.end()) {
     return it->second;
@@ -167,7 +171,7 @@ ExecutionResultOr<std::string> NormalizeCountryCode(
   return normalized_country;
 }
 
-ExecutionResultOr<std::string> NormalizeAlphaNumeric(const std::string& input) {
+std::string NormalizeAlphaNumeric(const std::string& input) {
   std::string result;
   for (char c : input) {
     if (absl::ascii_isalnum(c)) {
@@ -178,12 +182,34 @@ ExecutionResultOr<std::string> NormalizeAlphaNumeric(const std::string& input) {
 }
 
 ExecutionResultOr<std::string> NormalizeZipCode(
-    const std::string& zip_code,
-    bool should_only_trim_surrounding_whitespaces) {
-  if (should_only_trim_surrounding_whitespaces) {
+    const std::string& zip_code, const NormalizeZipCodeOptions& options) {
+  if (options.should_only_trim_surrounding_whitespaces) {
     return std::string(absl::StripAsciiWhitespace(zip_code));
   }
-  return NormalizeAlphaNumeric(zip_code);
+  std::string result = NormalizeAlphaNumeric(zip_code);
+  if (options.to_lowercase) {
+    result = absl::AsciiStrToLower(result);
+  }
+  if (options.fail_on_empty && result.empty()) {
+    return FailureExecutionResult(
+        SC_CPIO_PLAINTEXT_PII_NORMALIZER_INVALID_ZIP_CODE_FAILURE);
+  }
+
+  if (options.country_code.has_value() &&
+      NormalizeCountryCode(*options.country_code) == kUsCountryCode) {
+    if (options.zero_pad_us_zip_code && !result.empty()) {
+      if (result.length() < 5) {
+        result.insert(0, 5 - result.length(), '0');
+      } else if (result.length() > 5 && result.length() < 9) {
+        result.insert(0, 9 - result.length(), '0');
+      }
+    }
+    if (options.truncate_us_zip_code && result.length() == 9) {
+      return result.substr(0, 5);
+    }
+  }
+
+  return result;
 }
 
 }  // namespace google::scp::cpio

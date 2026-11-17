@@ -20,7 +20,6 @@ cc_library(
     name = "metric_client_provider_common_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

@@ -20,7 +20,6 @@ cc_library(
     name = "nosql_database_provider_common_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

@@ -20,7 +20,6 @@ cc_library(
     name = "core_blob_storage_provider_common_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

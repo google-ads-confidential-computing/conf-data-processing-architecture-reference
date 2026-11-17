@@ -20,7 +20,6 @@ cc_library(
     name = "parameter_client_provider_gcp_interface",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

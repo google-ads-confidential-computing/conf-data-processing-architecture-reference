@@ -72,6 +72,24 @@ DEFINE_ERROR_CODE(SC_CPIO_EXHAUSTED_RETRIES, SC_CPIO, 0x0013,
                   "Retry count exhausted",
                   HttpStatusCode::INTERNAL_SERVER_ERROR)
 
+// Granular errors for customer-managed wrapped keys, returned when unwrapping
+// a data encryption key (DEK) with a key encryption key (KEK) in a cloud KMS.
+DEFINE_ERROR_CODE(SC_CPIO_DEK_DECRYPTION_ERROR, SC_CPIO, 0x0014,
+                  "The encrypted DEK is missing, malformed, or cannot be "
+                  "decrypted with the KEK",
+                  HttpStatusCode::BAD_REQUEST)
+DEFINE_ERROR_CODE(SC_CPIO_INVALID_KEK, SC_CPIO, 0x0015,
+                  "The KEK is missing, malformed, does not exist, or is "
+                  "disabled",
+                  HttpStatusCode::BAD_REQUEST)
+DEFINE_ERROR_CODE(SC_CPIO_FEDERATED_AUTH_FAILED, SC_CPIO, 0x0016,
+                  "Failed to authenticate with the cloud through identity "
+                  "federation",
+                  HttpStatusCode::UNAUTHORIZED)
+DEFINE_ERROR_CODE(SC_CPIO_KEK_PERMISSION_DENIED, SC_CPIO, 0x0017,
+                  "Permission denied to decrypt with the KEK",
+                  HttpStatusCode::FORBIDDEN)
+
 // Map CPIO unknown error
 MAP_TO_PUBLIC_ERROR_CODE(SC_UNKNOWN, SC_CPIO_UNKNOWN_ERROR)
 }  // namespace google::scp::core::errors

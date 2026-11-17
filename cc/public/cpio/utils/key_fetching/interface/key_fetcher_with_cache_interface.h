@@ -29,21 +29,32 @@
 namespace google::scp::cpio {
 
 struct KeyFetcherOptions {
+  // Whether to enable prefetch for encryption keys.
   bool prefetch_keys = false;
+  // Whether to enable retry for prefetch and auto-refresh for both encryption
+  // and sid keys.
   bool prefetch_retry = false;
+  // The maximum time to wait for prefetch for both encryption and sid keys.
   uint64_t max_prefetch_wait_time_millis = 10 * 1000;
+  // The maximum age of the keys to be prefetched for encryption keys.
   std::chrono::seconds prefetch_keys_max_age =
-      std::chrono::seconds(14 * 24 * 60 * 60);
+      std::chrono::seconds(7 * 24 * 60 * 60);
+  // The lifetime of the keys in the key cache for encryption keys.
   std::chrono::seconds key_cache_lifetime =
       std::chrono::seconds(14 * 24 * 60 * 60);
+  // The lifetime of the fetching failure in the key cache for encryption keys.
   std::chrono::seconds fetching_failure_cache_lifetime =
       std::chrono::seconds(5 * 60);
 
+  // The auto-refresh time duration for sid keys.
   std::chrono::seconds auto_refresh_time_duration =
       std::chrono::seconds(24 * 60 * 60);
 
+  // The maximum time to wait for on-demand fetching for both encryption and
+  // sid keys.
   std::chrono::milliseconds on_demand_fetching_waiting_timeout =
       std::chrono::milliseconds(2000);  // 2s
+  // Whether to use read lock for cache read for encryption keys.
   bool use_read_lock_for_cache_read = false;
 
   // The validity period of the HMAC key stored in the HMAC cache is calculated
@@ -53,9 +64,11 @@ struct KeyFetcherOptions {
   // using expired keys from the cache, while also allowing for some flexibility
   // in key rotation. The value can be adjusted based on the expected key
   // rotation frequency and the acceptable risk of using slightly older keys.
+  // This is for sid keys.
   uint64_t auto_refresh_key_cache_valid_in_days = 1;
 
-  // Map of keyset namespace to its given prefetch configuration.
+  // Map of keyset namespace to its given prefetch configuration. This is for
+  // encryption keys.
   absl::flat_hash_map<
       std::string,
       google::cmrt::sdk::v1::EncryptionKeyPrefetchConfig::KeysetPrefetchConfig>

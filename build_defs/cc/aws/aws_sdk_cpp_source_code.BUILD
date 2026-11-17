@@ -30,7 +30,6 @@ cc_library(
         "aws-cpp-sdk-core/source/auth/*.cpp",
         "aws-cpp-sdk-core/source/client/*.cpp",
         "aws-cpp-sdk-core/source/internal/*.cpp",
-        "aws-cpp-sdk-core/source/aws/model/*.cpp",
         "aws-cpp-sdk-core/source/http/*.cpp",
         "aws-cpp-sdk-core/source/http/standard/*.cpp",
         "aws-cpp-sdk-core/source/config/*.cpp",

@@ -60,7 +60,7 @@ def _glob_terraform_configuration_files():
     # Otherwise, the files are ignored.
     # Also see
     # https://www.terraform.io/docs/configuration/index.html#code-organization.
-    return native.glob(["*.tf", "*.tf.json"])
+    return native.glob(["*.tf", "*.tf.json"], allow_empty = True)
 
 def tf_module(
         name,

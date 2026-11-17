@@ -20,7 +20,6 @@ cc_library(
     name = "cpio_utils_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

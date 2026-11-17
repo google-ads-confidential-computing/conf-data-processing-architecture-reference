@@ -21,7 +21,6 @@ cc_library(
     testonly = True,
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

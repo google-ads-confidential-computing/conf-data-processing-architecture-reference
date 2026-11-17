@@ -20,7 +20,6 @@ cc_library(
     name = "sync_utils",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

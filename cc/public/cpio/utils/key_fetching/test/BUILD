@@ -84,6 +84,24 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "valid_keys_fetcher_with_cache_test",
+    srcs = [
+        "valid_keys_fetcher_with_cache_test.cc",
+    ],
+    deps = [
+        ":key_fetching_metric_matcher",
+        "//cc/core/test/utils:utils_lib",
+        "//cc/public/core/test/interface:execution_result_matchers",
+        "//cc/public/cpio/mock/private_key_client:private_key_client_mock",
+        "//cc/public/cpio/utils:proto_utils",
+        "//cc/public/cpio/utils/dual_writing_metric_client/mock:dual_writing_metric_client_mock",
+        "//cc/public/cpio/utils/key_fetching/src:key_fetching_metric_utils",
+        "//cc/public/cpio/utils/key_fetching/src:valid_keys_fetcher_with_cache",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "key_fetching_metric_matcher",
     testonly = 1,

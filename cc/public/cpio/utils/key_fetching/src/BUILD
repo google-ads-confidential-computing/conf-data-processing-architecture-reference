@@ -115,6 +115,22 @@ cc_library(
 )
 
 cc_library(
+    name = "valid_keys_fetcher_with_cache",
+    srcs = ["valid_keys_fetcher_with_cache.cc"],
+    hdrs = [
+        "valid_keys_fetcher_with_cache.h",
+    ],
+    deps = [
+        ":coordinator_key_fetcher_with_cache_base",
+        ":key_fetching_utils",
+        "//cc/core/common/time_provider/src:time_provider_lib",
+        "//cc/public/cpio/utils/key_fetching/interface:valid_keys_cache_interface",
+        "//cc/public/cpio/utils/key_fetching/proto:key_coordinator_configuration_cc_proto",
+        "@com_google_protobuf//:protobuf",
+    ],
+)
+
+cc_library(
     name = "key_fetching",
     srcs = [
         "aws_wrapped_key_handler_with_cache.cc",

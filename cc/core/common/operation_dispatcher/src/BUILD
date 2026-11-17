@@ -20,7 +20,6 @@ cc_library(
     name = "operation_dispatcher_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

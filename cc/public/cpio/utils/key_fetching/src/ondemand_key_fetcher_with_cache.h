@@ -89,14 +89,14 @@ class OndemandKeyFetcherWithCache
                           core::ExecutionResult failure_result) noexcept;
 
   /// Remove key_id from in_progress cache.
-  void MarkFetchingFinished(const std::string& key_id) noexcept override;
+  void MarkFetchingFinished(const std::string& key_id) noexcept;
   /**
    * @brief Add key_id to in_progress cache when it is not yet.
    *
    * @return true made the operation.
    * @return false the key_id is already in the in progress cache and skip add.
    */
-  bool MarkFetchingInProgress(const std::string& key_id) noexcept override;
+  bool MarkFetchingInProgress(const std::string& key_id) noexcept;
   /// Check if the key_id is in the in progress cache.
   bool FetchingInProgress(const std::string& key_id) noexcept override;
 
@@ -106,7 +106,7 @@ class OndemandKeyFetcherWithCache
 
   /// Determine if the auto refresh for a given keyset should be performed.
   bool ShouldPerformAutoRefresh(
-      absl::string_view keyset_name) noexcept override;
+      const std::string& keyset_name) noexcept override;
 
   core::common::AutoExpiryConcurrentMap<std::string, Key> key_cache_;
   // A cache of key IDs and key fetching failures.

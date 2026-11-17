@@ -47,7 +47,7 @@ struct BaseKeyFetcherOptions {
   std::chrono::milliseconds max_prefetch_wait_time =
       std::chrono::milliseconds(10 * 1000);  // 10s
   std::chrono::seconds prefetch_keys_max_age =
-      std::chrono::seconds(14 * 24 * 60 * 60);  // 14 days
+      std::chrono::seconds(7 * 24 * 60 * 60);  // 7 days
   std::chrono::milliseconds on_demand_fetching_waiting_timeout =
       std::chrono::milliseconds(2000);  // 2s
   absl::flat_hash_map<
@@ -60,6 +60,7 @@ struct BaseKeyFetcherOptions {
   bool enable_incremental_prefetch = false;
   std::chrono::seconds incremental_prefetch_time_duration =
       std::chrono::seconds(5 * 60);  // 5m
+  bool enable_backfill = false;
 };
 
 /**
@@ -93,22 +94,12 @@ class CoordinatorKeyFetcherWithCacheBase {
   /// Cache valid keys.
   virtual void CacheValidKey(const std::vector<Key>& valid_keys) noexcept = 0;
 
-  /// Mark key fetching status as finished.
-  virtual void MarkFetchingFinished(const LookupKeyT& lookup_key) noexcept = 0;
-  /**
-   * @brief Mark the key fetching status as in progress when it is not yet.
-   *
-   * @return true made the operation.
-   * @return false the status is already in progress and skip add.
-   */
-  virtual bool MarkFetchingInProgress(
-      const LookupKeyT& lookup_key) noexcept = 0;
   /// Check if the key fetching is in progress.
   virtual bool FetchingInProgress(const LookupKeyT& lookup_key) noexcept = 0;
 
   /// Determine if the auto refresh for a given keyset should be performed.
   virtual bool ShouldPerformAutoRefresh(
-      absl::string_view keyset_name) noexcept = 0;
+      const std::string& keyset_name) noexcept = 0;
 
   /**
    * @brief Fetch the key with the given key ID using the ListPrivateKeys API
@@ -127,8 +118,50 @@ class CoordinatorKeyFetcherWithCacheBase {
   /// running.
   void StopBackgroundThreads() noexcept;
 
+  // Fetches active keys in [start_time, end_time] for the keyset using the
+  // ListActiveKeys API. For prefetch and auto-refresh, retries once on failure
+  // if enable_retry_in_prefetch_and_autorefresh is set.
+  core::ExecutionResultOr<std::vector<Key>> FetchKeysInTimeRange(
+      absl::string_view key_fetching_type, const std::string& keyset_name,
+      const google::protobuf::Timestamp& start_time,
+      const google::protobuf::Timestamp& end_time) noexcept;
+
   /// Wait for the key fetching finishing.
   void WaitForKeyReady(const LookupKeyT& lookup_key) noexcept;
+
+  /// Fetches the keyset metadata for the given keyset and caches it.
+  ///
+  /// @param key_fetching_type The type of key fetching.
+  /// @param keyset_name The name of the keyset.
+  void FetchAndCacheKeysetMetadata(absl::string_view key_fetching_type,
+                                   const std::string& keyset_name) noexcept;
+
+  /// Returns the active key count for the given keyset fetched from Key Service
+  /// GetKeysetMetadata API.
+  ///
+  /// @param keyset_name The name of the keyset.
+  /// @return The active key count for the given keyset fetched from Key Service
+  /// GetKeysetMetadata API.
+  int GetExpectedActiveKeyCount(absl::string_view keyset_name) noexcept;
+
+  /// Returns the backfill days for the given keyset fetched from Key Service
+  /// GetKeysetMetadata API.
+  ///
+  /// @param keyset_name The name of the keyset.
+  /// @return The backfill days for the given keyset, or -1 if unfetched.
+  int GetBackfillDays(absl::string_view keyset_name) noexcept;
+
+  /// Calculates the query start time for fetching active keys, accounting for
+  /// the base lookback duration and any backfill days configured for the
+  /// keyset.
+  ///
+  /// @param keyset_name The name of the keyset.
+  /// @param now_ns The current wall timestamp in nanoseconds.
+  /// @param base_lookback The base duration to subtract from `now_ns`.
+  /// @return The query start timestamp.
+  google::protobuf::Timestamp GetKeyFetchingQueryStartTime(
+      absl::string_view keyset_name, core::Timestamp now_ns,
+      std::chrono::nanoseconds base_lookback) noexcept;
 
   DualWritingMetricClientInterface& metric_client_;
   std::string key_type_;
@@ -173,14 +206,6 @@ class CoordinatorKeyFetcherWithCacheBase {
   /// Prefetch recent keys.
   void PrefetchKeys() noexcept;
 
-  // Fetches active keys in [start_time, end_time] for the keyset using the
-  // ListActiveKeys API. For prefetch and auto-refresh, retries once on failure
-  // if enable_retry_in_prefetch_and_autorefresh is set.
-  core::ExecutionResultOr<std::vector<Key>> FetchKeysInTimeRange(
-      absl::string_view key_fetching_type, const std::string& keyset_name,
-      const google::protobuf::Timestamp& start_time,
-      const google::protobuf::Timestamp& end_time) noexcept;
-
   // Function to convert an error during key fetching to a string
   // for metric recording.
   std::string MapToKeyFetchingErrorString(
@@ -202,21 +227,6 @@ class CoordinatorKeyFetcherWithCacheBase {
   /// cutoff has already been reached.
   bool IncrementalPrefetchKeys(const std::string& keyset_name,
                                IncrementalPrefetchCursor& cursor) noexcept;
-
-  /// Fetches the keyset metadata for the given keyset and caches it.
-  ///
-  /// @param key_fetching_type The type of key fetching.
-  /// @param keyset_name The name of the keyset.
-  void FetchAndCacheKeysetMetadata(absl::string_view key_fetching_type,
-                                   const std::string& keyset_name) noexcept;
-
-  /// Returns the active key count for the given keyset fetched from Key Service
-  /// GetKeysetMetadata API.
-  ///
-  /// @param keyset_name The name of the keyset.
-  /// @return The active key count for the given keyset fetched from Key Service
-  /// GetKeysetMetadata API.
-  int GetExpectedActiveKeyCount(absl::string_view keyset_name) noexcept;
 
   /// Checks if the number of fetched active keys matches the expected active
   /// key count for the given keyset, and records an error metric if not.

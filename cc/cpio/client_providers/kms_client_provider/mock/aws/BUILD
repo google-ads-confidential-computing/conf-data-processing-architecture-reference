@@ -20,7 +20,6 @@ cc_library(
     name = "aws_kms_client_provider_mock",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

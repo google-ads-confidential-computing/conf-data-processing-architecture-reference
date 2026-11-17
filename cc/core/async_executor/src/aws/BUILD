@@ -20,7 +20,6 @@ cc_library(
     name = "core_aws_async_executor_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

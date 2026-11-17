@@ -20,7 +20,6 @@ cc_library(
     name = "auto_scaling_client_mock",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

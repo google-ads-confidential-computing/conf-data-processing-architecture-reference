@@ -20,7 +20,6 @@ cc_library(
     name = "instance_database_provider_common_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

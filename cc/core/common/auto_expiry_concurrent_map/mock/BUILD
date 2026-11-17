@@ -20,7 +20,6 @@ cc_library(
     name = "auto_expiry_concurrent_map_mock",
     srcs = glob(
         [
-            "**/*.cc",
             "**/*.h",
         ],
     ),

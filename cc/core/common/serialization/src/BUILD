@@ -20,7 +20,6 @@ cc_library(
     name = "serialization_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

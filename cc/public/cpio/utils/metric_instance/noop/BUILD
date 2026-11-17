@@ -20,7 +20,6 @@ cc_library(
     name = "noop_metric_instance",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

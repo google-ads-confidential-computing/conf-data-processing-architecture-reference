@@ -16,6 +16,8 @@
 
 #include "coordinator_key_fetcher_with_cache_base.h"
 
+#include <algorithm>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <random>
@@ -85,6 +87,26 @@ constexpr size_t kAutoRefreshFetchActiveKeysEndTimeAddedDiffInHours = 7 * 24;
 // Check active key count 1 day in the future to ensure key service has enough
 // active keys.
 constexpr size_t kCheckActiveKeysCountAddedDiffInHours = 24;
+
+constexpr uint64_t kOneMillisecondInNanoseconds =
+    duration_cast<nanoseconds>(milliseconds(1)).count();
+
+// Subtract 1ms from the earliest activation timestamp so the next query's
+// inclusive end_time (`ActivationTime <= end_time` in Key Service) excludes
+// the key group that was already fetched.
+core::Timestamp GetTimeBeforeEarliestActivation(const std::vector<Key>& keys) {
+  core::Timestamp earliest_before_activation =
+      std::numeric_limits<core::Timestamp>::max();
+  for (const auto& key : keys) {
+    core::Timestamp before_activation =
+        key.activation_timestamp > kOneMillisecondInNanoseconds
+            ? key.activation_timestamp - kOneMillisecondInNanoseconds
+            : 0;
+    earliest_before_activation =
+        std::min(earliest_before_activation, before_activation);
+  }
+  return earliest_before_activation;
+}
 
 ListPrivateKeysRequest GetListPrivateKeysRequestBase(
     const KeyCoordinatorConfiguration& key_service_options) {
@@ -329,12 +351,10 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::PrefetchKeys() noexcept {
     } else {
       // ListActiveKeys needs to specify its start and end time to ensure the
       // behaviours for ListPrivateKeys and ListActiveKeys are in sync in the
-      // legacy prefetch. Start time for the old prefetch system is (now - age
-      // + 1 week) End time for the old prefetch system is (now + 1 week)
-      int64_t age =
-          duration_cast<nanoseconds>(key_fetcher_options_.prefetch_keys_max_age)
-              .count();
-      auto start_time = TimeUtil::NanosecondsToTimestamp(now - age + one_week);
+      // legacy prefetch. Start time for the old prefetch system is (now - age)
+      // End time for the old prefetch system is (now + 1 week)
+      auto start_time = GetKeyFetchingQueryStartTime(
+          keyset_name, now, key_fetcher_options_.prefetch_keys_max_age);
       auto end_time = TimeUtil::NanosecondsToTimestamp(now + one_week);
       auto keys_or = FetchKeysInTimeRange(KeyFetchingType::kPrefetch,
                                           keyset_name, start_time, end_time);
@@ -491,11 +511,6 @@ void CoordinatorKeyFetcherWithCacheBase<
   while (!stop_notification_.WaitForNotificationWithTimeout(
       absl::Seconds(key_fetcher_options_.auto_refresh_time_duration.count()))) {
     for (const auto& keyset_name : allowed_keysets_list_) {
-      // Try to fetch the keyset metadata when active_key_count isn't
-      // being cached.
-      if (GetExpectedActiveKeyCount(keyset_name) == 0) {
-        FetchAndCacheKeysetMetadata(KeyFetchingType::kAutoRefresh, keyset_name);
-      }
       AutoRefreshKeys(keyset_name);
     }
   }
@@ -504,6 +519,11 @@ void CoordinatorKeyFetcherWithCacheBase<
 template <typename LookupKeyT>
 void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::AutoRefreshKeys(
     std::string keyset_name) noexcept {
+  // Try to fetch the keyset metadata when active_key_count isn't
+  // being cached.
+  if (GetExpectedActiveKeyCount(keyset_name) == 0) {
+    FetchAndCacheKeysetMetadata(KeyFetchingType::kAutoRefresh, keyset_name);
+  }
   if (!ShouldPerformAutoRefresh(keyset_name)) {
     return;
   }
@@ -511,10 +531,9 @@ void CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::AutoRefreshKeys(
             keyset_name.c_str());
 
   auto now = TimeProvider::GetWallTimestampInNanosecondsAsClockTicks();
-  auto key_fetching_query_start_time = TimeUtil::NanosecondsToTimestamp(
-      now - duration_cast<nanoseconds>(
-                hours(kAutoRefreshFetchActiveKeysStartTimeSubDiffInHours))
-                .count());
+  auto key_fetching_query_start_time = GetKeyFetchingQueryStartTime(
+      keyset_name, now,
+      hours(kAutoRefreshFetchActiveKeysStartTimeSubDiffInHours));
   auto key_fetching_query_end_time = TimeUtil::NanosecondsToTimestamp(
       now + duration_cast<nanoseconds>(
                 hours(kAutoRefreshFetchActiveKeysEndTimeAddedDiffInHours))
@@ -579,24 +598,33 @@ bool CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::IncrementalPrefetchKeys(
     return false;
   }
 
-  auto end_time = cursor.end_time;
-  auto start_time = std::max(cursor.earliest_prefetch_start_time,
-                             end_time - cursor.step_duration_in_ns);
+  auto step_end_time_ns = cursor.end_time;
+  auto step_start_time_ns =
+      std::max(cursor.earliest_prefetch_start_time,
+               step_end_time_ns - cursor.step_duration_in_ns);
 
-  auto start_timestamp = TimeUtil::NanosecondsToTimestamp(start_time);
-  auto end_timestamp = TimeUtil::NanosecondsToTimestamp(end_time);
+  auto step_start_timestamp =
+      TimeUtil::NanosecondsToTimestamp(step_start_time_ns);
+  auto step_end_timestamp = TimeUtil::NanosecondsToTimestamp(step_end_time_ns);
   SCP_INFO(component_name_, kZeroUuid,
            "Incremental prefetch keys for keyset %s from %s to %s.",
-           keyset_name.c_str(), TimeUtil::ToString(start_timestamp).c_str(),
-           TimeUtil::ToString(end_timestamp).c_str());
+           keyset_name.c_str(),
+           TimeUtil::ToString(step_start_timestamp).c_str(),
+           TimeUtil::ToString(step_end_timestamp).c_str());
 
   auto keys_or =
       FetchKeysInTimeRange(KeyFetchingType::kIncrementalPrefetch, keyset_name,
-                           start_timestamp, end_timestamp);
+                           step_start_timestamp, step_end_timestamp);
   if (keys_or.Successful()) {
     CacheValidKey(*keys_or);
+    // Cursor end_time is the end time of the next prefetch window and we
+    // calculate it here based on the previous start time or the earliest
+    // fetched key's activation time.
+    cursor.end_time =
+        std::min(step_start_time_ns, GetTimeBeforeEarliestActivation(*keys_or));
+  } else {
+    cursor.end_time = step_start_time_ns;
   }
-  cursor.end_time = start_time;
   return true;
 }
 
@@ -636,6 +664,26 @@ int CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::GetExpectedActiveKeyCount(
   std::shared_lock lock(keyset_metadata_mutex_);
   auto it = keyset_metadata_map_.find(keyset_name);
   return it != keyset_metadata_map_.end() ? it->second.active_key_count : 0;
+}
+
+template <typename LookupKeyT>
+int CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::GetBackfillDays(
+    absl::string_view keyset_name) noexcept {
+  std::shared_lock lock(keyset_metadata_mutex_);
+  auto it = keyset_metadata_map_.find(keyset_name);
+  return it != keyset_metadata_map_.end() ? it->second.backfill_days : -1;
+}
+
+template <typename LookupKeyT>
+google::protobuf::Timestamp
+CoordinatorKeyFetcherWithCacheBase<LookupKeyT>::GetKeyFetchingQueryStartTime(
+    absl::string_view keyset_name, core::Timestamp now_ns,
+    std::chrono::nanoseconds base_lookback) noexcept {
+  int keyset_backfill_days = key_fetcher_options_.enable_backfill
+                                 ? std::max(0, GetBackfillDays(keyset_name))
+                                 : 0;
+  return TimeUtil::NanosecondsToTimestamp(
+      now_ns - (base_lookback + hours(keyset_backfill_days * 24)).count());
 }
 
 template <typename LookupKeyT>

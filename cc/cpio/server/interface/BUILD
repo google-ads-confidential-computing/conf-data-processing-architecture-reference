@@ -61,7 +61,6 @@ cc_library(
     name = "server_interface_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

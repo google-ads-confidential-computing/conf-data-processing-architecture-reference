@@ -20,7 +20,6 @@ cc_library(
     name = "gcp_metric_client_provider_mock",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

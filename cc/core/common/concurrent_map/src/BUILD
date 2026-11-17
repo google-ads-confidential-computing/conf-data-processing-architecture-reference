@@ -20,7 +20,6 @@ cc_library(
     name = "concurrent_map_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

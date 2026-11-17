@@ -20,7 +20,6 @@ cc_library(
     name = "logger_interface_lib",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

@@ -20,7 +20,6 @@ cc_library(
     name = "metric_instance_mock",
     srcs = glob(
         [
-            "*.cc",
             "*.h",
         ],
     ),

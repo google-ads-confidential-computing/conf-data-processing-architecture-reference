@@ -339,7 +339,7 @@ core::ExecutionResultOr<Key> OndemandKeyFetcherWithCache::FetchKeys(
 }
 
 bool OndemandKeyFetcherWithCache::ShouldPerformAutoRefresh(
-    absl::string_view keyset_name) noexcept {
+    const std::string& keyset_name) noexcept {
   return true;
 }
 }  // namespace google::scp::cpio
